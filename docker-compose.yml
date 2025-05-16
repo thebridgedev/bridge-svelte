@@ -1,0 +1,24 @@
+services:
+  nblocks-svelte:
+    container_name: nblocks-svelte
+    image: nblocks-svelte:dev
+    build:
+      target: dev
+      context: ./
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./:/home/appuser/         
+    restart: unless-stopped    
+    stdin_open: true
+    tty: true
+    ports:
+      - "3000:3000"
+    networks:
+      - bridge
+
+networks:
+  bridge:
+    driver: bridge
+
+
+

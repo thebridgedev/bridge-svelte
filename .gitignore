@@ -58,3 +58,4 @@ nblocks-angular-reference/*
 .turbo
 .bash_history
 .bun
+.cursor

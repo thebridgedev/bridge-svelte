@@ -1,9 +1,12 @@
 {
-    "name": "nblocks-svelte",
-    "private": true,
-    "scripts": {
-      "dev": "bun run dev --cwd demo",
-      "build": "bun run build --cwd demo",
-      "build:nblocks": "bun run build --cwd nblocks-svelte"
-    }
+  "name": "nblocks-svelte-workspace",
+  "private": true,
+  "workspaces": [
+    "nblocks-svelte",
+    "demo"
+  ],"scripts": {
+    "build": "bun run --filter demo build",
+    "build:nblocks": "bun run --filter nblocks-svelte build",
+    "dev": "bun run --filter demo dev"
+  }
 }

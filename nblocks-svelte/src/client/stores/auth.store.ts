@@ -34,16 +34,16 @@ export async function checkAuth() {
 }
 
 export async function login(options?: { redirectUri?: string }) {
-  authState.update(state => ({ ...state, isLoading: true, error: null }));
-  
+  console.log('login');
+    
   try {
     await authService.login(options);
     // Note: This will redirect the user, so the code below won't execute
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Failed to login';
-    authState.update(state => ({ ...state, error: errorMessage }));
+    
   } finally {
-    authState.update(state => ({ ...state, isLoading: false }));
+    
   }
 }
 

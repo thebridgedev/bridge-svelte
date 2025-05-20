@@ -1,4 +1,5 @@
-import { writable } from 'svelte/store';
+// src/lib/config/nblocksConfig.ts
+import { writable, derived } from 'svelte/store';
 import type { NblocksConfig } from '../../shared/types/config.js';
 
 const DEFAULT_CONFIG: Partial<NblocksConfig> = {
@@ -8,20 +9,6 @@ const DEFAULT_CONFIG: Partial<NblocksConfig> = {
   loginRoute: '/login',
   debug: false
 };
-
-// Create a writable store for the config
-export const nblocksConfig = writable<NblocksConfig | null>(null);
-
-// Function to initialize the config
-export function initConfig(config: NblocksConfig) {
-  if (!config.appId) {
-    throw new Error('nBlocks appId is required but was not provided in the configuration.');
-  }
-  nblocksConfig.set({
-    ...DEFAULT_CONFIG,
-    ...config
-  });
-}
 
 // Function to get environment variables
 export function getConfigFromEnv(): NblocksConfig {
@@ -42,4 +29,39 @@ export function getConfigFromEnv(): NblocksConfig {
     loginRoute,
     debug
   };
-} 
+}
+
+// Create a writable store and initialize it immediately
+const initialConfig = getConfigFromEnv();
+if (!initialConfig.appId) {
+  throw new Error('nBlocks appId is required but was not provided in the environment configuration.');
+}
+
+export const nblocksConfig = writable<NblocksConfig>(initialConfig);
+
+// Provide a derived read-only store
+export const readonlyConfig = derived(nblocksConfig, ($config) => $config);
+
+// Allow runtime initialization with external config
+export function initConfig(config: NblocksConfig) {
+  if (!config.appId) {
+    throw new Error('nBlocks appId is required but was not provided in the configuration.');
+  }
+  nblocksConfig.set({
+    ...DEFAULT_CONFIG,
+    ...config
+  });
+}
+
+// Allow synchronous access to the latest config value
+let _currentConfig: NblocksConfig = initialConfig;
+nblocksConfig.subscribe((cfg) => {
+  if (cfg) _currentConfig = cfg;
+});
+
+export function getConfig(): NblocksConfig {
+  if (!_currentConfig) {
+    throw new Error('Config has not been initialized.');
+  }
+  return _currentConfig;
+}

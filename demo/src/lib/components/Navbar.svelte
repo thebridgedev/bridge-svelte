@@ -14,15 +14,35 @@
     <a href="/" class="nav-brand">
       nBlocks Demo
     </a>
-    <div class="nav-login">
-      {#if $authState.isAuthenticated}
+    
+    {#if $authState.isAuthenticated}
+      <div class="nav-links">
+        <a href="/" class="nav-link" style="margin-right: auto">
+          Home
+        </a>
+        
+        <a href="/team" class="nav-link">
+          Team Management
+        </a>
+        
+        <a href="/protected" class="nav-link">
+          Protected Page
+        </a>
+        
         <button onclick={() => handleLogout()} class="nav-button">
           Logout
         </button>
-      {:else}
-        <Login />
-      {/if}
-    </div>
+      </div>
+    {:else}
+      <div class="nav-links">
+        <div class="nav-login">
+          <Login />
+        </div>
+        <a href="/protected" class="nav-link">
+          Protected Page
+        </a>
+      </div>
+    {/if}
   </div>
 </nav>
 
@@ -47,6 +67,24 @@
     font-weight: bold;
     color: #3b82f6;
     text-decoration: none;
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .nav-link {
+    color: #4b5563;
+    text-decoration: none;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    transition: color 0.2s;
+  }
+
+  .nav-link:hover {
+    color: #3b82f6;
   }
 
   .nav-button {

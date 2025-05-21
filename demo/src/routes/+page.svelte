@@ -2,7 +2,8 @@
 	import TokenStatus from '$lib/components/TokenStatus.svelte';
   import FeatureFlag from '@nblocks-svelte/client/components/FeatureFlag.svelte';
   import { auth } from '@nblocks-svelte/shared/services/auth.service';
-  // import FeatureFlagAPIExample from '../lib/components/FeatureFlagAPIExample.svelte';
+  import ConfigStatus from '$lib/components/ConfigStatus.svelte';
+    // import FeatureFlagAPIExample from '../lib/components/FeatureFlagAPIExample.svelte';
   const { isAuthenticated } = auth;
 </script>
 
@@ -16,6 +17,7 @@
         </p>
       </div>
 
+      <ConfigStatus />
       <div class="features-overview">
         <h2 class="heading-lg">The code demonstrates the following features</h2>
         <div class="features-grid">
@@ -119,15 +121,8 @@
             </div>
           </div> -->
         </div>
-      </div>
-      <TokenStatus />
+      </div>      
     </div>
   </div>
 </div>
 
-<style>
-  .page-container {
-    /* Add your styles here */
-  }
-  /* Add additional styles as needed */
-</style>

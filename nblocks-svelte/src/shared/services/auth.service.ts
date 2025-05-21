@@ -1,6 +1,6 @@
 // src/lib/auth.ts
-import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
+import { derived, get, writable } from 'svelte/store';
 import { getConfig } from '../../client/stores/config.store';
 import type { TokenSet } from './types/config';
 
@@ -35,18 +35,23 @@ function clearTokens() {
 }
 
 async function login(options: { redirectUri?: string } = {}) {
-  const config = getConfig();
-  const redirectUri =
-    options.redirectUri ||
-    config.callbackUrl ||
-    (browser ? window.location.origin + '/auth/callback' : '');
-
-  const loginUrl = `${config.authBaseUrl}/url/login/${config.appId}?redirect_uri=${encodeURIComponent(redirectUri)}`;
+  
+  const loginUrl = createLoginUrl(options);
   if (browser) {
     window.location.href = loginUrl;
   } else {
     throw new Error('Login not supported in this environment');
   }
+}
+
+function createLoginUrl(options: { redirectUri?: string } = {}): string {
+  const config = getConfig();
+
+  const redirectUri =
+    options.redirectUri ||
+    config.callbackUrl ||
+    (browser ? window.location.origin + '/auth/callback' : '');
+  return `${config.authBaseUrl}/url/login/${config.appId}?redirect_uri=${encodeURIComponent(redirectUri)}`;
 }
 
 async function handleCallback(code: string) {
@@ -111,5 +116,6 @@ export const auth = {
   logout: clearTokens,
   handleCallback,
   refreshToken,
+  createLoginUrl,
   getToken: () => get(tokenStore)
 };

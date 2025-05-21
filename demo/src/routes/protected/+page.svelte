@@ -7,7 +7,7 @@
 
 
   onMount(() => {
-    if (get(isAuthenticated)) {
+    if (!get(isAuthenticated)) {
       goto('/');
     }
   });

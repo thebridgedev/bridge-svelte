@@ -10,6 +10,9 @@ const tokenStore = writable<TokenSet | null>(null);
 const isLoading = writable(true);
 const error = writable<string | null>(null);
 
+let refreshInterval: ReturnType<typeof setTimeout> | null = null;
+const REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+
 // Load from localStorage on first load
 if (browser) {
   try {
@@ -27,15 +30,16 @@ if (browser) {
 function setTokens(tokens: TokenSet) {
   tokenStore.set(tokens);
   if (browser) localStorage.setItem(TOKEN_KEY, JSON.stringify(tokens));
+  scheduleTokenRefresh();
 }
 
 function clearTokens() {
   tokenStore.set(null);
   if (browser) localStorage.removeItem(TOKEN_KEY);
+  stopAutoRefresh();
 }
 
 async function login(options: { redirectUri?: string } = {}) {
-  
   const loginUrl = createLoginUrl(options);
   if (browser) {
     window.location.href = loginUrl;
@@ -101,11 +105,69 @@ async function refreshToken(refreshToken: string): Promise<TokenSet | null> {
   }
 }
 
-// --- Derived values
+function getTokenExpiry(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    
+    return payload.exp * 1000;    
+  } catch {
+    return null;
+  }
+}
+
+function scheduleTokenRefresh() {
+  if (!browser) return;
+  const current = get(tokenStore);
+  const exp = current?.accessToken ? getTokenExpiry(current.accessToken) : null;
+  if (!exp) return;
+
+  const timeUntilExpiry = exp - Date.now();
+  console.log('timeUntilExpiry and refresh threshold', timeUntilExpiry, REFRESH_THRESHOLD_MS);
+  
+  if (timeUntilExpiry <= REFRESH_THRESHOLD_MS) {
+    console.log('refreshing now');
+    // refreshNow();
+  } else {
+    const checkIn = Math.max(timeUntilExpiry - REFRESH_THRESHOLD_MS, 10000);
+    refreshInterval = setTimeout(refreshNow, checkIn);
+  }
+}
+
+async function refreshNow() {
+  const current = get(tokenStore);
+  if (!current?.refreshToken) return;
+
+  console.log('🔄 Attempting token refresh...');
+
+  const newTokens = await refreshToken(current.refreshToken);
+  if (newTokens) {
+    console.log('✅ Token refreshed');
+    setTokens(newTokens);
+  } else {
+    console.warn('❌ Token refresh failed');
+    clearTokens();
+  }
+}
+
+function startAutoRefresh() {
+  stopAutoRefresh();
+  scheduleTokenRefresh();
+}
+
+function stopAutoRefresh() {
+  if (refreshInterval) clearTimeout(refreshInterval);
+  refreshInterval = null;
+}
+
+if (browser) {
+  startAutoRefresh();
+}
+
+// --- Derived values ---
 
 const isAuthenticated = derived(tokenStore, $t => !!$t?.accessToken);
 
-// --- Exports
+// --- Exports ---
 
 export const auth = {
   token: tokenStore,

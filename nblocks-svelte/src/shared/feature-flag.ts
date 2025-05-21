@@ -1,6 +1,6 @@
-import { writable, get } from 'svelte/store';
-import { auth } from './services/auth.service';
+import { get, writable } from 'svelte/store';
 import { getConfig } from '../client/stores/config.store';
+import { auth } from './services/auth.service';
 
 const baseUrl = 'https://backendless.nblocks.cloud';
 const cacheValidityMs = 5 * 60 * 1000;
@@ -13,13 +13,15 @@ export async function loadFeatureFlags(): Promise<void> {
   const appId = tokens?.appId ?? getConfig().appId;
   const accessToken = tokens?.accessToken;
 
-  if (!accessToken || !appId) return;
+  if (!appId) return;
 
   const url = `${baseUrl}/flags/bulkEvaluate/${appId}`;
+  const body = accessToken ? { accessToken } : {};
+
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ accessToken })
+    body: JSON.stringify(body)
   });
 
   if (!res.ok) throw new Error('Failed to load feature flags');
@@ -39,7 +41,7 @@ export async function isFeatureEnabled(flag: string, forceLive = false): Promise
   const appId = tokens?.appId ?? getConfig().appId;
   const accessToken = tokens?.accessToken;
 
-  if (!accessToken || !appId) return false;
+  if (!appId) return false;
 
   if (!forceLive && Date.now() - lastFetchTime < cacheValidityMs) {
     return get(cachedFlags)[flag] ?? false;
@@ -49,10 +51,12 @@ export async function isFeatureEnabled(flag: string, forceLive = false): Promise
 
   if (forceLive) {
     const url = `${baseUrl}/flags/evaluate/${appId}/${flag}`;
+    const body = accessToken ? { accessToken } : {};
+
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accessToken })
+      body: JSON.stringify(body)
     });
 
     if (!res.ok) return get(cachedFlags)[flag] ?? false;

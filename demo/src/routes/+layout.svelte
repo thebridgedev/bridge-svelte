@@ -3,7 +3,7 @@
   import { beforeNavigate, goto } from '$app/navigation';
   import { createRouteGuard } from '$lib/auth/route-guard';
   import { auth } from '@nblocks-svelte/shared/services/auth.service';
-
+  import { featureFlags } from '@nblocks-svelte/shared/feature-flag';
   import Navbar from '$lib/components/Navbar.svelte';
   import '../app.css';
 
@@ -31,6 +31,7 @@
       login();
     }
 
+    featureFlags.refresh(); // 👈 Fetch as early as possible
     loading = false;
   });
 

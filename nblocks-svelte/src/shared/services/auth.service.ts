@@ -126,7 +126,7 @@ function scheduleTokenRefresh() {
   
   if (timeUntilExpiry <= REFRESH_THRESHOLD_MS) {
     console.log('refreshing now');
-    // refreshNow();
+    refreshNow();
   } else {
     const checkIn = Math.max(timeUntilExpiry - REFRESH_THRESHOLD_MS, 10000);
     refreshInterval = setTimeout(refreshNow, checkIn);

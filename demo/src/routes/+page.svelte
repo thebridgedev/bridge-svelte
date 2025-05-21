@@ -1,5 +1,6 @@
 <script lang="ts">
   import { auth } from '@nblocks-svelte/shared/services/auth.service'
+  import TokenStatus from '../lib/components/TokenStatus.svelte';
   const { isAuthenticated } = auth;
 </script>
 
@@ -15,6 +16,8 @@
       Please log in to access protected features.
     </p>
   {/if}
+
+  <TokenStatus />
 
   <div class="features">
     <div class="feature-card">

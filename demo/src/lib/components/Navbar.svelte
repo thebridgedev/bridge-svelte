@@ -1,5 +1,12 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
   import Login from '@nblocks-svelte/client/components/auth/Login.svelte';
+  import { authState, logout } from '@nblocks-svelte/client/stores/auth.store';
+
+  async function handleLogout() {
+    logout();
+    goto('/');
+  }
 </script>
 
 <nav class="nav-menu">
@@ -8,7 +15,13 @@
       nBlocks Demo
     </a>
     <div class="nav-login">
-      <Login></Login>
+      {#if $authState.isAuthenticated}
+        <button onclick={() => handleLogout()} class="nav-button">
+          Logout
+        </button>
+      {:else}
+        <Login />
+      {/if}
     </div>
   </div>
 </nav>
@@ -34,5 +47,20 @@
     font-weight: bold;
     color: #3b82f6;
     text-decoration: none;
+  }
+
+  .nav-button {
+    background-color: #ef4444;
+    color: white;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: background-color 0.2s;
+  }
+
+  .nav-button:hover {
+    background-color: #dc2626;
   }
 </style> 

@@ -11,10 +11,17 @@
     /^\/docs($|\/)/
   ];
   
-
+  // Define feature flag protections
+  const featureFlagProtections = [    
+    {
+      flag: 'beta-feature',
+      paths: ['/beta/*'],
+      redirectTo: '/',
+    }
+  ];
   
 </script>
-<NblocksBootStrap publicRoutes={PUBLIC_ROUTES} />
+  <NblocksBootStrap publicRoutes={PUBLIC_ROUTES} featureFlagProtections={featureFlagProtections} />
 
   <Navbar />
   <main>

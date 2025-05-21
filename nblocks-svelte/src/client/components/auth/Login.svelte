@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { login } from '../../stores/auth.store.js';
+  import { auth } from '../../../shared/services/auth.service';
+  const { isAuthenticated, login } = auth;
 </script>
 
 <button onclick={() => login()} class="login-button">

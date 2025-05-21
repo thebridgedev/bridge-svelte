@@ -1,10 +1,13 @@
 <script lang="ts">
+  import { get } from 'svelte/store';
   import { goto } from '$app/navigation';
-  import { authState } from 'nblock-svelte';
+  import { auth } from '@nblocks-svelte/shared/services/auth.service';
   import { onMount } from 'svelte';
+  const { isAuthenticated } = auth;
+
 
   onMount(() => {
-    if (!$authState.isAuthenticated) {
+    if (get(isAuthenticated)) {
       goto('/');
     }
   });
@@ -13,7 +16,7 @@
 <div class="container">
   <h1>Protected Page</h1>
   
-  {#if $authState.isAuthenticated}
+  {#if $isAuthenticated}
     <div class="content">
       <p class="message">
         This is a protected page. You can only see this content when you're logged in.

@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { authState } from '@nblocks-svelte/client/stores/auth.store';
+  import { auth } from '@nblocks-svelte/shared/services/auth.service'
+  const { isAuthenticated } = auth;
 </script>
 
 <div class="container">
   <h1>Welcome to nBlocks Demo</h1>
   
-  {#if $authState.isAuthenticated}
+  {#if $isAuthenticated}
     <p class="welcome-message">
       You are logged in! Try accessing the protected page or team management.
     </p>

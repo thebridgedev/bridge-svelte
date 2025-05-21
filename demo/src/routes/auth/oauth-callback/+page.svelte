@@ -1,8 +1,9 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { handleCallback } from '@nblocks-svelte/client/stores/auth.store';
+  import { auth } from '@nblocks-svelte/shared/services/auth.service';
   import { onMount } from 'svelte';
 
+  const { handleCallback } = auth;
   onMount(async () => {
     const code = new URLSearchParams(window.location.search).get('code');    
     if (code) {

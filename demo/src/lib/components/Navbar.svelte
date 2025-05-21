@@ -1,12 +1,15 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import Login from '@nblocks-svelte/client/components/auth/Login.svelte';
-  import { authState, logout } from '@nblocks-svelte/client/stores/auth.store';
+  import { auth } from '@nblocks-svelte/shared/services/auth.service';
 
   async function handleLogout() {
     logout();
     goto('/');
   }
+
+const { isAuthenticated, logout } = auth;
+
 </script>
 
 <nav class="nav-menu">
@@ -15,7 +18,7 @@
       nBlocks Demo
     </a>
     
-    {#if $authState.isAuthenticated}
+    {#if $isAuthenticated}
       <div class="nav-links">
         <a href="/" class="nav-link" style="margin-right: auto">
           Home

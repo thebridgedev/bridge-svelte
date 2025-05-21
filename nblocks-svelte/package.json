@@ -27,6 +27,9 @@
 			"svelte": "./dist/index.js"
 		}
 	},
+	"dependencies": {
+		"jose": "^6.0.10"
+	},
 	"peerDependencies": {
 		"svelte": "^5.0.0"
 	},

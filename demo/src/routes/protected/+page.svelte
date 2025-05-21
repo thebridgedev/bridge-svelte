@@ -3,7 +3,10 @@
   import { goto } from '$app/navigation';
   import { auth } from '@nblocks-svelte/shared/services/auth.service';
   import { onMount } from 'svelte';
+  import { profileStore } from '@nblocks-svelte/shared/profile';
+
   const { isAuthenticated } = auth;
+  const { profile, error, isOnboarded, hasMultiTenantAccess } = profileStore;
 
 
   onMount(() => {
@@ -25,6 +28,17 @@
       <div class="info-card">
         <h2>Authentication Status</h2>
         <p>You are currently authenticated</p>
+        <h2>Your Profile</h2>
+        <p><strong>Name:</strong> {$profile?.fullName}</p>
+        <p><strong>Email:</strong> {$profile?.email}</p>
+        <p><strong>Username:</strong> {$profile?.username}</p>
+        {#if $profile?.tenant}
+          <div style="margin-top: 1rem;">
+            <h3>Tenant Information</h3>
+            <p><strong>Tenant Name:</strong> {$profile.tenant.name}</p>
+            <p><strong>Tenant ID:</strong> {$profile.tenant.id}</p>
+          </div>
+        {/if}
       </div>
     </div>
   {:else}

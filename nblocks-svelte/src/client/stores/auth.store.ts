@@ -1,29 +1,17 @@
 import { writable } from 'svelte/store';
-import { AuthService } from '../../shared/services/auth.service.js';
-import type { NblocksConfig } from '../../shared/types/config.js';
-import { nblocksConfig } from './config.store.js';
+import * as auth from '../../shared/services/auth.service.js'; // 👈 new functional service
 
-// Create a writable store for auth state
 export const authState = writable({
   isAuthenticated: false,
   isLoading: true,
   error: null as string | null
 });
 
-const authService = AuthService.getInstance();
-
-// Initialize auth service when config changes
-nblocksConfig.subscribe((config: NblocksConfig | null) => {
-  if (config) {
-    authService.init(config);
-  }
-});
-
 export async function checkAuth() {
   authState.update(state => ({ ...state, isLoading: true, error: null }));
-  
+
   try {
-    const authenticated = await authService.isAuthenticated();
+    const authenticated = auth.isAuthenticated();
     authState.update(state => ({ ...state, isAuthenticated: authenticated }));
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Failed to check authentication status';
@@ -34,24 +22,20 @@ export async function checkAuth() {
 }
 
 export async function login(options?: { redirectUri?: string }) {
-  console.log('login');
-    
   try {
-    await authService.login(options);
-    // Note: This will redirect the user, so the code below won't execute
+    await auth.login(options);
+    // Note: user will be redirected — nothing beyond here will run
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Failed to login';
-    
-  } finally {
-    
+    authState.update(state => ({ ...state, error: errorMessage }));
   }
 }
 
 export function logout() {
   authState.update(state => ({ ...state, isLoading: true, error: null }));
-  
+
   try {
-    authService.logout();
+    auth.logout();
     authState.update(state => ({ ...state, isAuthenticated: false }));
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Failed to logout';
@@ -63,9 +47,9 @@ export function logout() {
 
 export async function handleCallback(code: string) {
   authState.update(state => ({ ...state, isLoading: true, error: null }));
-  
+
   try {
-    await authService.handleCallback(code);
+    await auth.handleCallback(code);
     authState.update(state => ({ ...state, isAuthenticated: true }));
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Failed to handle callback';
@@ -73,4 +57,4 @@ export async function handleCallback(code: string) {
   } finally {
     authState.update(state => ({ ...state, isLoading: false }));
   }
-} 
+}

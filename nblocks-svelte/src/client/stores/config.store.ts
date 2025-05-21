@@ -33,6 +33,7 @@ export function getConfigFromEnv(): NblocksConfig {
 
 // Create a writable store and initialize it immediately
 const initialConfig = getConfigFromEnv();
+console.log('initialConfig', initialConfig);
 if (!initialConfig.appId) {
   throw new Error('nBlocks appId is required but was not provided in the environment configuration.');
 }

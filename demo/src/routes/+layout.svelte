@@ -3,7 +3,7 @@
   import NblocksBootStrap from '@nblocks-svelte/client/NblocksBootStrap.svelte';
   import '../app.css';
 
-  let loading = true;
+  let loading = $state(true);
   const PUBLIC_ROUTES = [
     '/',
     '/login',
@@ -19,12 +19,18 @@
       redirectTo: '/',
     }
   ];
+
+  function onBootstrapComplete() {    
+    loading = false;    
+  }
   
 </script>
-  <NblocksBootStrap publicRoutes={PUBLIC_ROUTES} featureFlagProtections={featureFlagProtections} />
+  <NblocksBootStrap publicRoutes={PUBLIC_ROUTES} featureFlagProtections={featureFlagProtections} onBootstrapComplete={onBootstrapComplete} />
 
+  {#if !loading}
   <Navbar />
   <main>
     <slot />
   </main>
+  {/if}
 

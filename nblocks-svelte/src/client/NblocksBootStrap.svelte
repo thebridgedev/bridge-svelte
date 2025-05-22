@@ -1,6 +1,6 @@
 <script lang="ts">
     import { beforeNavigate } from '$app/navigation';
-    import { onMount } from 'svelte';
+    import { onMount} from 'svelte';
     import { checkFeatureFlagProtection } from '../lib/auth/feature-flag-route-guard';
     import type { FeatureFlagProtection } from '../lib/auth/feature-flag-route-guard';
     import { createRouteGuard } from '../lib/auth/route-guard';
@@ -8,9 +8,10 @@
     import { auth } from '../shared/services/auth.service';
   
     // Use $props to declare props
-    let { publicRoutes = [], featureFlagProtections = [] }: {
+    let { publicRoutes = [], featureFlagProtections = [], onBootstrapComplete }: {
       publicRoutes: (string | RegExp)[],
-      featureFlagProtections: FeatureFlagProtection[]
+      featureFlagProtections: FeatureFlagProtection[],
+      onBootstrapComplete: () => void
     } = $props();
   
     const { login } = auth;
@@ -30,6 +31,9 @@
       }
   
       featureFlags.refresh();
+      if (onBootstrapComplete) {
+        onBootstrapComplete();
+      }
     });
   
     beforeNavigate(async ({ to, cancel }) => {

@@ -1,10 +1,8 @@
-<script lang="ts">
-	import TokenStatus from '$lib/components/TokenStatus.svelte';
-  import FeatureFlag from '@nblocks-svelte/client/components/FeatureFlag.svelte';
-  import { auth } from '@nblocks-svelte/lib/shared/services/auth.service';
+<script lang="ts">	
+  import FeatureFlag from '@nblocks-svelte/lib/client/components/FeatureFlag.svelte';  
   import ConfigStatus from '$lib/components/ConfigStatus.svelte';
     // import FeatureFlagAPIExample from '../lib/components/FeatureFlagAPIExample.svelte';
-  const { isAuthenticated } = auth;
+  
 </script>
 
 <div class="page-container">

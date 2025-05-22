@@ -1,6 +1,6 @@
 // src/lib/config/nblocksConfig.ts
 import { writable, derived } from 'svelte/store';
-import type { NblocksConfig } from '../../shared/types/config.js';
+import type { NblocksConfig } from '../../shared/types/config';
 
 const DEFAULT_CONFIG: Partial<NblocksConfig> = {
   authBaseUrl: 'https://auth.nblocks.cloud',

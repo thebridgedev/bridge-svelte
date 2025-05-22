@@ -1,4 +1,4 @@
-import type { NblocksConfig } from '../../shared/types/config.js';
+import type { NblocksConfig } from '../../shared/types/config';
 export declare function getConfigFromEnv(): NblocksConfig;
 export declare const nblocksConfig: import("svelte/store").Writable<NblocksConfig>;
 export declare const readonlyConfig: import("svelte/store").Readable<NblocksConfig>;

@@ -1,4 +1,4 @@
-import { isFeatureEnabled } from '../../shared/feature-flag';
+import { isFeatureEnabled } from '../shared/feature-flag';
 
 export interface FeatureFlagProtection {
   flag: string;

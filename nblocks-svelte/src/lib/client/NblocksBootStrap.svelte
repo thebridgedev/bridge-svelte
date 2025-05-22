@@ -1,9 +1,9 @@
 <script lang="ts">
     import { beforeNavigate } from '$app/navigation';
     import { onMount} from 'svelte';
-    import { checkFeatureFlagProtection } from '../lib/auth/feature-flag-route-guard';
-    import type { FeatureFlagProtection } from '../lib/auth/feature-flag-route-guard';
-    import { createRouteGuard } from '../lib/auth/route-guard';
+    import { checkFeatureFlagProtection } from '../auth/feature-flag-route-guard';
+    import type { FeatureFlagProtection } from '../auth/feature-flag-route-guard';
+    import { createRouteGuard } from '../auth/route-guard';
     import { featureFlags } from '../shared/feature-flag';
     import { auth } from '../shared/services/auth.service';
   

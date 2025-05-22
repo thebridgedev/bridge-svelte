@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
-import type { NblocksConfig } from '../../shared/types/config.js';
-import { nblocksConfig } from './config.store.js';
+import type { NblocksConfig } from '../../shared/types/config';
+import { nblocksConfig } from './config.store';
 
 export interface Profile {
   username: string;

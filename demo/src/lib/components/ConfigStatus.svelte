@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { getConfig } from '@nblocks-svelte/client/stores/config.store';
+    import { getConfig } from '@nblocks-svelte/lib/client/stores/config.store';
     import { onMount } from 'svelte';
     import TokenStatus from './TokenStatus.svelte';
     import { auth } from '@nblocks-svelte/lib/shared/services/auth.service';

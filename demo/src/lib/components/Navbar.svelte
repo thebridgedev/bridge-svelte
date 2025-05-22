@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import Login from '@nblocks-svelte/client/components/auth/Login.svelte';
-  import { auth } from '@nblocks-svelte/shared/services/auth.service';
+  import { auth } from '@nblocks-svelte/lib/shared/services/auth.service';
 
   async function handleLogout() {
     logout();

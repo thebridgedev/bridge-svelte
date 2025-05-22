@@ -60,3 +60,39 @@ nblocks-angular-reference/*
 .bun
 .cursor
 .env*
+
+
+**/node_modules
+
+# Output
+**/.output
+**/.vercel
+**/.netlify
+**/.wrangler
+**/.svelte-kit
+**/build
+**/dist
+
+# OS
+**/.DS_Store
+**/Thumbs.db
+
+# Env
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.test
+
+# Vite
+**/vite.config.js.timestamp-*
+**/vite.config.ts.timestamp-*
+
+**/*.tgz
+**/*.tar.gz
+**/*.tar.xz
+**/*.tar.bz2
+**/*.tar.lzma
+**/*.tar.lz
+**/*.tar.lzo
+**/*.tar.lrz
+**/*.tar.lha

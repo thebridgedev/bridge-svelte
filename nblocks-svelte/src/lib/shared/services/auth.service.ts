@@ -2,7 +2,7 @@
 import { browser } from '$app/environment';
 import { derived, get, writable } from 'svelte/store';
 import { getConfig } from '../../client/stores/config.store';
-import type { TokenSet } from './types/config';
+import type { TokenSet } from './types/config.js';
 
 const TOKEN_KEY = 'nblocks_tokens';
 

@@ -1,6 +1,6 @@
 import { get, writable } from 'svelte/store';
 import { getConfig } from '../client/stores/config.store';
-import { auth } from './services/auth.service';
+import { auth } from './services/auth.service.js';
 
 const baseUrl = 'https://backendless.nblocks.cloud';
 const cacheValidityMs = 5 * 60 * 1000;

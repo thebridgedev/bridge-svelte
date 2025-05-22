@@ -1,10 +1,9 @@
 // src/lib/auth/profile.ts
-import { writable, derived, get } from 'svelte/store';
-import { jwtVerify, createRemoteJWKSet, errors as joseErrors } from 'jose';
-import { browser } from '$app/environment';
+import { createRemoteJWKSet, errors as joseErrors, jwtVerify } from 'jose';
+import { derived, get, writable } from 'svelte/store';
 import { getConfig } from '../client/stores/config.store';
-import { auth } from './services/auth.service';
 import type { NblocksConfig } from '../types/config';
+import { auth } from './services/auth.service.js';
 
 export interface IDToken {
   sub: string;

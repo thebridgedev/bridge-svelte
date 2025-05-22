@@ -1,5 +1,5 @@
 import { get } from 'svelte/store';
-import { auth } from '../../shared/services/auth.service';
+import { auth } from '../shared/services/auth.service';
 
 const { isAuthenticated, createLoginUrl } = auth;
 

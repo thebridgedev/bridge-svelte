@@ -1,5 +1,5 @@
 <script>
-    import { auth } from '@nblocks-svelte/shared/services/auth.service';
+    import { auth } from '@nblocks-svelte/lib/shared/services/auth.service';
     import { onDestroy } from 'svelte';
     import { browser } from '$app/environment';
   

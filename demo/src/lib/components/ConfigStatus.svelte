@@ -2,7 +2,7 @@
     import { getConfig } from '@nblocks-svelte/client/stores/config.store';
     import { onMount } from 'svelte';
     import TokenStatus from './TokenStatus.svelte';
-    import { auth } from '@nblocks-svelte/shared/services/auth.service';
+    import { auth } from '@nblocks-svelte/lib/shared/services/auth.service';
     const { isAuthenticated } = auth;
     let config = $state<{ appId: string } | null>(null);
     let error = $state<Error | null>(null);

@@ -8,12 +8,6 @@
   const { isAuthenticated } = auth;
   const { profile, error, isOnboarded, hasMultiTenantAccess } = profileStore;
 
-
-  onMount(() => {
-    if (!get(isAuthenticated)) {
-      goto('/');
-    }
-  });
 </script>
 
 <div class="container">

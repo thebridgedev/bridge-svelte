@@ -5,10 +5,10 @@
 
   let loading = $state(true);
   const PUBLIC_ROUTES = [
-    '/',
+      '/',
     '/login',
-    /^\/auth\/oauth-callback$/,
-    /^\/docs($|\/)/
+    new RegExp('^/auth/oauth-callback$'),
+    new RegExp('^/docs($|/)'),
   ];
   
   // Define feature flag protections

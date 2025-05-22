@@ -6,7 +6,8 @@
     "demo"
   ],"scripts": {
     "build": "bun run --filter demo build",
-    "build:nblocks": "bun run --filter nblocks-svelte build",
-    "dev": "bun run --filter demo dev"
+    "build:nblocks": "bun run --filter @nebulr/nblocks-svelte build",
+    "dev": "bun run --filter demo dev",
+    "package": "bun run --filter @nebulr/nblocks-svelte package"    
   }
 }

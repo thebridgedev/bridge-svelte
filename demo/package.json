@@ -14,7 +14,7 @@
 		"lint": "prettier --check . && eslint ."
 	},
 	"dependencies": {
-		   "nblocks-svelte": "workspace:*"
+		   "@nebulr/nblocks-svelte": "workspace:*"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",

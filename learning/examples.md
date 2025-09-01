@@ -270,6 +270,8 @@ nBlocks configuration values are primarily set through environment variables in 
 | Variable Name | Description | Default Value |
 |---------------|-------------|---------------|
 | `VITE_NBLOCKS_APP_ID` | Your nBlocks application ID | (Required) |
+| `VITE_NBLOCKS_AUTH_BASE_URL` | Base URL for nBlocks auth services | `https://auth.nblocks.cloud` |
+| `VITE_NBLOCKS_BACKENDLESS_BASE_URL` | Base URL for nBlocks backendless services | `https://backendless.nblocks.cloud` |
 | `VITE_NBLOCKS_CALLBACK_URL` | URL for OAuth callback | (Optional) |
 | `VITE_NBLOCKS_DEFAULT_REDIRECT_ROUTE` | Default route after login | `/` |
 | `VITE_NBLOCKS_LOGIN_ROUTE` | Route for login page | `/login` |

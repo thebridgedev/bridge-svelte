@@ -1,9 +1,10 @@
 // src/lib/config/nblocksConfig.ts
-import { writable, derived } from 'svelte/store';
-import type { NblocksConfig } from '../../shared/types/config';
+import { derived, writable } from 'svelte/store';
+import type { NblocksConfig } from '../../shared/types/config.js';
 
 const DEFAULT_CONFIG: Partial<NblocksConfig> = {
   authBaseUrl: 'https://auth.nblocks.cloud',
+  backendlessBaseUrl: 'https://backendless.nblocks.cloud',
   teamManagementUrl: 'https://backendless.nblocks.cloud/user-management-portal/users',
   defaultRedirectRoute: '/',
   loginRoute: '/login',
@@ -14,6 +15,7 @@ const DEFAULT_CONFIG: Partial<NblocksConfig> = {
 export function getConfigFromEnv(): NblocksConfig {
   const appId = import.meta.env.VITE_NBLOCKS_APP_ID || '';
   const authBaseUrl = import.meta.env.VITE_NBLOCKS_AUTH_BASE_URL || DEFAULT_CONFIG.authBaseUrl;
+  const backendlessBaseUrl = import.meta.env.VITE_NBLOCKS_BACKENDLESS_BASE_URL || DEFAULT_CONFIG.backendlessBaseUrl;
   const callbackUrl = import.meta.env.VITE_NBLOCKS_CALLBACK_URL || '';
   const teamManagementUrl = import.meta.env.VITE_NBLOCKS_TEAM_MANAGEMENT_URL || DEFAULT_CONFIG.teamManagementUrl;
   const defaultRedirectRoute = import.meta.env.VITE_NBLOCKS_DEFAULT_REDIRECT_ROUTE || DEFAULT_CONFIG.defaultRedirectRoute;
@@ -23,6 +25,7 @@ export function getConfigFromEnv(): NblocksConfig {
   return {
     appId,
     authBaseUrl,
+    backendlessBaseUrl,
     callbackUrl,
     teamManagementUrl,
     defaultRedirectRoute,

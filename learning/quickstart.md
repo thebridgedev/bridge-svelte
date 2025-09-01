@@ -61,38 +61,7 @@ The simplest way to add login functionality to your app is to use the auth servi
 
 ### Handling the callback
 
-After a user logs in through nBlocks, they'll be redirected back to your application. You need to set up a callback route to handle this redirect:
-
-1. First, go to the nBlocks Control Center:
-   - Navigate to Authentication -> Authentication -> Security
-   - Change the callback URL to point to your application with the path `/auth/oauth-callback`
-   - For example: `https://your-app.com/auth/oauth-callback` or `localhost:3000/auth/oauth-callback`
-   - **Important**: The path you specify here (`/auth/oauth-callback`) must match exactly where you create your server-side route
-
-2. Now create a server-side route in your Svelte application:
-   - The route must be located at the exact path you specified in the control center
-   - For the example above, create the file at `app/auth/oauth-callback/+page.svelte`
-
-```ts
-<script lang="ts">
-  import { goto } from '$app/navigation';
-  import { auth } from '@nblocks-svelte/shared/services/auth.service';
-  import { onMount } from 'svelte';
-
-  const { handleCallback } = auth;
-  onMount(async () => {
-    const code = new URLSearchParams(window.location.search).get('code');    
-    if (code) {
-      try {
-        await handleCallback(code);
-      } catch (err) {
-        console.error('Auth callback error:', err);
-      }
-    }
-    goto('/');
-  });
-</script> 
-```
+x
 
 ## Protecting Routes
 

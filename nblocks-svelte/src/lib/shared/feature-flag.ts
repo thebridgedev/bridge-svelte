@@ -1,8 +1,7 @@
 import { get, writable } from 'svelte/store';
-import { getConfig } from '../client/stores/config.store';
+import { getConfig } from '../client/stores/config.store.js';
 import { auth } from './services/auth.service.js';
 
-const baseUrl = 'https://backendless.nblocks.cloud';
 const cacheValidityMs = 5 * 60 * 1000;
 
 const cachedFlags = writable<Record<string, boolean>>({});
@@ -12,10 +11,11 @@ export async function loadFeatureFlags(): Promise<void> {
   const tokens = get(auth.token);
   const appId = tokens?.appId ?? getConfig().appId;
   const accessToken = tokens?.accessToken;
+  const backendlessBaseUrl = getConfig().backendlessBaseUrl;
 
   if (!appId) return;
 
-  const url = `${baseUrl}/flags/bulkEvaluate/${appId}`;
+  const url = `${backendlessBaseUrl}/flags/bulkEvaluate/${appId}`;
   const body = accessToken ? { accessToken } : {};
 
   const res = await fetch(url, {
@@ -27,7 +27,7 @@ export async function loadFeatureFlags(): Promise<void> {
   if (!res.ok) throw new Error('Failed to load feature flags');
 
   const data = await res.json();
-  const flags = data.flags.reduce((acc, { flag, evaluation }) => {
+  const flags = data.flags.reduce((acc: Record<string, boolean>, { flag, evaluation }: { flag: string; evaluation?: { enabled: boolean } }) => {
     acc[flag] = evaluation?.enabled ?? false;
     return acc;
   }, {});
@@ -40,6 +40,8 @@ export async function isFeatureEnabled(flag: string, forceLive = false): Promise
   const tokens = get(auth.token);
   const appId = tokens?.appId ?? getConfig().appId;
   const accessToken = tokens?.accessToken;
+  const backendlessBaseUrl = getConfig().backendlessBaseUrl;
+  
 
   if (!appId) return false;
 
@@ -50,7 +52,7 @@ export async function isFeatureEnabled(flag: string, forceLive = false): Promise
   if (!forceLive) await loadFeatureFlags();
 
   if (forceLive) {
-    const url = `${baseUrl}/flags/evaluate/${appId}/${flag}`;
+    const url = `${backendlessBaseUrl}/flags/evaluate/${appId}/${flag}`;
     const body = accessToken ? { accessToken } : {};
 
     const res = await fetch(url, {

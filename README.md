@@ -31,6 +31,7 @@ The following environment variables can be configured:
 ```env
 VITE_NBLOCKS_APP_ID=your_app_id
 VITE_NBLOCKS_AUTH_BASE_URL=https://auth.nblocks.cloud
+VITE_NBLOCKS_BACKENDLESS_BASE_URL=https://backendless.nblocks.cloud
 VITE_NBLOCKS_CALLBACK_URL=your_callback_url
 VITE_NBLOCKS_TEAM_MANAGEMENT_URL=https://backendless.nblocks.cloud/user-management-portal/users
 VITE_NBLOCKS_DEFAULT_REDIRECT_ROUTE=/

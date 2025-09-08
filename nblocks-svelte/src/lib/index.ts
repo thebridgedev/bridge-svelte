@@ -12,10 +12,13 @@ export { default as NblocksBootStrap } from './client/NblocksBootStrap.svelte';
 export * from './shared/feature-flag.js';
 
 // Auth route guards
-export * from './auth/feature-flag-route-guard.js';
 export * from './auth/route-guard.js';
 
 // Types
-export * from './shared/services/auth.service.js';
 export * from './shared/profile.js'; // If this exists
+export * from './shared/services/auth.service.js';
 export * from './shared/types/config.js';
+
+// Logger
+export { logger } from './shared/logger.js';
+

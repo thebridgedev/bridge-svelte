@@ -1,8 +1,9 @@
 // src/lib/auth.ts
 import { browser } from '$app/environment';
 import { derived, get, writable } from 'svelte/store';
-import { getConfig } from '../../client/stores/config.store';
-import type { TokenSet } from './types/config.js';
+import { getConfig } from '../../client/stores/config.store.js';
+import { logger } from '../logger.js';
+import type { TokenSet } from '../types/config.js';
 
 const TOKEN_KEY = 'nblocks_tokens';
 
@@ -19,7 +20,7 @@ if (browser) {
     const raw = localStorage.getItem(TOKEN_KEY);
     if (raw) tokenStore.set(JSON.parse(raw));
   } catch (e) {
-    console.error('Failed to load tokens from storage', e);
+    logger.error('Failed to load tokens from storage', e);
   } finally {
     isLoading.set(false);
   }
@@ -122,10 +123,10 @@ function scheduleTokenRefresh() {
   if (!exp) return;
 
   const timeUntilExpiry = exp - Date.now();
-  console.log('timeUntilExpiry and refresh threshold', timeUntilExpiry, REFRESH_THRESHOLD_MS);
+  logger.debug('[auth] timeUntilExpiry and refresh threshold', timeUntilExpiry, REFRESH_THRESHOLD_MS);
   
   if (timeUntilExpiry <= REFRESH_THRESHOLD_MS) {
-    console.log('refreshing now');
+    logger.debug('[auth] refreshing now');
     refreshNow();
   } else {
     const checkIn = Math.max(timeUntilExpiry - REFRESH_THRESHOLD_MS, 10000);
@@ -137,14 +138,14 @@ async function refreshNow() {
   const current = get(tokenStore);
   if (!current?.refreshToken) return;
 
-  console.log('🔄 Attempting token refresh...');
+  logger.debug('🔄 Attempting token refresh...');
 
   const newTokens = await refreshToken(current.refreshToken);
   if (newTokens) {
-    console.log('✅ Token refreshed');
+    logger.debug('✅ Token refreshed');
     setTokens(newTokens);
   } else {
-    console.warn('❌ Token refresh failed');
+    logger.warn('❌ Token refresh failed');
     clearTokens();
   }
 }

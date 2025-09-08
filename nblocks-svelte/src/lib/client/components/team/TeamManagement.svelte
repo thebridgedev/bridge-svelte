@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { auth } from '../../../shared/services/auth.service';
-  import { getConfig } from '../../stores/config.store';
+  import { logger } from '../../../shared/logger.js';
+  import { auth } from '../../../shared/services/auth.service.js';
+  import { getConfig } from '../../stores/config.store.js';
 
   let iframeUrl: string | null = null;
   let error: string | null = null;
@@ -26,13 +27,13 @@
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`Failed to get handover code: ${response.status} ${response.statusText}`, errorText);
+        logger.error(`Failed to get handover code: ${response.status} ${response.statusText}`, errorText);
         throw new Error(`Failed to get handover code: ${response.statusText}`);
       }
 
       const data = await response.json();
       if (!data.code) {
-        console.error('No handover code in response:', data);
+        logger.error('No handover code in response:', data);
         throw new Error('Failed to get handover code: No code in response');
       }
 
@@ -40,21 +41,21 @@
       const baseUrl = config.teamManagementUrl;
       return `${baseUrl}?code=${data.code}`;
     } catch (err) {
-      console.error('Error getting handover code:', err);
+      logger.error('Error getting handover code:', err);
       throw err;
     }
   }
 
   onMount(async () => {
-    console.log('TeamManagement onMount');
+    logger.debug('TeamManagement onMount');
     try {
       if (!auth.isAuthenticated) {
-        console.log('TeamManagement onMount: User is not authenticated');
+        logger.debug('TeamManagement onMount: User is not authenticated');
         throw new Error('User must be authenticated to access team management');
       }
       const token = auth.getToken();
       // Get the access token from your auth store
-      const accessToken = token.accessToken;
+      const accessToken = token?.accessToken;
       if (!accessToken) {
         throw new Error('No access token available');
       }

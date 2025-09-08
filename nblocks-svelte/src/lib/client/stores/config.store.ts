@@ -1,5 +1,6 @@
 // src/lib/config/nblocksConfig.ts
 import { derived, writable } from 'svelte/store';
+import { logger } from '../../shared/logger.js';
 import type { NblocksConfig } from '../../shared/types/config.js';
 
 const DEFAULT_CONFIG: Partial<NblocksConfig> = {
@@ -20,8 +21,7 @@ export function getConfigFromEnv(): NblocksConfig {
   const teamManagementUrl = import.meta.env.VITE_NBLOCKS_TEAM_MANAGEMENT_URL || DEFAULT_CONFIG.teamManagementUrl;
   const defaultRedirectRoute = import.meta.env.VITE_NBLOCKS_DEFAULT_REDIRECT_ROUTE || DEFAULT_CONFIG.defaultRedirectRoute;
   const loginRoute = import.meta.env.VITE_NBLOCKS_LOGIN_ROUTE || DEFAULT_CONFIG.loginRoute;
-  const debug = import.meta.env.VITE_NBLOCKS_DEBUG === 'true' || DEFAULT_CONFIG.debug;
-
+  const debug = import.meta.env.VITE_NBLOCKS_DEBUG === 'true' || DEFAULT_CONFIG.debug;  
   return {
     appId,
     authBaseUrl,
@@ -36,7 +36,7 @@ export function getConfigFromEnv(): NblocksConfig {
 
 // Create a writable store and initialize it immediately
 const initialConfig = getConfigFromEnv();
-console.log('initialConfig', initialConfig);
+logger.debug('[config] initialConfig', initialConfig);
 if (!initialConfig.appId) {
   throw new Error('nBlocks appId is required but was not provided in the environment configuration.');
 }

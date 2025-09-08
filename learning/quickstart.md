@@ -14,7 +14,7 @@ Add the variable VITE_NBLOCKS_APP_ID to your .env file
 
 > **Note:** You can find your app ID in the nBlocks Control Center by navigating to the 'Keys' section.
 
-Use the `NblocksBootStrap` component to initialize your app:
+Use the `NblocksBootStrap` component to initialize your app with a `routeConfig`:
 
 ```ts
 <!-- src/routes/+layout.svelte -->
@@ -22,19 +22,21 @@ Use the `NblocksBootStrap` component to initialize your app:
   import NblocksBootStrap from '@nblocks-svelte/client/NblocksBootStrap.svelte';
   let loading = $state(true);
 
-
-  //these are the routes that should be accessible withouth authentication
-  const PUBLIC_ROUTES = [
-      '/',    
-    new RegExp('^/auth/oauth-callback$'),    
-  ];
+  // Define access rules
+  const routeConfig = {
+    rules: [
+      { match: '/', public: true },
+      { match: new RegExp('^/auth/oauth-callback$'), public: true }
+    ],
+    defaultAccess: 'protected'
+  };
     
   function onBootstrapComplete() {
     loading = false;
   }
 </script>
 
-<NblocksBootStrap publicRoutes={PUBLIC_ROUTES} onBootstrapComplete={onBootstrapComplete} />
+<NblocksBootStrap routeConfig={routeConfig} onBootstrapComplete={onBootstrapComplete} />
 
 {#if !loading}
   <slot />

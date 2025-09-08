@@ -35,3 +35,8 @@ export interface NblocksConfig {
      */
     debug?: boolean;
 }
+export interface TokenSet {
+    accessToken: string;
+    refreshToken: string;
+    idToken: string;
+}

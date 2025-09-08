@@ -38,7 +38,7 @@ nBlocks can protect routes in your Svelte application:
 
 #### Using NblocksBootStrap
 
-The most comprehensive way to protect routes is using the `NblocksBootStrap` component:
+The most comprehensive way to protect routes is using the `NblocksBootStrap` component with a `routeConfig`:
 
 ```ts
 <!-- src/routes/+layout.svelte -->
@@ -46,14 +46,22 @@ The most comprehensive way to protect routes is using the `NblocksBootStrap` com
   import NblocksBootStrap from '@nblocks-svelte/client/NblocksBootStrap.svelte';
   let loading = $state(true);
 
-  const PUBLIC_ROUTES = ['/', '/login', /^\/auth\/oauth-callback$/];
+  const routeConfig = {
+    rules: [
+      { match: '/', public: true },
+      { match: '/login', public: true },
+      { match: new RegExp('^/auth/oauth-callback$'), public: true },
+      { match: '/beta/*', featureFlag: 'beta-feature', redirectTo: '/' }
+    ],
+    defaultAccess: 'protected'
+  };
 
   function onBootstrapComplete() {
     loading = false;
   }
 </script>
 
-<NblocksBootStrap publicRoutes={PUBLIC_ROUTES} onBootstrapComplete={onBootstrapComplete} />
+<NblocksBootStrap routeConfig={routeConfig} onBootstrapComplete={onBootstrapComplete} />
 
 {#if !loading}
   <slot />
@@ -61,8 +69,8 @@ The most comprehensive way to protect routes is using the `NblocksBootStrap` com
 ```
 
 This approach:
-- Protects all routes by default
-- Allows you to specify public paths that don't require authentication
+- **defaultAccess**: sets whether unmatched routes are public or protected
+- **rules**: lets you mark individual paths as public and/or gate routes behind feature flags
 - Handles redirects automatically
 
 
@@ -209,7 +217,7 @@ You can also use the `fallback` prop to provide alternative content:
 
 ### Feature flags on routes
 
-Protect entire routes with feature flags using the `NblocksBootStrap` component:
+Protect entire routes with feature flags using the same `routeConfig` structure:
 
 ```ts
 <!-- src/routes/+layout.svelte -->
@@ -217,25 +225,23 @@ Protect entire routes with feature flags using the `NblocksBootStrap` component:
   import NblocksBootStrap from '@nblocks-svelte/client/NblocksBootStrap.svelte';
   let loading = $state(true);
 
-  const featureFlagProtections = [
-    {
-      flag: 'premium-feature',
-      paths: ['/premium/*'],
-      redirectTo: '/upgrade',
-    },
-    {
-      flag: 'beta-feature',
-      paths: ['/beta/*'],
-      redirectTo: '/',
-    }
-  ];
+  const routeConfig = {
+    rules: [
+      { match: '/', public: true },
+      { match: '/login', public: true },
+      { match: new RegExp('^/auth/oauth-callback$'), public: true },
+      { match: '/premium/*', featureFlag: 'premium-feature', redirectTo: '/upgrade' },
+      { match: '/beta/*', featureFlag: 'beta-feature', redirectTo: '/' }
+    ],
+    defaultAccess: 'protected'
+  };
 
   function onBootstrapComplete() {
     loading = false;
   }
 </script>
 
-<NblocksBootStrap featureFlagProtections={featureFlagProtections} onBootstrapComplete={onBootstrapComplete} />
+<NblocksBootStrap routeConfig={routeConfig} onBootstrapComplete={onBootstrapComplete} />
 
 {#if !loading}
   <slot />

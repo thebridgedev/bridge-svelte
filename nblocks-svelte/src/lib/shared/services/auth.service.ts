@@ -52,11 +52,9 @@ async function login(options: { redirectUri?: string } = {}) {
 function createLoginUrl(options: { redirectUri?: string } = {}): string {
   const config = getConfig();
 
-  const redirectUri =
-    options.redirectUri ||
-    config.callbackUrl ||
-    (browser ? window.location.origin + '/auth/callback' : '');
-  return `${config.authBaseUrl}/url/login/${config.appId}?redirect_uri=${encodeURIComponent(redirectUri)}`;
+  const redirectUri = options.redirectUri ?? config.callbackUrl ?? '';
+  const base = `${config.authBaseUrl}/url/login/${config.appId}`;
+  return redirectUri ? `${base}?redirect_uri=${encodeURIComponent(redirectUri)}` : base;
 }
 
 async function handleCallback(code: string) {
@@ -101,7 +99,7 @@ async function refreshToken(refreshToken: string): Promise<TokenSet | null> {
     setTokens(tokens);
     return tokens;
   } catch (e) {
-    console.error('Failed to refresh token', e);
+    logger.error('Failed to refresh token', e);
     return null;
   }
 }

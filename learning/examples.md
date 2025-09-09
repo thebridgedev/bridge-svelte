@@ -248,6 +248,68 @@ Protect entire routes with feature flags using the same `routeConfig` structure:
 {/if}
 ```
 
+### Any vs All requirements
+
+You can require one of many flags (any) or all flags (all) for a route:
+
+```ts
+<!-- src/routes/+layout.svelte -->
+<script lang="ts">
+  import NblocksBootStrap from '@nblocks-svelte/client/NblocksBootStrap.svelte';
+  let loading = $state(true);
+
+  const routeConfig = {
+    rules: [
+      // Route allowed if any of the flags are enabled
+      { match: '/labs/*', featureFlag: { any: ['labs-v1', 'labs-v2'] }, redirectTo: '/' },
+
+      // Route allowed only if all flags are enabled
+      { match: '/premium/*', featureFlag: { all: ['paid', 'kyc-verified'] }, redirectTo: '/upgrade' },
+
+      // Public routes
+      { match: '/', public: true },
+      { match: new RegExp('^/auth/oauth-callback$'), public: true }
+    ],
+    defaultAccess: 'protected'
+  };
+
+  function onBootstrapComplete() {
+    loading = false;
+  }
+</script>
+
+<NblocksBootStrap routeConfig={routeConfig} onBootstrapComplete={onBootstrapComplete} />
+
+{#if !loading}
+  <slot />
+{/if}
+```
+
+### Global flag plus per-route criteria
+
+To enforce a global flag "A must be enabled for all protected routes", combine a top-level catch-all rule with route-specific rules. The first matching rule wins, so put the global guard last and more specific routes before it:
+
+```ts
+const routeConfig = {
+  rules: [
+    // Specific route rule with its own criteria (runs first if it matches)
+    { match: '/beta/*', featureFlag: { any: ['beta-feature', 'internal'] }, redirectTo: '/' },
+
+    // Public routes
+    { match: '/', public: true },
+    { match: '/login', public: true },
+
+    // Global flag: requires A for everything else that is protected
+    { match: '/*', featureFlag: 'A', redirectTo: '/login' }
+  ],
+  defaultAccess: 'protected'
+};
+```
+
+Notes:
+- Order matters. Place specific rules before the global catch-all.
+- Public routes bypass feature checks. All other routes fall back to the global rule and must pass flag "A".
+
 ## Configuration
 
 ### Getting Config Values

@@ -69,30 +69,30 @@
             <h3 class="heading-md">Cached Feature Flag</h3>
             <div class="card">
               <p class="note">Uses cached values (5-minute cache)</p>
-              <FeatureFlag flagName="demo-flag" let:enabled>
-                {#if enabled}
+              <FeatureFlag flagName="demo-flag" >                
                   <div class="feature-status active">
                     <p>Feature flag "demo-flag" is active</p>
-                  </div>
-                {:else}
-                  <div class="feature-status">Create a feature flag called "demo-flag"</div>
-                {/if}
+                  </div>                
               </FeatureFlag>
+
+              <FeatureFlag flagName="demo-flag" negate={true} >                
+                <div class="feature-status">Create a feature flag called "demo-flag"</div>
+            </FeatureFlag>
             </div>
+
           </div>
 
           <div class="feature-example">
             <h3 class="heading-md">Live Feature Flag</h3>
             <div class="card">
               <p class="note">Direct API call on each load</p>
-              <FeatureFlag flagName="demo-flag" forceLive={true} let:enabled>
-                {#if enabled}
+              <FeatureFlag flagName="demo-flag" forceLive={true}>                
                   <div class="feature-status active">
                     <p>Feature flag "demo-flag" is active</p>
-                  </div>
-                {:else}
-                  <div class="feature-status">Create a feature flag called "demo-flag"</div>
-                {/if}
+                  </div>               
+              </FeatureFlag>
+              <FeatureFlag flagName="demo-flag" forceLive={true} negate={true} >               
+                  <div class="feature-status">Create a feature flag called "demo-flag"</div>              
               </FeatureFlag>
             </div>
           </div>

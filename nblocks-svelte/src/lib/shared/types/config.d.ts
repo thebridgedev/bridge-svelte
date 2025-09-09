@@ -15,6 +15,11 @@ export interface NblocksConfig {
      */
     authBaseUrl?: string;
     /**
+     * The base URL for nBlocks backendless services
+     * @default 'https://backendless.nblocks.cloud'
+     */
+    backendlessBaseUrl?: string;
+    /**
      * Route to redirect to after login
      * @default '/'
      */

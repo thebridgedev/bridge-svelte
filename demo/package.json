@@ -13,8 +13,9 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint ."
 	},
-	"dependencies": {
-		   "@nebulr/nblocks-svelte": "workspace:*"
+	"dependencies": {		
+		"@nebulr/nblocks-svelte": "../nebulr-nblocks-svelte-0.0.1-alpha.3.tgz"
+
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",

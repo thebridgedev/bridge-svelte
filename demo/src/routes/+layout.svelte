@@ -4,6 +4,7 @@
   import NblocksBootStrap from '@nblocks-svelte/lib/client/NblocksBootStrap.svelte';
   import type { NblocksConfig } from '@nblocks-svelte/lib/shared/types/config.js';
   import '../app.css';
+  let { children } = $props();
 
   let loading = $state(true);
   const routeConfig: RouteGuardConfig = {
@@ -39,7 +40,7 @@
   {#if !loading}
   <Navbar />
   <main>
-    <slot />
+    {@render children()}
   </main>
   {/if}
 

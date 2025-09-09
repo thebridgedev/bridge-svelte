@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { isFeatureEnabled } from '../../shared/feature-flag';
+  import type { Snippet } from 'svelte';
   import { onMount } from 'svelte';
+  import { isFeatureEnabled } from '../../shared/feature-flag.js';
 
-  let { flagName, forceLive = false, negate = false } = $props();
+  let { flagName, forceLive = false, negate = false, children }: { flagName: string; forceLive?: boolean; negate?: boolean; children?: Snippet } = $props();
 
   let enabled = $state(false);
 
@@ -14,5 +15,7 @@
 </script>
 
 {#if shouldRender}
-  <slot {enabled} />
+  {#if children}
+    {@render children()}
+  {/if}
 {/if}

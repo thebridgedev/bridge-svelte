@@ -5,12 +5,18 @@
     import { createRouteGuard } from '../auth/route-guard.js';
     import { featureFlags } from '../shared/feature-flag.js';
     import { auth } from '../shared/services/auth.service.js';
+    import type { NblocksConfig } from '../shared/types/config.js';
+    import { initConfig } from './stores/config.store.js';
   
-    // Use $props to declare props
-    let { routeConfig, onBootstrapComplete }: {
+    // Props: require config to be passed by consumer
+    let { routeConfig, config, onBootstrapComplete }: {
       routeConfig: RouteGuardConfig,
-      onBootstrapComplete: () => void
+      config: NblocksConfig,
+      onBootstrapComplete?: () => void
     } = $props();
+
+    // Initialize configuration immediately
+    initConfig(config);
   
     const { login } = auth;
     const guard = createRouteGuard({ config: routeConfig });

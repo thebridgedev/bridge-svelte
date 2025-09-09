@@ -2,7 +2,6 @@
 import { createRemoteJWKSet, errors as joseErrors, jwtVerify } from 'jose';
 import { derived, get, writable } from 'svelte/store';
 import { getConfig } from '../client/stores/config.store';
-import type { NblocksConfig } from '../types/config';
 import { auth } from './services/auth.service.js';
 
 export interface IDToken {
@@ -70,16 +69,25 @@ function transformIDToken(payload: IDToken): Profile {
   };
 }
 
-const config: NblocksConfig = getConfig();
-const jwks = createRemoteJWKSet(new URL(`${config.authBaseUrl}/.well-known/jwks.json`));
-const expectedIssuer = config.authBaseUrl;
-const expectedAudience = config.appId;
+let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+let expectedIssuer: string | null = null;
+let expectedAudience: string | null = null;
+
+function ensureVerifier() {
+  const config = getConfig();
+  if (!jwks || expectedIssuer !== config.authBaseUrl || expectedAudience !== config.appId) {
+    jwks = createRemoteJWKSet(new URL(`${config.authBaseUrl}/.well-known/jwks.json`));
+    expectedIssuer = config.authBaseUrl;
+    expectedAudience = config.appId;
+  }
+}
 
 async function verifyToken(idToken: string): Promise<Profile | null> {
   try {
-    const { payload } = await jwtVerify(idToken, jwks, {
-      issuer: expectedIssuer,
-      audience: expectedAudience,
+    ensureVerifier();
+    const { payload } = await jwtVerify(idToken, jwks as NonNullable<typeof jwks>, {
+      issuer: expectedIssuer as string,
+      audience: expectedAudience as string,
     });
 
     return transformIDToken(payload as IDToken);

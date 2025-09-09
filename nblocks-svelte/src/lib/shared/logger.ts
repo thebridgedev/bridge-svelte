@@ -17,7 +17,7 @@ function isDebugEnabled(): boolean {
 
 export const logger = {
   debug: (...args: unknown[]) => {    
-    if (isDebugEnabled()) console.debug(...args);
+    if (isDebugEnabled()) console.log(...args);
   },
   log: (...args: unknown[]) => {
     if (isDebugEnabled()) console.log(...args);

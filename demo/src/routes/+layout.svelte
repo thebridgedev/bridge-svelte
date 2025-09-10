@@ -9,12 +9,12 @@
   let loading = $state(true);
   const routeConfig: RouteGuardConfig = {
     rules: [
-      { match: '/', public: true },
+      
       { match: '/login', public: true },
       { match: new RegExp('^/auth/oauth-callback$'), public: true },
       { match: new RegExp('^/docs($|/)'), public: true },
-      { match: '/beta*', featureFlag: 'beta-feature', redirectTo: '/' },
-      { match: '/*', featureFlag:'global-feature', redirectTo: '/login'}
+      // { match: '/beta*', featureFlag: 'beta-feature', redirectTo: '/' },
+      // { match: '/*', featureFlag:'global-feature', redirectTo: '/login'}
     ],
     defaultAccess: 'protected'
   };

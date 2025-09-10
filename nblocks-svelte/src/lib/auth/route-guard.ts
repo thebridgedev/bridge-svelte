@@ -1,6 +1,7 @@
 import { get } from 'svelte/store';
 import { isFeatureEnabled } from '../shared/feature-flag.js';
 import { auth } from '../shared/services/auth.service.js';
+import { logger } from '../shared/logger.js';
 
 const { isAuthenticated, createLoginUrl } = auth;
 
@@ -38,8 +39,8 @@ function toRegExp(pattern: string | RegExp): RegExp {
   return new RegExp(`^${escaped}$`);
 }
 
-function findMatchingRule(pathname: string, config: RouteGuardConfig): RouteRule | null {  
-  for (const rule of config.rules) {    
+function findMatchingRule(pathname: string, config: RouteGuardConfig): RouteRule | null {    
+  for (const rule of config.rules) {       
     if (toRegExp(rule.match).test(pathname)) {      
       return rule;
     }
@@ -64,24 +65,38 @@ async function evaluateFlagRequirement(req: FlagRequirement): Promise<boolean> {
 
 export function createRouteGuard({ config }: { config: RouteGuardConfig }) {
   function isPublicRoute(pathname: string): boolean {
-    const rule = findMatchingRule(pathname, config);
-    if (rule) return !!rule.public;
-    return (config.defaultAccess ?? 'protected') === 'public';
+    const rule = findMatchingRule(pathname, config);    
+    if (rule) {
+      logger.debug(`[route-guard] path ${pathname} is ${rule.public ? 'public' : 'protected'} by the rule ${rule.match}`);
+      return !!rule.public;
+    }
+    logger.debug(`[route-guard] path ${pathname} is ${config.defaultAccess === 'public' ? 'public' : 'protected'} by the default access ${config.defaultAccess}`);   
+    const isPublicByDefault = (config.defaultAccess ?? 'protected') === 'public';    
+    return isPublicByDefault;
   }
 
-  function isProtectedRoute(pathname: string): boolean {
+  function isProtectedRoute(pathname: string): boolean {    
     return !isPublicRoute(pathname);
   }
 
-  function shouldRedirectToLogin(pathname: string): boolean {
-    return isProtectedRoute(pathname) && !get(isAuthenticated);
+  function shouldRedirectToLogin(pathname: string): boolean {  
+    const isProtected = isProtectedRoute(pathname);
+    const authenticated = get(isAuthenticated);
+    if(isProtectedRoute(pathname) && !get(isAuthenticated)) {
+      logger.debug(`[route-guard] path ${pathname} is protected and user is not authenticated`);  
+      return true;
+    }
+    logger.debug(`[route-guard] path ${pathname} is ${isProtected?'protected':'public'} and user ${authenticated?'authenticated':'not authenticated'}`);  
+    return false;
   }
 
   async function checkRouteRestrictions(pathname: string): Promise<string | null> {    
     const rule = findMatchingRule(pathname, config);
+    
     if (!rule) return null;    
-    if (rule.featureFlag) {
+    if (rule.featureFlag) {      
       const ok = await evaluateFlagRequirement(rule.featureFlag);
+      logger.debug(`[route-guard] path ${pathname} is restricted by the feature flag ${rule.featureFlag}`);
       if (!ok) return rule.redirectTo ?? '/';
     }
     return null;
@@ -101,12 +116,13 @@ export function createRouteGuard({ config }: { config: RouteGuardConfig }) {
       { type: 'allow' } |
       { type: 'login', loginUrl: string } |
       { type: 'redirect', to: string }
-    > {
-      if (shouldRedirectToLogin(pathname)) {
+    > {      
+      if (shouldRedirectToLogin(pathname)) {             
         return { type: 'login', loginUrl: getLoginRedirect() };
-      }       
+      }             
       const redirectTo = await checkRouteRestrictions(pathname);
       if (redirectTo) {
+        
         return { type: 'redirect', to: redirectTo };
       }
       return { type: 'allow' };

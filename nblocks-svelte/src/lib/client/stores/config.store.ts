@@ -3,6 +3,11 @@ import { derived, writable } from 'svelte/store';
 import { logger } from '../../shared/logger.js';
 import type { NblocksConfig } from '../../shared/types/config.js';
 
+interface ConfigStoreState {
+  config: NblocksConfig | null;
+  loaded: boolean;
+}
+
 const DEFAULT_CONFIG: Partial<NblocksConfig> = {
   authBaseUrl: 'https://auth.nblocks.cloud',
   backendlessBaseUrl: 'https://backendless.nblocks.cloud',
@@ -12,42 +17,49 @@ const DEFAULT_CONFIG: Partial<NblocksConfig> = {
   debug: false
 };
 
-// Writable config store, starts uninitialized until consumer calls initConfig
-export const nblocksConfig = writable<NblocksConfig | null>(null);
+const { subscribe, set, update } = writable<ConfigStoreState>({
+  config: null,
+  loaded: false
+});
 
-// Read-only convenience
-export const readonlyConfig = derived(nblocksConfig, ($config) => $config);
+export const nblocksConfig = {
+  subscribe,
+  initConfig: (config: NblocksConfig) => {
+    if (!config?.appId) {
+      throw new Error('nBlocks appId is required but was not provided in the configuration.');
+    }
 
-// Quick flag to know if config is ready
-export const configReady = derived(nblocksConfig, ($c) => !!$c?.appId);
+    const merged = {
+      ...DEFAULT_CONFIG,
+      ...config
+    } as NblocksConfig;
 
-// Runtime initialization with external config (required)
-export function initConfig(config: NblocksConfig) {
-  if (!config?.appId) {
-    throw new Error('nBlocks appId is required but was not provided in the configuration.');
+    // Set the full config and mark it as loaded
+    set({
+      config: merged,
+      loaded: true
+    });
+
+    // This will only print when debug is true
+    logger.debug('[config] initialized', merged);
   }
-  const merged = {
-    ...DEFAULT_CONFIG,
-    ...config
-  } as NblocksConfig;
+};
 
-  // Update sync cache first so logger can read debug flag
-  _currentConfig = merged;
-  nblocksConfig.set(merged);
-
-  // This will only print when debug is true (logger checks getConfig().debug)
-  logger.debug('[config] initialized', merged);  
-}
+// Convenience derived stores
+export const configReady = derived(nblocksConfig, ($state) => $state.loaded);
+export const readonlyConfig = derived(nblocksConfig, ($state) => $state.config);
 
 // Synchronous access to latest config value
 let _currentConfig: NblocksConfig | null = null;
-nblocksConfig.subscribe((cfg) => {
-  if (cfg) _currentConfig = cfg;
+nblocksConfig.subscribe(($state) => {
+  if ($state.loaded) {
+    _currentConfig = $state.config;
+  }
 });
 
 export function getConfig(): NblocksConfig {
   if (!_currentConfig) {
-    throw new Error('Config has not been initialized. Call initConfig(...) early in app startup.');
+    throw new Error('Config has not been initialized. Call  initConfig(...) early in app startup.');
   }
   return _currentConfig;
 }

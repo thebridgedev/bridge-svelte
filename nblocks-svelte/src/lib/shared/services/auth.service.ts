@@ -60,13 +60,31 @@ function createLoginUrl(options: { redirectUri?: string } = {}): string {
 async function handleCallback(code: string) {
   const config = getConfig();
   const url = `${config.authBaseUrl}/token/code/${config.appId}`;
+
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code })
+    body: JSON.stringify({
+      code,
+      ...(config.callbackUrl ? { redirectUri: config.callbackUrl } : {})
+    })
   });
 
-  if (!response.ok) throw new Error('Failed to exchange code for tokens');
+  if (!response.ok) {
+    let errorMessage = 'Failed to exchange code for tokens';
+    try {
+      const errorData = await response.json();
+      if (errorData && errorData.message) {
+        errorMessage = `Failed to exchange code for tokens: ${errorData.message}`;
+      } else if (errorData && typeof errorData === 'string') {
+        errorMessage = `Failed to exchange code for tokens: ${errorData}`;
+      }
+    } catch (e) {
+      // If parsing JSON fails, use the generic message or response status text
+      errorMessage = `Failed to exchange code for tokens: ${response.statusText || 'Unknown error'}`;
+    }
+    throw new Error(errorMessage);
+  }
   const data = await response.json();
   setTokens({
     accessToken: data.access_token,

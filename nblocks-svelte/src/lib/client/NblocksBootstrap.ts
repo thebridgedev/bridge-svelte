@@ -1,13 +1,12 @@
 // src/lib/nblocks/bootstrap.ts
 
-import { browser } from '$app/environment';
 import { redirect } from '@sveltejs/kit';
 import { logger } from '../../index.js';
 import type { RouteGuardConfig } from '../auth/route-guard.js';
 import { createRouteGuard } from '../auth/route-guard.js';
 import { nblocksConfig } from '../client/stores/config.store.js';
 import { featureFlags } from '../shared/feature-flag.js';
-import { auth, maybeRefreshNow, startAutoRefresh } from '../shared/services/auth.service.js';
+import { auth, maybeRefreshNow } from '../shared/services/auth.service.js';
 import type { NblocksConfig } from '../shared/types/config.js';
 
 export async function nblocksBootstrap(url: URL, config: NblocksConfig, routeConfig: RouteGuardConfig) {
@@ -60,8 +59,4 @@ logger.debug('[nblocksBootstrap] decision', decision);
     throw redirect(303, decision.to);
   }
     logger.debug('[nblocksBootstrap] in the end');
-  // 5. Start auto-refresh on the client side
-  if (browser) {
-    startAutoRefresh();
-  }
 }

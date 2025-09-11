@@ -1,7 +1,9 @@
-import type { LayoutLoad } from './$types';
+export const ssr = false;
+
+import type { RouteGuardConfig } from '@nblocks-svelte/lib/auth/route-guard';
 import { nblocksBootstrap } from '@nblocks-svelte/lib/client/NblocksBootstrap'; // Import the new function
 import type { NblocksConfig } from '@nblocks-svelte/lib/shared/types/config';
-import type { RouteGuardConfig } from '@nblocks-svelte/lib/auth/route-guard';
+import type { LayoutLoad } from './$types';
 
 export const load: LayoutLoad = async ({ url }) => {  
 
@@ -25,7 +27,7 @@ export const load: LayoutLoad = async ({ url }) => {
       { match: new RegExp('^/docs($|/)'), public: true },
       // { match: '/beta*', featureFlag: 'beta-feature', redirectTo: '/' },
       // { match: '/*', featureFlag:'global-feature', redirectTo: '/login'}
-    ],
+    ],,
     defaultAccess: 'protected'
   };
 

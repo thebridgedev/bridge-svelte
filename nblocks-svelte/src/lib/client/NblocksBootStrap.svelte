@@ -1,10 +1,11 @@
 <script lang="ts">
+  import { browser } from '$app/environment';
   import { beforeNavigate } from '$app/navigation';
   import { onMount } from 'svelte';
   import type { RouteGuardConfig } from '../auth/route-guard.js';
   import { createRouteGuard } from '../auth/route-guard.js';
   import { featureFlags } from '../shared/feature-flag.js';
-  import { auth } from '../shared/services/auth.service.js';
+  import { auth, maybeRefreshNow, startAutoRefresh } from '../shared/services/auth.service.js';
   import type { NblocksConfig } from '../shared/types/config.js';
   import { nblocksConfig } from './stores/config.store.js';
 
@@ -17,6 +18,7 @@
 
   // Initialize configuration immediately using the new store's method
   nblocksConfig.initConfig(config);
+ 
 
   const { login } = auth;
   const guard = createRouteGuard({ config: routeConfig });
@@ -37,12 +39,19 @@
 
   onMount(async () => {
     const path = window.location.pathname;
+    // Ensure tokens are fresh if needed before flags/guard
+    await maybeRefreshNow();
+
+    // Load flags prior to guard if your guard depends on them
+    await featureFlags.refresh();
+
     await handleRoute(path);
-    featureFlags.refresh();
-    // Call the optional callback once the async logic is complete
-    if (onBootstrapComplete) {
-      onBootstrapComplete();
-    }
+
+  //   if (browser) {
+  //   startAutoRefresh();
+  // }
+    // 5) Signal completion
+    if (onBootstrapComplete) onBootstrapComplete();
   });
 
   beforeNavigate(async ({ to, cancel }) => {

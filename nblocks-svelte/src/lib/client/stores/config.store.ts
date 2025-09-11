@@ -14,7 +14,8 @@ const DEFAULT_CONFIG: Partial<NblocksConfig> = {
   teamManagementUrl: 'https://backendless.nblocks.cloud/user-management-portal/users',
   defaultRedirectRoute: '/',
   loginRoute: '/login',
-  debug: false
+  debug: false,
+  callbackUrl: '/auth/oauth-callback',
 };
 
 const { subscribe, set, update } = writable<ConfigStoreState>({

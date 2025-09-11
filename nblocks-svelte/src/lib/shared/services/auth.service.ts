@@ -132,16 +132,25 @@ function getTokenExpiry(token: string): number | null {
   }
 }
 
+function shouldRefreshNow(accessToken: string | null): boolean {
+  if (!accessToken) return false;
+  const exp = getTokenExpiry(accessToken);
+  if (!exp) return false;
+  const timeUntilExpiry = exp - Date.now();
+  return timeUntilExpiry <= REFRESH_THRESHOLD_MS;
+}
+
 function scheduleTokenRefresh() {
   if (!browser) return;
   const current = get(tokenStore);
-  const exp = current?.accessToken ? getTokenExpiry(current.accessToken) : null;
+  const accessToken = current?.accessToken ?? null;
+  const exp = accessToken ? getTokenExpiry(accessToken) : null;
   if (!exp) return;
 
   const timeUntilExpiry = exp - Date.now();
   logger.debug('[auth] timeUntilExpiry and refresh threshold', timeUntilExpiry, REFRESH_THRESHOLD_MS);
   
-  if (timeUntilExpiry <= REFRESH_THRESHOLD_MS) {
+  if (shouldRefreshNow(accessToken)) {
     logger.debug('[auth] refreshing now');
     refreshNow();
   } else {
@@ -176,8 +185,19 @@ function stopAutoRefresh() {
   refreshInterval = null;
 }
 
-if (browser) {
-  startAutoRefresh();
+export async function maybeRefreshNow(): Promise<boolean> {
+  const current = get(tokenStore);
+  const accessToken = current?.accessToken ?? null;
+  const refresh = current?.refreshToken ?? null;
+  if (!accessToken || !refresh) return !!accessToken;
+
+  if (shouldRefreshNow(accessToken)) {
+    const newTokens = await refreshToken(refresh);
+    if (newTokens) return true;
+    clearTokens();
+    return false;
+  }
+  return true;
 }
 
 // --- Derived values ---
@@ -198,3 +218,5 @@ export const auth = {
   createLoginUrl,
   getToken: () => get(tokenStore)
 };
+
+export { startAutoRefresh, stopAutoRefresh };

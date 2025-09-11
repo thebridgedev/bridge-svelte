@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
   import { goto } from '$app/navigation';
   import { auth } from '@nblocks-svelte/lib/shared/services/auth.service';
   import { onMount } from 'svelte';
@@ -15,4 +15,4 @@
     }
     goto('/');
   });
-</script> 
+</script>  -->

@@ -12,7 +12,7 @@ import type { NblocksConfig } from '../shared/types/config.js';
 export async function nblocksBootstrap(url: URL, config: NblocksConfig, routeConfig: RouteGuardConfig) {
  
   // 1. Initialize configuration (synchronously)
-  nblocksConfig.initConfig(config);
+  nblocksConfig.initConfig(config, routeConfig);
    logger.debug('[IMAN nblocksBootstrap] pathname', url.pathname);
   // 1a. If we're on the OAuth callback route, let the dedicated route handle it
   try {
@@ -48,7 +48,7 @@ export async function nblocksBootstrap(url: URL, config: NblocksConfig, routeCon
 
   // 4. Handle route guarding and redirects
   logger.debug('[nblocksBootstrap] createRouteGuard');
-  const guard = createRouteGuard({ config: routeConfig });
+  const guard = createRouteGuard();
   logger.debug('[nblocksBootstrap] guard.getNavigationDecision');
   const decision = await guard.getNavigationDecision(url.pathname);
 logger.debug('[nblocksBootstrap] decision', decision);

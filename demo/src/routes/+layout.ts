@@ -27,7 +27,7 @@ export const load: LayoutLoad = async ({ url }) => {
       { match: new RegExp('^/docs($|/)'), public: true },
       // { match: '/beta*', featureFlag: 'beta-feature', redirectTo: '/' },
       // { match: '/*', featureFlag:'global-feature', redirectTo: '/login'}
-    ],,
+    ],
     defaultAccess: 'protected'
   };
 

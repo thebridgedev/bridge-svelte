@@ -1,7 +1,6 @@
 <script lang="ts">  
   import { beforeNavigate } from '$app/navigation';
   import { onMount } from 'svelte';
-  import type { RouteGuardConfig } from '../auth/route-guard.js';
   import { createRouteGuard } from '../auth/route-guard.js';
   import { auth, startAutoRefresh } from '../shared/services/auth.service.js';
 
@@ -12,7 +11,7 @@
   } = $props();
 
   const { login } = auth;
-  const guard = createRouteGuard({ config: routeConfig });
+  const guard = createRouteGuard();
 
   async function handleRoute(pathname: string, cancel?: () => void) {
     const decision = await guard.getNavigationDecision(pathname);    

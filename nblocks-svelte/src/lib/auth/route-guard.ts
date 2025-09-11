@@ -1,7 +1,8 @@
 import { get } from 'svelte/store';
+import { getRouteGuardConfig } from '../client/stores/config.store.js';
 import { isFeatureEnabled } from '../shared/feature-flag.js';
-import { auth } from '../shared/services/auth.service.js';
 import { logger } from '../shared/logger.js';
+import { auth } from '../shared/services/auth.service.js';
 
 const { isAuthenticated, createLoginUrl } = auth;
 
@@ -63,7 +64,8 @@ async function evaluateFlagRequirement(req: FlagRequirement): Promise<boolean> {
   return true;
 }
 
-export function createRouteGuard({ config }: { config: RouteGuardConfig }) {
+export function createRouteGuard() {
+  const config = getRouteGuardConfig();
   function isPublicRoute(pathname: string): boolean {
     const rule = findMatchingRule(pathname, config);    
     if (rule) {

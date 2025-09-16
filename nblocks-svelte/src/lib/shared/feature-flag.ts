@@ -1,6 +1,7 @@
 import { get, writable } from 'svelte/store';
 import { getConfig } from '../client/stores/config.store.js';
 import { auth } from './services/auth.service.js';
+import { logger } from '../shared/logger.js';
 
 const cacheValidityMs = 5 * 60 * 1000;
 
@@ -44,7 +45,7 @@ export async function isFeatureEnabled(flag: string, forceLive = false): Promise
   
 
   if (!appId) return false;
-
+  logger.debug(`[feature-flag] is flag:${flag}: enabled: ${get(cachedFlags)[flag]}` );
   if (!forceLive && Date.now() - lastFetchTime < cacheValidityMs) {
     return get(cachedFlags)[flag] ?? false;
   }

@@ -95,10 +95,11 @@ export function createRouteGuard() {
   async function checkRouteRestrictions(pathname: string): Promise<string | null> {    
     const rule = findMatchingRule(pathname, config);
     
-    if (!rule) return null;    
-    if (rule.featureFlag) {      
+    if (!rule) return null;
+    
+    if (rule.featureFlag) {
       const ok = await evaluateFlagRequirement(rule.featureFlag);
-      logger.debug(`[route-guard] path ${pathname} is restricted by the feature flag ${rule.featureFlag}`);
+      logger.debug(`[route-guard] path ${pathname} is restricted by the feature flag ${rule.featureFlag} and flag requirment evaluated to ${ok}`);
       if (!ok) return rule.redirectTo ?? '/';
     }
     return null;

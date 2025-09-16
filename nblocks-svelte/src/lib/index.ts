@@ -1,4 +1,5 @@
 // Core stores and setup
+export * from './client/NblocksBootstrap.js';
 export * from './client/stores/config.store.js';
 export * from './client/stores/profile.store.js';
 

@@ -20,12 +20,12 @@ export const load: LayoutLoad = async ({ url }) => {
 
   const routeConfig: RouteGuardConfig = {
     rules: [
-    //   { match: '/', public: true },
+      { match: '/', public: true },
       { match: '/login', public: true },
       { match: new RegExp('^/auth/oauth-callback$'), public: true },
     //   { match: new RegExp('^/.well-known*'), public: true },
       { match: new RegExp('^/docs($|/)'), public: true },
-      // { match: '/beta*', featureFlag: 'beta-feature', redirectTo: '/' },
+      { match: '/beta*', featureFlag: 'test-global-admin-access', redirectTo: '/',public: true },
       // { match: '/*', featureFlag:'global-feature', redirectTo: '/login'}
     ],
     defaultAccess: 'protected'

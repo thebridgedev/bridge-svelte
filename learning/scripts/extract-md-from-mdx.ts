@@ -42,8 +42,14 @@ async function main() {
       await fs.mkdir(path.dirname(outputPath), { recursive: true });
       
       const absoluteInputPath = path.resolve(inputPath);
-      const markdownContent = await mdxToMd(absoluteInputPath);
+      let markdownContent = await mdxToMd(absoluteInputPath);
       
+      // Clean up residual frontmatter-like lines
+      markdownContent = markdownContent
+        .replace(/^---\s*$/m, '')
+        .replace(/^## title:.*$/m, '')
+        .trim();
+
       await Bun.write(outputPath, markdownContent);
       console.log(`✅ Converted ${inputPath} -> ${outputPath}`);
     }

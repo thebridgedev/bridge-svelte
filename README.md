@@ -3,14 +3,14 @@
 This repository contains both bridge Bridge Svelte library and a demo application showcasing its features.
 
 ## Quick Links
-- [Quickstart Guide](learning/quickstart.md) - Get started quickly with Bridge in your Svelte application
-- [Examples](learning/examples.md) - Detailed examples of Bridge features
+- [Quickstart Guide](learning/md/quickstart.md) - Get started quickly with Bridge in your Svelte application
+- [Examples](learning/md/examples.md) - Detailed examples of Bridge features
 
 ## Table of Contents
 
 - [Installation](#installation)
 - [Configuration](#configuration)
-- [Aubridgentication](#aubridgentication)
+- [Authentication](#Authentication)
 - [Feature Flags](#feature-flags)
 - [Demo Application](#demo-application)
 
@@ -22,28 +22,55 @@ npm install @bridge/svelte
 
 ## Configuration
 
-For detailed configuration instructions, see bridge [Quickstart Guide](learning/quickstart.md).
+The Bridge SvelteKit SDK is configured by passing a `BridgeConfig` object to the `bridgeBootstrap` function in your root `+layout.ts` file.
 
-### Environment Variables
+Here's an example:
 
-The following environment variables can be configured:
+```typescript
+import { bridgeBootstrap, type BridgeConfig } from '@nebulr/bridge-svelte';
 
-```env
-VITE_BRIDGE_APP_ID=your_app_id
-VITE_BRIDGE_AUTH_BASE_URL=https://auth.nblocks.cloud
-VITE_BRIDGE_BACKENDLESS_BASE_URL=https://backendless.nblocks.cloud
-VITE_BRIDGE_CALLBACK_URL=your_callback_url
-VITE_BRIDGE_TEAM_MANAGEMENT_URL=https://backendless.nblocks.cloud/user-management-portal/users
-VITE_BRIDGE_DEFAULT_REDIRECT_ROUTE=/
-VITE_BRIDGE_LOGIN_ROUTE=/login
-VITE_BRIDGE_DEBUG=false
+export const load = async ({ url }) => {
+  const config: BridgeConfig = {
+    appId: 'your_app_id',
+    callbackUrl: 'http://localhost:5173/auth/oauth-callback',
+    defaultRedirectRoute: '/protected',
+    debug: true,
+  };
+
+  await bridgeBootstrap(url, config);
+};
 ```
 
-## Aubridgentication
+### Essential Configuration
 
-For aubridgentication examples and implementation details, see:
-- [Quickstart Guide - Aubridgentication](learning/quickstart.md#aubridgentication)
-- [Examples - Aubridgentication](learning/examples.md#aubridgentication)
+These are the primary options you will need to configure for your application.
+
+*   `appId` (**required** `string`): Your unique application identifier from the Bridge dashboard.
+*   `callbackUrl` (`string`): The URL that Bridge will redirect to after a user successfully authenticates.
+    *   **Default**: `window.location.origin + '/auth/callback'`
+*   `defaultRedirectRoute` (`string`): The route to redirect users to after a successful login.
+    *   **Default**: `'/'`
+*   `debug` (`boolean`): Set to `true` to enable detailed logging from the Bridge SDK to the console.
+    *   **Default**: `false`
+
+### Advanced Configuration
+
+These options are typically only needed for development or advanced use cases. In most production scenarios, you can rely on their default values.
+
+*   `authBaseUrl` (`string`): The base URL for the Bridge authentication service.
+    *   **Default**: `'https://auth.nblocks.cloud'`
+*   `backendlessBaseUrl` (`string`): The base URL for Bridge's backendless services, including feature flags.
+    *   **Default**: `'https://backendless.nblocks.cloud'`
+*   `loginRoute` (`string`): The route within your application that serves as the login page. The SDK will redirect users here if they attempt to access a protected route without being authenticated.
+    *   **Default**: `'/login'`
+*   `teamManagementUrl` (`string`): The URL for the Bridge team management portal.
+    *   **Default**: `'https://backendless.nblocks.cloud'`
+
+## Authentication
+
+For authentication examples and implementation details, see:
+- [Quickstart Guide - authentication](learning/md/quickstart.md#authentication)
+- [Examples - authentication](learning/md/examples.md#authentication)
 
 The library provides:
 - Login & logout flow
@@ -54,7 +81,7 @@ The library provides:
 ## Feature Flags
 
 For feature flag examples and implementation details, see:
-- [Examples - Feature Flags](learning/examples.md#feature-flags)
+- [Examples - Feature Flags](learning/md/examples.md#feature-flags)
 
 The library supports:
 - Basic feature flag usage
@@ -65,7 +92,7 @@ The library supports:
 
 ## Demo Application
 
-The demo application in this repository contains runnable examples of bridge usage patterns found in bridge [examples](learning/examples.md) documentation.
+The demo application in this repository contains runnable examples of bridge usage patterns found in bridge [examples](learning/md/examples.md) documentation.
 
 To run bridge demo:
 
@@ -78,7 +105,7 @@ bun run dev
 The demo showcases:
 - Feature flag implementation
 - Team management features
-- Aubridgentication flows
+- authentication flows
 - Integration examples
 
 ## Contributing

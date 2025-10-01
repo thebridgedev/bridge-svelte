@@ -1,7 +1,3 @@
----
-
-## title: Bridge Svelte Quickstart Guide
-
 # Bridge Svelte Quickstart Guide
 
 This guide shows how to get started with The Bridge Svelte plugin.

@@ -4,10 +4,15 @@
   "workspaces": [
     "bridge-svelte",
     "demo"
-  ],"scripts": {
+  ],
+  "scripts": {
     "build": "bun run --filter demo build",
     "build:bridge": "bun run --filter @nebulr/bridge-svelte build",
     "dev": "bun run --filter demo dev",
-    "package": "bun run --filter @nebulr/bridge-svelte package"    
+    "package": "bun run --filter @nebulr/bridge-svelte package",
+    "build:docs": "bun learning/scripts/extract-md-from-mdx.ts learning/mdx/ learning/md/"
+  },
+  "devDependencies": {
+    "mdx-to-md": "^0.5.2"
   }
 }

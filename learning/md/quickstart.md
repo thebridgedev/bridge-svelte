@@ -1,53 +1,68 @@
-// This file should be moved to bridge learning directory.
+---
+
+## title: Bridge Svelte Quickstart Guide
 
 # Bridge Svelte Quickstart Guide
 
+This guide shows how to get started with The Bridge Svelte plugin.
+
 ## Installation
+
 Install bridge bridge svelte plugin
 
 ```bash
 npm install @nebulr/bridge-svelte
+
 ```
 
 ## Configuration
-Add bridge variable VITE_BRIDGE_APP_ID to your .env file
 
-> **Note:** You can find your app ID in bridge Bridge Control Center by navigating to bridge 'Keys' section.
+You initialize Bridge inside `+layout.svelte`. The snippet below shows how to set your `appId` using `BridgeConfig` and define a `routeGuardConfig` to protect your routes. For this example, we will protect all routes.
 
-Use bridge `BridgeBootStrap` component to initialize your app with a `routeConfig`:
+Finally, you initialize bridge configs using `bridgeBootstrap`.
 
-```ts
-<!-- src/routes/+layout.svelte -->
+```typescript
+// src/routes/+layout.ts
+
+export const ssr = false;
+
+import type { LayoutLoad } from './$types';
+import type { BridgeConfig, RouteGuardConfig} from '@nebulr/bridge-svelte';
+import { bridgeBootstrap } from '@nebulr/bridge-svelte';
+
+export const load: LayoutLoad = async ({ url }) => {  
+
+  //Initialize bridge bridge
+  await bridgeBootstrap(url, "YOUR_APP_ID");
+
+}
+
+```
+
+Inside your +layout.svelte add BridgeBootstrap
+
+```svelte
+
 <script lang="ts">
-  import BridgeBootStrap from '@bridge-svelte/client/BridgeBootStrap.svelte';
-  let loading = $state(true);
-
-  // Define access rules
-  const routeConfig = {
-    rules: [
-      { match: '/', public: true },
-      { match: new RegExp('^/auth/oauth-callback$'), public: true }
-    ],
-    defaultAccess: 'protected'
-  };
-    
-  function onBootstrapComplete() {
-    loading = false;
-  }
+	import Header from './Header.svelte';
+	import '../app.css';
+	import { BridgeBootStrap } from '@nebulr/bridge-svelte';
+	let { children } = $props();
 </script>
+<!--  Add this right at bridge beginning  -->
+<BridgeBootStrap></BridgeBootStrap>
+	<main>
+		{@render children()}
+	</main>
 
-<BridgeBootStrap routeConfig={routeConfig} onBootstrapComplete={onBootstrapComplete} />
 
-{#if !loading}
-  <slot />
-{/if}
 ```
 
 ## Aubridgentication
 
-### Redirecting to bridge login
+### Redirecting to Bridge login
 
-The simplest way to add login functionality to your app is to use bridge auth service which will redirect you to bridge bridge login screen
+The simplest way to add login functionality to your app is to use bridge auth service which will redirect you to bridge Bridge login screen
 
 ```ts
 <!-- src/components/LoginButton.svelte -->
@@ -59,20 +74,19 @@ The simplest way to add login functionality to your app is to use bridge auth se
 <button onclick={() => login()}>
   Sign In
 </button>
+
 ```
 
-### Handling bridge callback
+## Handling bridge callback
 
-x
+`/auth/oauth-callback` should be publicly accessible per bridge configuration above.
 
 ## Protecting Routes
 
 Use bridge `BridgeBootStrap` component to define public routes as shown in bridge configuration section.
 
-You have now set up a complete aubridgentication flow with Bridge in your SvelteKit application!
-Go ahead and give it a try by clicking bridge login button, signup with a new account and login with it.
+## Wrap-up
 
-For more detailed examples and to explore bridge full capabilities of bridge bridge-svelte plugin, please refer to bridge [examples documentation](examples.md).
+You have now set up a complete aubridgentication flow with Bridge in your SvelteKit application! Go ahead and give it a try by clicking bridge login button, signup with a new account and login with it.
 
-
-
+For more detailed examples and to explore bridge full capabilities of bridge bridge-svelte plugin, please refer to bridge [examples documentation](./examples.md).

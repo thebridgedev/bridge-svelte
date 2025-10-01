@@ -5,7 +5,7 @@
       "moduleResolution": "Node",
       "baseUrl": ".",
       "paths": {
-        "@nblocks-svelte": ["nblocks-svelte/src"]
+        "@bridge-svelte": ["bridge-svelte/src"]
       },
       "esModuleInterop": true,
       "strict": true

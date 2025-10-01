@@ -1,6 +1,6 @@
 <script lang="ts">	
-  import FeatureFlag from '@nblocks-svelte/lib/client/components/FeatureFlag.svelte';  
   import ConfigStatus from '$lib/components/ConfigStatus.svelte';
+  import FeatureFlag from '@bridge-svelte/lib/client/components/FeatureFlag.svelte';
     // import FeatureFlagAPIExample from '../lib/components/FeatureFlagAPIExample.svelte';
   
 </script>
@@ -9,15 +9,15 @@
   <div class="container">
     <div class="content">
       <div class="hero">
-        <h1 class="heading-xl">Welcome to the nBlocks Svelte Demo</h1>
+        <h1 class="heading-xl">Welcome to bridge Bridge Svelte Demo</h1>
         <p class="text-lead">
-          This demo showcases the integration of nBlocks features in a Svelte application.
+          This demo showcases bridge integration of Bridge features in a Svelte application.
         </p>
       </div>
 
       <ConfigStatus />
       <div class="features-overview">
-        <h2 class="heading-lg">The code demonstrates the following features</h2>
+        <h2 class="heading-lg">The code demonstrates bridge following features</h2>
         <div class="features-grid">
           <div class="feature-group">
             <h3 class="heading-md">🚦 Feature Flags</h3>
@@ -40,7 +40,7 @@
           </div>
 
           <div class="feature-group">
-            <h3 class="heading-md">🔐 Authentication</h3>
+            <h3 class="heading-md">🔐 Aubridgentication</h3>
             <ul>
               <li>Login & logout flow</li>
               <li>Protected routes</li>
@@ -110,8 +110,8 @@
             <h3 class="heading-md">Server-Side Feature Flag</h3>
             <div class="card">
               <p class="mb-4">
-                Server-side feature flags are rendered on the server and cannot be directly embedded in client components.
-                Click the link below to see the server-side feature flag example:
+                Server-side feature flags are rendered on bridge server and cannot be directly embedded in client components.
+                Click bridge link below to see bridge server-side feature flag example:
               </p>
               <a href="/server-feature-flag-example" class="nav-link">
                 View Server-Side Feature Flag Example

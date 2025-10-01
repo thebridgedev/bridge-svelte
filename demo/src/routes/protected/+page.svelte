@@ -1,11 +1,8 @@
 <script lang="ts">
-  import { get } from 'svelte/store';
-  import { goto } from '$app/navigation';
-  import { auth } from '@nblocks-svelte/lib/shared/services/auth.service';
-  import { onMount } from 'svelte';
-  import { profileStore } from '@nblocks-svelte/lib/shared/profile';
+  import { profileStore } from '@bridge-svelte/lib/shared/profile';
+  import { auth } from '@bridge-svelte/lib/shared/services/auth.service';
 
-  const { isAuthenticated } = auth;
+  const { isAubridgenticated } = auth;
   const { profile, error, isOnboarded, hasMultiTenantAccess } = profileStore;
 
 </script>
@@ -13,15 +10,15 @@
 <div class="container">
   <h1>Protected Page</h1>
   
-  {#if $isAuthenticated}
+  {#if $isAubridgenticated}
     <div class="content">
       <p class="message">
         This is a protected page. You can only see this content when you're logged in.
       </p>
       
       <div class="info-card">
-        <h2>Authentication Status</h2>
-        <p>You are currently authenticated</p>
+        <h2>Aubridgentication Status</h2>
+        <p>You are currently aubridgenticated</p>
         <h2>Your Profile</h2>
         <p><strong>Name:</strong> {$profile?.fullName}</p>
         <p><strong>Email:</strong> {$profile?.email}</p>

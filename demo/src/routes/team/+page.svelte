@@ -1,5 +1,5 @@
 <script lang="ts">
-  import TeamManagement from '@nblocks-svelte/lib/client/components/team/TeamManagement.svelte';
+  import TeamManagement from '@bridge-svelte/lib/client/components/team/TeamManagement.svelte';
 </script>
 
 <div class="team-page">

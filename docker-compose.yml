@@ -1,13 +1,13 @@
 services:
-  nblocks-svelte:
-    container_name: nblocks-svelte
-    image: nblocks-svelte:dev
+  bridge-svelte:
+    container_name: bridge-svelte
+    image: bridge-svelte:dev
     build:
       target: dev
       context: ./
       dockerfile: ./Dockerfile
     volumes:
-      - ./:/home/pptruser/app         
+      - ./:/home/bridgeuser/app         
     restart: unless-stopped    
     stdin_open: true
     tty: true

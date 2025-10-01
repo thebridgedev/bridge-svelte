@@ -1,0 +1,47 @@
+export interface BridgeConfig {
+    /**
+     * Your Bridge application ID
+     * @required
+     */
+    appId: string;
+    /**
+     * The URL to redirect to after successful login
+     * @default The current origin + '/auth/callback'
+     */
+    callbackUrl?: string;
+    /**
+     * The base URL for Bridge auth services
+     * @default 'https://auth.nblocks.cloud'
+     */
+    authBaseUrl?: string;
+    /**
+     * The base URL for Bridge backendless services
+     * @default 'https://backendless.nblocks.cloud'
+     */
+    backendlessBaseUrl?: string;
+    /**
+     * Route to redirect to after login
+     * @default '/'
+     */
+    defaultRedirectRoute?: string;
+    /**
+     * Route to redirect to when aubridgentication fails
+     * @default '/login'
+     */
+    loginRoute?: string;
+    /**
+     * URL for bridge team management portal
+     * @default 'https://backendless.nblocks.cloud'
+     */
+    teamManagementUrl?: string;
+    /**
+     * Debug mode
+     * @default false
+     */
+    debug?: boolean;
+}
+export interface TokenSet {
+    accessToken: string;
+    refreshToken: string;
+    idToken: string;
+}

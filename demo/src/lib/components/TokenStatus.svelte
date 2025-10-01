@@ -1,7 +1,7 @@
 <script>
-    import { auth } from '@nblocks-svelte/lib/shared/services/auth.service';
-    import { onDestroy } from 'svelte';
     import { browser } from '$app/environment';
+    import { auth } from '@bridge-svelte/lib/shared/services/auth.service';
+    import { onDestroy } from 'svelte';
   
     let timeLeft = '';
     let interval;

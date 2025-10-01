@@ -1,24 +1,24 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import Login from '@nblocks-svelte/lib/client/components/auth/Login.svelte';
-  import { auth } from '@nblocks-svelte/lib/shared/services/auth.service';
+  import Login from '@bridge-svelte/lib/client/components/auth/Login.svelte';
+  import { auth } from '@bridge-svelte/lib/shared/services/auth.service';
 
   async function handleLogout() {
     logout();
     goto('/');
   }
 
-const { isAuthenticated, logout } = auth;
+const { isAubridgenticated, logout } = auth;
 
 </script>
 
 <nav class="nav-menu">
   <div class="nav-container">
     <a href="/" class="nav-brand">
-      nBlocks Demo
+      Bridge Demo
     </a>
     
-    {#if $isAuthenticated}
+    {#if $isAubridgenticated}
       <div class="nav-links">
         <a href="/" class="nav-link" style="margin-right: auto">
           Home

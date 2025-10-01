@@ -14,7 +14,7 @@
 		"lint": "prettier --check . && eslint ."
 	},
 	"dependencies": {		
-		"@nebulr/nblocks-svelte": "../nblocks-svelte"
+		"@nebulr/bridge-svelte": "../bridge-svelte"
 
 	},
 	"devDependencies": {

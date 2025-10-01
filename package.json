@@ -1,13 +1,13 @@
 {
-  "name": "nblocks-svelte-workspace",
+  "name": "bridge-svelte-workspace",
   "private": true,
   "workspaces": [
-    "nblocks-svelte",
+    "bridge-svelte",
     "demo"
   ],"scripts": {
     "build": "bun run --filter demo build",
-    "build:nblocks": "bun run --filter @nebulr/nblocks-svelte build",
+    "build:bridge": "bun run --filter @nebulr/bridge-svelte build",
     "dev": "bun run --filter demo dev",
-    "package": "bun run --filter @nebulr/nblocks-svelte package"    
+    "package": "bun run --filter @nebulr/bridge-svelte package"    
   }
 }

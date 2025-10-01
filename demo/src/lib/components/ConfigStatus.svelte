@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { getConfig } from '@nblocks-svelte/lib/client/stores/config.store';
+    import { getConfig } from '@bridge-svelte/lib/client/stores/config.store';
+    import { auth } from '@bridge-svelte/lib/shared/services/auth.service';
     import { onMount } from 'svelte';
     import TokenStatus from './TokenStatus.svelte';
-    import { auth } from '@nblocks-svelte/lib/shared/services/auth.service';
-    const { isAuthenticated } = auth;
+    const { isAubridgenticated } = auth;
     let config = $state<{ appId: string } | null>(null);
     let error = $state<Error | null>(null);
   
@@ -23,22 +23,22 @@
   
       {#if error.message.includes('appId is required')}
         <p class="mt-2 text-sm">
-          Please set the <code>VITE_NBLOCKS_APP_ID</code> environment variable or provide an <code>appId</code> in your config.
+          Please set bridge <code>VITE_BRIDGE_APP_ID</code> environment variable or provide an <code>appId</code> in your config.
         </p>
       {:else}
         <p class="mt-2 text-sm">
-          Make sure the nBlocks config is initialized before using its features.
+          Make sure bridge Bridge config is initialized before using its features.
         </p>
       {/if}
     </div>
   {:else if config}
     <div class="feature-status active">
       <p class="font-bold">✅ Success</p>
-      <p>nBlocks configuration initialized with appId: <code>{config.appId}</code></p>
+      <p>Bridge configuration initialized with appId: <code>{config.appId}</code></p>
     </div>
   {/if}
 
-  {#if $isAuthenticated}
+  {#if $isAubridgenticated}
     <TokenStatus />
   {/if}
   

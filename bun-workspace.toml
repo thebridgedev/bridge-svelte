@@ -1,2 +1,2 @@
 [workspace]
-members = ["demo", @nebulr/nblocks-svelte]
+members = ["demo", @nebulr/bridge-svelte]

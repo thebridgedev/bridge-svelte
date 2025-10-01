@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Supports ARM + x86-64
-# 'as base' allows us to refer to this build stage in other build stages
+# 'as base' allows us to refer to this build stage in obridger build stages
 FROM node:22 as base
 
 
@@ -12,52 +12,28 @@ RUN apt-get update && apt-get install -y zsh
 SHELL ["/bin/zsh", "-c"]
 
 RUN apt-get update && \
-    apt-get -y install iproute2  lsof vim less curl jq python3 python3-requests python3-dotenv python3-colorama && \
+    apt-get -y install iproute2  lsof vim less curl jq && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 
-ENV PUPPETEER_SKIP_DOWNLOAD true
-# Add OpenAI API key environment variable with a default empty value
+ARG APP_USER=bridgeuser
 
-WORKDIR /home/pptruser/app
-
-
-RUN apt-get update \
-    && apt-get install -y chromium python3-pip \
-      --no-install-recommends \    
-    && rm -rf /var/lib/apt/lists/*
+WORKDIR /home/bridgeuser/app
 
 
-RUN pip3 install --break-system-packages cfn-lint    
-RUN npm i puppeteer \
-    # Add user so we don't need --no-sandbox.
-    # same layer as npm install to keep re-chowned files from using up several hundred MBs more space
-    && groupadd -r pptruser && useradd -r -s /bin/zsh -g pptruser -G audio,video pptruser \
-    && mkdir -p /home/pptruser/Downloads \
-    && chown -R pptruser:pptruser /home/pptruser
-    # && chown -R pptruser:pptruser node_modules/ \
-    # && chown -R pptruser:pptruser package.json \
-    # && chown -R pptruser:pptruser package-lock.json \
-    # && chown -R pptruser:pptruser /app
+RUN apt-get update && apt-get install -y dumb-init \
+    && groupadd -r $APP_USER && useradd -r -s /bin/bash -g $APP_USER $APP_USER \
+    && mkdir -p /home/$APP_USER \
+    && chown -R $APP_USER:$APP_USER /home/$APP_USER \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* \    
 
-
-RUN npm i -g pnpm bun wrangler
-# Run everything after as non-privileged user.
-
-COPY scripts /home/pptruser/app/scripts
-RUN ls -R /home/pptruser/app/scripts/package-installs
-
-RUN find /home/pptruser/app/scripts -type f -name "*.sh" -exec chmod +x {} \; && \
-    /home/pptruser/app/scripts/package-installs/install-aws-cli.py
-
-
+RUN npm i g bun
 # Refering to base, and adding new build stage label 'dev'
 FROM base as dev
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 
-USER pptruser
+USER $APP_USER
 COPY . .
 CMD ["zsh"]
 

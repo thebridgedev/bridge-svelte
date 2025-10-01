@@ -53,8 +53,8 @@ Thumbs.db
 .local
 
 .next
-nblocks-plugins/*
-nblocks-angular-reference/*
+bridge-plugins/*
+bridge-angular-reference/*
 .turbo
 .bash_history
 .bun

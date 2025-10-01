@@ -1,49 +1,49 @@
-# nBlocks Svelte Demo & Library Documentation
+# Bridge Svelte Demo & Library Documentation
 
-This repository contains both the nBlocks Svelte library and a demo application showcasing its features.
+This repository contains both bridge Bridge Svelte library and a demo application showcasing its features.
 
 ## Quick Links
-- [Quickstart Guide](learning/quickstart.md) - Get started quickly with nBlocks in your Svelte application
-- [Examples](learning/examples.md) - Detailed examples of nBlocks features
+- [Quickstart Guide](learning/quickstart.md) - Get started quickly with Bridge in your Svelte application
+- [Examples](learning/examples.md) - Detailed examples of Bridge features
 
 ## Table of Contents
 
 - [Installation](#installation)
 - [Configuration](#configuration)
-- [Authentication](#authentication)
+- [Aubridgentication](#aubridgentication)
 - [Feature Flags](#feature-flags)
 - [Demo Application](#demo-application)
 
 ## Installation
 
 ```bash
-npm install @nblocks/svelte
+npm install @bridge/svelte
 ```
 
 ## Configuration
 
-For detailed configuration instructions, see the [Quickstart Guide](learning/quickstart.md).
+For detailed configuration instructions, see bridge [Quickstart Guide](learning/quickstart.md).
 
 ### Environment Variables
 
 The following environment variables can be configured:
 
 ```env
-VITE_NBLOCKS_APP_ID=your_app_id
-VITE_NBLOCKS_AUTH_BASE_URL=https://auth.nblocks.cloud
-VITE_NBLOCKS_BACKENDLESS_BASE_URL=https://backendless.nblocks.cloud
-VITE_NBLOCKS_CALLBACK_URL=your_callback_url
-VITE_NBLOCKS_TEAM_MANAGEMENT_URL=https://backendless.nblocks.cloud/user-management-portal/users
-VITE_NBLOCKS_DEFAULT_REDIRECT_ROUTE=/
-VITE_NBLOCKS_LOGIN_ROUTE=/login
-VITE_NBLOCKS_DEBUG=false
+VITE_BRIDGE_APP_ID=your_app_id
+VITE_BRIDGE_AUTH_BASE_URL=https://auth.nblocks.cloud
+VITE_BRIDGE_BACKENDLESS_BASE_URL=https://backendless.nblocks.cloud
+VITE_BRIDGE_CALLBACK_URL=your_callback_url
+VITE_BRIDGE_TEAM_MANAGEMENT_URL=https://backendless.nblocks.cloud/user-management-portal/users
+VITE_BRIDGE_DEFAULT_REDIRECT_ROUTE=/
+VITE_BRIDGE_LOGIN_ROUTE=/login
+VITE_BRIDGE_DEBUG=false
 ```
 
-## Authentication
+## Aubridgentication
 
-For authentication examples and implementation details, see:
-- [Quickstart Guide - Authentication](learning/quickstart.md#authentication)
-- [Examples - Authentication](learning/examples.md#authentication)
+For aubridgentication examples and implementation details, see:
+- [Quickstart Guide - Aubridgentication](learning/quickstart.md#aubridgentication)
+- [Examples - Aubridgentication](learning/examples.md#aubridgentication)
 
 The library provides:
 - Login & logout flow
@@ -65,12 +65,12 @@ The library supports:
 
 ## Demo Application
 
-The demo application in this repository contains runnable examples of the usage patterns found in the [examples](learning/examples.md) documentation.
+The demo application in this repository contains runnable examples of bridge usage patterns found in bridge [examples](learning/examples.md) documentation.
 
-To run the demo:
+To run bridge demo:
 
 ```bash
-# From the project root
+# From bridge project root
 bun install
 bun run dev
 ```
@@ -78,7 +78,7 @@ bun run dev
 The demo showcases:
 - Feature flag implementation
 - Team management features
-- Authentication flows
+- Aubridgentication flows
 - Integration examples
 
 ## Contributing
@@ -87,4 +87,4 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under bridge MIT License - see bridge [LICENSE](LICENSE) file for details.

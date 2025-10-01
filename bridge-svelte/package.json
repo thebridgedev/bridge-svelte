@@ -1,6 +1,6 @@
 {
 	"name": "@nebulr/bridge-svelte",
-	"version": "0.0.1-alpha.14",
+	"version": "1.0.0-beta.2",
 	"author": "Iman Pouya",
 	"license": "MIT",
 	"scripts": {

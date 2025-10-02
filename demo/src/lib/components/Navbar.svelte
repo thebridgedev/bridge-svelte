@@ -8,7 +8,7 @@
     goto('/');
   }
 
-const { isAubridgenticated, logout } = auth;
+const { isAuthenticated, logout } = auth;
 
 </script>
 
@@ -18,7 +18,7 @@ const { isAubridgenticated, logout } = auth;
       Bridge Demo
     </a>
     
-    {#if $isAubridgenticated}
+    {#if $isAuthenticated}
       <div class="nav-links">
         <a href="/" class="nav-link" style="margin-right: auto">
           Home

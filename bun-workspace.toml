@@ -1,2 +1,2 @@
 [workspace]
-members = ["demo", @nebulr/bridge-svelte]
+members = ["bridge-svelte", "demo"]

@@ -3,7 +3,7 @@
     import { auth } from '@bridge-svelte/lib/shared/services/auth.service';
     import { onMount } from 'svelte';
     import TokenStatus from './TokenStatus.svelte';
-    const { isAubridgenticated } = auth;
+    const { isAuthenticated } = auth;
     let config = $state<{ appId: string } | null>(null);
     let error = $state<Error | null>(null);
   
@@ -27,7 +27,7 @@
         </p>
       {:else}
         <p class="mt-2 text-sm">
-          Make sure bridge Bridge config is initialized before using its features.
+          Make sure Bridge config is initialized before using its features.
         </p>
       {/if}
     </div>
@@ -38,7 +38,7 @@
     </div>
   {/if}
 
-  {#if $isAubridgenticated}
+  {#if $isAuthenticated}
     <TokenStatus />
   {/if}
   

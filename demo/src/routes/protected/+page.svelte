@@ -2,7 +2,7 @@
   import { profileStore } from '@bridge-svelte/lib/shared/profile';
   import { auth } from '@bridge-svelte/lib/shared/services/auth.service';
 
-  const { isAubridgenticated } = auth;
+  const { isAuthenticated } = auth;
   const { profile, error, isOnboarded, hasMultiTenantAccess } = profileStore;
 
 </script>
@@ -10,7 +10,7 @@
 <div class="container">
   <h1>Protected Page</h1>
   
-  {#if $isAubridgenticated}
+  {#if $isAuthenticated}
     <div class="content">
       <p class="message">
         This is a protected page. You can only see this content when you're logged in.

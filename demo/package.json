@@ -13,9 +13,8 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint ."
 	},
-	"dependencies": {		
-		"@nebulr/bridge-svelte": "../bridge-svelte"
-
+	"dependencies": {
+		"@nebulr-group/bridge-svelte": "../bridge-svelte"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",

@@ -1,4 +1,6 @@
+
 ## @nebulr-group/bridge-svelte
+
 
 Bridge Svelte library. Add Bridge auth, feature flags, and payments to your SvelteKit 2 + Svelte 5 apps.
 
@@ -13,6 +15,7 @@ npm i @nebulr-group/bridge-svelte
 See the `demo/` app in the monorepo for end-to-end wiring.
 
 ### Build
+
 
 ```bash
 npm run build
@@ -55,5 +58,4 @@ git config --global commit.gpgsign true
 ```
 
 ### License
-
 MIT © thebridgedev

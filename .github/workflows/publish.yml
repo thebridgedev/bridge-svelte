@@ -52,7 +52,8 @@ jobs:
           if [ "v${PACKAGE_VERSION}" != "${{ github.ref_name }}" ]; then
             echo "❌ package.json version ($PACKAGE_VERSION) does not match tag (${{ github.ref_name }})" && exit 1
           fi
-          PUBLISHED_VERSIONS=$(npm view @nebulr/bridge-svelte versions --json || true)
+          PUBLISHED_VERSIONS=$(npm view @nebulr-group/bridge-svelte versions --json || true)
+
           if echo "$PUBLISHED_VERSIONS" | grep -q "\"$PACKAGE_VERSION\""; then
             echo "❌ Version $PACKAGE_VERSION already published to npm" && exit 1
           else

@@ -88,11 +88,6 @@ bridge-angular-reference/*
 **/vite.config.ts.timestamp-*
 
 **/*.tgz
-**/*.tar.gz
-**/*.tar.xz
-**/*.tar.bz2
-**/*.tar.lzma
-**/*.tar.lz
-**/*.tar.lzo
-**/*.tar.lrz
-**/*.tar.lha
+**/*.tar.*
+
+project_descriptions/*

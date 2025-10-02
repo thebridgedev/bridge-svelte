@@ -1,4 +1,4 @@
-export interface BridgeConfig {
+ export interface BridgeConfig {
   /**
    * Your Bridge application ID
    * @required

@@ -22,22 +22,10 @@ jobs:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
+      - name: 🔧 Setup and Build
+        uses: ./.github/actions/setup-and-build
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: 🔧 Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 'latest'
-
-      - name: 📦 Install dependencies
-        run: bun install
-
-      - name: 🛠️ Build
-        run: bun run build
+          working-directory: bridge-svelte
 
       # - name: 🧪 Tests (optional)
       #   run: |
@@ -58,22 +46,10 @@ jobs:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
+      - name: 🔧 Setup and Build (frozen)
+        uses: ./.github/actions/setup-and-build
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: 🔧 Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 'latest'
-
-      - name: 📦 Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: 🛠️ Build
-        run: bun run build
+          working-directory: bridge-svelte
 
       - name: 🛑 Pre-publish validation
         run: |

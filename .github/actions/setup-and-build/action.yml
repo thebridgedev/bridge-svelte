@@ -1,0 +1,43 @@
+name: Setup Node, Bun and Build
+description: Reusable setup for Node.js, Bun install and build
+inputs:
+  node-version:
+    description: Node.js version
+    required: false
+    default: '20'
+  bun-version:
+    description: Bun version
+    required: false
+    default: 'latest'
+  registry-url:
+    description: npm registry URL
+    required: false
+    default: 'https://registry.npmjs.org'
+  working-directory:
+    description: Working directory for install/build
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        registry-url: ${{ inputs.registry-url }}
+
+    - name: 🔧 Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: ${{ inputs.bun-version }}
+
+    - name: 📦 Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: bun install
+
+    - name: 🛠️ Build
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: bun run build
+
+

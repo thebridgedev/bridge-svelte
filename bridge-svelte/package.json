@@ -15,7 +15,9 @@
 	  "package": "bun run prepack && bun pm pack --destination ../"
 	},
 	"files": [
-	  "dist"
+	  "dist",
+	  "README.md",
+	  "LICENSE"
 	],
 	"sideEffects": [
 	  "**/*.css"

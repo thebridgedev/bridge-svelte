@@ -1,0 +1,77 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bridge-svelte/bridge-svelte
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔧 Setup Bun (required by build scripts)
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 'latest'
+
+      - name: 🛠️ Build
+        run: npm run build
+
+      - name: 🧪 Tests (optional)
+        run: |
+          if npm run | grep -q " test"; then
+            npm test
+          else
+            echo "No test script found; skipping tests."
+          fi
+
+      - name: 🛑 Pre-publish validation
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          echo "Git Tag: ${{ github.ref_name }}, Package Version: $PACKAGE_VERSION"
+          if [ "v${PACKAGE_VERSION}" != "${{ github.ref_name }}" ]; then
+            echo "❌ package.json version ($PACKAGE_VERSION) does not match tag (${{ github.ref_name }})" && exit 1
+          fi
+          PUBLISHED_VERSIONS=$(npm view @nebulr/bridge-svelte versions --json || true)
+          if echo "$PUBLISHED_VERSIONS" | grep -q "\"$PACKAGE_VERSION\""; then
+            echo "❌ Version $PACKAGE_VERSION already published to npm" && exit 1
+          else
+            echo "✅ Version $PACKAGE_VERSION is new; proceeding"
+          fi
+
+      - name: 🚀 Publish to npm (with provenance)
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: ✨ Create GitHub Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            This release was automatically published from CI.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+

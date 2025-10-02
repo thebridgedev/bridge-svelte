@@ -1,6 +1,6 @@
 # Bridge Svelte Demo & Library Documentation
 
-This repository contains both bridge Bridge Svelte library and a demo application showcasing its features.
+This repository contains both Bridge Svelte library and a demo application showcasing its features.
 
 ## Quick Links
 - [Quickstart Guide](learning/md/quickstart.md) - Get started quickly with Bridge in your Svelte application
@@ -27,7 +27,7 @@ The Bridge SvelteKit SDK is configured by passing a `BridgeConfig` object to the
 Here's an example:
 
 ```typescript
-import { bridgeBootstrap, type BridgeConfig } from '@nebulr/bridge-svelte';
+import { bridgeBootstrap, type BridgeConfig } from '@nebulr-group';
 
 export const load = async ({ url }) => {
   const config: BridgeConfig = {

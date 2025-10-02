@@ -1,6 +1,6 @@
 <script lang="ts">
   import { auth } from '../../../shared/services/auth.service';
-  const { isAubridgenticated, login } = auth;
+  const { isAuthenticated, login } = auth;
 </script>
 
 <button onclick={() => login()} class="login-button">

@@ -9,7 +9,7 @@
   <div class="container">
     <div class="content">
       <div class="hero">
-        <h1 class="heading-xl">Welcome to bridge Bridge Svelte Demo</h1>
+        <h1 class="heading-xl">Welcome to  Bridge Svelte Demo</h1>
         <p class="text-lead">
           This demo showcases bridge integration of Bridge features in a Svelte application.
         </p>

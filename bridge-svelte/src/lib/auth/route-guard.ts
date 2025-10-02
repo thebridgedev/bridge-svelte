@@ -4,7 +4,7 @@ import { isFeatureEnabled } from '../shared/feature-flag.js';
 import { logger } from '../shared/logger.js';
 import { auth } from '../shared/services/auth.service.js';
 
-const { isAubridgenticated, createLoginUrl } = auth;
+const { isAuthenticated, createLoginUrl } = auth;
 
 export type PublicRoutePattern = string | RegExp;
 
@@ -83,8 +83,8 @@ export function createRouteGuard() {
 
   function shouldRedirectToLogin(pathname: string): boolean {  
     const isProtected = isProtectedRoute(pathname);
-    const aubridgenticated = get(isAubridgenticated);
-    if(isProtectedRoute(pathname) && !get(isAubridgenticated)) {
+    const aubridgenticated = get(isAuthenticated);
+    if(isProtectedRoute(pathname) && !get(isAuthenticated)) {
       logger.debug(`[route-guard] path ${pathname} is protected and user is not aubridgenticated`);  
       return true;
     }

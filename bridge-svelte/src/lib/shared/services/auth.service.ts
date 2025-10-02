@@ -202,13 +202,13 @@ export async function maybeRefreshNow(): Promise<boolean> {
 
 // --- Derived values ---
 
-const isAubridgenticated = derived(tokenStore, $t => !!$t?.accessToken);
+const isAuthenticated = derived(tokenStore, $t => !!$t?.accessToken);
 
 // --- Exports ---
 
 export const auth = {
   token: tokenStore,
-  isAubridgenticated,
+  isAuthenticated,
   isLoading,
   error,
   login,

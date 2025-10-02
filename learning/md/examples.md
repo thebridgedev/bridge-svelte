@@ -36,14 +36,14 @@ bun run dev
 
 Bridge can protect routes in your Svelte application:
 
-#### Using BridgeBootStrap
+#### Using BridgeBootstrap
 
-The most comprehensive way to protect routes is using bridge `BridgeBootStrap` component with a `routeConfig`:
+The most comprehensive way to protect routes is using bridge `BridgeBootstrap` component with a `routeConfig`:
 
 ```ts
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import BridgeBootStrap from '@bridge-svelte/client/BridgeBootStrap.svelte';
+  import BridgeBootstrap from '@bridge-svelte/client/BridgeBootstrap.svelte';
   let loading = $state(true);
 
   const routeConfig = {
@@ -61,7 +61,7 @@ The most comprehensive way to protect routes is using bridge `BridgeBootStrap` c
   }
 </script>
 
-<BridgeBootStrap routeConfig={routeConfig} onBootstrapComplete={onBootstrapComplete} />
+<BridgeBootstrap routeConfig={routeConfig} onBootstrapComplete={onBootstrapComplete} />
 
 {#if !loading}
   <slot />
@@ -86,14 +86,14 @@ You can use bridge `auth` service to check if a user is currently logged in:
 <!-- src/components/AuthStatus.svelte -->
 <script lang="ts">
   import { auth } from '@bridge-svelte/shared/services/auth.service';
-  const { isAubridgenticated, isLoading } = auth;
+  const { isAuthenticated, isLoading } = auth;
 </script>
 
 {#if isLoading}
   <div>Loading...</div>
 {:else}
   <div>
-    {#if $isAubridgenticated}
+    {#if $isAuthenticated}
       You are logged in!
     {:else}
       Please log in to continue
@@ -114,7 +114,7 @@ Access bridge current user's profile information using bridge `auth` service:
   import { onMount } from 'svelte';
   import { profileStore } from '@bridge-svelte/shared/profile';
 
-  const { isAubridgenticated } = auth;
+  const { isAuthenticated } = auth;
   const { profile, error, isOnboarded, hasMultiTenantAccess } = profileStore;
 
 </script>
@@ -122,7 +122,7 @@ Access bridge current user's profile information using bridge `auth` service:
 <div class="container">
   <h1>Profile informatin</h1>
   
-  {#if $isAubridgenticated}
+  {#if $isAuthenticated}
     <div class="content">
       <p class="message">
         This is a protected page. You can only see this content when you're logged in.
@@ -223,7 +223,7 @@ Protect entire routes with feature flags using bridge same `routeConfig` structu
 ```ts
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import BridgeBootStrap from '@bridge-svelte/client/BridgeBootStrap.svelte';
+  import BridgeBootstrap from '@bridge-svelte/client/BridgeBootstrap.svelte';
   let loading = $state(true);
 
   const routeConfig = {
@@ -242,7 +242,7 @@ Protect entire routes with feature flags using bridge same `routeConfig` structu
   }
 </script>
 
-<BridgeBootStrap routeConfig={routeConfig} onBootstrapComplete={onBootstrapComplete} />
+<BridgeBootstrap routeConfig={routeConfig} onBootstrapComplete={onBootstrapComplete} />
 
 {#if !loading}
   <slot />
@@ -256,7 +256,7 @@ You can require one of many flags (any) or all flags (all) for a route:
 ```ts
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import BridgeBootStrap from '@bridge-svelte/client/BridgeBootStrap.svelte';
+  import BridgeBootstrap from '@bridge-svelte/client/BridgeBootstrap.svelte';
   let loading = $state(true);
 
   const routeConfig = {
@@ -279,7 +279,7 @@ You can require one of many flags (any) or all flags (all) for a route:
   }
 </script>
 
-<BridgeBootStrap routeConfig={routeConfig} onBootstrapComplete={onBootstrapComplete} />
+<BridgeBootstrap routeConfig={routeConfig} onBootstrapComplete={onBootstrapComplete} />
 
 {#if !loading}
   <slot />

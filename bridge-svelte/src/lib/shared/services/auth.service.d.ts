@@ -10,7 +10,7 @@ declare function handleCallback(code: string): Promise<void>;
 declare function refreshToken(refreshToken: string): Promise<TokenSet | null>;
 export declare const auth: {
     token: import("svelte/store").Writable<any>;
-    isAubridgenticated: import("svelte/store").Readable<boolean>;
+    isAuthenticated: import("svelte/store").Readable<boolean>;
     isLoading: import("svelte/store").Writable<boolean>;
     error: import("svelte/store").Writable<string | null>;
     login: typeof login;

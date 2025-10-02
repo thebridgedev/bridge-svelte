@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: bridge-svelte/bridge-svelte
+        working-directory: bridge-svelte
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: bridge-svelte/bridge-svelte
+        working-directory: bridge-svelte
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4

@@ -22,23 +22,10 @@ jobs:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
+      - name: 🔧 Setup and Build
+        uses: ./.github/actions/setup-and-build
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: 🔧 Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 'latest'
-          cache: true
-
-      - name: 📦 Install dependencies
-        run: bun install
-
-      - name: 🛠️ Build
-        run: bun run build
+          working-directory: bridge-svelte
 
       # - name: 🧪 Tests (optional)
       #   run: |
@@ -59,23 +46,10 @@ jobs:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
+      - name: 🔧 Setup and Build (frozen)
+        uses: ./.github/actions/setup-and-build
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: 🔧 Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 'latest'
-          cache: true
-
-      - name: 📦 Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: 🛠️ Build
-        run: bun run build
+          working-directory: bridge-svelte
 
       - name: 🛑 Pre-publish validation
         run: |
@@ -97,12 +71,10 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: ✨ Create GitHub Release
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          body: |
-            This release was automatically published from CI.
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "Release ${{ github.ref_name }}" \
+            --notes "This release was automatically published from CI."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

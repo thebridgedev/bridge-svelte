@@ -5,6 +5,14 @@
 	"description": "Bridge Svelte library, This library helps you to add bridge authentication and feature flags, and payments to your svelte application.",
 	"author": "Iman Pouya",
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/thebridgedev/bridge-svelte.git"
+	},
+	"bugs": {
+		"url": "https://github.com/thebridgedev/bridge-svelte/issues"
+	},
+	"homepage": "https://github.com/thebridgedev/bridge-svelte#readme",
 	"scripts": {
 	  "dev": "vite dev",
 	  "build": "bun run prepack",

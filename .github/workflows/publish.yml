@@ -32,7 +32,6 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 'latest'
-          cache: true
 
       - name: 📦 Install dependencies
         run: bun install
@@ -69,7 +68,6 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 'latest'
-          cache: true
 
       - name: 📦 Install dependencies
         run: bun install --frozen-lockfile

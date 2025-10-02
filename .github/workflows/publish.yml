@@ -1,20 +1,60 @@
-name: Publish to npm
+name: Build and Publish
 
 on:
   push:
+    branches: [ "**" ]
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+*'
+  pull_request:
+    branches: [ main ]
 
 permissions:
   id-token: write
   contents: write
 
 jobs:
-  build-and-publish:
+  build:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: bridge-svelte/bridge-svelte
+        working-directory: bridge-svelte
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 🔧 Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 'latest'
+          cache: true
+
+      - name: 📦 Install dependencies
+        run: bun install
+
+      - name: 🛠️ Build
+        run: bun run build
+
+      # - name: 🧪 Tests (optional)
+      #   run: |
+      #     if bun run | grep -q " test"; then
+      #       bun test
+      #     else
+      #       echo "No test script found; skipping tests."
+      #     fi
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bridge-svelte
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
@@ -36,14 +76,6 @@ jobs:
 
       - name: 🛠️ Build
         run: bun run build
-
-      # - name: 🧪 Tests (optional)
-      #   run: |
-      #     if bun run | grep -q " test"; then
-      #       bun test
-      #     else
-      #       echo "No test script found; skipping tests."
-      #     fi
 
       - name: 🛑 Pre-publish validation
         run: |

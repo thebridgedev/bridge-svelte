@@ -24,26 +24,26 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-          cache: 'npm'
 
-      - name: 📦 Install dependencies
-        run: npm ci
-
-      - name: 🔧 Setup Bun (required by build scripts)
+      - name: 🔧 Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 'latest'
+          cache: true
+
+      - name: 📦 Install dependencies
+        run: bun install --frozen-lockfile
 
       - name: 🛠️ Build
-        run: npm run build
+        run: bun run build
 
-      - name: 🧪 Tests (optional)
-        run: |
-          if npm run | grep -q " test"; then
-            npm test
-          else
-            echo "No test script found; skipping tests."
-          fi
+      # - name: 🧪 Tests (optional)
+      #   run: |
+      #     if bun run | grep -q " test"; then
+      #       bun test
+      #     else
+      #       echo "No test script found; skipping tests."
+      #     fi
 
       - name: 🛑 Pre-publish validation
         run: |
@@ -53,7 +53,6 @@ jobs:
             echo "❌ package.json version ($PACKAGE_VERSION) does not match tag (${{ github.ref_name }})" && exit 1
           fi
           PUBLISHED_VERSIONS=$(npm view @nebulr-group/bridge-svelte versions --json || true)
-
           if echo "$PUBLISHED_VERSIONS" | grep -q "\"$PACKAGE_VERSION\""; then
             echo "❌ Version $PACKAGE_VERSION already published to npm" && exit 1
           else

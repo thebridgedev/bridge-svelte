@@ -83,6 +83,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v4
       - name: 🔄 Sync Docs
         uses: ./.github/actions/sync-docs
         env:

@@ -20,6 +20,8 @@ jobs:
     name: 🔄 Sync Learning Docs to Bridge Web
     runs-on: ubuntu-latest
     steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v4
       - name: 🔄 Sync Docs
         uses: ./.github/actions/sync-docs
         env:

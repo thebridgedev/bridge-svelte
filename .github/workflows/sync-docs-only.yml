@@ -18,5 +18,5 @@ permissions:
 jobs:
   sync:
     name: 🔄 Sync Learning Docs to Bridge Web
-    uses: ./.github/actions/sync-docs.yml
+    uses: ./.github/actions/sync-docs
     secrets: inherit

@@ -54,14 +54,12 @@ runs:
         else
           echo "⚠️ Failed to add SSH key to agent, trying direct key approach..."
           # Set SSH config to use the key directly
-          cat > ~/.ssh/config << 'EOF'
-Host gitlab.com
-    HostName gitlab.com
-    User git
-    IdentityFile ~/.ssh/id_rsa
-    IdentitiesOnly yes
-    StrictHostKeyChecking no
-EOF
+          echo "Host gitlab.com" > ~/.ssh/config
+          echo "    HostName gitlab.com" >> ~/.ssh/config
+          echo "    User git" >> ~/.ssh/config
+          echo "    IdentityFile ~/.ssh/id_rsa" >> ~/.ssh/config
+          echo "    IdentitiesOnly yes" >> ~/.ssh/config
+          echo "    StrictHostKeyChecking no" >> ~/.ssh/config
           chmod 600 ~/.ssh/config
         fi
         

@@ -77,5 +77,11 @@ jobs:
             --notes "This release was automatically published from CI."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+  sync_docs:
+    needs: publish
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+    uses: ./.github/actions/sync-docs.yml
+    secrets: inherit
 
 

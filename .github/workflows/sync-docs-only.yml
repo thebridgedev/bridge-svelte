@@ -1,0 +1,22 @@
+name: Sync Docs (Manual + Auto)
+
+on:
+  # ① Manual trigger
+  workflow_dispatch:
+
+  # ② Auto trigger when docs change on main
+  push:
+    branches: [ main ]
+    paths:
+      - "learning/**/*.md"
+      - "learning/**/*.mdx"
+      - "README.md"
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: 🔄 Sync Learning Docs to Bridge Web
+    uses: ./.github/actions/sync-docs.yml
+    secrets: inherit

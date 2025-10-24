@@ -3,7 +3,7 @@ import { browser } from '$app/environment';
 import { derived, get, writable } from 'svelte/store';
 import { getConfig } from '../../client/stores/config.store.js';
 import { logger } from '../logger.js';
-import type { TokenSet } from '../types/config.js';
+import type { BridgeConfig, TokenSet } from '../types/config.js';
 
 const TOKEN_KEY = 'bridge_tokens';
 
@@ -54,11 +54,11 @@ function createLoginUrl(options: { redirectUri?: string } = {}): string {
 
   const redirectUri = options.redirectUri ?? config.callbackUrl;
   const base = `${config.authBaseUrl}/url/login/${config.appId}`;
-  return redirectUri ? `${base}?redirect_uri=${encodeURIComponent(redirectUri)}` : base;
+  return redirectUri ? `${base}?cv_env=bridge&redirect_uri=${encodeURIComponent(redirectUri)}` : base;
 }
 
 async function handleCallback(code: string) {
-  const config = getConfig();
+  const config: BridgeConfig = getConfig();
   const url = `${config.authBaseUrl}/token/code/${config.appId}`;
 
   const response = await fetch(url, {
@@ -66,7 +66,7 @@ async function handleCallback(code: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       code,
-      ...(config.callbackUrl ? { redirect_uri: config.callbackUrl } : {})
+      ...(config.callbackUrl ? { redirect_uri: config.callbackUrl,redirectUri: config.callbackUrl } : {})
     })
   });
 

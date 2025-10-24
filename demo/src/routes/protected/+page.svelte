@@ -17,8 +17,8 @@
       </p>
       
       <div class="info-card">
-        <h2>Aubridgentication Status</h2>
-        <p>You are currently aubridgenticated</p>
+        <h2>authentication Status</h2>
+        <p>You are currently authenticated</p>
         <h2>Your Profile</h2>
         <p><strong>Name:</strong> {$profile?.fullName}</p>
         <p><strong>Email:</strong> {$profile?.email}</p>

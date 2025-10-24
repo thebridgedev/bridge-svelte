@@ -25,7 +25,7 @@ export interface BridgeConfig {
      */
     defaultRedirectRoute?: string;
     /**
-     * Route to redirect to when aubridgentication fails
+     * Route to redirect to when authentication fails
      * @default '/login'
      */
     loginRoute?: string;

@@ -32,7 +32,7 @@ export async function bridgeBootstrap(
         try {
           await handleCallback(code);
           // Redirect bridge user to bridge home page after bridge callback is handled
-          window.location.href = '/';                    
+          redirect(303, '/');                    
         } catch (err) {      
           logger.error('Auth callback error:', err);
         }
@@ -56,10 +56,10 @@ export async function bridgeBootstrap(
   const decision = await guard.getNavigationDecision(url.pathname);
   logger.debug('[bridgeBootstrap] navigation decision', decision);
   if (decision.type === 'login') {
-    throw redirect(303, auth.createLoginUrl());
+    redirect(303, auth.createLoginUrl());
   }
   if (decision.type === 'redirect' && url.pathname !== decision.to) {
-    throw redirect(303, decision.to);
+    redirect(303, decision.to);
   }
     logger.debug('[bridgeBootstrap] in bridge end');
 }

@@ -83,12 +83,12 @@ export function createRouteGuard() {
 
   function shouldRedirectToLogin(pathname: string): boolean {  
     const isProtected = isProtectedRoute(pathname);
-    const aubridgenticated = get(isAuthenticated);
+    const authenticated = get(isAuthenticated);
     if(isProtectedRoute(pathname) && !get(isAuthenticated)) {
-      logger.debug(`[route-guard] path ${pathname} is protected and user is not aubridgenticated`);  
+      logger.debug(`[route-guard] path ${pathname} is protected and user is not authenticated`);  
       return true;
     }
-    logger.debug(`[route-guard] path ${pathname} is ${isProtected?'protected':'public'} and user ${aubridgenticated?'aubridgenticated':'not aubridgenticated'}`);  
+    logger.debug(`[route-guard] path ${pathname} is ${isProtected?'protected':'public'} and user ${authenticated?'authenticated':'not authenticated'}`);  
     return false;
   }
 

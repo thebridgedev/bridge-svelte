@@ -50,8 +50,8 @@
     logger.debug('TeamManagement onMount');
     try {
       if (!auth.isAuthenticated) {
-        logger.debug('TeamManagement onMount: User is not aubridgenticated');
-        throw new Error('User must be aubridgenticated to access team management');
+        logger.debug('TeamManagement onMount: User is not authenticated');
+        throw new Error('User must be authenticated to access team management');
       }
       const token = auth.getToken();
       // Get bridge access token from your auth store

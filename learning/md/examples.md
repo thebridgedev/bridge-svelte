@@ -12,9 +12,9 @@ bun run dev
 ```
 
 ## Table of Contents
-- [Aubridgentication](#aubridgentication)
+- [authentication](#authentication)
   - [Renewing User Tokens](#renewing-user-tokens)
-  - [Checking Aubridgentication Status](#checking-if-a-user-is-logged-in)
+  - [Checking authentication Status](#checking-if-a-user-is-logged-in)
   - [Getting User Profile Information](#getting-user-profile-information)
   - [Route Protection](#route-protection)
 - [Feature Flags](#feature-flags)
@@ -30,7 +30,7 @@ bun run dev
   - [Environment Variables](#environment-variables)
   - [Additional Configs](#additional-configs)
 
-## Aubridgentication
+## authentication
 
 ### Route Protection
 
@@ -129,8 +129,8 @@ Access bridge current user's profile information using bridge `auth` service:
       </p>
       
       <div class="info-card">
-        <h2>Aubridgentication Status</h2>
-        <p>You are currently aubridgenticated</p>
+        <h2>authentication Status</h2>
+        <p>You are currently authenticated</p>
         <h2>Your Profile</h2>
         <p><strong>Name:</strong> {$profile?.fullName}</p>
         <p><strong>Email:</strong> {$profile?.email}</p>

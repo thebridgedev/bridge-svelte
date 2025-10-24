@@ -40,7 +40,7 @@
           </div>
 
           <div class="feature-group">
-            <h3 class="heading-md">🔐 Aubridgentication</h3>
+            <h3 class="heading-md">🔐 authentication</h3>
             <ul>
               <li>Login & logout flow</li>
               <li>Protected routes</li>

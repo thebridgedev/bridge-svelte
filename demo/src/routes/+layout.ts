@@ -7,16 +7,34 @@ import type { LayoutLoad } from './$types';
 
 export const load: LayoutLoad = async ({ url }) => {  
 
-  const config: BridgeConfig = {
-    appId: import.meta.env.VITE_BRIDGE_APP_ID,  
+
+  const isProd =
+    import.meta.env.VITE_ENVIRONMENT === 'prod' ||
+    import.meta.env.ENVIRONMENT === 'prod' ||
+    import.meta.env.VITE_ENV === 'prod';
+  console.log('isProd', isProd);
+
+  const baseConfig: BridgeConfig = {
+    appId: import.meta.env.VITE_BRIDGE_APP_ID,
     callbackUrl: import.meta.env.VITE_BRIDGE_CALLBACK_URL,
-    teamManagementUrl: import.meta.env.VITE_BRIDGE_TEAM_MANAGEMENT_URL,
-    authBaseUrl: import.meta.env.VITE_BRIDGE_AUTH_BASE_URL,
-    backendlessBaseUrl: import.meta.env.VITE_BRIDGE_BACKENDLESS_BASE_URL,
-    // defaultRedirectRoute: '/',
-    // loginRoute: '/login',
-    debug: import.meta.env.VITE_BRIDGE_DEBUG === 'true'
+    debug: true
   };
+
+  let config: BridgeConfig;
+  if (!isProd) {
+    const extras: Partial<BridgeConfig> = {};
+    const authBaseUrl = import.meta.env.VITE_BRIDGE_AUTH_BASE_URL;
+    if (authBaseUrl) extras.authBaseUrl = authBaseUrl;
+    const backendlessBaseUrl = import.meta.env.VITE_BRIDGE_BACKENDLESS_BASE_URL;
+    if (backendlessBaseUrl) extras.backendlessBaseUrl = backendlessBaseUrl;
+    const teamManagementUrl = import.meta.env.VITE_BRIDGE_TEAM_MANAGEMENT_URL;
+    if (teamManagementUrl) extras.teamManagementUrl = teamManagementUrl;
+    config = { ...baseConfig, ...extras } as BridgeConfig;
+  } else {
+    config = baseConfig;
+  }
+
+  
 
   const routeConfig: RouteGuardConfig = {
     rules: [

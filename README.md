@@ -108,6 +108,23 @@ The demo showcases:
 - authentication flows
 - Integration examples
 
+
+## Publishing & Release
+
+Bridge Svelte is published automatically to **npm** through a GitHub Action workflow.
+
+### 🧩 Releasing a new version
+
+To publish a new package version:
+
+1. **Update** the version field in `bridge-svelte/package.json`
+2. **Commit and push** your changes to `main`
+3. **Tag the release** using semantic versioning (`vX.Y.Z`):
+
+   ```bash
+   git tag v1.2.3
+   git push origin v1.2.3
+
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.

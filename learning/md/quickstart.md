@@ -2,9 +2,9 @@
 
 This guide shows how to get started with The Bridge Svelte plugin.
 
-## Installation
+## Install the plugin
 
-Install bridge bridge svelte plugin
+Install The Bridge svelte plugin
 
 ```bash
 npm install @nebulr-group
@@ -13,9 +13,7 @@ npm install @nebulr-group
 
 ## Configuration
 
-You initialize Bridge inside `+layout.svelte`. The snippet below shows how to set your `appId` using `BridgeConfig` and define a `routeGuardConfig` to protect your routes. For this example, we will protect all routes.
-
-Finally, you initialize bridge configs using `bridgeBootstrap`.
+You initialize Bridge inside `+layout.ts`. This example snippet shows how to set your `appId` with a one liner using `bridgeBootstrap`.
 
 ```typescript
 // src/routes/+layout.ts
@@ -28,16 +26,35 @@ import { bridgeBootstrap } from '@nebulr-group';
 
 export const load: LayoutLoad = async ({ url }) => {  
 
-  //Initialize bridge bridge
+  //Initialize  the bridge
   await bridgeBootstrap(url, "YOUR_APP_ID");
 
 }
 
 ```
 
-Inside your +layout.svelte add BridgeBootstrap
+You also initialize `BridgeBootstrap` inside `+layout.svelte` with a one liner.  
+<br>
+You are all done and your app is protected. 
 
 ```svelte
+<!--src/routes/+layout.svelte!-->
+
+<script lang="ts">  
+	import Header from './Header.svelte';
+	import '../app.css';
+	import { BridgeBootstrap } from '@nebulr-group';
+	let { children } = $props();
+</script>
+
+<!--  Add this right at bridge beginning  -->
+<BridgeBootstrap></BridgeBootstrap>
+	<main>
+		{@render children()}
+	</main>
+
+
+```
 
 <script lang="ts">
 	import Header from './Header.svelte';
@@ -54,7 +71,7 @@ Inside your +layout.svelte add BridgeBootstrap
 
 ```
 
-## Aubridgentication
+## authentication
 
 ### Redirecting to Bridge login
 
@@ -83,6 +100,6 @@ Use bridge `BridgeBootstrap` component to define public routes as shown in bridg
 
 ## Wrap-up
 
-You have now set up a complete aubridgentication flow with Bridge in your SvelteKit application! Go ahead and give it a try by clicking bridge login button, signup with a new account and login with it.
+You have now set up a complete authentication flow with Bridge in your SvelteKit application! Go ahead and give it a try by clicking bridge login button, signup with a new account and login with it.
 
 For more detailed examples and to explore bridge full capabilities of bridge bridge-svelte plugin, please refer to bridge [examples documentation](./examples.md).

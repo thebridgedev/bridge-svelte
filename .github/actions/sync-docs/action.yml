@@ -7,30 +7,32 @@ runs:
     - name: 🧾 Checkout repository
       uses: actions/checkout@v4
 
-    # 🩹 Fix 1 — Safely write multi-line SSH key via heredoc
     - name: 🔐 Setup SSH for GitLab
       shell: bash
       run: |
+        set -e
+        
+        # Create SSH directory with proper permissions
         mkdir -p ~/.ssh
         chmod 700 ~/.ssh
-
-        # Preserve all newlines exactly as stored in the secret
-        cat > ~/.ssh/id_rsa <<'EOF'
-        ${{ secrets.DOCS_SYNC_SSH_KEY }}
-        EOF
-
+        
+        # Write SSH key with proper formatting
+        echo "$DOCS_SYNC_SSH_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts 2>/dev/null
-
-    # 🩺 Fix 2 — Verify key format and GitLab connectivity (debug)
-    - name: 🧩 Verify SSH key and connection (debug)
-      shell: bash
-      run: |
-        echo "🔍 Checking key format..."
-        head -2 ~/.ssh/id_rsa
-        echo ""
+        
+        # Add GitLab to known hosts
+        ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts
+        chmod 644 ~/.ssh/known_hosts
+        
+        # Start SSH agent and add key
+        eval "$(ssh-agent -s)"
+        ssh-add ~/.ssh/id_rsa
+        
+        # Test SSH connection
         echo "🔍 Testing SSH connection to GitLab..."
-        ssh -i ~/.ssh/id_rsa -T git@gitlab.com || true
+        ssh -T git@gitlab.com || echo "⚠️ SSH test completed (expected for GitLab)"
+        
+        echo "✅ SSH setup completed"
 
     - name: 🧠 Sync /learning folder to Bridge Web (sync-docs branch)
       shell: bash
@@ -42,7 +44,16 @@ runs:
         SYNC_BRANCH="sync-docs/$REPO_NAME"
 
         echo "🔄 Syncing /learning content from $REPO_NAME → $GITLAB_REPO ($SYNC_BRANCH)"
+        
+        # Verify SSH key is loaded
+        echo "🔍 Verifying SSH key is loaded..."
+        ssh-add -l || echo "⚠️ No SSH keys loaded in agent"
+        
+        # Test GitLab connectivity before cloning
+        echo "🔍 Testing GitLab connectivity..."
+        ssh -o ConnectTimeout=10 -T git@gitlab.com || echo "⚠️ SSH test completed (expected for GitLab)"
 
+        echo "📥 Cloning repository..."
         git clone "$GITLAB_REPO"
         cd bridge-web
 
@@ -89,3 +100,4 @@ runs:
         fi
 
         echo "✅ Sync complete for $REPO_NAME → $GITLAB_REPO@$SYNC_BRANCH"
+

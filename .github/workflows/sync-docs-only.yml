@@ -4,17 +4,9 @@ on:
   # ① Manual trigger
   workflow_dispatch:
 
-  # ② Auto trigger when docs change on main
+  # ② Auto trigger when docs change on main or test branches
   push:
-    branches: [ main ]
-    paths:
-      - "learning/**/*.md"
-      - "learning/**/*.mdx"
-      - "README.md"
-
-  # ③ Allow testing on other branches (temporary for development)
-  push:
-    branches: [ "test/**", "fix/**", "feature/**" ]
+    branches: [ main, "test/**", "fix/**", "feature/**" ]
     paths:
       - "learning/**/*.md"
       - "learning/**/*.mdx"

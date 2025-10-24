@@ -12,6 +12,16 @@ on:
       - "learning/**/*.mdx"
       - "README.md"
 
+  # ③ Allow testing on other branches (temporary for development)
+  push:
+    branches: [ "test/**", "fix/**", "feature/**" ]
+    paths:
+      - "learning/**/*.md"
+      - "learning/**/*.mdx"
+      - "README.md"
+      - ".github/actions/sync-docs/action.yml"
+      - ".github/workflows/sync-docs-only.yml"
+
 permissions:
   contents: read
 

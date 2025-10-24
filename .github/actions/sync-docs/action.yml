@@ -7,13 +7,30 @@ runs:
     - name: 🧾 Checkout repository
       uses: actions/checkout@v4
 
+    # 🩹 Fix 1 — Safely write multi-line SSH key via heredoc
     - name: 🔐 Setup SSH for GitLab
       shell: bash
       run: |
         mkdir -p ~/.ssh
-        printf "%s" "$DOCS_SYNC_SSH_KEY" > ~/.ssh/id_rsa
+        chmod 700 ~/.ssh
+
+        # Preserve all newlines exactly as stored in the secret
+        cat > ~/.ssh/id_rsa <<'EOF'
+        ${{ secrets.DOCS_SYNC_SSH_KEY }}
+        EOF
+
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan gitlab.com >> ~/.ssh/known_hosts
+        ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts 2>/dev/null
+
+    # 🩺 Fix 2 — Verify key format and GitLab connectivity (debug)
+    - name: 🧩 Verify SSH key and connection (debug)
+      shell: bash
+      run: |
+        echo "🔍 Checking key format..."
+        head -2 ~/.ssh/id_rsa
+        echo ""
+        echo "🔍 Testing SSH connection to GitLab..."
+        ssh -i ~/.ssh/id_rsa -T git@gitlab.com || true
 
     - name: 🧠 Sync /learning folder to Bridge Web (sync-docs branch)
       shell: bash
@@ -72,4 +89,3 @@ runs:
         fi
 
         echo "✅ Sync complete for $REPO_NAME → $GITLAB_REPO@$SYNC_BRANCH"
-

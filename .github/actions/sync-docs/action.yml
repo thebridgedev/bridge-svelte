@@ -17,14 +17,14 @@ runs:
         chmod 700 ~/.ssh
         
         # Debug: Check if the secret is set
-        if [ -z "$DOCS_SYNC_SSH_KEY" ]; then
-          echo "❌ DOCS_SYNC_SSH_KEY secret is not set"
+        if [ -z "$DOCS_SYNC_KEY" ]; then
+          echo "❌ DOCS_SYNC_KEY secret is not set"
           exit 1
         fi
         
         # Write SSH key with proper formatting and validation
         echo "🔍 Writing SSH key..."
-        echo "$DOCS_SYNC_SSH_KEY" > ~/.ssh/id_rsa
+        echo "$DOCS_SYNC_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         
         # Validate SSH key format

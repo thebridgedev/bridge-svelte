@@ -25,4 +25,4 @@ jobs:
       - name: 🔄 Sync Docs
         uses: ./.github/actions/sync-docs
         env:
-          DOCS_SYNC_SSH_KEY: ${{ secrets.DOCS_SYNC_SSH_KEY }}
+          DOCS_SYNC_KEY: ${{ secrets.DOCS_SYNC_KEY }}

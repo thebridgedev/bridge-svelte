@@ -18,5 +18,9 @@ permissions:
 jobs:
   sync:
     name: 🔄 Sync Learning Docs to Bridge Web
-    uses: ./.github/actions/sync-docs
-    secrets: inherit
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔄 Sync Docs
+        uses: ./.github/actions/sync-docs
+        env:
+          DOCS_SYNC_SSH_KEY: ${{ secrets.DOCS_SYNC_SSH_KEY }}

@@ -16,21 +16,58 @@ runs:
         mkdir -p ~/.ssh
         chmod 700 ~/.ssh
         
-        # Write SSH key with proper formatting
+        # Debug: Check if the secret is set
+        if [ -z "$DOCS_SYNC_SSH_KEY" ]; then
+          echo "❌ DOCS_SYNC_SSH_KEY secret is not set"
+          exit 1
+        fi
+        
+        # Write SSH key with proper formatting and validation
+        echo "🔍 Writing SSH key..."
         echo "$DOCS_SYNC_SSH_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         
+        # Validate SSH key format
+        echo "🔍 Validating SSH key format..."
+        if ! ssh-keygen -l -f ~/.ssh/id_rsa >/dev/null 2>&1; then
+          echo "❌ Invalid SSH key format detected"
+          echo "🔍 First few characters of key:"
+          head -c 50 ~/.ssh/id_rsa
+          echo ""
+          echo "🔍 Last few characters of key:"
+          tail -c 50 ~/.ssh/id_rsa
+          exit 1
+        fi
+        
         # Add GitLab to known hosts
+        echo "🔍 Adding GitLab to known hosts..."
         ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts
         chmod 644 ~/.ssh/known_hosts
         
-        # Start SSH agent and add key
+        # Try SSH agent approach first
+        echo "🔍 Starting SSH agent..."
         eval "$(ssh-agent -s)"
-        ssh-add ~/.ssh/id_rsa
+        
+        echo "🔍 Adding SSH key to agent..."
+        if ssh-add ~/.ssh/id_rsa; then
+          echo "✅ SSH key added to agent successfully"
+        else
+          echo "⚠️ Failed to add SSH key to agent, trying direct key approach..."
+          # Set SSH config to use the key directly
+          cat > ~/.ssh/config << EOF
+Host gitlab.com
+    HostName gitlab.com
+    User git
+    IdentityFile ~/.ssh/id_rsa
+    IdentitiesOnly yes
+    StrictHostKeyChecking no
+EOF
+          chmod 600 ~/.ssh/config
+        fi
         
         # Test SSH connection
         echo "🔍 Testing SSH connection to GitLab..."
-        ssh -T git@gitlab.com || echo "⚠️ SSH test completed (expected for GitLab)"
+        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -T git@gitlab.com || echo "⚠️ SSH test completed (expected for GitLab)"
         
         echo "✅ SSH setup completed"
 

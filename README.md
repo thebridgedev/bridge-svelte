@@ -3,8 +3,8 @@
 This repository contains both Bridge Svelte library and a demo application showcasing its features.
 
 ## Quick Links
-- [Quickstart Guide](learning/md/quickstart.md) - Get started quickly with Bridge in your Svelte application
-- [Examples](learning/md/examples.md) - Detailed examples of Bridge features
+- [Quickstart Guide](learning/quickstart/quickstart.md) - Get started quickly with Bridge in your Svelte application
+- [Examples](learning/examples/examples.md) - Detailed examples of Bridge features
 
 ## Table of Contents
 

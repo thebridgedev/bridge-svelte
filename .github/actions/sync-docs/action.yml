@@ -101,9 +101,8 @@ runs:
         # Remove old synced content for this plugin
         rm -rf "$TARGET_PATH"/* || true
 
-        # Copy new content
-        cp -r ../learning/* "$TARGET_PATH"/ || true
-        if [ -f ../README.md ]; then cp ../README.md "$TARGET_PATH/index.md"; fi
+        # Copy new content (excluding README.md)
+        rsync -av --exclude='README.md' ../learning/ "$TARGET_PATH"/ || true
 
         git add .
 

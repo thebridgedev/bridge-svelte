@@ -34,7 +34,7 @@ export const load: LayoutLoad = async ({ url }) => {
 ```
 
 You also initialize `BridgeBootstrap` inside `+layout.svelte` with a one liner.  
-<br>
+<br/>
 You are all done and your app is protected. 
 
 ```svelte
@@ -54,7 +54,7 @@ You are all done and your app is protected.
 	</main>
 
 
-```
+```svelte
 
 <script lang="ts">
 	import Header from './Header.svelte';

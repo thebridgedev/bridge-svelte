@@ -104,7 +104,8 @@ runs:
         # Copy new content (excluding README.md)
         rsync -av --exclude='README.md' ../learning/ "$TARGET_PATH"/ || true
 
-        git add .
+        # Stage all changes including deletions
+        git add -A .
 
         if git diff --cached --quiet; then
           echo "✅ No new documentation changes to sync."

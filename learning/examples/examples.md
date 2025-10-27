@@ -1,7 +1,7 @@
 # Bridge Svelte Examples
 
-Here we are showing bridge features of bridge bridge svelte plugin. 
-You can also see bridgese features in our demo application in this monorepo
+Here we are showing bridge features of The Bridge svelte plugin. 
+You can also see the features in action in our demo application in this monorepo
 
 To start bridge demo app:
 ```bash

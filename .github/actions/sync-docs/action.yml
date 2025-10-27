@@ -93,7 +93,7 @@ runs:
         cd bridge-web
 
         git config user.name "Docs Sync Bot"
-        git config user.email "docs.bot@nebulr.dev"
+        git config user.email "docs.bot@nebulr.group"
 
         TARGET_PATH="bridge-docs/synced/$REPO_NAME"
         mkdir -p "$TARGET_PATH"

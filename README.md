@@ -1,5 +1,7 @@
 # Bridge Svelte Demo & Library Documentation
 
+[![MadeWithSvelte.com shield](https://madewithsvelte.com/storage/repo-shields/5996-shield.svg)](https://madewithsvelte.com/p/the-bridge/shield-link)
+
 This repository contains both Bridge Svelte library and a demo application showcasing its features.
 
 ## Quick Links

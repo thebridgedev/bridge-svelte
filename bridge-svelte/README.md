@@ -1,6 +1,8 @@
 
 ## @nebulr-group/bridge-svelte
 
+[![MadeWithSvelte.com shield](https://madewithsvelte.com/storage/repo-shields/5996-shield.svg)](https://madewithsvelte.com/p/the-bridge/shield-link)
+
 
 Bridge Svelte library. Add Bridge auth, feature flags, and payments to your SvelteKit 2 + Svelte 5 apps.
 

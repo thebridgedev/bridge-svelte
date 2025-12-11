@@ -12,7 +12,7 @@
 	"bugs": {
 		"url": "https://github.com/thebridgedev/bridge-svelte/issues"
 	},
-	"homepage": "https://github.com/thebridgedev/bridge-svelte#readme",
+	"homepage": "https://thebridge.dev",
 	"scripts": {
 	  "dev": "vite dev",
 	  "build": "bun run prepack",

@@ -14,5 +14,8 @@
   },
   "devDependencies": {
     "mdx-to-md": "^0.5.2"
+  },
+  "dependencies": {
+    "@nebulr-group/bridge-react": "0.1.0-beta.2"
   }
 }

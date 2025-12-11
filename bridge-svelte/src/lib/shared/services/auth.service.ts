@@ -40,6 +40,18 @@ function clearTokens() {
   stopAutoRefresh();
 }
 
+async function logout() {
+  // Clear local storage tokens first
+  clearTokens();
+  
+  // Redirect to backend logout endpoint to clear all authentication cookies
+  if (browser) {
+    const config = getConfig();
+    const logoutUrl = `${config.authBaseUrl}/url/logout/${config.appId}`;
+    window.location.href = logoutUrl;
+  }
+}
+
 async function login(options: { redirectUri?: string } = {}) {
   const loginUrl = createLoginUrl(options);
   if (browser) {
@@ -212,7 +224,7 @@ export const auth = {
   isLoading,
   error,
   login,
-  logout: clearTokens,
+  logout,
   handleCallback,
   refreshToken,
   createLoginUrl,

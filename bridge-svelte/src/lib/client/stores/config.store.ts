@@ -11,9 +11,9 @@ interface ConfigStoreState {
 }
 
 const DEFAULT_CONFIG: Partial<BridgeConfig> = {
-  authBaseUrl: 'https://auth.nblocks.cloud',
-  backendlessBaseUrl: 'https://backendless.nblocks.cloud',
-  teamManagementUrl: 'https://backendless.nblocks.cloud/user-management-portal/users',
+  authBaseUrl: 'https://api.thebridge.dev/auth',
+  backendlessBaseUrl: 'https://api.thebridge.dev/cloud-views',
+  teamManagementUrl: 'https://api.thebridge.dev/cloud-views/user-management-portal/users',
   defaultRedirectRoute: '/',
   loginRoute: '/login',
   debug: false

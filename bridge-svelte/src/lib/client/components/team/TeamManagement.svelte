@@ -37,7 +37,8 @@
         throw new Error('Failed to get handover code: No code in response');
       }
 
-      // Create bridge team management URL with bridge handover code
+      // Use the teamManagementUrl which points to bridge-api's user-management-portal endpoint
+      // bridge-api handles the redirect to cloud-views with proper handover
       const baseUrl = config.teamManagementUrl;
       return `${baseUrl}?code=${data.code}`;
     } catch (err) {

@@ -4,68 +4,72 @@
   import { auth } from '../../../shared/services/auth.service.js';
   import { getConfig } from '../../stores/config.store.js';
 
-  let iframeUrl: string | null = null;
-  let error: string | null = null;
-  let isLoading = true;
+  let iframeUrl = $state<string | null>(null);
+  let error = $state<string | null>(null);
+  let isLoading = $state(true);
 
   async function getHandoverCode(accessToken: string) {
     const config = getConfig();
     const authBaseUrl = config.authBaseUrl;
     const appId = config.appId;
 
-    try {
-      const response = await fetch(
-        `${authBaseUrl}/handover/code/${appId}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ accessToken }),
-        }
-      );
+    logger.debug('[TeamManagement] getHandoverCode called', { authBaseUrl, appId });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        logger.error(`Failed to get handover code: ${response.status} ${response.statusText}`, errorText);
-        throw new Error(`Failed to get handover code: ${response.statusText}`);
+    const response = await fetch(
+      `${authBaseUrl}/handover/code/${appId}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ accessToken }),
       }
+    );
 
-      const data = await response.json();
-      if (!data.code) {
-        logger.error('No handover code in response:', data);
-        throw new Error('Failed to get handover code: No code in response');
-      }
+    logger.debug('[TeamManagement] handover response status:', response.status);
 
-      // Use the teamManagementUrl which points to bridge-api's user-management-portal endpoint
-      // bridge-api handles the redirect to cloud-views with proper handover
-      const baseUrl = config.teamManagementUrl;
-      return `${baseUrl}?code=${data.code}`;
-    } catch (err) {
-      logger.error('Error getting handover code:', err);
-      throw err;
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error(`[TeamManagement] Failed to get handover code: ${response.status} ${response.statusText}`, errorText);
+      throw new Error(`Failed to get handover code: ${response.status} - ${errorText}`);
     }
+
+    const data = await response.json();
+    logger.debug('[TeamManagement] handover response data:', data);
+    
+    if (!data.code) {
+      logger.error('[TeamManagement] No handover code in response:', data);
+      throw new Error('Failed to get handover code: No code in response');
+    }
+
+    // Use the teamManagementUrl which points to bridge-api's user-management-portal endpoint
+    // bridge-api handles the redirect to cloud-views with proper handover
+    const baseUrl = config.teamManagementUrl;
+    const url = `${baseUrl}?code=${data.code}`;
+    logger.debug('[TeamManagement] constructed iframe URL:', url);
+    return url;
   }
 
   onMount(async () => {
-    logger.debug('TeamManagement onMount');
+    logger.debug('[TeamManagement] onMount started');
     try {
-      if (!auth.isAuthenticated) {
-        logger.debug('TeamManagement onMount: User is not authenticated');
-        throw new Error('User must be authenticated to access team management');
-      }
+      // Get token directly - auth.getToken() returns the current token synchronously
       const token = auth.getToken();
-      // Get bridge access token from your auth store
+      logger.debug('[TeamManagement] token check:', { hasToken: !!token, hasAccessToken: !!token?.accessToken });
+      
       const accessToken = token?.accessToken;
       if (!accessToken) {
-        throw new Error('No access token available');
+        throw new Error('No access token available. Please log in first.');
       }
 
       iframeUrl = await getHandoverCode(accessToken);
+      logger.debug('[TeamManagement] iframe URL set:', iframeUrl);
     } catch (err) {
+      logger.error('[TeamManagement] Error:', err);
       error = err instanceof Error ? err.message : 'Failed to load team management';
     } finally {
       isLoading = false;
+      logger.debug('[TeamManagement] loading complete, isLoading:', isLoading);
     }
   });
 </script>

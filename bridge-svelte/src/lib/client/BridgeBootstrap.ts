@@ -27,15 +27,27 @@ export async function bridgeBootstrap(
  
       const { handleCallback } = auth;
       const code = url.searchParams.get('code');
+      logger.debug('[bridgeBootstrap] callback code check', { hasCode: !!code, pathname: url.pathname });
     
       if (code) {
         try {
+          logger.debug('[bridgeBootstrap] calling handleCallback');
           await handleCallback(code);
+          // Verify tokens before redirect
+          const tokensAfterCallback = auth.getToken();
+          const isAuthAfterCallback = !!tokensAfterCallback?.accessToken;
+          logger.debug('[bridgeBootstrap] after handleCallback', { 
+            hasTokens: !!tokensAfterCallback?.accessToken,
+            isAuthenticated: isAuthAfterCallback 
+          });
           // Redirect bridge user to bridge home page after bridge callback is handled
+          logger.debug('[bridgeBootstrap] redirecting to /');
           redirect(303, '/');                    
         } catch (err) {      
-          logger.error('Auth callback error:', err);
+          logger.error('[bridgeBootstrap] Auth callback error:', err);
         }
+      } else {
+        logger.warn('[bridgeBootstrap] callback route detected but no code parameter');
       }    
       
     }
@@ -52,7 +64,15 @@ export async function bridgeBootstrap(
 
   // 4. Handle route guarding and redirects
   
-  const guard = createRouteGuard();  
+  const guard = createRouteGuard();
+  // Check auth state before route guard decision
+  const currentTokens = auth.getToken();
+  const currentAuth = !!currentTokens?.accessToken;
+  logger.debug('[bridgeBootstrap] before route guard check', { 
+    pathname: url.pathname,
+    hasTokens: !!currentTokens?.accessToken,
+    isAuthenticated: currentAuth 
+  });
   const decision = await guard.getNavigationDecision(url.pathname);
   logger.debug('[bridgeBootstrap] navigation decision', decision);
   if (decision.type === 'login') {

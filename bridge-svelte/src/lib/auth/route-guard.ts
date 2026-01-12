@@ -83,7 +83,15 @@ export function createRouteGuard() {
 
   function shouldRedirectToLogin(pathname: string): boolean {  
     const isProtected = isProtectedRoute(pathname);
+    const tokens = auth.getToken();
     const authenticated = get(isAuthenticated);
+    logger.debug(`[route-guard] shouldRedirectToLogin check`, {
+      pathname,
+      isProtected,
+      hasTokens: !!tokens?.accessToken,
+      authenticated,
+      tokenStoreValue: tokens
+    });
     if(isProtectedRoute(pathname) && !get(isAuthenticated)) {
       logger.debug(`[route-guard] path ${pathname} is protected and user is not authenticated`);  
       return true;

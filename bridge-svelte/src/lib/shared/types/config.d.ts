@@ -11,14 +11,9 @@ export interface BridgeConfig {
     callbackUrl?: string;
     /**
      * The base URL for Bridge auth services
-     * @default 'https://auth.nblocks.cloud'
+     * @default 'https://api.thebridge.dev/auth'
      */
     authBaseUrl?: string;
-    /**
-     * The base URL for Bridge backendless services
-     * @default 'https://backendless.nblocks.cloud'
-     */
-    backendlessBaseUrl?: string;
     /**
      * Route to redirect to after login
      * @default '/'
@@ -31,9 +26,14 @@ export interface BridgeConfig {
     loginRoute?: string;
     /**
      * URL for bridge team management portal
-     * @default 'https://backendless.nblocks.cloud'
+     * @default 'https://api.thebridge.dev/cloud-views/user-management-portal/users'
      */
     teamManagementUrl?: string;
+    /**
+     * Base URL for bridge cloud-views service (for plan selection, payments, feature flags, etc.)
+     * @default 'https://api.thebridge.dev/cloud-views'
+     */
+    cloudViewsUrl?: string;
     /**
      * Debug mode
      * @default false

@@ -18,6 +18,7 @@ export * from './auth/route-guard.js';
 // Types
 export * from './shared/profile.js'; // If this exists
 export * from './shared/services/auth.service.js';
+export * from './shared/services/plan.service.js';
 export * from './shared/types/config.js';
 
 // Logger

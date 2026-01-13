@@ -8,7 +8,7 @@ import { featureFlags } from '../shared/feature-flag.js';
 import { logger } from '../shared/logger.js';
 import { auth, maybeRefreshNow } from '../shared/services/auth.service.js';
 import type { BridgeConfig } from '../shared/types/config.js';
-import { bridgeConfig } from './stores/config.store.js';
+import { bridgeConfig, getConfig } from './stores/config.store.js';
 
 const bridgeReadyStore = writable(false);
 let resolveReady: (() => void) | null = null;

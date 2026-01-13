@@ -24,6 +24,12 @@ bun run dev
   - [Conditional Rendering with Feature Flags](#if-else-if-a-featureflag-is-disabled-bridgen-show-this)
   - [Route Protection with Feature Flags](#feature-flags-on-routes)
   - [Server-Side Feature Flags](#feature-flags-on-server-side-code-like-apis)
+- [Payments & Subscriptions](#payments--subscriptions)
+  - [Fetching Available Plans](#fetching-available-plans)
+  - [Checking Current Plan Status](#checking-current-plan-status)
+  - [Selecting or Changing Plans](#selecting-or-changing-plans)
+  - [Redirecting to Subscription Portal](#redirecting-to-subscription-portal)
+  - [Complete Plan Selection Example](#complete-plan-selection-example)
 - [Server-Side Rendering](#server-side-rendering)
 - [Configuration](#configuration)
   - [Getting Config Values](#getting-config-values)
@@ -313,6 +319,492 @@ Notes:
 - Order matters. Place specific rules before bridge global catch-all.
 - Public routes bypass feature checks. All obridger routes fall back to bridge global rule and must pass flag "A".
 
+## Payments & Subscriptions
+
+Bridge provides comprehensive support for subscription plan management, allowing users to view available plans, check their current subscription status, upgrade or downgrade plans, and manage billing.
+
+### Fetching Available Plans
+
+To display available subscription plans, use bridge `getPaymentOptionsAnonymous` GraphQL query:
+
+```ts
+// src/lib/graphql/operations.ts
+import { gql } from '@urql/svelte';
+
+export const GET_PAYMENT_OPTIONS_ANONYMOUS = gql`
+  query GetPaymentOptionsAnonymous {
+    getPaymentOptionsAnonymous {
+      plans {
+        id
+        key
+        name
+        description
+        trial
+        trialDays
+        prices {
+          amount
+          currency
+          recurrenceInterval
+        }
+      }
+      taxes {
+        id
+        name
+        countryCode
+        percentage
+      }
+    }
+  }
+`;
+```
+
+Then use it in your component:
+
+```ts
+<!-- src/components/PlanSelector.svelte -->
+<script lang="ts">
+  import { queryStore } from '@urql/svelte';
+  import client from '$lib/graphql/client';
+  import { GET_PAYMENT_OPTIONS_ANONYMOUS } from '$lib/graphql/operations';
+
+  const paymentOptionsStore = queryStore({
+    client,
+    query: GET_PAYMENT_OPTIONS_ANONYMOUS
+  });
+
+  let plans = $derived($paymentOptionsStore.data?.getPaymentOptionsAnonymous?.plans ?? []);
+  let isLoading = $derived($paymentOptionsStore.fetching);
+</script>
+
+{#if isLoading}
+  <div>Loading plans...</div>
+{:else}
+  {#each plans as plan}
+    <div class="plan-card">
+      <h3>{plan.name}</h3>
+      {#if plan.description}
+        <p>{plan.description}</p>
+      {/if}
+      {#each plan.prices as price}
+        <p>{price.currency} {price.amount} / {price.recurrenceInterval}</p>
+      {/each}
+    </div>
+  {/each}
+{/if}
+```
+
+### Checking Current Plan Status
+
+Check bridge current tenant's subscription status and plan details:
+
+```ts
+// src/lib/graphql/operations.ts
+export const GET_TENANT_PAYMENT_DETAILS = gql`
+  query GetTenantPaymentDetails {
+    getTenantPaymentDetails {
+      status {
+        paymentsEnabled
+        shouldSelectPlan
+        shouldSetupPayments
+        provider
+      }
+      details {
+        plan {
+          id
+          key
+          name
+          description
+        }
+        price {
+          amount
+          currency
+          recurrenceInterval
+        }
+        trial
+        trialDaysLeft
+      }
+    }
+  }
+`;
+```
+
+Usage example:
+
+```ts
+<!-- src/components/CurrentPlanStatus.svelte -->
+<script lang="ts">
+  import { queryStore } from '@urql/svelte';
+  import client from '$lib/graphql/client';
+  import { GET_TENANT_PAYMENT_DETAILS } from '$lib/graphql/operations';
+
+  const paymentDetailsStore = queryStore({
+    client,
+    query: GET_TENANT_PAYMENT_DETAILS
+  });
+
+  let paymentDetails = $derived($paymentDetailsStore.data?.getTenantPaymentDetails);
+  let currentPlan = $derived(paymentDetails?.details?.plan);
+  let paymentStatus = $derived(paymentDetails?.status);
+</script>
+
+{#if currentPlan}
+  <div>
+    <h3>Current Plan: {currentPlan.name}</h3>
+    {#if paymentStatus?.paymentsEnabled}
+      <p>Payments are enabled</p>
+    {:else if paymentStatus?.shouldSetupPayments}
+      <p>Please set up payments to continue</p>
+    {/if}
+  </div>
+{/if}
+```
+
+### Selecting or Changing Plans
+
+To allow users to upgrade or downgrade their plan, use bridge `setTenantPlanDetails` mutation:
+
+```ts
+// src/lib/graphql/operations.ts
+export const SET_TENANT_PLAN_DETAILS = gql`
+  mutation SetTenantPlanDetails($details: SetTenantPlanDetailsInput!) {
+    setTenantPlanDetails(details: $details) {
+      status {
+        paymentsEnabled
+        shouldSelectPlan
+        shouldSetupPayments
+        provider
+      }
+      details {
+        plan {
+          id
+          key
+          name
+        }
+        price {
+          amount
+          currency
+          recurrenceInterval
+        }
+        trial
+        trialDaysLeft
+      }
+    }
+  }
+`;
+```
+
+Implementation example:
+
+```ts
+<!-- src/components/PlanUpgrade.svelte -->
+<script lang="ts">
+  import client from '$lib/graphql/client';
+  import { SET_TENANT_PLAN_DETAILS } from '$lib/graphql/operations';
+  import { readonlyConfig } from '@nebulr-group/bridge-svelte';
+  import { auth } from '@nebulr-group/bridge-svelte';
+
+  const configStore = readonlyConfig;
+  let config = $derived($configStore);
+  let loading = $state(false);
+  let error = $state<string | null>(null);
+
+  async function selectPlan(planKey: string, currency: string, interval: string) {
+    loading = true;
+    error = null;
+
+    try {
+      const result = await client.mutation(SET_TENANT_PLAN_DETAILS, {
+        details: {
+          planKey,
+          priceOffer: {
+            currency,
+            recurrenceInterval: interval
+          }
+        }
+      }).toPromise();
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      const paymentStatus = result.data?.setTenantPlanDetails?.status;
+      const cloudViewsUrl = config?.cloudViewsUrl;
+
+      // Set security cookie before redirecting
+      await setSecurityCookie(cloudViewsUrl);
+
+      if (paymentStatus?.shouldSetupPayments) {
+        // Redirect to checkout for new subscriptions
+        window.location.href = `${cloudViewsUrl}/payments/checkoutView`;
+      } else {
+        // Redirect back to app for plan changes
+        window.location.href = `${cloudViewsUrl}/security/handoverToApp`;
+      }
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to select plan';
+      loading = false;
+    }
+  }
+
+  async function setSecurityCookie(cloudViewsUrl: string) {
+    const tokenSet = auth.getToken();
+    const token = tokenSet?.accessToken;
+
+    if (!token) {
+      throw new Error('No access token available');
+    }
+
+    await fetch(`${cloudViewsUrl}/security/setCookie`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+  }
+</script>
+
+{#if error}
+  <div class="error">{error}</div>
+{/if}
+
+<button 
+  disabled={loading}
+  onclick={() => selectPlan('premium', 'USD', 'month')}
+>
+  {loading ? 'Processing...' : 'Upgrade to Premium'}
+</button>
+```
+
+### Redirecting to Subscription Portal
+
+For existing subscribers, provide a link to manage their subscription and billing:
+
+```ts
+<!-- src/components/ManageBilling.svelte -->
+<script lang="ts">
+  import { readonlyConfig } from '@nebulr-group/bridge-svelte';
+  import { auth } from '@nebulr-group/bridge-svelte';
+
+  const configStore = readonlyConfig;
+  let config = $derived($configStore);
+
+  async function handleManagePayments() {
+    const cloudViewsUrl = config?.cloudViewsUrl;
+    
+    // Set security cookie before redirecting
+    const tokenSet = auth.getToken();
+    const token = tokenSet?.accessToken;
+
+    if (!token) {
+      throw new Error('No access token available');
+    }
+
+    await fetch(`${cloudViewsUrl}/security/setCookie`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    // Redirect to subscription portal
+    window.location.href = `${cloudViewsUrl}/payments/subscriptionPortal`;
+  }
+</script>
+
+<button onclick={handleManagePayments}>
+  Manage Billing & Payments
+</button>
+```
+
+### Complete Plan Selection Example
+
+Here's a complete example that combines all bridge features for a plan selection page:
+
+```ts
+<!-- src/routes/plans/+page.svelte -->
+<script lang="ts">
+  import { Button } from '$lib/components/ui/button';
+  import { queryStore } from '@urql/svelte';
+  import client from '$lib/graphql/client';
+  import { 
+    GET_PAYMENT_OPTIONS_ANONYMOUS, 
+    GET_TENANT_PAYMENT_DETAILS, 
+    SET_TENANT_PLAN_DETAILS 
+  } from '$lib/graphql/operations';
+  import { readonlyConfig } from '@nebulr-group/bridge-svelte';
+  import { auth } from '@nebulr-group/bridge-svelte';
+
+  // State
+  let selectedCurrency = $state('USD');
+  let selectedInterval = $state('month');
+  let loadingPlanKey = $state<string | null>(null);
+  let error = $state<string | null>(null);
+
+  // Config
+  const configStore = readonlyConfig;
+  let config = $derived($configStore);
+
+  // Queries
+  const paymentOptionsStore = queryStore({
+    client,
+    query: GET_PAYMENT_OPTIONS_ANONYMOUS
+  });
+
+  const paymentDetailsStore = queryStore({
+    client,
+    query: GET_TENANT_PAYMENT_DETAILS
+  });
+
+  // Derived data
+  let plans = $derived($paymentOptionsStore.data?.getPaymentOptionsAnonymous?.plans ?? []);
+  let paymentDetails = $derived($paymentDetailsStore.data?.getTenantPaymentDetails);
+  let currentPlan = $derived(paymentDetails?.details?.plan);
+  let isLoading = $derived($paymentOptionsStore.fetching || $paymentDetailsStore.fetching);
+
+  // Filter plans by selected currency and interval
+  let filteredPlans = $derived(
+    plans.filter(plan => 
+      plan.prices.some(p => 
+        p.currency === selectedCurrency && 
+        p.recurrenceInterval === selectedInterval
+      )
+    )
+  );
+
+  function getPriceForPlan(plan: any) {
+    return plan.prices.find(
+      (p: any) => p.currency === selectedCurrency && p.recurrenceInterval === selectedInterval
+    );
+  }
+
+  function isPlanSelected(plan: any): boolean {
+    if (!currentPlan) return false;
+    return currentPlan.key === plan.key;
+  }
+
+  async function selectPlan(plan: any) {
+    const price = getPriceForPlan(plan);
+    if (!price) return;
+
+    loadingPlanKey = plan.key;
+    error = null;
+
+    try {
+      const result = await client.mutation(SET_TENANT_PLAN_DETAILS, {
+        details: {
+          planKey: plan.key,
+          priceOffer: {
+            currency: price.currency,
+            recurrenceInterval: price.recurrenceInterval
+          }
+        }
+      }).toPromise();
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      const paymentStatus = result.data?.setTenantPlanDetails?.status;
+      const cloudViewsUrl = config?.cloudViewsUrl;
+
+      // Set security cookie
+      const tokenSet = auth.getToken();
+      const token = tokenSet?.accessToken;
+      
+      await fetch(`${cloudViewsUrl}/security/setCookie`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      // Redirect based on payment status
+      if (paymentStatus?.shouldSetupPayments) {
+        window.location.href = `${cloudViewsUrl}/payments/checkoutView`;
+      } else {
+        window.location.href = `${cloudViewsUrl}/security/handoverToApp`;
+      }
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to select plan';
+      loadingPlanKey = null;
+    }
+  }
+</script>
+
+<div class="plans-page">
+  <h1>Choose Your Plan</h1>
+
+  {#if error}
+    <div class="error">{error}</div>
+  {/if}
+
+  {#if isLoading}
+    <div>Loading plans...</div>
+  {:else}
+    <!-- Currency and interval selectors -->
+    <div class="filters">
+      <select bind:value={selectedCurrency}>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+      </select>
+      <select bind:value={selectedInterval}>
+        <option value="month">Monthly</option>
+        <option value="year">Yearly</option>
+      </select>
+    </div>
+
+    <!-- Plan cards -->
+    <div class="plans-grid">
+      {#each filteredPlans as plan}
+        {@const price = getPriceForPlan(plan)}
+        {@const isSelected = isPlanSelected(plan)}
+        {@const isLoadingThisPlan = loadingPlanKey === plan.key}
+
+        {#if price}
+          <div class="plan-card {isSelected ? 'selected' : ''}">
+            <h3>{plan.name}</h3>
+            {#if plan.description}
+              <p>{plan.description}</p>
+            {/if}
+            <div class="price">
+              ${price.amount}/{selectedInterval === 'month' ? 'mo' : 'yr'}
+            </div>
+            {#if isSelected}
+              <span class="badge">Current Plan</span>
+            {/if}
+            <Button
+              disabled={isSelected || loadingPlanKey !== null}
+              onclick={() => selectPlan(plan)}
+            >
+              {#if isLoadingThisPlan}
+                Processing...
+              {:else if isSelected}
+                Current Plan
+              {:else}
+                Select Plan
+              {/if}
+            </Button>
+          </div>
+        {/if}
+      {/each}
+    </div>
+
+    <!-- Manage payments link -->
+    {#if paymentDetails?.status?.paymentsEnabled}
+      <div class="manage-payments">
+        <a href="/manage-billing">Manage Billing & Payments</a>
+      </div>
+    {/if}
+  {/if}
+</div>
+```
+
 ## Configuration
 
 ### Getting Config Values
@@ -341,8 +833,9 @@ Bridge configuration values are primarily set through environment variables in y
 | Variable Name | Description | Default Value |
 |---------------|-------------|---------------|
 | `VITE_BRIDGE_APP_ID` | Your Bridge application ID | (Required) |
-| `VITE_BRIDGE_AUTH_BASE_URL` | Base URL for Bridge auth services | `https://auth.nblocks.cloud` |
-| `VITE_BRIDGE_BACKENDLESS_BASE_URL` | Base URL for Bridge backendless services | `https://backendless.nblocks.cloud` |
+| `VITE_BRIDGE_AUTH_BASE_URL` | Base URL for Bridge auth services | `https://api.thebridge.dev/auth` |
+| `VITE_BRIDGE_CLOUD_VIEWS_BASE_URL` | Base URL for Bridge cloud-views services (plans, flags, etc) | `https://api.thebridge.dev/cloud-views` |
+| `VITE_BRIDGE_TEAM_MANAGEMENT_URL` | URL for Bridge team management portal | `https://api.thebridge.dev/cloud-views/user-management-portal/users` |
 | `VITE_BRIDGE_CALLBACK_URL` | URL for OAuth callback | (Optional) |
 | `VITE_BRIDGE_DEFAULT_REDIRECT_ROUTE` | Default route after login | `/` |
 | `VITE_BRIDGE_LOGIN_ROUTE` | Route for login page | `/login` |

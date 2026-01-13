@@ -14,6 +14,7 @@ This repository contains both Bridge Svelte library and a demo application showc
 - [Configuration](#configuration)
 - [Authentication](#Authentication)
 - [Feature Flags](#feature-flags)
+- [Payments & Subscriptions](#payments--subscriptions)
 - [Demo Application](#demo-application)
 
 ## Installation
@@ -60,13 +61,13 @@ These are the primary options you will need to configure for your application.
 These options are typically only needed for development or advanced use cases. In most production scenarios, you can rely on their default values.
 
 *   `authBaseUrl` (`string`): The base URL for the Bridge authentication service.
-    *   **Default**: `'https://auth.nblocks.cloud'`
-*   `backendlessBaseUrl` (`string`): The base URL for Bridge's backendless services, including feature flags.
-    *   **Default**: `'https://backendless.nblocks.cloud'`
+    *   **Default**: `'https://api.thebridge.dev/auth'`
+*   `cloudViewsUrl` (`string`): The base URL for Bridge's cloud-views services, including feature flags.
+    *   **Default**: `'https://api.thebridge.dev/cloud-views'`
 *   `loginRoute` (`string`): The route within your application that serves as the login page. The SDK will redirect users here if they attempt to access a protected route without being authenticated.
     *   **Default**: `'/login'`
 *   `teamManagementUrl` (`string`): The URL for the Bridge team management portal.
-    *   **Default**: `'https://backendless.nblocks.cloud'`
+    *   **Default**: `'https://api.thebridge.dev/cloud-views/user-management-portal/users'`
 
 ## Authentication
 
@@ -92,6 +93,18 @@ The library supports:
 - Route protection with flags
 - Server-side feature flags
 
+## Payments & Subscriptions
+
+For payment and subscription management examples and implementation details, see:
+- [Examples - Payments & Subscriptions](learning/examples/examples.md#payments--subscriptions)
+
+The library provides:
+- Fetching available subscription plans
+- Checking current plan status
+- Selecting or changing plans (upgrade/downgrade)
+- Redirecting to subscription portal for billing management
+- Complete plan selection UI examples
+
 ## Demo Application
 
 The demo application in this repository contains runnable examples of bridge usage patterns found in bridge [examples](learning/md/examples.md) documentation.
@@ -107,7 +120,8 @@ bun run dev
 The demo showcases:
 - Feature flag implementation
 - Team management features
-- authentication flows
+- Authentication flows
+- Payment and subscription management
 - Integration examples
 
 

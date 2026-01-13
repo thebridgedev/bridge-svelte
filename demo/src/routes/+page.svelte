@@ -69,13 +69,13 @@
             <h3 class="heading-md">Cached Feature Flag</h3>
             <div class="card">
               <p class="note">Uses cached values (5-minute cache)</p>
-              <FeatureFlag flagName="demo-flag" >                
+              <FeatureFlag flagName="demo-flag">                
                   <div class="feature-status active">
                     <p>Feature flag "demo-flag" is active</p>
                   </div>                
               </FeatureFlag>
 
-              <FeatureFlag flagName="demo-flag" negate={true} >                
+              <FeatureFlag flagName="demo-flag" negate={true}>                
                 <div class="feature-status">Create a feature flag called "demo-flag"</div>
             </FeatureFlag>
             </div>
@@ -91,8 +91,8 @@
                     <p>Feature flag "demo-flag" is active</p>
                   </div>               
               </FeatureFlag>
-              <FeatureFlag flagName="demo-flag" forceLive={true} negate={true} >               
-                  <div class="feature-status">Create a feature flag called "demo-flag"</div>              
+              <FeatureFlag flagName="demo-flag" forceLive={true} negate={true}>               
+                  <div class="feature-status">Create a feature flag called "demo-flag"</div>           
               </FeatureFlag>
             </div>
           </div>

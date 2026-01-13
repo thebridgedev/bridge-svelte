@@ -187,7 +187,7 @@ For cases where you need real-time updates, you can use bridge `forceLive` prop:
 
 ### If, else, if a featureflag is disabled bridgen show this
 
-Use bridge `FeatureFlag` component with let:enabled to show content when a flag is disabled:
+Use bridge `FeatureFlag` component with `let:enabled` when you need to handle both enabled and disabled states yourself. Set `renderWhenDisabled={true}` to always render the snippet and receive the flag state (effective value after `negate` as `enabled`, and the raw value as `rawEnabled`):
 
 ```ts
 <!-- src/components/ConditionalContent.svelte -->
@@ -195,14 +195,16 @@ Use bridge `FeatureFlag` component with let:enabled to show content when a flag 
   import FeatureFlag from '@bridge-svelte/client/components/FeatureFlag.svelte';
 </script>
 
-<FeatureFlag flagName="demo-flag" let:enabled>
-    {#if enabled}
-        <div class="feature-status active">
-        <p>Feature flag "demo-flag" is active</p>
-        </div>
-    {:else}
-        <div class="feature-status"> "demo-flag" is inactive</div>
-    {/if}
+<FeatureFlag flagName="demo-flag" renderWhenDisabled={true} let:enabled let:rawEnabled>
+  {#if enabled}
+    <div class="feature-status active">
+      <p>Feature flag "demo-flag" is active</p>
+    </div>
+  {:else}
+    <div class="feature-status">
+      "demo-flag" is inactive (raw: {rawEnabled})
+    </div>
+  {/if}
 </FeatureFlag>
 ```
 

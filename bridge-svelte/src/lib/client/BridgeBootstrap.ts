@@ -1,6 +1,6 @@
 // src/lib/bridge/bootstrap.ts
 
-import { redirect } from '@sveltejs/kit';
+import { isRedirect, redirect } from '@sveltejs/kit';
 import { get, writable } from 'svelte/store';
 import type { RouteGuardConfig } from '../auth/route-guard.js';
 import { createRouteGuard } from '../auth/route-guard.js';
@@ -61,7 +61,10 @@ export async function bridgeBootstrap(
           // Redirect bridge user to bridge home page after bridge callback is handled
           logger.debug('[bridgeBootstrap] redirecting to /');
           redirect(303, '/');                    
-        } catch (err) {      
+        } catch (err) {
+          if (isRedirect(err)) {
+            throw err; // Re-throw redirect so SvelteKit can handle it
+          }
           logger.error('[bridgeBootstrap] Auth callback error:', err);
         }
       } else {
@@ -70,6 +73,9 @@ export async function bridgeBootstrap(
       
     }
   } catch (e) {
+    if (isRedirect(e)) {
+      throw e; // Re-throw redirect so SvelteKit can handle it
+    }
     logger.warn('[bridgeBootstrap] failed parsing callbackUrl', e);
   }
 

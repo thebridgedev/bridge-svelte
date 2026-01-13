@@ -1,6 +1,7 @@
 // src/lib/bridge/bootstrap.ts
 
 import { redirect } from '@sveltejs/kit';
+import { get, writable } from 'svelte/store';
 import type { RouteGuardConfig } from '../auth/route-guard.js';
 import { createRouteGuard } from '../auth/route-guard.js';
 import { featureFlags } from '../shared/feature-flag.js';
@@ -9,11 +10,28 @@ import { auth, maybeRefreshNow } from '../shared/services/auth.service.js';
 import type { BridgeConfig } from '../shared/types/config.js';
 import { bridgeConfig } from './stores/config.store.js';
 
+const bridgeReadyStore = writable(false);
+let resolveReady: (() => void) | null = null;
+const bridgeReadyPromise = new Promise<void>((resolve) => {
+  resolveReady = resolve;
+});
+
+function markBridgeReady() {
+  if (get(bridgeReadyStore)) return;
+  bridgeReadyStore.set(true);
+  resolveReady?.();
+}
+
 export async function bridgeBootstrap(
   url: URL,
   config: BridgeConfig | string,
   routeConfig: RouteGuardConfig = { rules: [], defaultAccess: 'protected' }
 ) {
+  // If we've already completed bootstrap once, short-circuit
+  if (get(bridgeReadyStore)) {
+    return;
+  }
+
   const finalConfig = typeof config === 'string' ? { appId: config } : config;
 
   // 1. Initialize configuration (synchronously)
@@ -81,5 +99,11 @@ export async function bridgeBootstrap(
   if (decision.type === 'redirect' && url.pathname !== decision.to) {
     redirect(303, decision.to);
   }
-    logger.debug('[bridgeBootstrap] in bridge end');
+  logger.debug('[bridgeBootstrap] in bridge end');
+  markBridgeReady();
+}
+
+export const bridgeReady = bridgeReadyStore;
+export function waitForBridge(): Promise<void> {
+  return bridgeReadyPromise;
 }

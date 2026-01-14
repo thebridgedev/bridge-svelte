@@ -16,6 +16,7 @@ bun run dev
   - [Renewing User Tokens](#renewing-user-tokens)
   - [Checking authentication Status](#checking-if-a-user-is-logged-in)
   - [Getting User Profile Information](#getting-user-profile-information)
+  - [Logout Functionality](#logout-functionality)
   - [Route Protection](#route-protection)
 - [Feature Flags](#feature-flags)
   - [Bulk Fetching vs Live Updates](#bulk-fetching-vs-live)
@@ -49,7 +50,7 @@ The most comprehensive way to protect routes is using bridge `BridgeBootstrap` c
 ```ts
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import BridgeBootstrap from '@bridge-svelte/client/BridgeBootstrap.svelte';
+  import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
   let loading = $state(true);
 
   const routeConfig = {
@@ -91,7 +92,7 @@ You can use bridge `auth` service to check if a user is currently logged in:
 ```ts
 <!-- src/components/AuthStatus.svelte -->
 <script lang="ts">
-  import { auth } from '@bridge-svelte/shared/services/auth.service';
+  import { auth } from '@nebulr-group/bridge-svelte';
   const { isAuthenticated, isLoading } = auth;
 </script>
 
@@ -110,51 +111,61 @@ You can use bridge `auth` service to check if a user is currently logged in:
 
 ### Getting User Profile Information
 
-Access bridge current user's profile information using bridge `auth` service:
+Access the current user's profile information using `profileStore`:
 
-```ts
+```svelte
 <script lang="ts">
-  import { get } from 'svelte/store';
-  import { goto } from '$app/navigation';
-  import { auth } from '@bridge-svelte/shared/services/auth.service';
-  import { onMount } from 'svelte';
-  import { profileStore } from '@bridge-svelte/shared/profile';
-
-  const { isAuthenticated } = auth;
-  const { profile, error, isOnboarded, hasMultiTenantAccess } = profileStore;
-
+  import { profileStore } from '@nebulr-group/bridge-svelte';
+  const { profile } = profileStore;
 </script>
 
-<div class="container">
-  <h1>Profile informatin</h1>
-  
-  {#if $isAuthenticated}
-    <div class="content">
-      <p class="message">
-        This is a protected page. You can only see this content when you're logged in.
-      </p>
-      
-      <div class="info-card">
-        <h2>authentication Status</h2>
-        <p>You are currently authenticated</p>
-        <h2>Your Profile</h2>
-        <p><strong>Name:</strong> {$profile?.fullName}</p>
-        <p><strong>Email:</strong> {$profile?.email}</p>
-        <p><strong>Username:</strong> {$profile?.username}</p>
-        {#if $profile?.tenant}
-          <div style="margin-top: 1rem;">
-            <h3>Tenant Information</h3>
-            <p><strong>Tenant Name:</strong> {$profile.tenant.name}</p>
-            <p><strong>Tenant ID:</strong> {$profile.tenant.id}</p>
-          </div>
-        {/if}
+{#if $profile}
+  <div class="profile-details">
+    <h2>Your Profile</h2>
+    <p><strong>Name:</strong> {$profile.fullName}</p>
+    <p><strong>Email:</strong> {$profile.email}</p>
+    <p><strong>Username:</strong> {$profile.username}</p>
+    
+    {#if $profile.tenant}
+      <div style="margin-top: 1rem;">
+        <h3>Tenant Information</h3>
+        <p><strong>Tenant Name:</strong> {$profile.tenant.name}</p>
+        <p><strong>Tenant ID:</strong> {$profile.tenant.id}</p>
       </div>
-    </div>  
-  {/if}
-  
-</div>
-
+    {/if}
+  </div>
+{:else if $profile === undefined}
+  <div class="avatar loading">Loading...</div>
+{:else}
+  <div class="avatar">Not logged in</div>
+{/if}
 ```
+
+### Logout Functionality
+
+To log out a user, use the `logout` function from the `auth` service:
+
+```svelte
+<script lang="ts">
+  import { auth, profileStore } from '@nebulr-group/bridge-svelte';
+  import { goto } from '$app/navigation';
+  
+  const { profile } = profileStore;
+  const { logout } = auth;
+
+  async function handleLogout() {
+    await logout();
+    goto('/');
+  }
+</script>
+
+{#if $profile}
+  <button class="btn-logout" onclick={handleLogout}>
+    Logout
+  </button>
+{/if}
+```
+
 
 ## Feature Flags
 
@@ -170,7 +181,7 @@ The recommended approach is to use bulk fetching with caching for better perform
 ```ts
 <!-- src/components/CachedFeatureExample.svelte -->
 <script lang="ts">
-  import FeatureFlag from '@bridge-svelte/client/components/FeatureFlag.svelte';
+  import { FeatureFlag } from '@nebulr-group/bridge-svelte';
 </script>
 
 <FeatureFlag flagName="demo-flag">  
@@ -183,7 +194,7 @@ For cases where you need real-time updates, you can use bridge `forceLive` prop:
 ```ts
 <!-- src/components/LiveFeatureExample.svelte -->
 <script lang="ts">
-  import FeatureFlag from '@bridge-svelte/client/components/FeatureFlag.svelte';
+  import { FeatureFlag } from '@nebulr-group/bridge-svelte';
 </script>
 
 <FeatureFlag flagName="demo-flag" forceLive={true} >  
@@ -198,7 +209,7 @@ Use bridge `FeatureFlag` component with `let:enabled` when you need to handle bo
 ```ts
 <!-- src/components/ConditionalContent.svelte -->
 <script lang="ts">
-  import FeatureFlag from '@bridge-svelte/client/components/FeatureFlag.svelte';
+  import { FeatureFlag } from '@nebulr-group/bridge-svelte';
 </script>
 
 <FeatureFlag flagName="demo-flag" renderWhenDisabled={true} let:enabled let:rawEnabled>
@@ -219,7 +230,7 @@ You can also use bridge `fallback` prop to provide alternative content:
 ```ts
 <!-- src/components/FeatureWithFallback.svelte -->
 <script lang="ts">
-  import FeatureFlag from '@bridge-svelte/client/components/FeatureFlag.svelte';
+  import { FeatureFlag } from '@nebulr-group/bridge-svelte';
 </script>
 
 ```
@@ -231,7 +242,7 @@ Protect entire routes with feature flags using bridge same `routeConfig` structu
 ```ts
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import BridgeBootstrap from '@bridge-svelte/client/BridgeBootstrap.svelte';
+  import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
   let loading = $state(true);
 
   const routeConfig = {
@@ -264,7 +275,7 @@ You can require one of many flags (any) or all flags (all) for a route:
 ```ts
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import BridgeBootstrap from '@bridge-svelte/client/BridgeBootstrap.svelte';
+  import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
   let loading = $state(true);
 
   const routeConfig = {
@@ -814,8 +825,9 @@ Access configuration values in your application:
 ```ts
 <!-- src/components/ConfigDisplay.svelte -->
 <script lang="ts">
-  import { useBridgeConfig } from '@bridge-svelte/client';
-  const config = useBridgeConfig();
+  import { readonlyConfig } from '@nebulr-group/bridge-svelte';
+  const configStore = readonlyConfig;
+  let config = $derived($configStore);
 </script>
 
 <div>

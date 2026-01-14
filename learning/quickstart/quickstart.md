@@ -7,7 +7,7 @@ This guide shows how to get started with The Bridge Svelte plugin.
 Install The Bridge svelte plugin
 
 ```bash
-npm install @nebulr-group
+npm i @nebulr-group/bridge-svelte
 
 ```
 
@@ -21,8 +21,8 @@ You initialize Bridge inside `+layout.ts`. This example snippet shows how to set
 export const ssr = false;
 
 import type { LayoutLoad } from './$types';
-import type { BridgeConfig, RouteGuardConfig} from '@nebulr-group';
-import { bridgeBootstrap } from '@nebulr-group';
+import type { BridgeConfig, RouteGuardConfig} from '@nebulr-group/bridge-svelte';
+import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
 
 export const load: LayoutLoad = async ({ url }) => {  
 
@@ -43,7 +43,7 @@ You are all done and your app is protected.
 <script lang="ts">  
 	import Header from './Header.svelte';
 	import '../app.css';
-	import { BridgeBootstrap } from '@nebulr-group';
+	import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
 	let { children } = $props();
 </script>
 
@@ -59,7 +59,7 @@ You are all done and your app is protected.
 <script lang="ts">
 	import Header from './Header.svelte';
 	import '../app.css';
-	import { BridgeBootstrap } from '@nebulr-group';
+	import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
 	let { children } = $props();
 </script>
 <!--  Add this right at bridge beginning  -->
@@ -80,7 +80,7 @@ The simplest way to add login functionality to your app is to use bridge auth se
 ```ts
 <!-- src/components/LoginButton.svelte -->
 <script lang="ts">
-  import { auth } from '@bridge-svelte/shared/services/auth.service';
+  import { auth } from '@nebulr-group/bridge-svelte';
   const { login } = auth;
 </script>
 

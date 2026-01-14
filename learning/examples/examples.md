@@ -30,6 +30,7 @@ bun run dev
   - [Checking Current Plan Status](#checking-current-plan-status)
   - [Selecting or Changing Plans](#selecting-or-changing-plans)
   - [Redirecting to Subscription Portal](#redirecting-to-subscription-portal)
+  - [Redirecting to Plan Selection](#redirecting-to-plan-selection)
   - [Complete Plan Selection Example](#complete-plan-selection-example)
 - [Server-Side Rendering](#server-side-rendering)
 - [Configuration](#configuration)
@@ -630,6 +631,52 @@ For existing subscribers, provide a link to manage their subscription and billin
   Manage Billing & Payments
 </button>
 ```
+
+### Redirecting to Plan Selection
+
+The simplest way to redirect users to Bridge's plan selection page is using the `planService.redirectToPlanSelection()` method. This handles all the authentication handover protocol automatically:
+
+```ts
+<!-- src/components/ManagePlan.svelte -->
+<script lang="ts">
+  import { planService } from '@nebulr-group/bridge-svelte';
+
+  async function handleManagePlan() {
+    try {
+      await planService.redirectToPlanSelection();
+    } catch (error) {
+      console.error('Failed to redirect to plan selection:', error);
+      // Handle error (e.g., show error message to user)
+    }
+  }
+</script>
+
+<button onclick={handleManagePlan}>
+  Manage Plan
+</button>
+```
+
+You can also use it directly in your navigation or header component:
+
+```ts
+<!-- src/components/Header.svelte -->
+<script lang="ts">
+  import { planService } from '@nebulr-group/bridge-svelte';
+
+  // ... other code
+</script>
+
+<nav>
+  <button class="nav-btn" onclick={() => planService.redirectToPlanSelection()}>
+    Manage Plan
+  </button>
+</nav>
+```
+
+This method automatically:
+- Validates the user is authenticated
+- Exchanges the access token for a handover code
+- Redirects to Bridge's plan selection page where users can view, upgrade, or downgrade their subscription
 
 ### Complete Plan Selection Example
 

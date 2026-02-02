@@ -92,7 +92,7 @@ The simplest way to add login functionality to your app is to use bridge auth se
 
 ## Handling bridge callback
 
-`/auth/oauth-callback` should be publicly accessible per bridge configuration above.
+`/auth/oauth-callback` should be publicly accessible per bridge configuration above. but there is no need to create a unique page for it 
 
 ## Protecting Routes
 

@@ -25,6 +25,11 @@ bun run dev
   - [Conditional Rendering with Feature Flags](#if-else-if-a-featureflag-is-disabled-bridgen-show-this)
   - [Route Protection with Feature Flags](#feature-flags-on-routes)
   - [Server-Side Feature Flags](#feature-flags-on-server-side-code-like-apis)
+  - [Usage Service Pattern for Plan Limits](#usage-service-pattern-for-plan-limits)
+  - [App Logic Integration with Usage Tracking](#app-logic-integration-with-usage-tracking)
+  - [UI Components with Feature Flags and Upgrade CTAs](#ui-components-with-feature-flags-and-upgrade-ctas)
+  - [Library View Upgrade CTA](#library-view-upgrade-cta)
+  - [Chat View Upgrade CTA](#chat-view-upgrade-cta)
 - [Payments & Subscriptions](#payments--subscriptions)
   - [Fetching Available Plans](#fetching-available-plans)
   - [Checking Current Plan Status](#checking-current-plan-status)
@@ -330,6 +335,178 @@ const routeConfig = {
 Notes:
 - Order matters. Place specific rules before bridge global catch-all.
 - Public routes bypass feature checks. All obridger routes fall back to bridge global rule and must pass flag "A".
+
+### Usage Service Pattern for Plan Limits
+
+Feature flags can be used to represent plan capabilities and numeric limits. Combine feature flags with a usage service to enforce plan limits:
+
+```ts
+// src/lib/services/usage.ts
+import { db } from '../db';
+
+export const USAGE_FLAGS = {
+  LIMIT_UNLIMITED: 'limit-unlimited',
+  LIMIT_10: 'limit-10'
+};
+
+export const FLAGS = {
+  REGENERATE_BOOK: 'regenerate-book',
+  REMOVE_WATERMARK: 'remove-watermark',
+  CUSTOM_STYLES: 'custom-styles',
+  EXPORT_PDF: 'export-pdf',
+  ...USAGE_FLAGS
+};
+
+export const usageService = {
+  async getBookCount(userId: string): Promise<number> {
+    if (!userId) return 0;
+    // Query your DB using the userId
+    return await db.books.where('workspaceId').equals(userId).count();
+  },
+
+  getPlanLimit(flags: Record<string, boolean> = {}): number {
+    if (flags[USAGE_FLAGS.LIMIT_UNLIMITED]) return Infinity;
+    if (flags[USAGE_FLAGS.LIMIT_10]) return 10;
+    return 1; // Default Free limit
+  },
+
+  async canCreateBook(userId: string, flags: Record<string, boolean> = {}): Promise<boolean> {
+    const limit = this.getPlanLimit(flags);
+    if (limit === Infinity) return true;
+    
+    const count = await this.getBookCount(userId);
+    return count < limit;
+  }
+};
+```
+
+### App Logic Integration with Usage Tracking
+
+In your main store or logic handler, check limits before allowing resource creation. Access flags synchronously using `get(featureFlags.flags)`:
+
+```ts
+// src/lib/store.svelte.ts or similar
+import { get } from 'svelte/store';
+import { featureFlags, profileStore } from '@nebulr-group/bridge-svelte';
+import { usageService } from './services/usage';
+
+async function createResource() {
+  const userId = profileStore.getProfile()?.id;
+  const flags = get(featureFlags.flags);
+  
+  if (!userId || !await usageService.canCreateBook(userId, flags)) {
+    throw new Error('Limit reached');
+  }
+  // Proceed with creation...
+}
+```
+
+### UI Components with Feature Flags and Upgrade CTAs
+
+Use the `<FeatureFlag>` component to conditionally render UI elements based on capabilities, with disabled states and upgrade messaging:
+
+```svelte
+<!-- src/components/FeatureButton.svelte -->
+<script lang="ts">
+  import { FeatureFlag } from '@nebulr-group/bridge-svelte';
+  import { FLAGS } from '../services/usage';
+</script>
+
+<FeatureFlag flagName={FLAGS.REGENERATE_BOOK} renderWhenDisabled={true} let:enabled>
+  {#snippet children({ enabled })}
+    <button disabled={!enabled} title={enabled ? 'Regenerate' : 'Upgrade to regenerate'}>
+      Regenerate
+      {#if !enabled}🔒{/if}
+    </button>
+  {/snippet}
+</FeatureFlag>
+```
+
+### Library View Upgrade CTA
+
+In a Library view, check if the limit is reached and display an upgrade message:
+
+```svelte
+<!-- src/routes/library/+page.svelte -->
+<script lang="ts">
+  import { featureFlags, profileStore } from '@nebulr-group/bridge-svelte';
+  import { usageService } from '../lib/services/usage';
+  import { planService } from '@nebulr-group/bridge-svelte';
+  
+  let canCreate = $state(true);
+  
+  $effect(() => {
+    const userId = $profileStore.profile?.id;
+    if (userId) {
+      usageService.canCreateBook(userId, $featureFlags.flags).then(res => canCreate = res);
+    }
+  });
+
+  async function handleUpgrade() {
+    try {
+      await planService.redirectToPlanSelection();
+    } catch (error) {
+      console.error('Failed to redirect:', error);
+    }
+  }
+</script>
+
+{#if !canCreate}
+  <div class="upgrade-card">
+    <p>You've reached your plan's book limit.</p>
+    <button class="btn-upgrade" onclick={handleUpgrade}>Upgrade to create more</button>
+  </div>
+{/if}
+```
+
+### Chat View Upgrade CTA
+
+When a user attempts to create a resource, display mutually exclusive messages based on limit checks. The limit check happens before generation starts:
+
+```svelte
+<!-- src/components/Chat.svelte -->
+<script lang="ts">
+  import { get } from 'svelte/store';
+  import { featureFlags, profileStore, planService } from '@nebulr-group/bridge-svelte';
+  import { usageService } from '../services/usage';
+  
+  async function startGeneration(choices: any) {
+    const userId = profileStore.getProfile()?.id;
+    const flags = get(featureFlags.flags);
+    
+    // Check limit before showing success message
+    if (!userId || !await usageService.canCreateBook(userId, flags)) {
+      // Show limit message (mutually exclusive with success message)
+      addMessage({ 
+        role: 'ai', 
+        text: 'You\'ve reached your plan\'s book limit. Upgrade to create more books!',
+        cta: {
+          label: 'Manage Plan',
+          action: async () => {
+            try {
+              await planService.redirectToPlanSelection();
+            } catch (error) {
+              console.error('Failed to redirect:', error);
+            }
+          }
+        }
+      });
+      return;
+    }
+    
+    // Only show success message if limit check passes
+    addMessage({ role: 'ai', text: 'Great! Creating your book now. This takes about 30 seconds...' });
+    await onGenerate?.(choices);
+  }
+</script>
+
+<!-- In MessageBubble or similar component, render CTA if present -->
+{#if msg.cta}
+  <button class="btn-upgrade" onclick={msg.cta.action}>
+    {msg.cta.label}
+  </button>
+{/if}
+```
 
 ## Payments & Subscriptions
 

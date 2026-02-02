@@ -8,7 +8,7 @@ import { featureFlags } from '../shared/feature-flag.js';
 import { logger } from '../shared/logger.js';
 import { auth, maybeRefreshNow } from '../shared/services/auth.service.js';
 import type { BridgeConfig } from '../shared/types/config.js';
-import { bridgeConfig, getConfig } from './stores/config.store.js';
+import { bridgeConfig } from './stores/config.store.js';
 
 const bridgeReadyStore = writable(false);
 let resolveReady: (() => void) | null = null;
@@ -59,8 +59,11 @@ export async function bridgeBootstrap(
             isAuthenticated: isAuthAfterCallback 
           });
           // Redirect bridge user to bridge home page after bridge callback is handled
-          logger.debug('[bridgeBootstrap] redirecting to /');
-          redirect(303, '/');                    
+          // Preserve payment status if present (from post-payment redirect)
+          const payment = url.searchParams.get('payment');
+          const redirectUrl = payment ? `/?payment=${payment}` : '/';
+          logger.debug('[bridgeBootstrap] redirecting to', { redirectUrl, payment });
+          redirect(303, redirectUrl);                    
         } catch (err) {
           if (isRedirect(err)) {
             throw err; // Re-throw redirect so SvelteKit can handle it

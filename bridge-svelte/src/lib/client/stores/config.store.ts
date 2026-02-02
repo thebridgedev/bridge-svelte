@@ -1,8 +1,8 @@
 // src/lib/config/bridgeConfig.ts
 import { derived, writable } from 'svelte/store';
+import type { RouteGuardConfig } from '../../auth/route-guard.js';
 import { logger } from '../../shared/logger.js';
 import type { BridgeConfig } from '../../shared/types/config.js';
-import type { RouteGuardConfig } from '../../auth/route-guard.js';
 
 interface ConfigStoreState {
   config: BridgeConfig | null;

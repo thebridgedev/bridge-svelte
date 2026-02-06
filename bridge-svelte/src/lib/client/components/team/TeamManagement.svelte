@@ -22,7 +22,10 @@
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ accessToken }),
+        body: JSON.stringify({ 
+          accessToken,
+          redirectUri: config.callbackUrl || `${window.location.origin}/auth/oauth-callback`
+        }),
       }
     );
 

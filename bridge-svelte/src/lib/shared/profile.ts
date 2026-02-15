@@ -1,6 +1,7 @@
 // src/lib/auth/profile.ts
 import { createRemoteJWKSet, errors as joseErrors, jwtVerify } from 'jose';
 import { derived, get, writable } from 'svelte/store';
+import { waitForBridge } from '../client/BridgeBootstrap.js';
 import { getConfig } from '../client/stores/config.store.js';
 import { auth } from './services/auth.service.js';
 
@@ -77,8 +78,8 @@ function ensureVerifier() {
   const config = getConfig();
   if (!jwks || expectedIssuer !== config.authBaseUrl || expectedAudience !== config.appId) {
     jwks = createRemoteJWKSet(new URL(`${config.authBaseUrl}/.well-known/jwks.json`));
-    expectedIssuer = config.authBaseUrl;
-    expectedAudience = config.appId;
+    expectedIssuer = config.authBaseUrl ?? null;
+    expectedAudience = config.appId ?? null;
   }
 }
 
@@ -90,7 +91,7 @@ async function verifyToken(idToken: string): Promise<Profile | null> {
       audience: expectedAudience as string,
     });
 
-    return transformIDToken(payload as IDToken);
+    return transformIDToken(payload as unknown as IDToken);
   } catch (err) {
     if (err instanceof joseErrors.JWTExpired) {
       error.set('Token expired');
@@ -121,10 +122,12 @@ async function updateProfile(idToken: string | null) {
   if (result) error.set(null);
 }
 
-// 🔁 Auto-sync profile with token
-auth.token.subscribe(($token) => {
-  const idToken = $token?.idToken || null;
-  updateProfile(idToken);
+// 🔁 Auto-sync profile with token after bridge is ready
+waitForBridge().then(() => {
+  auth.token.subscribe(($token) => {
+    const idToken = $token?.idToken || null;
+    updateProfile(idToken);
+  });
 });
 
 const isOnboarded = derived(profile, ($profile) => $profile?.onboarded ?? false);

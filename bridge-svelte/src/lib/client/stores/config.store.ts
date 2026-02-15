@@ -1,8 +1,8 @@
 // src/lib/config/bridgeConfig.ts
 import { derived, writable } from 'svelte/store';
+import type { RouteGuardConfig } from '../../auth/route-guard.js';
 import { logger } from '../../shared/logger.js';
 import type { BridgeConfig } from '../../shared/types/config.js';
-import type { RouteGuardConfig } from '../auth/route-guard.js';
 
 interface ConfigStoreState {
   config: BridgeConfig | null;
@@ -11,9 +11,9 @@ interface ConfigStoreState {
 }
 
 const DEFAULT_CONFIG: Partial<BridgeConfig> = {
-  authBaseUrl: 'https://auth.nblocks.cloud',
-  backendlessBaseUrl: 'https://backendless.nblocks.cloud',
-  teamManagementUrl: 'https://backendless.nblocks.cloud/user-management-portal/users',
+  authBaseUrl: 'https://api.thebridge.dev/auth',
+  teamManagementUrl: 'https://api.thebridge.dev/cloud-views/user-management-portal/users',
+  cloudViewsUrl: 'https://api.thebridge.dev/cloud-views',
   defaultRedirectRoute: '/',
   loginRoute: '/login',
   debug: false
@@ -32,10 +32,24 @@ export const bridgeConfig = {
       throw new Error('Bridge appId is required but was not provided in bridge configuration.');
     }
 
+    // Default to /auth/oauth-callback if not provided
+    const DEFAULT_CALLBACK_PATH = '/auth/oauth-callback';
+    const defaultCallback = typeof window !== 'undefined' 
+        ? `${window.location.origin}${DEFAULT_CALLBACK_PATH}`
+        : undefined;
+
     const merged = {
       ...DEFAULT_CONFIG,
+      callbackUrl: defaultCallback,
       ...config
     } as BridgeConfig;
+
+    // Use user provided callbackUrl if present, otherwise use default
+    if (config.callbackUrl) {
+        merged.callbackUrl = config.callbackUrl;
+    } else if (!merged.callbackUrl && defaultCallback) {
+        merged.callbackUrl = defaultCallback;
+    }
 
     // Set bridge full config and mark it as loaded
     set({

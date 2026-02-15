@@ -8,15 +8,19 @@ const cacheValidityMs = 5 * 60 * 1000;
 const cachedFlags = writable<Record<string, boolean>>({});
 let lastFetchTime = 0;
 
-export async function loadFeatureFlags(): Promise<void> {
-  const tokens = get(auth.token);
-  const appId = tokens?.appId ?? getConfig().appId;
-  const accessToken = tokens?.accessToken;
-  const backendlessBaseUrl = getConfig().backendlessBaseUrl;
+  export async function loadFeatureFlags(): Promise<void> {
+    const tokens = get(auth.token);
+    const appId = tokens?.appId ?? getConfig().appId;
+    // We should prefer the token from the store as it is more likely to be up to date
+    const accessToken = tokens?.accessToken;
+    const cloudViewsUrl = getConfig().cloudViewsUrl;
 
-  if (!appId) return;
+    if (!appId) return;
 
-  const url = `${backendlessBaseUrl}/flags/bulkEvaluate/${appId}`;
+    // Log the token we are using to fetch flags (partial for security)
+    logger.debug(`[feature-flag] fetching flags with token: ${accessToken ? accessToken.substring(0, 10) + '...' : 'none'}`);
+
+    const url = `${cloudViewsUrl}/flags/bulkEvaluate/${appId}`;
   const body = accessToken ? { accessToken } : {};
 
   const res = await fetch(url, {
@@ -41,7 +45,7 @@ export async function isFeatureEnabled(flag: string, forceLive = false): Promise
   const tokens = get(auth.token);
   const appId = tokens?.appId ?? getConfig().appId;
   const accessToken = tokens?.accessToken;
-  const backendlessBaseUrl = getConfig().backendlessBaseUrl;
+  const cloudViewsUrl = getConfig().cloudViewsUrl;
   
 
   if (!appId) return false;
@@ -53,7 +57,7 @@ export async function isFeatureEnabled(flag: string, forceLive = false): Promise
   if (!forceLive) await loadFeatureFlags();
 
   if (forceLive) {
-    const url = `${backendlessBaseUrl}/flags/evaluate/${appId}/${flag}`;
+    const url = `${cloudViewsUrl}/flags/evaluate/${appId}/${flag}`;
     const body = accessToken ? { accessToken } : {};
 
     const res = await fetch(url, {

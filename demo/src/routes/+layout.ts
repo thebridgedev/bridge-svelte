@@ -25,8 +25,8 @@ export const load: LayoutLoad = async ({ url }) => {
     const extras: Partial<BridgeConfig> = {};
     const authBaseUrl = import.meta.env.VITE_BRIDGE_AUTH_BASE_URL;
     if (authBaseUrl) extras.authBaseUrl = authBaseUrl;
-    const backendlessBaseUrl = import.meta.env.VITE_BRIDGE_BACKENDLESS_BASE_URL;
-    if (backendlessBaseUrl) extras.backendlessBaseUrl = backendlessBaseUrl;
+    const cloudViewsUrl = import.meta.env.VITE_BRIDGE_CLOUD_VIEWS_BASE_URL || import.meta.env.VITE_BRIDGE_BACKENDLESS_BASE_URL;
+    if (cloudViewsUrl) extras.cloudViewsUrl = cloudViewsUrl;
     const teamManagementUrl = import.meta.env.VITE_BRIDGE_TEAM_MANAGEMENT_URL;
     if (teamManagementUrl) extras.teamManagementUrl = teamManagementUrl;
     config = { ...baseConfig, ...extras } as BridgeConfig;

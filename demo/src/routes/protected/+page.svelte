@@ -4,7 +4,6 @@
 
   const { isAuthenticated } = auth;
   const { profile, error, isOnboarded, hasMultiTenantAccess } = profileStore;
-
 </script>
 
 <div class="container">

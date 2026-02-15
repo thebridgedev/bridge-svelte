@@ -1,12 +1,73 @@
 name: Build and Publish
 
 on:
-  push:
-    branches: [ "**" ]
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*'
-  pull_request:
-    branches: [ main ]
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Directory containing the package to build and publish
+        required: true
+        type: string
+      node-version:
+        description: Node.js version to use
+        required: false
+        default: '20'
+        type: string
+      registry-url:
+        description: npm registry URL for authentication
+        required: false
+        default: 'https://registry.npmjs.org'
+        type: string
+      setup-bun:
+        description: Install and configure Bun
+        required: false
+        default: true
+        type: boolean
+      bun-version:
+        description: Bun version to install when setup-bun is true
+        required: false
+        default: 'latest'
+        type: string
+      setup-pnpm:
+        description: Install and configure pnpm
+        required: false
+        default: false
+        type: boolean
+      pnpm-version:
+        description: pnpm version to install when setup-pnpm is true
+        required: false
+        default: 'latest'
+        type: string
+      install-command:
+        description: Command used to install dependencies
+        required: false
+        default: 'bun install'
+        type: string
+      build-command:
+        description: Command used to build the package
+        required: false
+        default: 'bun run build'
+        type: string
+      publish-command:
+        description: Command used to publish the package
+        required: false
+        default: 'npm publish --provenance --access public'
+        type: string
+      package-name:
+        description: Optional npm package name (falls back to package.json name if omitted)
+        required: false
+        type: string
+      sync-docs:
+        description: Run documentation sync after publish
+        required: false
+        default: true
+        type: boolean
+    secrets:
+      npm-token:
+        description: Token used to publish the package to npm
+        required: true
+      docs-sync-key:
+        description: SSH key used to sync documentation
+        required: false
 
 permissions:
   id-token: write
@@ -15,9 +76,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: bridge-svelte
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
@@ -25,23 +83,20 @@ jobs:
       - name: 🔧 Setup and Build
         uses: ./.github/actions/setup-and-build
         with:
-          working-directory: bridge-svelte
-
-      # - name: 🧪 Tests (optional)
-      #   run: |
-      #     if bun run | grep -q " test"; then
-      #       bun test
-      #     else
-      #       echo "No test script found; skipping tests."
-      #     fi
+          working-directory: ${{ inputs.working-directory }}
+          node-version: ${{ inputs.node-version }}
+          registry-url: ${{ inputs.registry-url }}
+          setup-bun: ${{ inputs.setup-bun }}
+          bun-version: ${{ inputs.bun-version }}
+          setup-pnpm: ${{ inputs.setup-pnpm }}
+          pnpm-version: ${{ inputs.pnpm-version }}
+          install-command: ${{ inputs.install-command }}
+          build-command: ${{ inputs.build-command }}
 
   publish:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: bridge-svelte
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
@@ -49,26 +104,84 @@ jobs:
       - name: 🔧 Setup and Build (frozen)
         uses: ./.github/actions/setup-and-build
         with:
-          working-directory: bridge-svelte
+          working-directory: ${{ inputs.working-directory }}
+          node-version: ${{ inputs.node-version }}
+          registry-url: ${{ inputs.registry-url }}
+          setup-bun: ${{ inputs.setup-bun }}
+          bun-version: ${{ inputs.bun-version }}
+          setup-pnpm: ${{ inputs.setup-pnpm }}
+          pnpm-version: ${{ inputs.pnpm-version }}
+          install-command: ${{ inputs.install-command }}
+          build-command: ${{ inputs.build-command }}
+
+      - name: 🔐 Configure npm auth
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.npm-token }}
+        run: |
+          npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
 
       - name: 🛑 Pre-publish validation
+        env:
+          INPUT_PACKAGE_NAME: ${{ inputs.package-name }}
+        working-directory: ${{ inputs.working-directory }}
         run: |
+          PACKAGE_NAME="$INPUT_PACKAGE_NAME"
+          if [ -z "$PACKAGE_NAME" ]; then
+            PACKAGE_NAME=$(node -p "require('./package.json').name")
+          fi
+
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          echo "Git Tag: ${{ github.ref_name }}, Package Version: $PACKAGE_VERSION"
+
+          echo "Git Tag: ${{ github.ref_name }}, Package: $PACKAGE_NAME, Version: $PACKAGE_VERSION"
+
           if [ "v${PACKAGE_VERSION}" != "${{ github.ref_name }}" ]; then
             echo "❌ package.json version ($PACKAGE_VERSION) does not match tag (${{ github.ref_name }})" && exit 1
           fi
-          PUBLISHED_VERSIONS=$(npm view @nebulr-group/bridge-svelte versions --json || true)
+
+          PUBLISHED_VERSIONS=$(npm view "$PACKAGE_NAME" versions --json || true)
           if echo "$PUBLISHED_VERSIONS" | grep -q "\"$PACKAGE_VERSION\""; then
             echo "❌ Version $PACKAGE_VERSION already published to npm" && exit 1
           else
             echo "✅ Version $PACKAGE_VERSION is new; proceeding"
           fi
 
-      - name: 🚀 Publish to npm (with provenance)
-        run: npm publish --provenance --access public
+          echo "PACKAGE_NAME=$PACKAGE_NAME" >> "$GITHUB_ENV"
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> "$GITHUB_ENV"
+
+          DIST_TAG="latest"
+          if [[ "$PACKAGE_VERSION" == *-* ]]; then
+            PRERELEASE_PART=${PACKAGE_VERSION#*-}
+            DIST_TAG=${PRERELEASE_PART%%.*}
+            if [ -z "$DIST_TAG" ]; then
+              DIST_TAG="latest"
+            fi
+          fi
+
+          echo "Detected package dist-tag: $DIST_TAG"
+          echo "DIST_TAG=$DIST_TAG" >> "$GITHUB_ENV"
+
+      - name: 🚀 Publish package
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.npm-token }}
+          PUBLISH_COMMAND: ${{ inputs.publish-command }}
+          DIST_TAG: ${{ env.DIST_TAG }}
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          if [ -z "$PUBLISH_COMMAND" ]; then
+            if [ "$DIST_TAG" = "latest" ]; then
+              echo "Publishing with default command (latest dist-tag)"
+              npm publish --provenance --access public
+            else
+              echo "Publishing with default command using dist-tag: $DIST_TAG"
+              npm publish --provenance --access public --tag "$DIST_TAG"
+            fi
+          else
+            printf '%s\n' "$PUBLISH_COMMAND" > .publish-command.sh
+            chmod +x .publish-command.sh
+            echo "Running custom publish command (DIST_TAG=$DIST_TAG)"
+            bash .publish-command.sh
+          fi
 
       - name: ✨ Create GitHub Release
         run: |
@@ -77,17 +190,25 @@ jobs:
             --notes "This release was automatically published from CI."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
+  
   sync_docs:
     needs: publish
-    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+    if: ${{ inputs.sync-docs && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') }}
     runs-on: ubuntu-latest
+    env:
+      DOCS_SYNC_KEY: ${{ secrets.docs-sync-key }}
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
+
       - name: 🔄 Sync Docs
+        if: ${{ env.DOCS_SYNC_KEY != '' }}
         uses: ./.github/actions/sync-docs
         env:
-          DOCS_SYNC_KEY: ${{ secrets.DOCS_SYNC_KEY }}
+          DOCS_SYNC_KEY: ${{ env.DOCS_SYNC_KEY }}
+
+      - name: 📭 Docs sync skipped (no secret provided)
+        if: ${{ env.DOCS_SYNC_KEY == '' }}
+        run: echo "DOCS_SYNC_KEY not provided; skipping documentation sync."
 
 

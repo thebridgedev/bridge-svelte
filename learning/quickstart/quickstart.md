@@ -7,7 +7,7 @@ This guide shows how to get started with The Bridge Svelte plugin.
 Install The Bridge svelte plugin
 
 ```bash
-npm install @nebulr-group
+npm i @nebulr-group/bridge-svelte
 
 ```
 
@@ -21,8 +21,8 @@ You initialize Bridge inside `+layout.ts`. This example snippet shows how to set
 export const ssr = false;
 
 import type { LayoutLoad } from './$types';
-import type { BridgeConfig, RouteGuardConfig} from '@nebulr-group';
-import { bridgeBootstrap } from '@nebulr-group';
+import type { BridgeConfig, RouteGuardConfig} from '@nebulr-group/bridge-svelte';
+import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
 
 export const load: LayoutLoad = async ({ url }) => {  
 
@@ -43,32 +43,15 @@ You are all done and your app is protected.
 <script lang="ts">  
 	import Header from './Header.svelte';
 	import '../app.css';
-	import { BridgeBootstrap } from '@nebulr-group';
+	import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
 	let { children } = $props();
 </script>
 
-<!--  Add this right at bridge beginning  -->
+<!--  Add this right at the beginning  -->
 <BridgeBootstrap></BridgeBootstrap>
 	<main>
 		{@render children()}
 	</main>
-
-
-```svelte
-
-<script lang="ts">
-	import Header from './Header.svelte';
-	import '../app.css';
-	import { BridgeBootstrap } from '@nebulr-group';
-	let { children } = $props();
-</script>
-<!--  Add this right at bridge beginning  -->
-<BridgeBootstrap></BridgeBootstrap>
-	<main>
-		{@render children()}
-	</main>
-
-
 ```
 
 ## authentication
@@ -80,7 +63,7 @@ The simplest way to add login functionality to your app is to use bridge auth se
 ```ts
 <!-- src/components/LoginButton.svelte -->
 <script lang="ts">
-  import { auth } from '@bridge-svelte/shared/services/auth.service';
+  import { auth } from '@nebulr-group/bridge-svelte';
   const { login } = auth;
 </script>
 
@@ -90,16 +73,16 @@ The simplest way to add login functionality to your app is to use bridge auth se
 
 ```
 
-## Handling bridge callback
+## Handling the OAuth callback
 
-`/auth/oauth-callback` should be publicly accessible per bridge configuration above.
+`/auth/oauth-callback` should be marked public in your `routeConfig`. The callback is handled inside `bridgeBootstrap`; you do not need a separate page for it. 
 
 ## Protecting Routes
 
-Use bridge `BridgeBootstrap` component to define public routes as shown in bridge configuration section.
+Pass a `routeConfig` to `bridgeBootstrap` in `+layout.ts` to define public and protected routes. See the [examples](../examples/examples.md#route-protection) for full route protection and feature-flag gating.
 
 ## Wrap-up
 
-You have now set up a complete authentication flow with Bridge in your SvelteKit application! Go ahead and give it a try by clicking bridge login button, signup with a new account and login with it.
+You have now set up a complete authentication flow with Bridge in your SvelteKit application! Go ahead and give it a try by clicking the Bridge login button, signing up with a new account, and logging in.
 
-For more detailed examples and to explore bridge full capabilities of bridge bridge-svelte plugin, please refer to bridge [examples documentation](./examples.md).
+For more detailed examples and to explore bridge full capabilities of bridge bridge-svelte plugin, please refer to the [examples documentation](../examples/examples.md).

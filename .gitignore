@@ -82,6 +82,7 @@ bridge-angular-reference/*
 **/.env.*
 !**/.env.example
 !**/.env.test
+!**/.env.test.local.example
 
 # Vite
 **/vite.config.js.timestamp-*
@@ -91,3 +92,7 @@ bridge-angular-reference/*
 **/*.tar.*
 
 project_descriptions/*
+
+# Playwright
+e2e/playwright/.auth/
+test-reports/

@@ -1,6 +1,6 @@
 {
 	"name": "@nebulr-group/bridge-svelte",
-	"version": "0.1.0",
+	"version": "0.2.0",
 
 	"description": "Bridge Svelte library, This library helps you to add bridge authentication and feature flags, and payments to your svelte application.",
 	"author": "Iman Pouya",
@@ -12,7 +12,7 @@
 	"bugs": {
 		"url": "https://github.com/thebridgedev/bridge-svelte/issues"
 	},
-	"homepage": "https://github.com/thebridgedev/bridge-svelte#readme",
+	"homepage": "https://thebridge.dev",
 	"scripts": {
 	  "dev": "vite dev",
 	  "build": "bun run prepack",

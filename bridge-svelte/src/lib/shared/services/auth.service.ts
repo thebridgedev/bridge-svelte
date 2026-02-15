@@ -29,8 +29,20 @@ if (browser) {
 // --- API ---
 
 function setTokens(tokens: TokenSet) {
+  logger.debug('[auth] setTokens called', { 
+    hasAccessToken: !!tokens?.accessToken,
+    hasRefreshToken: !!tokens?.refreshToken,
+    hasIdToken: !!tokens?.idToken 
+  });
   tokenStore.set(tokens);
-  if (browser) localStorage.setItem(TOKEN_KEY, JSON.stringify(tokens));
+  if (browser) {
+    localStorage.setItem(TOKEN_KEY, JSON.stringify(tokens));
+    logger.debug('[auth] tokens stored in localStorage');
+  }
+  // Verify tokens are set
+  const current = get(tokenStore);
+  const isAuth = !!current?.accessToken;
+  logger.debug('[auth] tokens set, isAuthenticated check:', isAuth);
   scheduleTokenRefresh();
 }
 
@@ -38,6 +50,18 @@ function clearTokens() {
   tokenStore.set(null);
   if (browser) localStorage.removeItem(TOKEN_KEY);
   stopAutoRefresh();
+}
+
+async function logout() {
+  // Clear local storage tokens first
+  clearTokens();
+  
+  // Redirect to backend logout endpoint to clear all authentication cookies
+  if (browser) {
+    const config = getConfig();
+    const logoutUrl = `${config.authBaseUrl}/url/logout/${config.appId}`;
+    window.location.href = logoutUrl;
+  }
 }
 
 async function login(options: { redirectUri?: string } = {}) {
@@ -58,8 +82,11 @@ function createLoginUrl(options: { redirectUri?: string } = {}): string {
 }
 
 async function handleCallback(code: string) {
+  logger.debug('[auth] handleCallback called with code:', code ? 'present' : 'missing');
   const config: BridgeConfig = getConfig();
   const url = `${config.authBaseUrl}/token/code/${config.appId}`;
+  
+  logger.debug('[auth] exchanging code for tokens', { url, appId: config.appId, callbackUrl: config.callbackUrl });
 
   const response = await fetch(url, {
     method: 'POST',
@@ -83,13 +110,22 @@ async function handleCallback(code: string) {
       // If parsing JSON fails, use bridge generic message or response status text
       errorMessage = `Failed to exchange code for tokens: ${response.statusText || 'Unknown error'}`;
     }
+    logger.error('[auth] handleCallback failed', errorMessage);
     throw new Error(errorMessage);
   }
   const data = await response.json();
+  logger.debug('[auth] token exchange successful, setting tokens');
   setTokens({
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
     idToken: data.id_token
+  });
+  // Double-check after setting
+  const finalCheck = get(tokenStore);
+  const finalAuth = get(isAuthenticated);
+  logger.debug('[auth] handleCallback completed', { 
+    tokensSet: !!finalCheck?.accessToken,
+    isAuthenticated: finalAuth 
   });
 }
 
@@ -212,7 +248,7 @@ export const auth = {
   isLoading,
   error,
   login,
-  logout: clearTokens,
+  logout,
   handleCallback,
   refreshToken,
   createLoginUrl,

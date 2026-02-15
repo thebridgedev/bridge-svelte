@@ -1,12 +1,11 @@
 # Bridge Svelte Examples
 
-Here we are showing bridge features of The Bridge svelte plugin. 
+Here we are showing Bridge features of The Bridge Svelte plugin. 
 You can also see the features in action in our demo application in this monorepo
 
-To start bridge demo app:
+To start the demo app:
 ```bash
-
-##from bridge project root
+# From bridge-svelte project root
 bun install
 bun run dev
 ```
@@ -22,9 +21,9 @@ bun run dev
   - [Bulk Fetching vs Live Updates](#bulk-fetching-vs-live)
   - [Basic Feature Flag Usage](#a-basic-feature-flag)
   - [Live Feature Flag Updates](#live-getting-a-feature-flag)
-  - [Conditional Rendering with Feature Flags](#if-else-if-a-featureflag-is-disabled-bridgen-show-this)
+  - [Conditional rendering with Feature Flags](#if--else-show-content-when-a-feature-flag-is-disabled)
   - [Route Protection with Feature Flags](#feature-flags-on-routes)
-  - [Server-Side Feature Flags](#feature-flags-on-server-side-code-like-apis)
+  - [Server-Side Feature Flags](#usage-service-pattern-for-plan-limits)
   - [Usage Service Pattern for Plan Limits](#usage-service-pattern-for-plan-limits)
   - [App Logic Integration with Usage Tracking](#app-logic-integration-with-usage-tracking)
   - [UI Components with Feature Flags and Upgrade CTAs](#ui-components-with-feature-flags-and-upgrade-ctas)
@@ -37,7 +36,6 @@ bun run dev
   - [Redirecting to Subscription Portal](#redirecting-to-subscription-portal)
   - [Redirecting to Plan Selection](#redirecting-to-plan-selection)
   - [Complete Plan Selection Example](#complete-plan-selection-example)
-- [Server-Side Rendering](#server-side-rendering)
 - [Configuration](#configuration)
   - [Getting Config Values](#getting-config-values)
   - [Environment Variables](#environment-variables)
@@ -49,17 +47,21 @@ bun run dev
 
 Bridge can protect routes in your Svelte application:
 
-#### Using BridgeBootstrap
+#### Using bridgeBootstrap and BridgeBootstrap
 
-The most comprehensive way to protect routes is using bridge `BridgeBootstrap` component with a `routeConfig`:
+Pass `routeConfig` as the third argument to `bridgeBootstrap` in your root `+layout.ts`. The `BridgeBootstrap` component in `+layout.svelte` only needs `onBootstrapComplete` (no `routeConfig` prop).
 
 ```ts
-<!-- src/routes/+layout.svelte -->
-<script lang="ts">
-  import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
-  let loading = $state(true);
+// src/routes/+layout.ts
+import type { LayoutLoad } from './$types';
+import type { BridgeConfig, RouteGuardConfig } from '@nebulr-group/bridge-svelte';
+import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
 
-  const routeConfig = {
+export const ssr = false;
+
+export const load: LayoutLoad = async ({ url }) => {
+  const config: BridgeConfig = { appId: 'YOUR_APP_ID' };
+  const routeConfig: RouteGuardConfig = {
     rules: [
       { match: '/', public: true },
       { match: '/login', public: true },
@@ -68,32 +70,43 @@ The most comprehensive way to protect routes is using bridge `BridgeBootstrap` c
     ],
     defaultAccess: 'protected'
   };
+  await bridgeBootstrap(url, config, routeConfig);
+  return {};
+};
+```
+
+```svelte
+<!-- src/routes/+layout.svelte -->
+<script lang="ts">
+  import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
+  let { children } = $props();
+  let loading = $state(true);
 
   function onBootstrapComplete() {
     loading = false;
   }
 </script>
 
-<BridgeBootstrap routeConfig={routeConfig} onBootstrapComplete={onBootstrapComplete} />
+<BridgeBootstrap onBootstrapComplete={onBootstrapComplete} />
 
 {#if !loading}
-  <slot />
+  {@render children()}
 {/if}
 ```
 
 This approach:
-- **defaultAccess**: sets whebridger unmatched routes are public or protected
+- **defaultAccess**: sets whether unmatched routes are public or protected
 - **rules**: lets you mark individual paths as public and/or gate routes behind feature flags
 - Handles redirects automatically
 
 
 ### Renewing User Tokens
 
-Bridge automatically handles token renewal for you. The token service will refresh tokens before bridgey expire to ensure a seamless user experience.
+Bridge automatically handles token renewal for you. The token service will refresh tokens before they expire to ensure a seamless user experience.
 
 ### Checking if a User is Logged In
 
-You can use bridge `auth` service to check if a user is currently logged in:
+You can use the `auth` service to check if a user is currently logged in:
 
 ```ts
 <!-- src/components/AuthStatus.svelte -->
@@ -179,10 +192,10 @@ To log out a user, use the `logout` function from the `auth` service:
 
 Bridge provides two ways to work with feature flags:
 
-1. **Bulk Fetching (Recommended)**: Get all feature flags at once and use bridgem throughout your application. This approach uses a 5-minute cache to improve performance.
-2. **Live Updates**: Check feature flags individually with real-time updates, bypassing bridge cache.
+1. **Bulk Fetching (Recommended)**: Get all feature flags at once and use them throughout your application. This approach uses a 5-minute cache to improve performance.
+2. **Live Updates**: Check feature flags individually with real-time updates, bypassing the cache.
 
-The recommended approach is to use bulk fetching with caching for better performance, simply using bridge featureflag component will use bridge cached response :
+The recommended approach is to use bulk fetching with caching for better performance; the `FeatureFlag` component uses the cached response by default:
 
 ```ts
 <!-- src/components/CachedFeatureExample.svelte -->
@@ -195,7 +208,7 @@ The recommended approach is to use bulk fetching with caching for better perform
 </FeatureFlag>
 ```
 
-For cases where you need real-time updates, you can use bridge `forceLive` prop:
+For cases where you need real-time updates, you can use the `forceLive` prop:
 
 ```ts
 <!-- src/components/LiveFeatureExample.svelte -->
@@ -208,112 +221,75 @@ For cases where you need real-time updates, you can use bridge `forceLive` prop:
 </FeatureFlag>
 ```
 
-### If, else, if a featureflag is disabled bridgen show this
+### If / else: show content when a feature flag is disabled
 
-Use bridge `FeatureFlag` component with `let:enabled` when you need to handle both enabled and disabled states yourself. Set `renderWhenDisabled={true}` to always render the snippet and receive the flag state (effective value after `negate` as `enabled`, and the raw value as `rawEnabled`):
+Use the `FeatureFlag` component with `renderWhenDisabled={true}` and the **snippet** (Svelte 5) to receive `enabled` and `rawEnabled`. The snippet is always rendered so you can show different content for enabled vs disabled:
 
-```ts
+```svelte
 <!-- src/components/ConditionalContent.svelte -->
 <script lang="ts">
   import { FeatureFlag } from '@nebulr-group/bridge-svelte';
 </script>
 
-<FeatureFlag flagName="demo-flag" renderWhenDisabled={true} let:enabled let:rawEnabled>
-  {#if enabled}
-    <div class="feature-status active">
-      <p>Feature flag "demo-flag" is active</p>
-    </div>
-  {:else}
-    <div class="feature-status">
-      "demo-flag" is inactive (raw: {rawEnabled})
-    </div>
-  {/if}
+<FeatureFlag flagName="demo-flag" renderWhenDisabled={true}>
+  {#snippet children({ enabled, rawEnabled })}
+    {#if enabled}
+      <div class="feature-status active">
+        <p>Feature flag "demo-flag" is active</p>
+      </div>
+    {:else}
+      <div class="feature-status">
+        "demo-flag" is inactive (raw: {rawEnabled})
+      </div>
+    {/if}
+  {/snippet}
 </FeatureFlag>
-```
-
-You can also use bridge `fallback` prop to provide alternative content:
-
-```ts
-<!-- src/components/FeatureWithFallback.svelte -->
-<script lang="ts">
-  import { FeatureFlag } from '@nebulr-group/bridge-svelte';
-</script>
-
 ```
 
 ### Feature flags on routes
 
-Protect entire routes with feature flags using bridge same `routeConfig` structure:
+Protect entire routes with feature flags by passing the same `routeConfig` structure to `bridgeBootstrap` in `+layout.ts`:
 
 ```ts
-<!-- src/routes/+layout.svelte -->
-<script lang="ts">
-  import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
-  let loading = $state(true);
-
-  const routeConfig = {
-    rules: [
-      { match: '/', public: true },
-      { match: '/login', public: true },
-      { match: new RegExp('^/auth/oauth-callback$'), public: true },
-      { match: '/premium/*', featureFlag: 'premium-feature', redirectTo: '/upgrade' },
-      { match: '/beta/*', featureFlag: 'beta-feature', redirectTo: '/' }
-    ],
-    defaultAccess: 'protected'
-  };
-
-  function onBootstrapComplete() {
-    loading = false;
-  }
-</script>
-
-<BridgeBootstrap routeConfig={routeConfig} onBootstrapComplete={onBootstrapComplete} />
-
-{#if !loading}
-  <slot />
-{/if}
+// In +layout.ts: pass routeConfig as third argument to bridgeBootstrap
+const routeConfig = {
+  rules: [
+    { match: '/', public: true },
+    { match: '/login', public: true },
+    { match: new RegExp('^/auth/oauth-callback$'), public: true },
+    { match: '/premium/*', featureFlag: 'premium-feature', redirectTo: '/upgrade' },
+    { match: '/beta/*', featureFlag: 'beta-feature', redirectTo: '/' }
+  ],
+  defaultAccess: 'protected'
+};
+await bridgeBootstrap(url, config, routeConfig);
 ```
 
 ### Any vs All requirements
 
-You can require one of many flags (any) or all flags (all) for a route:
+You can require one of many flags (any) or all flags (all) for a route. Pass this `routeConfig` to `bridgeBootstrap` in `+layout.ts`:
 
 ```ts
-<!-- src/routes/+layout.svelte -->
-<script lang="ts">
-  import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
-  let loading = $state(true);
+const routeConfig = {
+  rules: [
+    // Route allowed if any of the flags are enabled
+    { match: '/labs/*', featureFlag: { any: ['labs-v1', 'labs-v2'] }, redirectTo: '/' },
 
-  const routeConfig = {
-    rules: [
-      // Route allowed if any of bridge flags are enabled
-      { match: '/labs/*', featureFlag: { any: ['labs-v1', 'labs-v2'] }, redirectTo: '/' },
+    // Route allowed only if all flags are enabled
+    { match: '/premium/*', featureFlag: { all: ['paid', 'kyc-verified'] }, redirectTo: '/upgrade' },
 
-      // Route allowed only if all flags are enabled
-      { match: '/premium/*', featureFlag: { all: ['paid', 'kyc-verified'] }, redirectTo: '/upgrade' },
-
-      // Public routes
-      { match: '/', public: true },
-      { match: new RegExp('^/auth/oauth-callback$'), public: true }
-    ],
-    defaultAccess: 'protected'
-  };
-
-  function onBootstrapComplete() {
-    loading = false;
-  }
-</script>
-
-<BridgeBootstrap routeConfig={routeConfig} onBootstrapComplete={onBootstrapComplete} />
-
-{#if !loading}
-  <slot />
-{/if}
+    // Public routes
+    { match: '/', public: true },
+    { match: new RegExp('^/auth/oauth-callback$'), public: true }
+  ],
+  defaultAccess: 'protected'
+};
+await bridgeBootstrap(url, config, routeConfig);
 ```
 
 ### Global flag plus per-route criteria
 
-To enforce a global flag "A must be enabled for all protected routes", combine a top-level catch-all rule with route-specific rules. The first matching rule wins, so put bridge global guard last and more specific routes before it:
+To enforce a global flag "A must be enabled for all protected routes", combine a top-level catch-all rule with route-specific rules. The first matching rule wins, so put the global guard last and more specific routes before it:
 
 ```ts
 const routeConfig = {
@@ -330,11 +306,12 @@ const routeConfig = {
   ],
   defaultAccess: 'protected'
 };
+await bridgeBootstrap(url, config, routeConfig);
 ```
 
 Notes:
-- Order matters. Place specific rules before bridge global catch-all.
-- Public routes bypass feature checks. All obridger routes fall back to bridge global rule and must pass flag "A".
+- Order matters. Place specific rules before the global catch-all.
+- Public routes bypass feature checks. All other routes fall back to the global rule and must pass flag "A".
 
 ### Usage Service Pattern for Plan Limits
 
@@ -412,7 +389,7 @@ Use the `<FeatureFlag>` component to conditionally render UI elements based on c
   import { FLAGS } from '../services/usage';
 </script>
 
-<FeatureFlag flagName={FLAGS.REGENERATE_BOOK} renderWhenDisabled={true} let:enabled>
+<FeatureFlag flagName={FLAGS.REGENERATE_BOOK} renderWhenDisabled={true}>
   {#snippet children({ enabled })}
     <button disabled={!enabled} title={enabled ? 'Regenerate' : 'Upgrade to regenerate'}>
       Regenerate
@@ -514,7 +491,7 @@ Bridge provides comprehensive support for subscription plan management, allowing
 
 ### Fetching Available Plans
 
-To display available subscription plans, use bridge `getPaymentOptionsAnonymous` GraphQL query:
+To display available subscription plans, use the `getPaymentOptionsAnonymous` GraphQL query:
 
 ```ts
 // src/lib/graphql/operations.ts
@@ -584,7 +561,7 @@ Then use it in your component:
 
 ### Checking Current Plan Status
 
-Check bridge current tenant's subscription status and plan details:
+Check the current tenant's subscription status and plan details:
 
 ```ts
 // src/lib/graphql/operations.ts
@@ -650,7 +627,7 @@ Usage example:
 
 ### Selecting or Changing Plans
 
-To allow users to upgrade or downgrade their plan, use bridge `setTenantPlanDetails` mutation:
+To allow users to upgrade or downgrade their plan, use the `setTenantPlanDetails` mutation:
 
 ```ts
 // src/lib/graphql/operations.ts
@@ -857,7 +834,7 @@ This method automatically:
 
 ### Complete Plan Selection Example
 
-Here's a complete example that combines all bridge features for a plan selection page:
+Here's a complete example that combines all Bridge features for a plan selection page:
 
 ```ts
 <!-- src/routes/plans/+page.svelte -->
@@ -1064,7 +1041,7 @@ Access configuration values in your application:
 
 ### Environment Variables
 
-Bridge configuration values are primarily set through environment variables in your `.env` file. Here are bridge available configuration variables:
+Bridge configuration values are primarily set through environment variables in your `.env` file. Here are the available configuration variables:
 
 | Variable Name | Description | Default Value |
 |---------------|-------------|---------------|

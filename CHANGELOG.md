@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-02-17
+
+### Added
+
+- Install test: `bun run test:install` and CI workflow to verify the packed package installs with Svelte 5 and SvelteKit 2.
+
+### Fixed
+
+- Install test script now cleans up `install-test-tmp` and `install-test-pkg.tgz` after run (and on exit).
+
 ## [0.2.0] - 2025-02-15
 
 ### Added
@@ -28,5 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Pre-release version before 0.2.0.
 
+[0.2.1]: https://github.com/thebridgedev/bridge-svelte/releases/tag/v0.2.1
 [0.2.0]: https://github.com/thebridgedev/bridge-svelte/releases/tag/v0.2.0
 [0.2.0-alpha.9]: https://github.com/thebridgedev/bridge-svelte/releases/tag/v0.2.0-alpha.9

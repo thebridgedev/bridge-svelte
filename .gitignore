@@ -28,6 +28,10 @@ yarn-error.log
 !.vscode/extensions.json
 .history/*
 
+# Install test (bun run test:install)
+install-test-tmp/
+install-test-pkg.tgz
+
 # Miscellaneous
 /.angular/cache
 .sass-cache/

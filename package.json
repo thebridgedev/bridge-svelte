@@ -15,7 +15,8 @@
     "test:e2e:stage": "bun run e2e/playwright/pre-setup.ts test.stage && PLAYWRIGHT_PROJECT_NAME=stage bunx playwright test --project=stage",
     "test:e2e:prod": "bun run e2e/playwright/pre-setup.ts test.prod && PLAYWRIGHT_PROJECT_NAME=prod bunx playwright test --project=prod",
     "test:e2e:headed": "bun run e2e/playwright/pre-setup.ts test.local && PLAYWRIGHT_PROJECT_NAME=local PLAYWRIGHT_HEADED=true bunx playwright test --project=local",
-    "test:e2e:report": "bunx playwright show-report test-reports/playwright-report"
+    "test:e2e:report": "bunx playwright show-report test-reports/playwright-report",
+    "test:install": "bash scripts/test-install.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

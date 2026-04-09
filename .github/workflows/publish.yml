@@ -148,9 +148,11 @@ jobs:
 
       - name: 🚀 Publish package
         env:
+          NODE_AUTH_TOKEN: ""
           DIST_TAG: ${{ env.DIST_TAG }}
         working-directory: ${{ inputs.working-directory }}
         run: |
+          npm install -g npm@latest
           if [ "$DIST_TAG" = "latest" ]; then
             echo "Publishing with dist-tag: latest"
             npm publish --provenance --access public

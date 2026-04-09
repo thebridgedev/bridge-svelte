@@ -1,0 +1,28 @@
+name: Sync Docs (Manual + Auto)
+
+on:
+  # ① Manual trigger
+  workflow_dispatch:
+
+  # ② Auto trigger when docs change on main
+  push:
+    branches: [ main ]
+    paths:
+      - "learning/**/*.md"
+      - "learning/**/*.mdx"
+      - "README.md"
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: 🔄 Sync Learning Docs to Bridge Web
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v4
+      - name: 🔄 Sync Docs
+        uses: ./.github/actions/sync-docs
+        env:
+          DOCS_SYNC_KEY: ${{ secrets.DOCS_SYNC_KEY }}

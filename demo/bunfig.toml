@@ -1,0 +1,2 @@
+[install.scopes]
+"@nebulr-group" = { url = "http://host.docker.internal:4873" }

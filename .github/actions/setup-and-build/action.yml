@@ -1,0 +1,70 @@
+name: Setup Node, Bun and Build
+description: Reusable setup for Node.js, Bun install and build
+inputs:
+  node-version:
+    description: Node.js version
+    required: false
+    default: '20'
+  registry-url:
+    description: npm registry URL
+    required: false
+    default: 'https://registry.npmjs.org'
+  working-directory:
+    description: Working directory for install/build
+    required: true
+  bun-version:
+    description: Bun version
+    required: false
+    default: 'latest'
+  setup-bun:
+    description: Whether to install and configure Bun
+    required: false
+    default: 'true'
+  setup-pnpm:
+    description: Whether to install and configure pnpm
+    required: false
+    default: 'false'
+  pnpm-version:
+    description: pnpm version to install when setup-pnpm is true
+    required: false
+    default: 'latest'
+  install-command:
+    description: Command to install dependencies
+    required: false
+    default: 'bun install'
+  build-command:
+    description: Command to run the build
+    required: false
+    default: 'bun run build'
+runs:
+  using: 'composite'
+  steps:
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        registry-url: ${{ inputs.registry-url }}
+
+    - name: 🔧 Setup Bun
+      if: ${{ inputs.setup-bun == 'true' }}
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: ${{ inputs.bun-version }}
+
+    - name: 📦 Setup pnpm
+      if: ${{ inputs.setup-pnpm == 'true' }}
+      uses: pnpm/action-setup@v3
+      with:
+        version: ${{ inputs.pnpm-version }}
+
+    - name: 📦 Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: ${{ inputs.install-command }}
+
+    - name: 🛠️ Build
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: ${{ inputs.build-command }}
+
+

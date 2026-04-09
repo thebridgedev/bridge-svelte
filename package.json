@@ -1,0 +1,34 @@
+{
+  "name": "bridge-svelte-workspace",
+  "private": true,
+  "workspaces": [
+    "bridge-svelte",
+    "demo"
+  ],
+  "scripts": {
+    "build": "bun run --filter demo build",
+    "build:bridge": "bun run --filter @nebulr-group/bridge-svelte build",
+    "dev": "bun run --filter demo dev",
+    "package": "bun run --filter @nebulr-group/bridge-svelte package",
+    "publish:local": "bun run publish:local:core && bun run publish:local:plugin",
+    "publish:local:core": "cd ../auth-core && bun run publish:local",
+    "publish:local:plugin": "bun run --filter @nebulr-group/bridge-svelte publish:local",
+    "build:docs": "bun learning/scripts/extract-md-from-mdx.ts learning/mdx/ learning/md/",
+    "test:e2e": "bun run e2e/playwright/pre-setup.ts test.local && PLAYWRIGHT_PROJECT_NAME=local bunx playwright test --project=local",
+    "test:e2e:stage": "bun run e2e/playwright/pre-setup.ts test.stage && PLAYWRIGHT_PROJECT_NAME=stage bunx playwright test --project=stage",
+    "test:e2e:prod": "bun run e2e/playwright/pre-setup.ts test.prod && PLAYWRIGHT_PROJECT_NAME=prod bunx playwright test --project=prod",
+    "test:e2e:headed": "bun run e2e/playwright/pre-setup.ts test.local && PLAYWRIGHT_PROJECT_NAME=local PLAYWRIGHT_HEADED=true bunx playwright test --project=local",
+    "test:e2e:report": "bunx playwright show-report test-reports/playwright-report",
+    "test:install": "bash scripts/test-install.sh"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^25.2.2",
+    "dotenv": "^17.2.4",
+    "mdx-to-md": "^0.5.2"
+  },
+  "dependencies": {
+    "@nebulr-group/bridge-auth-core": "0.1.0-beta.0"
+  },
+  "version": "0.1.0-beta.0"
+}

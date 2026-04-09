@@ -1,0 +1,36 @@
+# Test that the packed package installs cleanly with Svelte 5 + SvelteKit 2
+name: Test install
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  install-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Build and pack package
+        run: |
+          bun install
+          bun run build:bridge
+          bun run package
+          mv nebulr-group-bridge-svelte-*.tgz install-test-pkg.tgz
+
+      - name: Install with svelte@5 + @sveltejs/kit@2
+        run: |
+          mkdir -p install-test
+          cd install-test
+          npm init -y
+          npm install svelte@^5 @sveltejs/kit@^2
+          npm install ../install-test-pkg.tgz
+          echo "Install succeeded"

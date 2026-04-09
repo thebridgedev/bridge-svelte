@@ -1,0 +1,138 @@
+name: "Sync Docs to GitLab (Bridge Web)"
+description: "Syncs /learning folder to bridge-web GitLab repo using a sync-docs branch."
+runs:
+  using: "composite"
+
+  steps:
+    - name: 🧾 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🔐 Setup SSH for GitLab
+      shell: bash
+      run: |
+        set -e
+        
+        # Create SSH directory with proper permissions
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        
+        # Debug: Check if the secret is set
+        if [ -z "$DOCS_SYNC_KEY" ]; then
+          echo "❌ DOCS_SYNC_KEY secret is not set"
+          exit 1
+        fi
+        
+        # Write SSH key with proper formatting and validation
+        echo "🔍 Writing SSH key..."
+        echo "$DOCS_SYNC_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        
+        # Validate SSH key format
+        echo "🔍 Validating SSH key format..."
+        if ! ssh-keygen -l -f ~/.ssh/id_rsa >/dev/null 2>&1; then
+          echo "❌ Invalid SSH key format detected"
+          echo "🔍 First few characters of key:"
+          head -c 50 ~/.ssh/id_rsa
+          echo ""
+          echo "🔍 Last few characters of key:"
+          tail -c 50 ~/.ssh/id_rsa
+          exit 1
+        fi
+        
+        # Add GitLab to known hosts
+        echo "🔍 Adding GitLab to known hosts..."
+        ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts
+        chmod 644 ~/.ssh/known_hosts
+        
+        # Try SSH agent approach first
+        echo "🔍 Starting SSH agent..."
+        eval "$(ssh-agent -s)"
+        
+        echo "🔍 Adding SSH key to agent..."
+        if ssh-add ~/.ssh/id_rsa; then
+          echo "✅ SSH key added to agent successfully"
+        else
+          echo "⚠️ Failed to add SSH key to agent, trying direct key approach..."
+          # Set SSH config to use the key directly
+          echo "Host gitlab.com" > ~/.ssh/config
+          echo "    HostName gitlab.com" >> ~/.ssh/config
+          echo "    User git" >> ~/.ssh/config
+          echo "    IdentityFile ~/.ssh/id_rsa" >> ~/.ssh/config
+          echo "    IdentitiesOnly yes" >> ~/.ssh/config
+          echo "    StrictHostKeyChecking no" >> ~/.ssh/config
+          chmod 600 ~/.ssh/config
+        fi
+        
+        # Test SSH connection
+        echo "🔍 Testing SSH connection to GitLab..."
+        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -T git@gitlab.com || echo "⚠️ SSH test completed (expected for GitLab)"
+        
+        echo "✅ SSH setup completed"
+
+    - name: 🧠 Sync /learning folder to Bridge Web (sync-docs branch)
+      shell: bash
+      run: |
+        set -e
+
+        REPO_NAME=$(basename "${{ github.repository }}")
+        GITLAB_REPO="git@gitlab.com:nebulrgroup/bridge/bridge-web.git"
+        SYNC_BRANCH="sync-docs/$REPO_NAME"
+
+        echo "🔄 Syncing /learning content from $REPO_NAME → $GITLAB_REPO ($SYNC_BRANCH)"
+        
+        # Verify SSH key is loaded
+        echo "🔍 Verifying SSH key is loaded..."
+        ssh-add -l || echo "⚠️ No SSH keys loaded in agent"
+        
+        # Test GitLab connectivity before cloning
+        echo "🔍 Testing GitLab connectivity..."
+        ssh -o ConnectTimeout=10 -T git@gitlab.com || echo "⚠️ SSH test completed (expected for GitLab)"
+
+        echo "📥 Cloning repository..."
+        git clone "$GITLAB_REPO"
+        cd bridge-web
+
+        git config user.name "Docs Sync Bot"
+        git config user.email "docs.bot@nebulr.group"
+
+        TARGET_PATH="bridge-docs/synced/$REPO_NAME"
+        mkdir -p "$TARGET_PATH"
+
+        # Remove old synced content for this plugin
+        rm -rf "$TARGET_PATH"/* || true
+
+        # Copy new content (excluding README.md)
+        rsync -av --exclude='README.md' ../learning/ "$TARGET_PATH"/ || true
+
+        # Stage all changes including deletions
+        git add -A .
+
+        if git diff --cached --quiet; then
+          echo "✅ No new documentation changes to sync."
+          exit 0
+        fi
+
+        git commit -m "Sync learning docs from $REPO_NAME@${{ github.sha }}" || true
+
+        echo "🧩 Preparing sync branch $SYNC_BRANCH..."
+        git fetch origin $SYNC_BRANCH || true
+        git checkout -B $SYNC_BRANCH
+
+        echo "⚙️ Rebasing on latest origin/$SYNC_BRANCH (if exists)..."
+        if git show-ref --quiet refs/remotes/origin/$SYNC_BRANCH; then
+          if ! git rebase origin/$SYNC_BRANCH; then
+            echo "⚠️ Rebase conflict detected — aborting and retrying with merge strategy."
+            git rebase --abort || true
+            git pull --rebase=false --strategy-option ours origin $SYNC_BRANCH || true
+          fi
+        fi
+
+        echo "🚀 Pushing updates to GitLab branch $SYNC_BRANCH..."
+        if ! git push origin HEAD:$SYNC_BRANCH; then
+          echo "⚠️ Initial push failed — pulling latest and retrying once."
+          git pull --rebase=false origin $SYNC_BRANCH || true
+          git push origin HEAD:$SYNC_BRANCH || echo "❌ Push still failed, manual review needed."
+        fi
+
+        echo "✅ Sync complete for $REPO_NAME → $GITLAB_REPO@$SYNC_BRANCH"
+

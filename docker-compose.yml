@@ -1,0 +1,27 @@
+services:
+  bridge-svelte:
+    container_name: bridge-svelte
+    image: bridge-svelte:dev
+    build:
+      target: dev
+      context: ./
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./:/home/bridgeuser/app
+      # Anonymous volume shadows the host's macOS node_modules so the container uses its own Linux build
+      - /home/bridgeuser/app/node_modules
+      - ../auth-core:/home/bridgeuser/auth-core
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    ports:      
+      - "3008:3001"
+    networks:
+      - bridge
+
+networks:
+  bridge:
+    driver: bridge
+
+
+

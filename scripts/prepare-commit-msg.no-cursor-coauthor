@@ -1,0 +1,5 @@
+#!/bin/sh
+# Copy to .git/hooks/prepare-commit-msg and chmod +x to strip Cursor co-author from future commits.
+# cp scripts/prepare-commit-msg.no-cursor-coauthor .git/hooks/prepare-commit-msg && chmod +x .git/hooks/prepare-commit-msg
+FILE="$1"
+grep -v "Co-authored-by: Cursor <cursoragent@cursor.com>" "$FILE" > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"

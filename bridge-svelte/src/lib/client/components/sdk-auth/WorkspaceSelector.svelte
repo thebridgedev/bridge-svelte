@@ -80,6 +80,7 @@
           <button
             type="button"
             data-bridge-workspace-item
+            data-tenant-id={ws.tenant.id}
             data-active={ws.id === currentWorkspaceId}
             data-loading={switchingId === ws.id}
             disabled={!!switchingId}

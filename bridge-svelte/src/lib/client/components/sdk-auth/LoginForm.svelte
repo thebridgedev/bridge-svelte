@@ -3,7 +3,7 @@
   import type { HTMLAttributes } from 'svelte/elements';
   import type { AppConfig, FederationConnection } from '@thebridge/auth-core';
   import { onMount } from 'svelte';
-  import { getBridgeAuth, authState, appConfigStore } from '../../../core/bridge-instance.js';
+  import { getBridgeAuth, authState, appConfigStore, ensureAppConfig } from '../../../core/bridge-instance.js';
   import { getConfig } from '../../stores/config.store.js';
   import AuthFormWrapper from './shared/AuthFormWrapper.svelte';
   import Spinner from './shared/Spinner.svelte';
@@ -33,6 +33,13 @@
     onSsoClick?: (connectionType: string) => void;
     heading?: string;
     ssoConnections?: FederationConnection[];
+    /**
+     * SSO kickoff strategy for the built-in SsoButtons.
+     * - 'redirect' (default): full-page navigation to the federation endpoint.
+     * - 'popup': opens window.open and resolves via postMessage.
+     * Ignored when `onSsoClick` is provided (the caller handles the click).
+     */
+    ssoMode?: 'redirect' | 'popup';
     footer?: Snippet;
   }
 
@@ -48,6 +55,7 @@
     onSsoClick,
     heading = '',
     ssoConnections = [],
+    ssoMode = 'redirect',
     footer,
     class: className,
     style,
@@ -164,6 +172,15 @@
 
   onMount(async () => {
     if (typeof window === 'undefined') return;
+
+    // Ensure the anonymous app config is loaded. `initBridge()` kicks off the
+    // same fetch on startup, but LoginForm can mount before that promise
+    // settles (slow network, failed init, etc.), so we call it again here.
+    // `ensureAppConfig()` is idempotent and logs errors — the store update
+    // triggers reactivity and the SSO buttons / magic-link / passkey toggles
+    // render when it resolves.
+    void ensureAppConfig();
+
     const params = new URLSearchParams(window.location.search);
     const magicToken = params.get('bridge_magic_link_token');
     if (!magicToken) return;
@@ -391,6 +408,7 @@
         {:else}
           <SsoButton
             connection={conn}
+            mode={ssoMode}
             onSuccess={onLogin}
             onError={onError}
             class="bridge-btn bridge-btn-secondary bridge-sso-btn"

@@ -36,6 +36,13 @@ const _readyPromise = new Promise<void>((resolve) => {
   _resolveReady = resolve;
 });
 
+// ── App config load gate ───────────────────────────────────────────────────────
+//
+// The anonymous app config drives SSO button visibility, signup/magic-link
+// toggles, etc. on LoginForm. We cache the in-flight fetch so concurrent
+// callers share a single network request and can await the result.
+let _appConfigPromise: Promise<AppConfig | null> | null = null;
+
 // ── Init / access ──────────────────────────────────────────────────────────────
 
 export function initBridge(config: BridgeAuthConfig): BridgeAuth {
@@ -96,11 +103,43 @@ export function initBridge(config: BridgeAuthConfig): BridgeAuth {
     _error.set(err.message);
   });
 
-  // Load app config anonymously (drives SSO buttons etc.)
-  _instance.getAppConfig().then((cfg) => _appConfig.set(cfg)).catch(() => {});
+  // Load app config anonymously (drives SSO buttons, signup toggle, etc.).
+  // Cached in `_appConfigPromise` so LoginForm (and others) can await the
+  // result via `ensureAppConfig()` instead of racing the store update.
+  void ensureAppConfig();
 
   logger.debug('[bridge-instance] initialized');
   return _instance;
+}
+
+/**
+ * Load the anonymous app config into `appConfigStore` if it isn't already.
+ *
+ * Idempotent: concurrent callers share the in-flight fetch, and once the
+ * store holds a value this function resolves immediately.
+ *
+ * Resolves with the loaded config on success or `null` on failure (the
+ * fetch error is logged — it is not silently swallowed).
+ */
+export function ensureAppConfig(): Promise<AppConfig | null> {
+  const existing = get(_appConfig);
+  if (existing) return Promise.resolve(existing);
+  if (_appConfigPromise) return _appConfigPromise;
+
+  _appConfigPromise = getBridgeAuth()
+    .getAppConfig()
+    .then((cfg) => {
+      _appConfig.set(cfg);
+      return cfg;
+    })
+    .catch((err) => {
+      logger.warn('[bridge-instance] getAppConfig failed:', err);
+      // Allow a later call to retry
+      _appConfigPromise = null;
+      return null;
+    });
+
+  return _appConfigPromise;
 }
 
 export function getBridgeAuth(): BridgeAuth {

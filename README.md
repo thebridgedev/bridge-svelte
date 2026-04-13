@@ -140,12 +140,12 @@ You can also use individual components for custom flows:
 
 | Component | Purpose | Key Props |
 |-----------|---------|-----------|
-| `<LoginForm />` | Full multi-step login | `showSignupLink`, `showForgotPassword`, `showMagicLink`, `showPasskeys`, `onLogin`, `heading` |
+| `<LoginForm />` | Full multi-step login | `showSignupLink`, `showForgotPassword`, `showMagicLink`, `showPasskeys`, `ssoMode` (`'redirect'` \| `'popup'`, default `'redirect'`), `onLogin`, `heading` |
 | `<SignupForm />` | Registration form | `onSignup`, `showLoginLink`, `loginHref` |
 | `<MfaChallenge />` | MFA code entry + recovery | `onVerified`, `showRecoveryOption` |
 | `<MfaSetup />` | Phone → verify → backup code | `onComplete` |
 | `<TenantSelector />` | Multi-tenant workspace picker | `onSelect`, `tenantItem` (custom render snippet) |
-| `<SsoButton />` | Federation popup (Google, Azure, etc.) | `connection`, `label`, `icon` (snippet) |
+| `<SsoButton />` | Federated login (Google, Azure, etc.) — redirect (default) or popup | `connection`, `label`, `mode` (`'redirect'` \| `'popup'`, default `'redirect'`), `icon` (snippet) |
 | `<ForgotPassword />` | Send reset link / set new password | `token` (if present, shows set-password form), `loginHref` |
 | `<MagicLink />` | Passwordless email link | `onSent`, `loginHref` |
 | `<PasskeyLogin />` | WebAuthn authentication | `onLogin`, `autofill` |

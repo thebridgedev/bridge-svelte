@@ -21,6 +21,7 @@ export {
   flagsStore,
   bridgeReadyStore,
   appConfigStore,
+  ensureAppConfig,
   subscriptionStore,
   loadSubscription,
 } from './core/bridge-instance.js';

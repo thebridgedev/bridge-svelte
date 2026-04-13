@@ -8,6 +8,14 @@
   interface Props extends HTMLButtonAttributes {
     connection: FederationConnection;
     label?: string;
+    /**
+     * SSO kickoff strategy.
+     * - 'redirect' (default): full-page navigation to the federation endpoint,
+     *   provider returns via the normal OAuth callback chain.
+     * - 'popup': opens window.open and resolves via postMessage — useful for
+     *   embedded widgets that must not unload the host page.
+     */
+    mode?: 'redirect' | 'popup';
     onSuccess?: () => void;
     onError?: (error: Error) => void;
     icon?: Snippet;
@@ -16,6 +24,7 @@
   let {
     connection,
     label,
+    mode = 'redirect',
     onSuccess,
     onError,
     icon,
@@ -31,7 +40,7 @@
     if (loading) return;
     loading = true;
     try {
-      const result = await getBridgeAuth().startSsoLogin(connection.type);
+      const result = await getBridgeAuth().startSsoLogin(connection.type, { mode });
       if (result.type === 'auth_success') {
         onSuccess?.();
       } else if (result.type === 'auth_error') {

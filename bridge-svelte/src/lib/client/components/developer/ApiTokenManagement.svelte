@@ -41,7 +41,7 @@
     loading = true;
     error = null;
     try {
-      tokens = await getBridgeAuth().apiTokens.listAppTokens();
+      tokens = await getBridgeAuth().apiTokens.listTokens();
     } catch (err) {
       error = err instanceof Error ? err.message : 'Failed to load API tokens';
     } finally {
@@ -72,7 +72,7 @@
         privileges: selectedPrivileges,
         expireAt: createExpiry || undefined,
       };
-      const result = await getBridgeAuth().apiTokens.createAppToken(input);
+      const result = await getBridgeAuth().apiTokens.createToken(input);
       newToken = result.token;
       tokens = [result.record, ...tokens];
       showCreateForm = false;
@@ -100,7 +100,7 @@
     revoking = true;
     error = null;
     try {
-      await getBridgeAuth().apiTokens.revokeAppToken(revokeTarget.id);
+      await getBridgeAuth().apiTokens.revokeToken(revokeTarget.id);
       tokens = tokens.filter((t) => t.id !== revokeTarget!.id);
       success = `Token "${revokeTarget.name}" revoked.`;
       revokeDialogOpen = false;

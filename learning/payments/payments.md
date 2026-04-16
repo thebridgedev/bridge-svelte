@@ -56,7 +56,7 @@ All standard `HTMLAttributes<HTMLDivElement>` props (`class`, `style`, `data-*`,
       {/if}
       {#each prices as price}
         <button disabled={isCurrent} onclick={() => onPick(price)}>
-          {price.amount === 0 ? 'Free' : `$${price.amount / 100} / ${price.recurrenceInterval}`}
+          {price.amount === 0 ? 'Free' : `${price.amount} ${price.currency.toUpperCase()} / ${price.recurrenceInterval}`}
         </button>
       {/each}
     </div>

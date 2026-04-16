@@ -27,6 +27,13 @@ export async function bridgeBootstrap(
 
   const finalConfig = typeof config === 'string' ? { appId: config } : config;
 
+  // Persist Stripe Checkout session_id to sessionStorage before any framework
+  // redirects (e.g. SvelteKit goto) can strip it from the URL. auth-core's
+  // getSubscriptionStatus() will pick it up and trigger a server-side sync.
+  if (typeof sessionStorage !== 'undefined' && url.searchParams.has('session_id')) {
+    sessionStorage.setItem('bridge_checkout_session_id', url.searchParams.get('session_id')!);
+  }
+
   // 1. Initialize configuration (synchronously) — this also calls initBridge()
   bridgeConfig.initConfig(finalConfig, routeConfig);
 

@@ -180,7 +180,7 @@
                     {:else if price.amount === 0}
                       Select free plan
                     {:else}
-                      {price.amount / 100} {price.currency.toUpperCase()} / {price.recurrenceInterval}
+                      {price.amount} {price.currency.toUpperCase()} / {price.recurrenceInterval}
                     {/if}
                   </button>
                 {/each}

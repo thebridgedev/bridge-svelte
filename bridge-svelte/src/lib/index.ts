@@ -66,6 +66,22 @@ export * from './shared/types/config.js';
 // Logger
 export { logger, setLoggerDebug } from './shared/logger.js';
 
+// Conversion tracking (Reddit / GA4 via GTM dataLayer)
+export {
+	pushConversionEvent,
+	pushRedditEvent,
+	configureRedditTracking,
+} from './client/tracking/reddit-tracking.js';
+export type {
+	RedditConversionEvent,
+	RedditEcommerce,
+	RedditEcommerceItem,
+	RedditUserData,
+	PushConversionEventOptions,
+	RedditTrackingGate,
+} from './client/tracking/reddit-tracking.js';
+export { sha256Email } from './client/tracking/pii-hashing.js';
+
 // Auth-core type re-exports for advanced consumers
 export type {
   AuthConfigResponse,

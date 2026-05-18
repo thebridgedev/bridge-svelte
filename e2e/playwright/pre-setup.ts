@@ -69,6 +69,38 @@ async function preSetup() {
   }
   console.log(`[pre-setup] Health check passed`);
 
+  // In local-dev mode, ensure the dedicated "Bridge Plugin Demos" workspace exists in
+  // NBLOCKS_DASHBOARD and link the new test app to it. That puts demo apps in their own
+  // workspace in the admin UI at localhost:3023, separate from the developer's main work.
+  // CI / stage / prod don't auto-run this — for those, use the standalone setup script in
+  // bridge-api/scripts/setup-sdk-demos-workspace.sh (see bridge-api README).
+  let adminTenantId: string | undefined;
+  if (mode === 'test.local') {
+    try {
+      const tenantRes = await fetch(
+        `${testDataApiUrl}/account/test/playwright/sdk-demos-workspace`,
+        { method: 'GET', headers: { 'x-playwright-api-key': apiKey } },
+      );
+      if (tenantRes.ok) {
+        const { tenantId, name } = await tenantRes.json();
+        if (tenantId) {
+          adminTenantId = tenantId;
+          console.log(`[pre-setup] Will link test app to "${name}" workspace (${tenantId})`);
+        } else {
+          console.log('[pre-setup] SDK demos workspace not available — app will not appear in admin UI.');
+        }
+      } else if (tenantRes.status === 404) {
+        // bridge-api running an older build without the endpoint — older behaviour
+        console.log('[pre-setup] sdk-demos-workspace endpoint not available — skipping admin UI link.');
+      } else {
+        console.log(`[pre-setup] sdk-demos-workspace lookup returned ${tenantRes.status} — skipping admin UI link.`);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.log(`[pre-setup] sdk-demos-workspace lookup failed (${msg}) — skipping admin UI link.`);
+    }
+  }
+
   // Create or get the test app
   console.log(`[pre-setup] Setting up test app (domain: ${testAppDomain})...`);
   const setupRes = await fetch(`${testDataApiUrl}/account/test/playwright/setup-test-app`, {
@@ -83,6 +115,7 @@ async function preSetup() {
       ownerEmail,
       ownerPassword,
       appUrl: 'http://localhost:3001',
+      ...(adminTenantId ? { adminTenantId } : {}),
     }),
   });
 

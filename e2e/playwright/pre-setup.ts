@@ -69,6 +69,37 @@ async function preSetup() {
   }
   console.log(`[pre-setup] Health check passed`);
 
+  // In local-dev mode, look up the developer's admin tenant in NBLOCKS_DASHBOARD
+  // so we can link the new test app to it — that makes the app visible in the
+  // admin UI at localhost:3023 under that admin user. CI / stage / prod skip
+  // this; the app stays unlinked (fine for throwaway test runs).
+  let adminTenantId: string | undefined;
+  if (mode === 'test.local') {
+    try {
+      const tenantRes = await fetch(
+        `${testDataApiUrl}/account/test/playwright/local-admin-tenant`,
+        { method: 'GET', headers: { 'x-playwright-api-key': apiKey } },
+      );
+      if (tenantRes.ok) {
+        const { tenantId, email } = await tenantRes.json();
+        if (tenantId) {
+          adminTenantId = tenantId;
+          console.log(`[pre-setup] Will link test app to admin tenant ${tenantId} (${email})`);
+        } else {
+          console.log('[pre-setup] No local admin tenant found — app will not be visible in admin UI.');
+        }
+      } else if (tenantRes.status === 404) {
+        // bridge-api running an older build without the endpoint — older behaviour
+        console.log('[pre-setup] local-admin-tenant endpoint not available — skipping admin UI link.');
+      } else {
+        console.log(`[pre-setup] local-admin-tenant lookup returned ${tenantRes.status} — skipping admin UI link.`);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.log(`[pre-setup] local-admin-tenant lookup failed (${msg}) — skipping admin UI link.`);
+    }
+  }
+
   // Create or get the test app
   console.log(`[pre-setup] Setting up test app (domain: ${testAppDomain})...`);
   const setupRes = await fetch(`${testDataApiUrl}/account/test/playwright/setup-test-app`, {
@@ -83,6 +114,7 @@ async function preSetup() {
       ownerEmail,
       ownerPassword,
       appUrl: 'http://localhost:3001',
+      ...(adminTenantId ? { adminTenantId } : {}),
     }),
   });
 

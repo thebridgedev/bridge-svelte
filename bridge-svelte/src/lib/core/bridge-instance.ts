@@ -103,11 +103,6 @@ export function initBridge(config: BridgeAuthConfig): BridgeAuth {
     _error.set(err.message);
   });
 
-  // Load app config anonymously (drives SSO buttons, signup toggle, etc.).
-  // Cached in `_appConfigPromise` so LoginForm (and others) can await the
-  // result via `ensureAppConfig()` instead of racing the store update.
-  void ensureAppConfig();
-
   logger.debug('[bridge-instance] initialized');
   return _instance;
 }
@@ -199,7 +194,7 @@ export const appConfigStore: Readable<AppConfig | null> = _appConfig;
 
 // ── Subscription store ─────────────────────────────────────────────────────
 
-interface SubscriptionState {
+export interface SubscriptionState {
   status: SubscriptionStatus | null;
   plans: Plan[] | null;
   loading: boolean;

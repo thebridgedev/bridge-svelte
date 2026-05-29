@@ -44,7 +44,7 @@
       } else {
         // @ts-ignore — @simplewebauthn/browser is an optional peer dependency
         const mod = await import('@simplewebauthn/browser');
-        authResponse = await mod.startAuthentication({ optionsJSON: options, useBrowserAutofill: autofill });
+        authResponse = await mod.startAuthentication({ optionsJSON: options as any, useBrowserAutofill: autofill });
       }
 
       await getBridgeAuth().authenticateWithPasskey(authResponse);

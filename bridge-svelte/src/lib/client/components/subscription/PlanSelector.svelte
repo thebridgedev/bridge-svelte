@@ -2,14 +2,15 @@
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
   import { onMount } from 'svelte';
-  import type { Plan, PriceOfferSdk } from '@thebridge/auth-core';
+  import type { Plan, PriceOfferSdk } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth, loadSubscription, subscriptionStore } from '../../../core/bridge-instance.js';
+  import { getConfig } from '../../stores/config.store.js';
   import Alert from '../sdk-auth/shared/Alert.svelte';
   import Spinner from '../sdk-auth/shared/Spinner.svelte';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
-    successUrl: string;
-    cancelUrl: string;
+    successRedirect?: string;
+    cancelRedirect?: string;
     onSelect?: (detail: { plan: Plan; price: PriceOfferSdk }) => void;
     planCard?: Snippet<[{ plan: Plan; prices: PriceOfferSdk[]; isCurrent: boolean; onPick: (price: PriceOfferSdk) => void }]>;
     emptyState?: Snippet;
@@ -17,8 +18,8 @@
   }
 
   let {
-    successUrl,
-    cancelUrl,
+    successRedirect = '/subscription',
+    cancelRedirect = '/subscription',
     onSelect,
     planCard,
     emptyState,
@@ -48,7 +49,12 @@
     return 'select-plan';
   })());
 
-  const currentPlanKey = $derived(status?.plan?.key ?? null);
+  // status.plan is a Plan object from the REST endpoint; a string from JWT-derived paths.
+  const currentPlanKey = $derived(
+    status?.plan
+      ? typeof status.plan === 'string' ? status.plan : (status.plan as Plan).key
+      : null
+  );
 
   onMount(() => {
     // Only load if not already loaded
@@ -73,16 +79,19 @@
         onSelect?.({ plan, price });
       } else {
         // Needs checkout — redirect to Stripe (or direct plan set when Stripe not configured)
+        const base = getConfig().callbackUrl ?? `${window.location.origin}/auth/oauth-callback`;
+        // Use {CHECKOUT_SESSION_ID} placeholder — Stripe substitutes it in-place,
+        // avoiding the double-? bug that occurs when Stripe appends ?session_id= to a URL that already has query params.
+        const successUrl = `${base}?stripe_success=1&session_id={CHECKOUT_SESSION_ID}&redirect=${encodeURIComponent(successRedirect)}`;
+        const cancelUrl  = `${base}?stripe_cancel=1&redirect=${encodeURIComponent(cancelRedirect)}`;
         const session = await getBridgeAuth().startCheckout(plan.key, price, { successUrl, cancelUrl });
         if (session.sessionId === null) {
           // Stripe not configured — plan was set directly on the backend
           await loadSubscription();
           onSelect?.({ plan, price });
         } else {
-          const { loadStripe } = await import('@stripe/stripe-js');
-          const stripe = await loadStripe(session.publicKey);
-          if (!stripe) throw new Error('Failed to load Stripe');
-          await stripe.redirectToCheckout({ sessionId: session.sessionId });
+          if (!session.checkoutUrl) throw new Error('Checkout session URL missing');
+          window.location.href = session.checkoutUrl;
         }
       }
     } catch (err) {
@@ -94,8 +103,7 @@
 
   async function goToPortal(): Promise<void> {
     try {
-      const url = await getBridgeAuth().getPortalUrl();
-      window.location.href = url;
+      await getBridgeAuth().redirectToPlanSelection();
     } catch (err) {
       pickError = err instanceof Error ? err.message : 'Failed to open billing portal';
     }
@@ -159,7 +167,7 @@
             >
               <div class="bridge-plan-card-header">
                 <h3 class="bridge-plan-name">{plan.name}</h3>
-                {#if plan.trial && plan.trialDays > 0}
+                {#if plan.trial && (plan.trialDays ?? 0) > 0}
                   <span class="bridge-plan-trial-badge">{plan.trialDays}-day trial</span>
                 {/if}
               </div>
@@ -189,7 +197,7 @@
                   <button
                     class="bridge-btn-primary bridge-plan-select-btn"
                     disabled={isCurrent || picking}
-                    onclick={() => handlePick(plan, { amount: 0, currency: 'usd', recurrenceInterval: 'month' })}
+                    onclick={() => handlePick(plan, { id: '', amount: 0, currency: 'usd', recurrenceInterval: 'month' })}
                   >
                     {isCurrent ? 'Current plan' : 'Select plan'}
                   </button>

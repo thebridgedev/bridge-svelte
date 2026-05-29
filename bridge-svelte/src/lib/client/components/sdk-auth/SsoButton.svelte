@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { HTMLButtonAttributes } from 'svelte/elements';
-  import type { FederationConnection } from '@thebridge/auth-core';
+  import type { FederationConnection } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
   import Spinner from './shared/Spinner.svelte';
 

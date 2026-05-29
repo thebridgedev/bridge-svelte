@@ -54,6 +54,7 @@ Thumbs.db
 .pki
 .ssh/
 .npmrc
+bunfig.toml
 .local
 
 .next

@@ -1,9 +1,10 @@
 <script lang="ts">
   import { getBridgeAuth, isAuthenticated } from '@bridge-svelte/lib/core/bridge-instance';
+  import { getConfig } from '@bridge-svelte/lib/client/stores/config.store';
   import { stylesToggle } from '$lib/styles-toggle.svelte.js';
 
   function handleLogout() {
-    getBridgeAuth().logout({ redirectTo: '/' });
+    getBridgeAuth().logout({ redirectTo: getConfig().loginRoute });
   }
 </script>
 
@@ -33,6 +34,10 @@
 
         <a href="/subscription" class="nav-link">
           Subscription
+        </a>
+
+        <a href="/billing-lifecycle" class="nav-link">
+          Billing Lifecycle
         </a>
 
         <a href="/protected" class="nav-link">

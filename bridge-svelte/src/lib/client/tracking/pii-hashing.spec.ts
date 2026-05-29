@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import { webcrypto } from 'node:crypto';
+import { describe, it, expect } from 'vitest';
 
 import { sha256Email } from './pii-hashing.js';
 
@@ -23,19 +22,9 @@ const USER_AT_EXAMPLE_COM_HASH =
 const ADMIN_AT_GMAIL_COM_HASH =
 	'7932b2e116b076a54f452848eaabd5857f61bd957fe8a218faf216f24c9885bb';
 
-/**
- * Vitest's `environment: 'node'` exposes Node's `webcrypto` at `globalThis.crypto`
- * from v19+, but the `digest()` API is the same as the browser `crypto.subtle`
- * that `sha256Email` expects. We defensively wire it up here so the test is
- * robust across Node versions.
- */
-beforeAll(() => {
-	if (!globalThis.crypto || typeof globalThis.crypto.subtle?.digest !== 'function') {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(globalThis as any).crypto = webcrypto;
-	}
-});
-
+// Vitest's `environment: 'node'` exposes the Web Crypto API at
+// `globalThis.crypto` (Node 19+), with the same `crypto.subtle.digest()` the
+// browser provides and `sha256Email` expects.
 describe('sha256Email (client)', () => {
 	it('hashes a plain, already-normalized email to the known SHA-256 hex (matches server fixture)', async () => {
 		await expect(sha256Email('user@example.com')).resolves.toBe(USER_AT_EXAMPLE_COM_HASH);

@@ -53,6 +53,14 @@ export const test = base.extend<AuthFixtures>({
 
   // Test user — created before test, cleaned up after
   testUser: async ({ testDataClient }, use) => {
+    // Reset shared app config so a prior test leaving paymentsAutoRedirect=true
+    // (welcome-paywall, Stripe flows) doesn't bounce this test's protected-route
+    // navigations to /welcome. Tests that intentionally exercise the paywall
+    // flip it back on explicitly.
+    await testDataClient
+      .configureApp({ paymentsAutoRedirect: false, stripeEnabled: false })
+      .catch(() => {});
+
     const account = await testDataClient.createTestAccount();
     console.log(`[fixture] Created test account: ${account.email}`);
 

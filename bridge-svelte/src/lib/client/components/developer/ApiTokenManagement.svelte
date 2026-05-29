@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { HTMLAttributes } from 'svelte/elements';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
-  import type { ApiToken, AvailablePrivilege, CreateApiTokenInput } from '@thebridge/auth-core';
+  import type { ApiToken, AvailablePrivilege, CreateApiTokenInput } from '@nebulr-group/bridge-auth-core';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {}
 

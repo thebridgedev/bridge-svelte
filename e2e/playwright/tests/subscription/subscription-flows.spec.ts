@@ -251,8 +251,9 @@ test.describe('Subscription Flows', () => {
       expect(page.url()).toContain('stripe.com');
     } finally {
       await testDataClient.deletePlan(planKey).catch(() => {});
-      // Disable Stripe again
-      await testDataClient.configureApp({ stripeEnabled: false }).catch(() => {});
+      await testDataClient
+        .configureApp({ stripeEnabled: false, paymentsAutoRedirect: false })
+        .catch(() => {});
     }
   });
 });

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
-  import type { AppConfig, FederationConnection } from '@thebridge/auth-core';
+  import type { AppConfig, FederationConnection } from '@nebulr-group/bridge-auth-core';
   import { onMount } from 'svelte';
   import { getBridgeAuth, authState, appConfigStore, ensureAppConfig } from '../../../core/bridge-instance.js';
   import { getConfig } from '../../stores/config.store.js';
@@ -83,12 +83,15 @@
   function buildSsoConnections(appConfig: AppConfig | null): FederationConnection[] {
     if (!appConfig) return [];
     const out: FederationConnection[] = [];
-    if (appConfig.googleSsoEnabled)   out.push({ id: 'google',   type: 'google',      name: 'Google' });
-    if (appConfig.azureAdSsoEnabled)  out.push({ id: 'azure',    type: 'ms-azure-ad', name: 'Microsoft' });
-    if (appConfig.linkedinSsoEnabled) out.push({ id: 'linkedin', type: 'linkedin',    name: 'LinkedIn' });
-    if (appConfig.githubSsoEnabled)   out.push({ id: 'github',   type: 'github',      name: 'GitHub' });
-    if (appConfig.facebookSsoEnabled) out.push({ id: 'facebook', type: 'facebook',    name: 'Facebook' });
-    if (appConfig.appleSsoEnabled)    out.push({ id: 'apple',    type: 'apple',       name: 'Apple' });
+    if (appConfig.googleSsoEnabled) out.push({ id: 'google', type: 'google', name: 'Google' });
+    if (appConfig.azureSsoEnabled)  out.push({ id: 'azure', type: 'ms-azure-ad', name: 'Microsoft' });
+    // Remaining providers (LinkedIn, GitHub, Facebook, Apple, custom SAML/OIDC)
+    // come from the canonical federationConnections list. Skip google/azure so
+    // they don't duplicate the built-in toggles above.
+    for (const conn of appConfig.federationConnections ?? []) {
+      if (conn.type === 'google' || conn.type === 'ms-azure-ad') continue;
+      out.push(conn);
+    }
     return out;
   }
 

@@ -1,6 +1,11 @@
+# COMPOSE_PROJECT_NAME defaults to 'bridge' (slot 0). Worktree slots set this
+# to 'bridge-wt-<N>' via a .env file in this directory (auto-loaded by
+# docker compose) so the container name + host port don't collide with slot 0.
+name: ${COMPOSE_PROJECT_NAME:-bridge}
+
 services:
   bridge-svelte:
-    container_name: bridge-svelte
+    container_name: ${COMPOSE_PROJECT_NAME:-bridge}-svelte
     image: bridge-svelte:dev
     build:
       target: dev
@@ -14,14 +19,11 @@ services:
     restart: unless-stopped
     stdin_open: true
     tty: true
-    ports:      
-      - "3008:3001"
+    ports:
+      - "${BRIDGE_SVELTE_EXT_PORT:-3008}:3001"
     networks:
       - bridge
 
 networks:
   bridge:
     driver: bridge
-
-
-

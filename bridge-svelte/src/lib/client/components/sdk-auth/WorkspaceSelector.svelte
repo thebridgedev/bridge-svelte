@@ -1,13 +1,13 @@
 <script lang="ts">
-  import type { HTMLDivAttributes } from 'svelte/elements';
+  import type { HTMLAttributes } from 'svelte/elements';
   import type { Snippet } from 'svelte';
-  import type { Workspace } from '@thebridge/auth-core';
+  import type { Workspace } from '@nebulr-group/bridge-auth-core';
   import { onMount } from 'svelte';
   import { getBridgeAuth, profileStore } from '../../../core/bridge-instance.js';
   import Spinner from './shared/Spinner.svelte';
   import Alert from './shared/Alert.svelte';
 
-  interface Props extends HTMLDivAttributes {
+  interface Props extends HTMLAttributes<HTMLDivElement> {
     onSwitch?: () => void;
     onError?: (error: Error) => void;
     workspaceItem?: Snippet<[{ workspace: Workspace; isActive: boolean; isLoading: boolean; onSelect: () => void }]>;

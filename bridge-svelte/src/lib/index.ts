@@ -2,12 +2,17 @@
 export * from './client/BridgeBootstrap.js';
 export * from './client/stores/config.store.js';
 
-// Bridge instance (singleton + Svelte stores)
+// Bridge instance (singleton accessors + reactive stores).
+//
+// `auth` is the recommended way to call BridgeAuth methods imperatively
+// (it's a lazy proxy to the singleton — `auth.logout()`, `auth.signup()`,
+// `auth.getProfile()`, etc.). The unified `bridge` surface below is the
+// recommended way to *read* live state reactively.
 export {
   initBridge,
-  getBridgeAuth,
   markReady,
   waitForBridge,
+  getBridgeAuth,
   auth,
   tokenStore,
   isAuthenticated,
@@ -18,13 +23,33 @@ export {
   hasMultiTenantAccess,
   tenantUsersStore,
   profileStore,
-  flagsStore,
   bridgeReadyStore,
   appConfigStore,
   ensureAppConfig,
   subscriptionStore,
   loadSubscription,
 } from './core/bridge-instance.js';
+export type { SubscriptionState } from './core/bridge-instance.js';
+
+// Phase 4 (TBP-288/319) — unified read surface. Single `bridge` aggregate
+// with scoped slices (`bridge.app` / `bridge.tenant` / `bridge.user`) fed
+// by session.snapshot. Coexists with the legacy module-level stores above;
+// `<BridgeProvider>` + `useBridge()` context hook land in TBP-320.
+export { bridge } from './core/bridge.js';
+export type {
+  BridgeSurface,
+  BridgeAppSurface,
+  BridgeTenantSurface,
+} from './core/bridge.js';
+export type {
+  BrandingSnapshot,
+  SubscriptionSnapshot,
+  UserSnapshot,
+  SessionSnapshotData,
+} from './core/snapshot-stores.js';
+
+// Phase 5 (TBP-331) — bridge.events.handle() handler-table type.
+export type { BridgeEventHandlers } from './core/events.js';
 
 // Components (Svelte components must have `export default`)
 export { default as BridgeBootstrap, default as BridgeProvider } from './client/BridgeBootstrap.svelte';
@@ -52,6 +77,22 @@ export { default as PasskeySetup } from './client/components/sdk-auth/PasskeySet
 
 // Subscription components
 export { default as PlanSelector } from './client/components/subscription/PlanSelector.svelte';
+
+// Billing 2.0 (Phase A / US-2) — canonical-model drop-in.
+// Parallel to PlanSelector (which consumes the Stripe-direct path); these
+// coexist until REF-1 (post-feature) consolidates them.
+export { default as BridgeSubscriptionStatus } from './client/components/subscription/BridgeSubscriptionStatus.svelte';
+
+// Billing 2.0 (Phase B / US-5+) — unified notice banner. Multi-state
+// (past_due / cancel / trial / dunning). One drop-in, all lifecycle copy.
+export { default as BridgeBillingNotice } from './client/components/subscription/BridgeBillingNotice.svelte';
+
+// Fullscreen plan-selection paywall. Drop into the root layout to gate
+// unauthenticated/unsubscribed users before they reach the app.
+export { default as BridgePaywall } from './client/components/subscription/BridgePaywall.svelte';
+
+// Billing 2.0 (Phase C / US-11) — live quota counter banner.
+export { default as BridgeQuotaBanner } from './client/components/subscription/BridgeQuotaBanner.svelte';
 
 // Feature flags
 export * from './shared/feature-flag.js';
@@ -122,4 +163,86 @@ export type {
   SubscriptionStatus,
   CheckoutSession,
   Workspace,
+} from '@nebulr-group/bridge-auth-core';
+
+// ----------------------------------------------------------------------------
+// Feature Flags 2.0 (re-exported from auth-core)
+// ----------------------------------------------------------------------------
+// Evaluator / operator runtime values
+export {
+  OPERATORS,
+  OPERATOR_VERSION,
+  CONDITIONS_PER_RULE_MAX,
+  isOperator,
+  isOperatorValidForType,
+  validOperatorsForType,
+  evaluateCondition,
+  validateConditions,
+  bucket,
+  evaluateBranch,
+  evaluateRule,
+  validateRule,
+  resolveAttribute,
+} from '@nebulr-group/bridge-auth-core';
+
+// FF 2.0 SDK runtime values
+export {
+  BridgeFlags,
+  BridgeIdentity,
+  MemoryIdentityStorage,
+  attachIdentity,
+  generateAnonymousId,
+  AttributeProviderRegistry,
+  AuthAttributeProvider,
+  BillingAttributeProvider,
+  TelemetryBatcher,
+  RealtimeClient,
+  BRIDGE_CONTEXT_HEADER,
+  serializeContext,
+  deserializeContext,
+  serverInstanceId,
+} from '@nebulr-group/bridge-auth-core';
+
+// FF 2.0 evaluator / SDK types
+export type {
+  Operator,
+  AttributeType,
+  Condition,
+  ConditionValue,
+  ValidationError,
+  Branch,
+  Rule,
+  FlagState,
+  EvalContext,
+  EvalResult,
+  RuleValidationError,
+  CachedFlag,
+  FlagValueType,
+  EvalTelemetry,
+  DiscoveryTelemetry,
+  BridgeFlagsHooks,
+  DeclaredAttributeType,
+  AttributeDeclaration,
+  BridgeFlagsMode,
+  AnonymousTrackingMode,
+  IdentityStorage,
+  AttributeProvider,
+  BillingSnapshot,
+  BillingProviderConfig,
+  TelemetryBatcherConfig,
+  RealtimeClientConfig,
+  RealtimeMessage,
+  FlagUpdateMessage,
+  FlagRemovedMessage,
+  UserStateMessage,
+  ConnectionState,
+  WebSocketLike,
+} from '@nebulr-group/bridge-auth-core';
+
+// FF 2.0 management types
+export type {
+  FlagResponse,
+  CreateFlagInput,
+  UpdateFlagInput,
+  FlagSchedule,
 } from '@nebulr-group/bridge-auth-core';

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { TeamUser } from '@thebridge/auth-core';
+  import type { TeamUser } from '@nebulr-group/bridge-auth-core';
   import type { HTMLAttributes } from 'svelte/elements';
   import { onMount } from 'svelte';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';

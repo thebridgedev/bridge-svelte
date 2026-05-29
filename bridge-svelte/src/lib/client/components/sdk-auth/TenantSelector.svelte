@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
-  import type { TenantUser } from '@thebridge/auth-core';
+  import type { TenantUser } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth, tenantUsersStore } from '../../../core/bridge-instance.js';
   import AuthFormWrapper from './shared/AuthFormWrapper.svelte';
   import Spinner from './shared/Spinner.svelte';

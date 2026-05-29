@@ -1,199 +1,103 @@
 # Bridge SvelteKit — Feature Flags
 
-You are adding feature flag support to a SvelteKit application that uses The Bridge.
+You are adding **Feature Flags** to a SvelteKit application that uses The Bridge. The goal is to ship code behind a switch you control from the Bridge dashboard — no redeploy needed.
 
 ## Prerequisites check
 
 Before starting, verify that Bridge is set up in this project:
-1. `@nebulr-group/bridge-svelte` is in package.json dependencies
-2. `src/routes/+layout.ts` calls `bridgeBootstrap()` with a `BridgeConfig` and `RouteGuardConfig`
-3. `src/routes/+layout.svelte` renders `<BridgeBootstrap>`
+
+1. `@nebulr-group/bridge-svelte` is in `package.json` dependencies
+2. `src/routes/+layout.ts` calls `bridgeConfig.initConfig({ appId })`
+3. `src/routes/+layout.svelte` renders `<BridgeBootstrap />`
 4. `VITE_BRIDGE_APP_ID` is set in `.env`
 
-If any are missing, run `bridge guide svelte` first to complete the initial setup.
+If any are missing, run `bridge guide svelte` first.
 
-## Using the FeatureFlag component
+## Step 1 — Activate the flags layer
 
-Import `FeatureFlag` from `@nebulr-group/bridge-svelte` and wrap content that should only render when a flag is enabled:
+`@nebulr-group/bridge-svelte/flags` is a subpath export — no new package to install. Importing anything from it puts the flag runtime on the dependency graph. `<BridgeBootstrap />` then initializes the flag layer on mount: local eval cache, hydration from the workspace, and realtime updates.
+
+Add one import from `/flags` in your root layout to activate it:
 
 ```svelte
+<!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import { FeatureFlag } from '@nebulr-group/bridge-svelte';
+  import BridgeBootstrap from '@nebulr-group/bridge-svelte/client/BridgeBootstrap.svelte';
+  import { FeatureFlag } from '@nebulr-group/bridge-svelte/flags';
+
+  let { children } = $props();
 </script>
 
-<FeatureFlag flagName="new-dashboard">
-  <p>The new dashboard is enabled!</p>
-</FeatureFlag>
+<BridgeBootstrap />
+<main>{@render children()}</main>
 ```
 
-To bypass the 5-minute bulk cache and check the flag live on every render, add `forceLive`:
+Flags start evaluating for all visitors as soon as `<BridgeBootstrap />` mounts — login is not required.
+
+## Step 2 — Create the demo page
+
+Create `src/routes/flags-demo/+page.svelte` with the content below. This page uses `FeatureFlag` to gate a visible box: grey with a striped border when the flag is off, solid green when it is on. The flag is auto-created in Bridge as off the first time the page loads.
 
 ```svelte
-<FeatureFlag flagName="new-dashboard" forceLive>
-  <p>Live-checked flag is enabled</p>
-</FeatureFlag>
-```
-
-To render different content based on whether the flag is enabled or disabled, use `renderWhenDisabled` with the snippet API:
-
-```svelte
-<FeatureFlag flagName="premium-feature" renderWhenDisabled>
-  {#snippet children({ enabled, rawEnabled })}
-    {#if enabled}
-      <button>Use premium feature</button>
-    {:else}
-      <button disabled title="Upgrade to unlock">
-        Premium feature (locked)
-      </button>
-    {/if}
-  {/snippet}
-</FeatureFlag>
-```
-
-The snippet receives `{ enabled, rawEnabled }` where `enabled` respects the `negate` prop and `rawEnabled` is the raw API value.
-
-**Props reference:**
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `flagName` | `string` | **(required)** | The feature flag key |
-| `forceLive` | `boolean` | `false` | Bypass cache and check live |
-| `negate` | `boolean` | `false` | Invert the flag value |
-| `renderWhenDisabled` | `boolean` | `false` | Always render children (pass `enabled` via snippet) |
-
-## Route-level feature gating
-
-Gate entire routes behind feature flags by adding `featureFlag` rules to the existing `RouteGuardConfig` in `src/routes/+layout.ts`. Open the file and add rules to the `rules` array:
-
-**Single flag:**
-
-```ts
-const routeConfig: RouteGuardConfig = {
-  rules: [
-    { match: '/', public: true },
-    { match: new RegExp('^/auth($|/)'), public: true },
-    { match: '/premium/*', featureFlag: 'premium-feature', redirectTo: '/upgrade' },
-    { match: '/beta/*', featureFlag: 'beta-feature', redirectTo: '/' },
-  ],
-  defaultAccess: 'protected',
-};
-```
-
-**`any` / `all` requirements:**
-
-```ts
-const routeConfig: RouteGuardConfig = {
-  rules: [
-    // Route allowed if ANY of the flags are enabled
-    { match: '/labs/*', featureFlag: { any: ['labs-v1', 'labs-v2'] }, redirectTo: '/' },
-
-    // Route allowed only if ALL flags are enabled
-    { match: '/premium/*', featureFlag: { all: ['paid', 'kyc-verified'] }, redirectTo: '/upgrade' },
-
-    { match: '/', public: true },
-    { match: new RegExp('^/auth($|/)'), public: true },
-  ],
-  defaultAccess: 'protected',
-};
-```
-
-**Global flag plus per-route criteria:**
-
-The first matching rule wins. Place specific routes before the global catch-all:
-
-```ts
-const routeConfig: RouteGuardConfig = {
-  rules: [
-    // Specific route — its own criteria
-    { match: '/beta/*', featureFlag: { any: ['beta-feature', 'internal'] }, redirectTo: '/' },
-
-    // Public routes
-    { match: '/', public: true },
-    { match: new RegExp('^/auth($|/)'), public: true },
-
-    // Global flag — requires 'app-enabled' for all other protected routes
-    { match: '/*', featureFlag: 'app-enabled', redirectTo: '/maintenance' },
-  ],
-  defaultAccess: 'protected',
-};
-```
-
-Import `RouteGuardConfig` if not already imported:
-
-```ts
-import type { BridgeConfig, RouteGuardConfig } from '@nebulr-group/bridge-svelte';
-```
-
-## Programmatic flag access
-
-Access flags from JavaScript/TypeScript when you need to check them outside of templates:
-
-```ts
-import { get } from 'svelte/store';
-import { featureFlags, isFeatureEnabled, loadFeatureFlags } from '@nebulr-group/bridge-svelte';
-
-// Load all flags (usually done automatically by bootstrap)
-await loadFeatureFlags();
-
-// Read the flags store (reactive)
-const allFlags = get(featureFlags.flags); // Record<string, boolean>
-
-// Check a single flag (cached)
-const enabled = await isFeatureEnabled('my-flag');
-
-// Check a single flag (live, bypasses cache)
-const enabledLive = await isFeatureEnabled('my-flag', true);
-
-// Refresh all flags
-await featureFlags.refresh();
-```
-
-**Example: resource limits via flags:**
-
-```ts
-// src/lib/services/usage.ts
-import { get } from 'svelte/store';
-import { featureFlags } from '@nebulr-group/bridge-svelte';
-
-const LIMIT_FLAGS = {
-  UNLIMITED: 'limit-unlimited',
-  LIMIT_50: 'limit-50',
-};
-
-export function getPlanLimit(): number {
-  const flags = get(featureFlags.flags);
-  if (flags[LIMIT_FLAGS.UNLIMITED]) return Infinity;
-  if (flags[LIMIT_FLAGS.LIMIT_50]) return 50;
-  return 5; // Free tier default
-}
-```
-
-**Example: upgrade CTA when a flag is disabled:**
-
-```svelte
+<!-- src/routes/flags-demo/+page.svelte -->
 <script lang="ts">
-  import { FeatureFlag } from '@nebulr-group/bridge-svelte';
+  import { FeatureFlag } from '@nebulr-group/bridge-svelte/flags';
 </script>
 
-<FeatureFlag flagName="advanced-export" renderWhenDisabled>
-  {#snippet children({ enabled })}
-    {#if enabled}
-      <button onclick={exportData}>Export data</button>
-    {:else}
-      <div class="upgrade-prompt">
-        <p>Upgrade your plan to export data.</p>
-        <a href="/subscription">View plans</a>
+<div class="demo-page">
+  <h1>Feature Flag Demo</h1>
+  <p>Toggle <strong>demo-flag</strong> in the Bridge dashboard and watch this box change — no refresh needed.</p>
+
+  <FeatureFlag key="demo-flag" defaultValue={false}>
+    {#snippet children()}
+      <div class="flag-box flag-on">
+        <div class="flag-icon">✓</div>
+        <p class="flag-label"><strong>demo-flag</strong> is <strong>enabled</strong></p>
+        <p class="flag-hint">Go to Feature Control in the Bridge dashboard to toggle it off again.</p>
       </div>
-    {/if}
-  {/snippet}
-</FeatureFlag>
+    {/snippet}
+    {#snippet fallback()}
+      <div class="flag-box flag-off">
+        <div class="flag-icon">⚑</div>
+        <p class="flag-label">This box will turn green once you enable <strong>demo-flag</strong></p>
+        <p class="flag-hint">Go to Feature Control in the Bridge dashboard and flip it on.</p>
+      </div>
+    {/snippet}
+  </FeatureFlag>
+</div>
+
+<style>
+  .demo-page { max-width: 480px; margin: 4rem auto; font-family: sans-serif; text-align: center; }
+  .flag-box { margin: 2rem auto; padding: 2.5rem 2rem; border-radius: 10px; transition: background 0.4s ease; }
+  .flag-off {
+    background: linear-gradient(#f0f0f0, #f0f0f0) padding-box,
+      repeating-linear-gradient(45deg, #aaa 0, #aaa 8px, transparent 8px, transparent 18px) border-box;
+    border: 8px solid transparent; color: #555;
+  }
+  .flag-on { background: #d4edda; border: 4px solid #28a745; color: #155724; }
+  .flag-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+  .flag-hint { font-size: 0.8rem; opacity: 0.65; margin-top: 0.5rem; }
+</style>
 ```
+
+**After creating the file, tell the user:**
+
+> I've created a feature flag demo page at `/flags-demo`. Open it in your browser, then go to **Feature Control** in the Bridge dashboard and toggle **demo-flag** on — the box will turn green without a page refresh.
+
+## How `FeatureFlag` works
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `key` | `string` | yes | Flag key — auto-created in Bridge on first eval if it doesn't exist |
+| `defaultValue` | `T` | yes | Value returned until the cache hydrates or if the flag doesn't exist |
+| `children` | `Snippet<[T]>` | no | Rendered when the flag is on (`passed: true`). Receives the typed flag value |
+| `fallback` | `Snippet<[T]>` | no | Rendered when the flag is off (`passed: false`). Receives the typed flag value |
+
+Use the same `FeatureFlag` component anywhere in the app to gate any content behind a flag.
 
 ## Verify
 
-1. Create a test flag in the Bridge dashboard (or via `bridge flag create test-flag`)
-2. Add `<FeatureFlag flagName="test-flag">` to a page and confirm the content appears when the flag is enabled
-3. Disable the flag and confirm the content disappears
-4. If using `renderWhenDisabled`, confirm both branches render correctly
-5. If using route-level gating, navigate to the gated route with the flag disabled and verify the redirect works
-6. Run the project's build command to confirm no TypeScript or import errors
+1. Navigate to `/flags-demo` in the browser. The grey striped box should appear — Bridge auto-creates `demo-flag` as off.
+2. Go to **Feature Control** in the Bridge dashboard and toggle `demo-flag` on.
+3. The box turns green **without a page refresh** — realtime updates are on by default.
+4. Toggle it off again to confirm it reverts.

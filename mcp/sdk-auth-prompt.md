@@ -2,12 +2,12 @@
 
 You are integrating The Bridge into a SvelteKit application using **in-app SDK authentication**. Instead of redirecting users to an external hosted login page, the app renders its own login and signup forms using Bridge SDK components (`LoginForm`, `SignupForm`). Users never leave the app.
 
-> **SDK version:** This guide targets `@nebulr-group/bridge-svelte` `^0.3.0`. Specific behaviors called out below — `logout()` taking no arguments AND always redirecting to the hosted page (use `clearSession()` + reload for SDK-mode logout), `profileStore` being the store directly (not an object), `signupRoute` not existing on `BridgeConfig`, `LoginForm` not auto-navigating after auth — are 0.3.x semantics. Newer versions may differ; if the project is on a different version, double-check the published `.d.ts` files.
+> **SDK version:** This guide targets `@nebulr-group/bridge-svelte` `^0.3.0`. Specific behaviors called out below — `profileStore` being the store directly (not an object), `signupRoute` not existing on `BridgeConfig`, `LoginForm` not auto-navigating after auth — are 0.3.x semantics. Newer versions may differ; if the project is on a different version, double-check the published `.d.ts` files.
 
 ## Prerequisites
 
-- **appId** — your Bridge application ID. Get it from `bridge app get` or the Bridge dashboard.
-- **Package manager** — use whatever the project already uses (check for `bun.lock`, `pnpm-lock.yaml`, `yarn.lock`, or `package-lock.json`).
+- **appId** — your Bridge application ID. Passed in from the master prompt (Step 3); confirm or retrieve via `bridge app get`.
+- **Package manager** — passed in from the master prompt (Step 1); confirm by checking for `bun.lock`, `pnpm-lock.yaml`, `yarn.lock`, or `package-lock.json`.
 
 ### Bridge admin app configuration (server-side)
 
@@ -18,9 +18,11 @@ Two server-side settings on the Bridge app must be in place before any SDK auth 
 
 Confirm both before proceeding. If either is missing, set them now — fixing this after the integration is wired in is a worse debugging experience.
 
-## Check existing Bridge setup
+## Integration audit
 
-Before proceeding, check if Bridge is already set up in this project:
+> This section is the audit checklist the master prompt's Step 1b delegates to. When called from master, the answers are already known — use this to confirm, not re-investigate.
+
+Check if Bridge is already set up in this project:
 
 1. Is `@nebulr-group/bridge-svelte` in `package.json` dependencies?
 2. Does `src/routes/+layout.ts` call `bridgeBootstrap()`?
@@ -388,7 +390,7 @@ Create `src/routes/auth/login/+page.svelte` and `src/routes/auth/signup/+page.sv
 If the project calls `auth.login()` to trigger the hosted login redirect, those calls are no longer needed. The route guard automatically redirects unauthenticated users to your `loginRoute`. Remove or replace any explicit `auth.login()` calls:
 
 - **Navigation buttons** that called `auth.login()` should now use `<a href="/auth/login">` instead (or the route guard handles it automatically when the user hits a protected route).
-- **Logout** still works the same way: `getBridgeAuth().logout()`.
+- **Logout** now requires passing `redirectTo` in SDK mode: `getBridgeAuth().logout({ redirectTo: '/auth/login' })`. Without it, `logout()` redirects to the hosted Bridge portal instead of your in-app login page.
 
 ### 4. The OAuth callback route can remain
 
@@ -403,16 +405,7 @@ Add login and logout controls to your navigation or header component:
   import { isAuthenticated, profileStore, getBridgeAuth } from '@nebulr-group/bridge-svelte';
 
   function handleLogout() {
-    // In 0.3.x, `logout()` always navigates to the hosted Bridge logout page
-    // via `window.location.href = createLogoutUrl()` regardless of whether the
-    // app is in SDK mode. To stay in-app, use `clearSession()` (silent token
-    // clear) and trigger a full page reload to the in-app login route — the
-    // reload re-runs `bridgeBootstrap` from a clean state, which re-syncs the
-    // Svelte stores. (A SvelteKit `goto()` is NOT enough: `clearSession()`
-    // does not emit `auth:logout`, so the in-memory profile/token stores stay
-    // populated until the page is fully reloaded.)
-    getBridgeAuth().clearSession();
-    window.location.assign('/auth/login');
+    getBridgeAuth().logout({ redirectTo: '/auth/login' });
   }
 </script>
 
@@ -426,12 +419,9 @@ Add login and logout controls to your navigation or header component:
 
 **Key points:**
 - With SDK auth, the "Log in" action is a simple link to `/auth/login` — no JavaScript call needed.
-- **Do NOT call `getBridgeAuth().logout()` in SDK mode.** In bridge-svelte 0.3.x, `logout()` unconditionally redirects to the hosted Bridge logout URL (`auth.thebridge.dev/auth/login/<appId>`) via `window.location.href`. There is no SDK-mode branch and no `redirectTo` option. Any `await logout(); goto(...)` pattern is dead code — the `goto()` never runs because the page has already started navigating to the hosted page.
-- **Use `clearSession()` + `window.location.assign('/auth/login')` instead.** `clearSession(): void` silently wipes tokens from storage without emitting `auth:logout` and without redirecting. The hard-reload to `/auth/login` is required (a `goto()` is not enough): the in-memory Svelte stores (`profileStore`, `tokenStore`, `flagsStore`) are wired to the `auth:logout` event, which `clearSession()` skips, so without a full reload they stay populated and the UI thinks the user is still logged in. The reload re-runs `bridgeBootstrap` which re-reads localStorage (now empty) and initializes the stores as logged-out.
+- **In SDK mode, always pass `redirectTo` to `logout()`.** Without it, `logout()` redirects to the hosted Bridge portal (`auth.thebridge.dev`). Pass your in-app login route: `getBridgeAuth().logout({ redirectTo: '/auth/login' })`. Replace `'/auth/login'` with whatever path you set as `loginRoute` in your `BridgeConfig`.
 - `isAuthenticated` is a Svelte readable store — use `$isAuthenticated` in templates.
 - `profileStore` IS the profile store directly (`Readable<Profile | null | undefined>`) — use `$profileStore` in templates. Earlier versions of this guide instructed `const { profile } = profileStore` and `$profile`; that pattern does NOT work in 0.3.x and will throw `store_invalid_shape` in Svelte 5.
-
-> **Known SDK gap (track upstream):** In a future bridge-svelte release, `logout()` should accept a `{ redirectTo?: string }` option (or a `silent: true` flag) so SDK-mode apps can log out in-place without the `clearSession()` workaround. Until then, the pattern above is the correct approach for SDK mode.
 
 ## Route protection
 
@@ -579,7 +569,7 @@ Before verifying, confirm every item was applied. Do not skip any:
 - [ ] All 7 route files match the structure shown above (correct component, correct token wiring where applicable)
 - [ ] `tenantSelfSignup` is enabled on the Bridge app (server-side) — confirmed in admin dashboard or via `bridge app get`
 - [ ] App origin is in `allowedOrigins` (server-side) — confirmed in admin dashboard or via `bridge app get`
-- [ ] Login/logout controls added to navigation (`<a href="/auth/login">` for login; logout calls `getBridgeAuth().clearSession()` followed by `window.location.assign('/auth/login')` — do NOT call `logout()`, which redirects to the hosted Bridge page in 0.3.x)
+- [ ] Login/logout controls added to navigation (`<a href="/auth/login">` for login; logout calls `getBridgeAuth().logout({ redirectTo: '/auth/login' })`)
 - [ ] User display uses `$isAuthenticated` and `$profileStore` directly — NOT the `const { profile } = profileStore` destructure pattern (that pattern is invalid in 0.3.x and triggers `store_invalid_shape` in Svelte 5)
 - [ ] `VITE_BRIDGE_APP_ID` set in the `.env` file
 - [ ] Auth headers added to API calls that hit protected backend endpoints (using `tokenStore`)
@@ -599,6 +589,6 @@ After completing the setup:
 6. **Login flow works:** Enter credentials and submit. The network calls should succeed AND the page should navigate away from `/auth/login` to your post-login destination. **If the network calls succeed but the page does not navigate, your `LoginForm` is missing the `onLogin` handler — it will not auto-redirect.** Add `onLogin={() => goto('/')}` (or wherever you want the user to land).
 7. **Signup flow works end-to-end:** Create a new account via `/auth/signup`. Open the inbox and find the verification email. The link should point at `{your-app-origin}/auth/set-password/{token}?flow=signup`. Click it — the page should render the "Set new password" form (NOT a 404 and NOT a blank page). Set a password, confirm you land on a "password set" success state, then log in with the new credentials. **If you see a blank page or 404 after clicking the email link, the `set-password/[token]` route is missing — go back and create it.**
 8. **Styles render correctly:** Bridge UI components (LoginForm, SignupForm, buttons, inputs) should have proper styling. If they appear unstyled, confirm that `@nebulr-group/bridge-svelte/styles` is imported in the root layout.
-9. **Logout works in-app:** Clicking logout clears the session and lands the user on `/auth/login` of YOUR app — NOT on `auth.thebridge.dev`. If the user ends up on the hosted Bridge page, the navigation handler is calling `getBridgeAuth().logout()` instead of `clearSession()` + `window.location.assign(...)`. Switch to the `clearSession()` pattern.
+9. **Logout works in-app:** Clicking logout clears the session and lands the user on `/auth/login` of YOUR app — NOT on `auth.thebridge.dev`. If the user ends up on the hosted Bridge page, the logout call is missing `redirectTo`. Use `getBridgeAuth().logout({ redirectTo: '/auth/login' })`.
 10. **Forgot-password flow works end-to-end:** From the login page, click "Forgot password?" (or navigate to `/auth/forgot-password`). Enter the email of an existing user, submit, and check the inbox. Click the reset link — it should land on `/auth/set-password/{token}` and render the same "Set new password" form. Set a new password and log in with it.
 11. **All seven auth routes resolve (no 404s):** With the dev server running and signed out, navigate manually to each of `/auth/login`, `/auth/signup`, `/auth/oauth-callback`, `/auth/set-password/test-token`, `/auth/forgot-password`, `/auth/magic-link`, `/auth/setup-passkey/test-token`. Every route must render its component without a 404. The set-password and setup-passkey pages will show an error state for an invalid token — that is correct; the page itself rendering is what matters here. The magic-link button and passkey button only appear inside `LoginForm` when their feature is enabled in admin config — that's expected. The standalone routes themselves must always exist.

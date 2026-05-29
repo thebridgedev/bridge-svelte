@@ -164,7 +164,7 @@ Add buttons to your navigation or header component:
 
 **How it works:**
 - `auth.login()` redirects to the Bridge hosted login page. After login, the user is redirected back to your app's callback URL (default: `{origin}/auth/oauth-callback`).
-- `auth.logout()` clears tokens and redirects to the Bridge hosted logout page.
+- `auth.logout()` clears tokens and redirects to the Bridge hosted logout page. **In SDK mode** (`loginRoute` configured), pass `redirectTo` explicitly so the user lands on your in-app login page instead: `auth.logout({ redirectTo: '/auth/login' })`. Without `redirectTo`, logout always goes to the hosted portal.
 - `isAuthenticated` is a Svelte readable store — use `$isAuthenticated` in templates.
 - **Important:** `profileStore` is an object containing stores, not a store itself. You must destructure it first: `const { profile } = profileStore;` then use `$profile` in templates. Do NOT use `$profileStore` directly — it will throw a `store_invalid_shape` error in Svelte 5.
 
@@ -320,3 +320,69 @@ After completing the setup:
 4. **Public route check:** Navigate to `/auth/*` — it should render without redirect.
 5. **Login check:** Log in via Bridge — you should be returned to the app and see user info.
 6. **Styles check:** Bridge UI components (if any render) should have proper styling — not raw unstyled HTML.
+
+---
+
+## Unified `bridge` surface (Live Channel Unification — recommended for new code)
+
+Phase 4 of the Live Channel Unification milestone introduces a single scoped read surface. **Use this for new code instead of reaching for individual stores like `subscriptionStore`, `flagsStore`, `getBridgeAuth().getProfile()`, etc.** The legacy exports still work for one minor with a one-time deprecation warning; they're removed in the next.
+
+### Three scopes, one object
+
+```ts
+import { useBridge } from '@nebulr-group/bridge-svelte';
+
+const bridge = useBridge();
+
+// app — anything tied to the app config (whitelabel, plan catalog, flag defs)
+bridge.app.branding              // Readable<BrandingSnapshot | null>
+bridge.app.plans                 // LazySlice<Plan[]>  ← await it, or .load()
+
+// tenant — anything tied to the workspace/tenant
+bridge.tenant.id                 // Readable<string | null>
+bridge.tenant.name               // Readable<string | null>
+bridge.tenant.subscription       // Readable<SubscriptionSnapshot | null>
+bridge.tenant.entitlements       // { can(key): boolean, snapshot: Readable<...> }
+
+// user — anything tied to the authenticated user
+bridge.user                      // Readable<UserSnapshot | null>  // { id, email, role, tenantId }
+```
+
+### How data lands
+
+- **Snapshot slices** (`app.branding`, `tenant.{id,name,subscription,entitlements}`, `user`) are pushed by the server in a single `session.snapshot` message the moment the per-user channel subscribes. First paint reflects real state — no flicker, no per-slice REST hydrate.
+- **Lazy slices** (`app.plans` today; more coming in TBP-359) start `null` and populate on first `.load()` or `await`:
+
+  ```ts
+  const plans = await bridge.app.plans;             // thenable sugar
+  const plans = await bridge.app.plans.load();      // explicit
+  $: $bridge.app.plans                              // Svelte store; null until loaded
+  ```
+
+- **Reconnect** re-emits the snapshot; lazy slices that were loaded keep their values and update via channel deltas (no automatic refetch).
+
+### Reading entitlements
+
+```svelte
+{#if bridge.tenant.entitlements.can('ai_completions')}
+  <FeatureUI />
+{/if}
+```
+
+`can()` is synchronous and reflects the latest snapshot or `entitlements.changed` push.
+
+### Using in components
+
+`useBridge()` reads from Svelte context, falling back to the module-level singleton when no `<BridgeProvider>` is mounted. The `<BridgeBootstrap>` (and its `<BridgeProvider>` alias) automatically sets the context, so any descendant component can call `useBridge()` without further wiring.
+
+### Mapping from legacy exports
+
+| Legacy (deprecated) | Unified surface |
+|---|---|
+| `subscriptionStore` (`$subscriptionStore.status`) | `bridge.tenant.subscription` (`$bridge.tenant.subscription`) |
+| `loadSubscription()` | snapshot auto-populates `bridge.tenant.subscription`; no manual call needed |
+| `getBridgeAuth().getProfile()` | `bridge.user` (snapshot) — full Profile via `getBridgeAuth().getProfile()` still works for fields outside the snapshot |
+| `flagsStore` (map) | `useFlag(key)` — local-first reactive eval (already preferred) |
+| `getBridgeAuth().getPlans()` | `bridge.app.plans.load()` — lazy + cached |
+
+The legacy exports continue to work; they emit a one-time `console.warn` directing you to the unified surface.

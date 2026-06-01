@@ -1,10 +1,11 @@
 <script lang="ts">
     import { getConfig } from '@bridge-svelte/lib/client/stores/config.store';
-    import { isAuthenticated } from '@bridge-svelte/lib/core/bridge-instance';
+    import { isAuthenticated, ensureAppConfig } from '@bridge-svelte/lib/core/bridge-instance';
     import { onMount } from 'svelte';
     import TokenStatus from './TokenStatus.svelte';
     let config = $state<{ appId: string } | null>(null);
     let error = $state<Error | null>(null);
+    let appName = $state<string | null>(null);
     let editing = $state(false);
     let newAppId = $state('');
 
@@ -19,13 +20,15 @@
       location.reload();
     }
 
-    onMount(() => {
+    onMount(async () => {
       try {
         config = getConfig();
         newAppId = config?.appId ?? '';
       } catch (err) {
         error = err instanceof Error ? err : new Error(String(err));
       }
+      const cfg = await ensureAppConfig().catch(() => null);
+      appName = cfg?.name ?? null;
     });
 
     function startEdit() { editing = true; }
@@ -82,6 +85,7 @@
             title="Click to change"
             style="cursor:pointer;border-bottom:1px dashed #6b7280;"
           >{config.appId}</code>
+          {#if appName}<span style="color:#374151;">— <strong>{appName}</strong></span>{/if}
         {/if}
 
         <span style="font-size:0.72rem;color:#6b7280;">({source})</span>

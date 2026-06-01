@@ -10,6 +10,7 @@ import {
   markReady,
   waitForBridge as _waitForBridge,
 } from '../core/bridge-instance.js';
+import { installBridgeAuthFetch } from '../core/bridge-runtime.js';
 import { useBridge } from '@nebulr-group/bridge-auth-core';
 import { featureFlags } from '../shared/feature-flag.js';
 import { logger } from '../shared/logger.js';
@@ -38,6 +39,12 @@ export async function bridgeBootstrap(
 
   // 1. Initialize configuration (synchronously) — this also calls initBridge()
   bridgeConfig.initConfig(finalConfig, routeConfig);
+
+  // 1b. Patch globalThis.fetch early so GraphQL/HTTP calls made in this load()
+  //     function (before any component mounts) already carry the Bearer token.
+  //     installBridgeAuthFetch() is idempotent — startBridgeRuntime() (onMount)
+  //     is a no-op when it finds the patch already in place.
+  installBridgeAuthFetch();
 
   // 1a. Unified callback handler — detects what is calling back and routes accordingly
   try {

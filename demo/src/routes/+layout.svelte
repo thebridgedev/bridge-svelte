@@ -44,12 +44,26 @@
   const runtimeOverrides = DEBUG
     ? ({
         realtime: {
-          websocketFactory: (url: string) => {
-            const ws = new WebSocket(url);
+          // Forward `protocols` to the native WebSocket: the AppSync Events
+          // transport relies on subprotocol negotiation (`aws-appsync-event-ws`
+          // + the `header-…` auth token) — dropping it here would leave AppSync
+          // happy at TCP/TLS but unable to process any frames, producing a
+          // silent reconnect loop. Centrifugo passes nothing so this is a no-op
+          // for that transport. Wire-formats:
+          //   Centrifugo → protocols = undefined
+          //   AppSync    → protocols = ['aws-appsync-event-ws', 'header-<b64>']
+          websocketFactory: (url: string, protocols?: string | string[]) => {
+            const ws = new WebSocket(url, protocols);
             ws.addEventListener('message', (e: MessageEvent) => {
               try {
                 const msg = JSON.parse(e.data as string);
-                const data = msg?.push?.pub?.data ?? msg?.pub?.data ?? msg;
+                // Centrifugo wraps publishes in push.pub.data; AppSync delivers
+                // payloads as a JSON-string inside { type:'data', event:'…' }.
+                // Unwrap both shapes so the debug overlay shows real events.
+                let data: any = msg?.push?.pub?.data ?? msg?.pub?.data ?? msg;
+                if (msg?.type === 'data' && typeof msg.event === 'string') {
+                  try { data = JSON.parse(msg.event); } catch { /* ignore */ }
+                }
                 if (data?.kind) {
                   console.debug('[Bridge RT] ←', data.kind, data);
                   recordEvent(data);

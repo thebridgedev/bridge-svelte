@@ -24,6 +24,10 @@
           Home
         </a>
 
+        <a href="/flag-demo" class="nav-link">
+          Feature Flags
+        </a>
+
         <a href="/team" class="nav-link">
           Team Management
         </a>

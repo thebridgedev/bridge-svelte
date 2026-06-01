@@ -51,6 +51,7 @@ import {
 
 import { getConfig } from '../client/stores/config.store.js';
 import { getBridgeAuth, tokenStore } from './bridge-instance.js';
+import { wrapFetchWithBridgeAuth } from './bridge-fetch.js';
 import { applySessionSnapshot } from './snapshot-stores.js';
 import { bridgeEvents } from './events.js';
 import { _setRealtimeStatus } from './realtime-status.js';
@@ -58,6 +59,7 @@ import { _setRealtimeStatus } from './realtime-status.js';
 let _realtime: RealtimeClient | undefined;
 let _unsubscribeAuth: (() => void) | undefined;
 let _currentAuthToken: string | undefined;
+let _originalFetch: typeof fetch | undefined;
 
 const _onOpenSubs: Set<() => void> = new Set();
 const _onCloseSubs: Set<() => void> = new Set();
@@ -84,10 +86,30 @@ export interface StartBridgeRuntimeOptions {
  * Must be called AFTER `bridgeConfig.initConfig({...})` runs — typically from
  * `<BridgeBootstrap />`'s onMount.
  */
+/**
+ * Patch globalThis.fetch so every request to the bridge API automatically
+ * gets the current access token injected as Authorization: Bearer, and
+ * TOKEN_VERSION_STALE responses are retried with a fresh token.
+ *
+ * Idempotent — safe to call from both bridgeBootstrap() (load-function context,
+ * before any component mounts) and startBridgeRuntime() (onMount). Whichever
+ * runs first installs the patch; the second call is a no-op.
+ * Restored by stopBridgeRuntime().
+ */
+export function installBridgeAuthFetch(): void {
+  if (_originalFetch) return; // already installed
+  if (typeof globalThis === 'undefined' || typeof globalThis.fetch === 'undefined') return;
+  const config = getConfig();
+  _originalFetch = globalThis.fetch;
+  globalThis.fetch = wrapFetchWithBridgeAuth(_originalFetch, config.apiBaseUrl ?? 'https://api.thebridge.dev');
+}
+
 export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): void {
   if (_realtime) return;
 
   const config = getConfig();
+
+  installBridgeAuthFetch();
 
   // `appId` may come from BridgeAuth's API context if available; falls back
   // to the value from `getConfig()`. The auth context one is what gets bound
@@ -107,8 +129,18 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
     getAuthToken: () => _currentAuthToken,
   });
 
+  let _connectedOnce = false;
   _realtime.setOnOpen(() => {
     _setRealtimeStatus('open');
+    // On reconnect (not initial connect), proactively refresh tokens.
+    // If the WS was down when tokenVersion was bumped on the server, the
+    // client missed the user.state_changed broadcast. Refreshing here
+    // syncs tokens before the first post-reconnect request can fail with
+    // TOKEN_VERSION_STALE.
+    if (_connectedOnce) {
+      getBridgeAuth().refreshTokens().catch(() => { /* best-effort; wrapFetchWithBridgeAuth is the hard fallback */ });
+    }
+    _connectedOnce = true;
     for (const fn of _onOpenSubs) {
       try { fn(); } catch { /* subscriber errors swallowed */ }
     }
@@ -233,6 +265,10 @@ export async function stopBridgeRuntime(): Promise<void> {
     _realtime = undefined;
   }
   _currentAuthToken = undefined;
+  if (_originalFetch) {
+    globalThis.fetch = _originalFetch;
+    _originalFetch = undefined;
+  }
 }
 
 /**

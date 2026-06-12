@@ -5,6 +5,15 @@
     ?key=<flag-key>               — which flag to evaluate (required)
     ?attrs=<json>                 — per-call attributes (optional)
     ?attrs_b64=<base64-json>      — per-call attributes, base64-encoded (optional)
+    ?defaultType=<boolean|string|number|json>
+                                  — declared type of the dev default (optional)
+    ?defaultValue=<json>          — dev default passed to the SDK (optional).
+                                    The SDK's fail-safe type guard falls back to
+                                    this default whenever the server value's type
+                                    doesn't match it — so typed-flag tests MUST
+                                    send a default of the matching type, else
+                                    string/number/json flags always render the
+                                    fallback branch. Defaults to `false`.
 
   Playwright testids (unchanged):
     [data-testid="probe-state"]      — "active" | "fallback"
@@ -13,6 +22,7 @@
     [data-testid="probe-key"]        — resolved flag key
     [data-testid="probe-attrs"]      — JSON-stringified attrs
     [data-testid="probe-default"]    — JSON-stringified default
+    [data-testid="probe-app-id"]     — appId the SDK booted with (fail-fast guard)
 -->
 <script lang="ts">
   import { page } from '$app/state';
@@ -34,13 +44,31 @@
     } catch { return {}; }
   }
 
+  // Dev default for the FeatureFlag. JSON-decoding the param yields the typed
+  // value directly ('"light"' → string, '0' → number, '{...}' → object);
+  // `defaultType` is advisory — a malformed pair degrades to `false` rather
+  // than breaking the probe for unrelated boolean tests.
+  function parseDefault(): unknown {
+    const raw = page.url.searchParams.get('defaultValue');
+    if (raw === null) return false;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return false;
+    }
+  }
+
   const flagKey = $derived((page.url.searchParams.get('key') ?? '').trim());
   const attrs = $derived(parseAttrs());
   const hasAttrs = $derived(Object.keys(attrs).length > 0);
+  const probeDefault = $derived(parseDefault());
 </script>
 
 <div class="page">
   <div class="container">
+    <!-- The appId the SDK is actually running with — lets tests fail fast
+         when the demo and the test harness disagree on the app under test. -->
+    <span class="sr-only" data-testid="probe-app-id">{page.data.config?.appId ?? ''}</span>
     <h1 class="heading-xl">Flag probe</h1>
     <p class="text-lead">
       Evaluates any flag by key. Used by tests and for manual inspection — pass
@@ -61,7 +89,7 @@
 
         <!-- Live result -->
         <div class="demo-output">
-          <FeatureFlag key={flagKey} defaultValue={false} context={hasAttrs ? { attributes: attrs } : undefined}>
+          <FeatureFlag key={flagKey} defaultValue={probeDefault} context={hasAttrs ? { attributes: attrs } : undefined}>
             {#snippet children(value)}
               <div class="flag-result flag-result--on">
                 ✅ <strong>{flagKey}</strong> is <strong>ON</strong>
@@ -70,7 +98,7 @@
                 <span data-testid="probe-state">active</span>
                 <span data-testid="probe-value">{JSON.stringify(value)}</span>
                 <span data-testid="probe-value-type">{typeof value}</span>
-                <span data-testid="probe-default">false</span>
+                <span data-testid="probe-default">{JSON.stringify(probeDefault)}</span>
                 <span data-testid="probe-key">{flagKey}</span>
                 <span data-testid="probe-attrs">{JSON.stringify(attrs)}</span>
               </div>
@@ -83,7 +111,7 @@
                 <span data-testid="probe-state">fallback</span>
                 <span data-testid="probe-value">{JSON.stringify(value)}</span>
                 <span data-testid="probe-value-type">{typeof value}</span>
-                <span data-testid="probe-default">false</span>
+                <span data-testid="probe-default">{JSON.stringify(probeDefault)}</span>
                 <span data-testid="probe-key">{flagKey}</span>
                 <span data-testid="probe-attrs">{JSON.stringify(attrs)}</span>
               </div>

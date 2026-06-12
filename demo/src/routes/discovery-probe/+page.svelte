@@ -29,4 +29,7 @@
   <p>
     State: <strong data-testid="probe-state">{state}</strong>
   </p>
+  <p>
+    App: <code data-testid="probe-app-id">{page.data.config?.appId ?? ''}</code>
+  </p>
 </section>

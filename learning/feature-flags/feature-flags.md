@@ -68,6 +68,20 @@ const checkout = useFlag('new_checkout', false, () => ({
 }));
 ```
 
+### App-wide attributes (`bridge.attributes`)
+
+For attributes that every flag evaluation should see — not just one call site — publish them once on the unified bridge surface:
+
+```ts
+import { bridge } from '@nebulr-group/bridge-svelte';
+
+bridge.attributes.set('beta_cohort', true);                    // static value
+bridge.attributes.bind('cart_size', () => cart.items.length); // re-read on every eval
+bridge.attributes.bindMany(() => ({ theme, locale }));         // bulk getter
+```
+
+Precedence on key collision: per-call context > `bridge.attributes` > Bridge-managed providers. The `bridge:` namespace is reserved — writes to it are rejected with a console warning. See the Live Updates guide for the full `bridge.attributes` API.
+
 ### FeatureFlag component
 
 Declarative gating with optional fallback content. The snippets receive the evaluated value:
@@ -147,6 +161,8 @@ When the live channel drops, flags freeze on last-known values and refetch on re
 ### Bridge-managed attributes
 
 With Bridge auth and/or billing enabled, attributes like `bridge:user.role`, `bridge:tenant.plan`, and `bridge:billing.plan` merge into every evaluation automatically — no app code. Your own (dev-supplied) attributes always win on key collision, and the admin UI surfaces collisions on the flag detail page.
+
+With billing enabled this includes quota and entitlement attributes (`bridge:billing.quota.<metric>.*`, `bridge:billing.entitlement.<name>`) — the recommended way to gate plan-granted features is a flag whose rule targets an entitlement attribute. See the Payments guide's Entitlements section for the pattern.
 
 ### Propagating context to your backend
 

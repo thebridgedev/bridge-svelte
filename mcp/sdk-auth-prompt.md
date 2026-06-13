@@ -500,7 +500,20 @@ After login, user and tenant information is available via stores:
 - `profileStore` — `Readable<{ fullName, email, tenant, onboarded, ... } | null | undefined>` (use `$profileStore` directly — it is the store itself, NOT an object containing nested stores)
 - `tokenStore` — `Readable<{ accessToken, refreshToken, idToken } | null>`
 - `authState` — `Readable<'unauthenticated' | 'authenticated' | 'tenant-selection' | ...>`
-- `flagsStore` — `Readable<Map<string, boolean>>`
+
+For feature flags, read them via the Feature Flags 2.0 surface — `useFlag(() => key, defaultValue)` (reactive rune) or `<FeatureFlag key="..." defaultValue={...}>` (component), both from `@nebulr-group/bridge-svelte/flags`:
+
+```svelte
+<script lang="ts">
+  import { useFlag } from '@nebulr-group/bridge-svelte/flags';
+
+  const newDashboard = useFlag(() => 'new_dashboard', false);
+</script>
+
+{#if newDashboard.value}
+  <NewDashboard />
+{/if}
+```
 
 ## Authenticated API calls to your backend
 

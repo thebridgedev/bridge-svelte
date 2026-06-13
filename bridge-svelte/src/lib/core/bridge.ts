@@ -8,10 +8,9 @@
  * follow-up sub-tickets (TBP-322 `.load()` semantics + TBP-323 reactive
  * binding for loaded slices).
  *
- * Backward compat: this is purely additive. The legacy module-level stores
- * (`subscriptionStore`, `flagsStore`, `appConfigStore`, etc.) continue to
- * exist and are populated by the same internal state — TBP-324 wraps them
- * in deprecation warnings; for now both surfaces coexist.
+ * Backward compat: this is purely additive. The module-level stores
+ * (`subscriptionStore`, `appConfigStore`, etc.) continue to exist and are
+ * populated by the same internal state; both surfaces coexist.
  *
  * Note: `useBridge()` (Svelte context hook) lands in TBP-320. This module
  * only exposes the singleton aggregate `bridge`; consumers can import it

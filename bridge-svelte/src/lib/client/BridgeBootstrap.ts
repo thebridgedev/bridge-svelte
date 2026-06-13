@@ -12,7 +12,6 @@ import {
 } from '../core/bridge-instance.js';
 import { installBridgeAuthFetch } from '../core/bridge-runtime.js';
 import { useBridge } from '@nebulr-group/bridge-auth-core';
-import { featureFlags } from '../shared/feature-flag.js';
 import { logger } from '../shared/logger.js';
 import type { BridgeConfig } from '../shared/types/config.js';
 import { bridgeConfig, getConfig } from './stores/config.store.js';
@@ -169,13 +168,19 @@ export async function bridgeBootstrap(
     // Non-fatal — gate fails open; the notice hydrates lazily on first render.
   }
 
-  // 3. Fire flag fetch without awaiting so GQL queries can start in parallel.
-  //    The flagsReady promise is passed to the guard and returned to callers
-  //    so routes that need flags can still await before rendering.
-  //    Swallow errors — feature flag failures should never crash the bootstrap.
-  const flagsReady = featureFlags.refresh().catch((err) => {
-    logger.warn('[bridgeBootstrap] Feature flags failed to load:', err);
-  });
+  // 3. Warm the route-guard's flag cache without awaiting so GQL queries can
+  //    start in parallel. `loadFeatureFlags()` populates the same auth-core
+  //    FeatureFlagService the route guard evaluates `featureFlag` rules
+  //    against; the flagsReady promise is passed to the guard and returned to
+  //    callers so routes that gate on flags can await before rendering.
+  //    (Component/programmatic flag reads use FF 2.0 `useFlag` / <FeatureFlag>.)
+  //    Errors are logged, never thrown — flag failures must not crash bootstrap.
+  const flagsReady = getBridgeAuth()
+    .loadFeatureFlags()
+    .then(() => {})
+    .catch((err) => {
+      logger.warn('[bridgeBootstrap] Feature flags failed to load:', err);
+    });
 
   // 4. Handle route guarding and redirects
   const guard = createRouteGuard(flagsReady);

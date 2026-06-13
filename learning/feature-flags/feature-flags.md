@@ -172,7 +172,7 @@ Only propagate identity and attributes the backend can't derive itself — never
 
 ### Route-level flags
 
-Gate entire routes behind flags with `routeConfig` rules (unchanged from 1.x):
+Gate entire routes behind flags with `routeConfig` rules:
 
 ```ts
 const routeConfig: RouteGuardConfig = {
@@ -185,14 +185,4 @@ const routeConfig: RouteGuardConfig = {
 };
 ```
 
----
-
-### Legacy (1.x) API
-
-Apps on the pre-2.0 surface used `flagName`/`forceLive` props with a server-evaluated, cached model:
-
-```svelte
-<FeatureFlag flagName="new-dashboard" forceLive>…</FeatureFlag>
-```
-
-The 1.x props (`flagName`, `forceLive`, `negate`, `renderWhenDisabled`) and the bulk/live cache distinction are superseded by the local-eval model above — there is no cache staleness to bypass, because rule changes push live. The 1.x programmatic helpers (`featureFlags`, `isFeatureEnabled`, `loadFeatureFlags`) remain available for boolean flags during migration; prefer `useFlag`/`flagStore` for new code.
+A `featureFlag` requirement on a route rule is evaluated server-side by the SDK's route guard before the route renders — it's independent of the in-component `useFlag` / `<FeatureFlag>` surface. `bridgeBootstrap()` warms the route-guard's flag cache internally, so no extra setup is needed: declare the rule and the guard redirects when the flag is off.

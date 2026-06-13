@@ -13,13 +13,15 @@
 //      previous values wholesale.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { get } from 'svelte/store';
+import { get, type Readable } from 'svelte/store';
 import {
   applySessionSnapshot,
   __resetSnapshotStores,
   type SessionSnapshotData,
 } from './snapshot-stores.js';
 import { bridge, _allSnapshotSlices, __resetBridgeLazySlices } from './bridge.js';
+
+type AllSnapshotSlices = typeof _allSnapshotSlices extends Readable<infer V> ? V : never;
 
 const fullSnapshot: SessionSnapshotData = {
   app: {
@@ -62,7 +64,7 @@ describe('bridge surface (Phase 4, TBP-319)', () => {
   });
 
   it('applies a full snapshot atomically — every slice updates together', () => {
-    const observed: Array<ReturnType<typeof get<typeof _allSnapshotSlices>>> = [];
+    const observed: AllSnapshotSlices[] = [];
     const unsub = _allSnapshotSlices.subscribe((v) => observed.push(v));
     applySessionSnapshot(fullSnapshot);
     unsub();
@@ -248,7 +250,7 @@ describe('bridge.app.plans lazy slice (Phase 4, TBP-321/322)', () => {
 
   it('apply() updates a loaded slice (TBP-323 reactive binding primitive)', async () => {
     await bridge.app.plans.load();
-    bridge.app.plans.apply([{ key: 'enterprise', name: 'Enterprise' }]);
-    expect(get(bridge.app.plans)).toEqual([{ key: 'enterprise', name: 'Enterprise' }]);
+    bridge.app.plans.apply([{ key: 'enterprise', name: 'Enterprise', prices: [] }]);
+    expect(get(bridge.app.plans)).toEqual([{ key: 'enterprise', name: 'Enterprise', prices: [] }]);
   });
 });

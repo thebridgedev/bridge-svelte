@@ -48,13 +48,14 @@ export type {
   SessionSnapshotData,
 } from './core/snapshot-stores.js';
 
-// Phase 5 (TBP-331) — bridge.events.handle() handler-table type.
-export type { BridgeEventHandlers } from './core/events.js';
+// Phase 5 (TBP-331) — bridge.events.handle() handler-table type + dispatcher
+// type (the type of `bridge.events`, for consumers typing a reference to it).
+export type { BridgeEventHandlers, BridgeEventsDispatcher } from './core/events.js';
 
 // Components (Svelte components must have `export default`)
 export { default as BridgeBootstrap, default as BridgeProvider } from './client/BridgeBootstrap.svelte';
 export { default as ApiTokenManagement } from './client/components/developer/ApiTokenManagement.svelte';
-export { default as FeatureFlag } from './client/components/FeatureFlag.svelte';
+export { default as FeatureFlag } from './flags/FeatureFlag.svelte';
 export { default as ProfileName } from './client/components/ProfileName.svelte';
 export { default as TeamManagementPanel } from './client/components/team/TeamManagementPanel.svelte';
 export { default as TeamUserList } from './client/components/team/TeamUserList.svelte';
@@ -93,9 +94,6 @@ export { default as BridgePaywall } from './client/components/subscription/Bridg
 
 // Billing 2.0 (Phase C / US-11) — live quota counter banner.
 export { default as BridgeQuotaBanner } from './client/components/subscription/BridgeQuotaBanner.svelte';
-
-// Feature flags
-export * from './shared/feature-flag.js';
 
 // Auth route guards
 export * from './auth/route-guard.js';

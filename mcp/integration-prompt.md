@@ -244,7 +244,20 @@ After login, user and tenant information is available via stores:
 - `profileStore.profile` — `Readable<{ fullName, email, tenant, onboarded, ... } | null>`
 - `tokenStore` — `Readable<{ accessToken, refreshToken, idToken } | null>`
 - `authState` — `Readable<'unauthenticated' | 'authenticated' | 'tenant-selection' | ...>`
-- `flagsStore` — `Readable<Map<string, boolean>>`
+
+For feature flags, read them via the Feature Flags 2.0 surface — `useFlag(() => key, defaultValue)` (reactive rune) or `<FeatureFlag key="..." defaultValue={...}>` (component), both from `@nebulr-group/bridge-svelte/flags`:
+
+```svelte
+<script lang="ts">
+  import { useFlag } from '@nebulr-group/bridge-svelte/flags';
+
+  const newDashboard = useFlag(() => 'new_dashboard', false);
+</script>
+
+{#if newDashboard.value}
+  <NewDashboard />
+{/if}
+```
 
 ## Authenticated API calls to your backend
 
@@ -325,7 +338,7 @@ After completing the setup:
 
 ## Unified `bridge` surface (Live Channel Unification — recommended for new code)
 
-Phase 4 of the Live Channel Unification milestone introduces a single scoped read surface. **Use this for new code instead of reaching for individual stores like `subscriptionStore`, `flagsStore`, `getBridgeAuth().getProfile()`, etc.** The legacy exports still work for one minor with a one-time deprecation warning; they're removed in the next.
+Phase 4 of the Live Channel Unification milestone introduces a single scoped read surface. **Use this for new code instead of reaching for individual stores like `subscriptionStore`, `getBridgeAuth().getProfile()`, etc.** The legacy exports still work for one minor with a one-time deprecation warning; they're removed in the next.
 
 ### Three scopes, one object
 
@@ -382,7 +395,6 @@ bridge.user                      // Readable<UserSnapshot | null>  // { id, emai
 | `subscriptionStore` (`$subscriptionStore.status`) | `bridge.tenant.subscription` (`$bridge.tenant.subscription`) |
 | `loadSubscription()` | snapshot auto-populates `bridge.tenant.subscription`; no manual call needed |
 | `getBridgeAuth().getProfile()` | `bridge.user` (snapshot) — full Profile via `getBridgeAuth().getProfile()` still works for fields outside the snapshot |
-| `flagsStore` (map) | `useFlag(key)` — local-first reactive eval (already preferred) |
 | `getBridgeAuth().getPlans()` | `bridge.app.plans.load()` — lazy + cached |
 
 The legacy exports continue to work; they emit a one-time `console.warn` directing you to the unified surface.

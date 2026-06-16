@@ -141,6 +141,7 @@ export type {
   TenantUser,
 } from '@nebulr-group/bridge-auth-core';
 export { BridgeAuth, BridgeAuthError, HttpError, TeamService, ApiTokenService } from '@nebulr-group/bridge-auth-core';
+export type { SessionStalePayload } from '@nebulr-group/bridge-auth-core';
 export type {
   ApiToken,
   CreateApiTokenInput,

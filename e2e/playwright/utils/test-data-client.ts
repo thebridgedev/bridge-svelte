@@ -347,6 +347,42 @@ export class TestDataClient {
   }
 
   /**
+   * Idempotently ensures a plan exists (create-if-absent).
+   *
+   * When the plan already exists, bridge-api returns it WITHOUT re-running the
+   * Stripe price sync/archive sweep — so a STABLE, reusable plan's Stripe price
+   * is synced exactly once and reused on every later run. This is what makes the
+   * welcome-paywall checkout deterministic (no create-then-checkout price race).
+   */
+  async ensurePlan(planData: {
+    key: string;
+    name?: string;
+    description?: string;
+    trial?: boolean;
+    trialDays?: number;
+    prices?: Array<{ amount: number; currency: string; recurrenceInterval: string }>;
+  }): Promise<{ planId: string; key: string; name: string; created: boolean }> {
+    const response = await fetch(`${this.baseUrl}/account/test/playwright/ensure-plan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-playwright-api-key': this.apiKey,
+      },
+      body: JSON.stringify({
+        appDomain: this.appDomain,
+        ...planData,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to ensure plan: ${response.status} ${error}`);
+    }
+
+    return response.json();
+  }
+
+  /**
    * Deletes a plan by key for test cleanup.
    *
    * @param planKey - Plan key to delete

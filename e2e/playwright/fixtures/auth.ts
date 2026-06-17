@@ -19,6 +19,37 @@ import {
 import { type PlaywrightTestAccount, TestDataClient } from '../utils/test-data-client';
 import { LONG_TIMEOUT, MED_TIMEOUT } from './timeouts';
 
+/** Shape of the token blob auth-core persists to localStorage. */
+export interface BridgeTokens {
+  accessToken?: string;
+  refreshToken?: string;
+  idToken?: string;
+}
+
+/**
+ * Read the auth-core token blob from the page's localStorage.
+ *
+ * auth-core namespaces the storage key as `bridge_tokens:<appId>` (older builds
+ * used the bare `bridge_tokens`) — match either by prefix. Returns the parsed
+ * tokens object, or `null` when absent/unparseable. Single source of truth for
+ * every token read across the e2e suite, so the key-resolution logic lives in
+ * exactly one place.
+ */
+export function readBridgeTokens(page: Page): Promise<BridgeTokens | null> {
+  return page.evaluate(() => {
+    const key = Object.keys(localStorage).find(
+      (k) => k === 'bridge_tokens' || k.startsWith('bridge_tokens:'),
+    );
+    const raw = key ? localStorage.getItem(key) : null;
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  });
+}
+
 /**
  * Extended test fixtures for authentication and test data management.
  */
@@ -188,19 +219,10 @@ export async function loginViaBridgeAuth(
   const finalUrl = page.url();
   console.log(`[login] Login complete, final URL: ${finalUrl}`);
 
-  // Verify tokens are stored in localStorage
-  const hasTokens = await page.evaluate(() => {
-    const raw = localStorage.getItem('bridge_tokens');
-    if (!raw) return false;
-    try {
-      const tokens = JSON.parse(raw);
-      return !!tokens?.accessToken;
-    } catch {
-      return false;
-    }
-  });
+  // Verify tokens are stored in localStorage.
+  const tokens = await readBridgeTokens(page);
 
-  if (!hasTokens) {
+  if (!tokens?.accessToken) {
     throw new Error(
       `Login appeared to succeed but no tokens found in localStorage. Final URL: ${finalUrl}`,
     );
@@ -239,20 +261,12 @@ export async function loginViaSdkAuth(
   const signInBtn = page.locator('button[type="submit"]:has-text("Sign in")');
   await signInBtn.click();
 
-  // Wait for tokens to appear (SDK auth stores directly)
-  await page.waitForFunction(
-    () => {
-      const raw = localStorage.getItem('bridge_tokens');
-      if (!raw) return false;
-      try {
-        const tokens = JSON.parse(raw);
-        return !!tokens?.accessToken;
-      } catch {
-        return false;
-      }
-    },
-    { timeout: LONG_TIMEOUT },
-  );
+  // Wait for tokens to appear (SDK auth stores directly).
+  await expect
+    .poll(async () => !!(await readBridgeTokens(page))?.accessToken, {
+      timeout: LONG_TIMEOUT,
+    })
+    .toBe(true);
 
   // Wait for the post-login redirect to settle
   // (handleLogin calls goto('/protected') on successful login)

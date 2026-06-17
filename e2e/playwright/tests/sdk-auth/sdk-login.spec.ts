@@ -1,4 +1,4 @@
-import { test, expect, loginViaSdkAuth } from '../../fixtures/auth';
+import { test, expect, loginViaSdkAuth, readBridgeTokens } from '../../fixtures/auth';
 import { MED_TIMEOUT, LONG_TIMEOUT } from '../../fixtures/timeouts';
 
 test.describe('SDK Login', () => {
@@ -10,12 +10,8 @@ test.describe('SDK Login', () => {
     await loginViaSdkAuth(page, testUser.email, testUser.password);
 
     // Verify tokens exist
-    const hasTokens = await page.evaluate(() => {
-      const raw = localStorage.getItem('bridge_tokens');
-      if (!raw) return false;
-      const tokens = JSON.parse(raw);
-      return !!tokens?.accessToken && !!tokens?.refreshToken && !!tokens?.idToken;
-    });
+    const t = await readBridgeTokens(page);
+    const hasTokens = !!t?.accessToken && !!t?.refreshToken && !!t?.idToken;
     expect(hasTokens).toBe(true);
   });
 

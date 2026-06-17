@@ -2,10 +2,10 @@
  * Token Persistence Tests
  *
  * Verifies that authentication tokens persist across page reloads
- * (stored in localStorage under 'bridge_tokens').
+ * (stored in localStorage under the namespaced key `bridge_tokens:<appId>`).
  */
 
-import { test, expect } from '../../fixtures/auth';
+import { test, expect, readBridgeTokens } from '../../fixtures/auth';
 import { MED_TIMEOUT } from '../../fixtures/timeouts';
 
 test.describe('Token Persistence', () => {
@@ -13,10 +13,7 @@ test.describe('Token Persistence', () => {
     const page = authenticatedPage;
 
     // Get tokens before reload
-    const tokensBefore = await page.evaluate(() => {
-      const raw = localStorage.getItem('bridge_tokens');
-      return raw ? JSON.parse(raw) : null;
-    });
+    const tokensBefore = await readBridgeTokens(page);
 
     expect(tokensBefore).not.toBeNull();
     expect(tokensBefore.accessToken).toBeTruthy();
@@ -26,10 +23,7 @@ test.describe('Token Persistence', () => {
     await page.waitForLoadState('networkidle');
 
     // Get tokens after reload
-    const tokensAfter = await page.evaluate(() => {
-      const raw = localStorage.getItem('bridge_tokens');
-      return raw ? JSON.parse(raw) : null;
-    });
+    const tokensAfter = await readBridgeTokens(page);
 
     // Tokens should still be present
     expect(tokensAfter).not.toBeNull();

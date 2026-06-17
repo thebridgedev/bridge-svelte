@@ -8,7 +8,7 @@
  * - Logout clears tokens and returns to unauthenticated state
  */
 
-import { test, expect, loginViaSdkAuth } from '../../fixtures/auth';
+import { test, expect, loginViaSdkAuth, readBridgeTokens } from '../../fixtures/auth';
 import { createCleanContext } from '../../fixtures/clean-page';
 import { LONG_TIMEOUT, MED_TIMEOUT } from '../../fixtures/timeouts';
 
@@ -40,10 +40,7 @@ test.describe('Login & Logout Flow', () => {
     try {
       await loginViaSdkAuth(page, testUser.email, testUser.password);
 
-      const tokenData = await page.evaluate(() => {
-        const raw = localStorage.getItem('bridge_tokens');
-        return raw ? JSON.parse(raw) : null;
-      });
+      const tokenData = await readBridgeTokens(page);
 
       expect(tokenData).not.toBeNull();
       expect(tokenData.accessToken).toBeTruthy();
@@ -94,15 +91,7 @@ test.describe('Login & Logout Flow', () => {
     });
 
     // Tokens should be cleared
-    const hasTokens = await page.evaluate(() => {
-      const raw = localStorage.getItem('bridge_tokens');
-      if (!raw) return false;
-      try {
-        return !!JSON.parse(raw)?.accessToken;
-      } catch {
-        return false;
-      }
-    });
+    const hasTokens = !!(await readBridgeTokens(page))?.accessToken;
 
     expect(hasTokens).toBe(false);
   });

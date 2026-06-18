@@ -130,6 +130,10 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
   });
 
   let _connectedOnce = false;
+  // Set just before we call _realtime.reauthorize() so the resulting
+  // reconnect's setOnOpen handler knows the token is already fresh and skips
+  // its proactive refresh — see the loop note in setOnOpen below.
+  let _reauthInFlight = false;
   _realtime.setOnOpen(() => {
     _setRealtimeStatus('open');
     // On reconnect (not initial connect), proactively refresh tokens.
@@ -137,7 +141,18 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
     // client missed the user.state_changed broadcast. Refreshing here
     // syncs tokens before the first post-reconnect request can fail with
     // TOKEN_VERSION_STALE.
-    if (_connectedOnce) {
+    //
+    // EXCEPT when this reconnect was caused by our OWN reauthorize() below
+    // (a token-only refresh). In that case the token is already current, so
+    // refreshing again would mint yet another JWT, which the tokenStore
+    // subscription would see as a change and reauthorize() again → reconnect
+    // → setOnOpen → refresh → … an unbounded loop that hammers /auth/token
+    // (observed ~32 cycles/sec, jamming the page's main thread and stalling
+    // every downstream wait). Only genuine, externally-triggered reconnects
+    // (network blips, server restarts) should trigger the catch-up refresh.
+    const causedByReauthorize = _reauthInFlight;
+    _reauthInFlight = false;
+    if (_connectedOnce && !causedByReauthorize) {
       getBridgeAuth().refreshTokens().catch(() => { /* best-effort; wrapFetchWithBridgeAuth is the hard fallback */ });
     }
     _connectedOnce = true;
@@ -241,6 +256,10 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
     // Centrifugo's connection-token TTL drops it. Force a reauthorize so the
     // server re-validates against the new token immediately.
     if (prevAuthToken && _currentAuthToken && prevAuthToken !== _currentAuthToken) {
+      // Flag this as a self-induced reconnect so setOnOpen does NOT fire its
+      // proactive refresh (which would mint a new token → land back here →
+      // loop forever). The token we're reauthorizing with is already current.
+      _reauthInFlight = true;
       void _realtime!.reauthorize();
     }
   });

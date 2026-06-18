@@ -18,7 +18,6 @@ let _instance: BridgeAuth | null = null;
 const _tokens: Writable<TokenSet | null> = writable(null);
 const _appConfig: Writable<AppConfig | null> = writable(null);
 const _profile: Writable<Profile | null | undefined> = writable(undefined);
-const _flags: Writable<Record<string, boolean>> = writable({});
 const _authState: Writable<AuthState> = writable('unauthenticated');
 const _isLoading: Writable<boolean> = writable(true);
 const _error: Writable<string | null> = writable(null);
@@ -58,7 +57,7 @@ export function initBridge(config: BridgeAuthConfig): BridgeAuth {
   if (existingTokens) {
     _tokens.set(existingTokens);
     // Fetch profile for existing tokens
-    _instance.getProfile().then((p) => _profile.set(p ?? null)).catch(() => {});
+    _instance.getProfile().then((p) => _profile.set(p ?? null)).catch((err) => logger.warn('[bridge-instance] profile fetch failed:', err));
   }
   _authState.set(_instance.getAuthState());
   _isLoading.set(false);
@@ -66,13 +65,12 @@ export function initBridge(config: BridgeAuthConfig): BridgeAuth {
   // Wire auth-core events → Svelte stores
   _instance.on('auth:login', (tokens) => {
     _tokens.set(tokens);
-    _instance!.getProfile().then((p) => _profile.set(p ?? null)).catch(() => {});
+    _instance!.getProfile().then((p) => _profile.set(p ?? null)).catch((err) => logger.warn('[bridge-instance] profile fetch failed:', err));
   });
 
   _instance.on('auth:logout', () => {
     _tokens.set(null);
     _profile.set(null);
-    _flags.set({});
   });
 
   _instance.on('auth:token-refreshed', (tokens) => {
@@ -94,9 +92,8 @@ export function initBridge(config: BridgeAuthConfig): BridgeAuth {
 
   _instance.on('auth:workspace-changed', (tokens) => {
     _tokens.set(tokens);
-    _flags.set({});
     _subscriptionWritable.set({ status: null, plans: null, loading: false, error: null });
-    _instance!.getProfile().then((p) => _profile.set(p ?? null)).catch(() => {});
+    _instance!.getProfile().then((p) => _profile.set(p ?? null)).catch((err) => logger.warn('[bridge-instance] profile fetch failed:', err));
   });
 
   _instance.on('auth:error', (err) => {
@@ -183,9 +180,6 @@ export const hasMultiTenantAccess: Readable<boolean> = _hasMultiTenantAccess;
 /** Tenant users for multi-tenant selection */
 export const tenantUsersStore: Readable<TenantUser[]> = _tenantUsers;
 
-/** Feature flags map */
-export const flagsStore: Readable<Record<string, boolean>> = _flags;
-
 /** Bridge ready state */
 export const bridgeReadyStore: Readable<boolean> = _ready;
 
@@ -231,13 +225,12 @@ export async function loadSubscription(): Promise<void> {
 export const auth: BridgeAuth = new Proxy({} as BridgeAuth, {
   get(_, prop) {
     const instance = getBridgeAuth();
-    const value = (instance as any)[prop];
+    const value = Reflect.get(instance, prop);
     return typeof value === 'function' ? value.bind(instance) : value;
   },
 });
 
 // ── Internal-only store writers (for use by wrapper modules) ───────────────────
 
-export const _flagsWritable = _flags;
 export const _profileWritable = _profile;
 export const _errorWritable = _error;

@@ -138,24 +138,35 @@ After a successful signup the user receives a verification email. Once verified,
 
 See [Theming & Styles](../theming/theming.md) for customization options.
 
-## 7. Environment variables
+## 7. Configuration
 
-Set these in your `.env` file:
+The `config` object you pass to `bridgeBootstrap` is a `BridgeConfig`. The most common fields:
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `VITE_BRIDGE_APP_ID` | Your Bridge application ID | **(required)** |
-| `VITE_BRIDGE_API_BASE_URL` | Root URL for the Bridge API | `https://api.thebridge.dev` |
-| `VITE_BRIDGE_DEFAULT_REDIRECT_ROUTE` | Default route after login | `/` |
-| `VITE_BRIDGE_LOGIN_ROUTE` | Route for your login page | `/login` |
-| `VITE_BRIDGE_DEBUG` | Enable debug logging | `false` |
+| Field | Default | Description |
+|-------|---------|-------------|
+| `appId` | **(required)** | Your Bridge application ID |
+| `loginRoute` | — | In-app route of your login page — unauthenticated users are redirected here |
+| `signupRoute` | — | In-app route of your signup page |
+| `defaultRedirectRoute` | `'/'` | Route to land on after login |
+| `apiBaseUrl` | `https://api.thebridge.dev` | Root URL for the Bridge API (dev override) |
+| `hostedUrl` | `https://auth.thebridge.dev` | Bridge hosted UI URL (dev override) |
+| `debug` | `false` | Enable debug logging |
 
-Example `.env`:
+See the [Configuration Reference](../configuration/configuration.md) for the full list (token storage, billing routes).
+
+Rather than hardcoding environment-specific values, keep them in a `.env` file and read them with Vite's `import.meta.env` when you build the config (the `VITE_` prefix is required for values to reach the browser):
 
 ```env
 VITE_BRIDGE_APP_ID=your-app-id-here
 VITE_BRIDGE_DEFAULT_REDIRECT_ROUTE=/dashboard
-VITE_BRIDGE_LOGIN_ROUTE=/auth/login
+```
+
+```ts
+const config: BridgeConfig = {
+  appId: import.meta.env.VITE_BRIDGE_APP_ID,
+  loginRoute: '/auth/login',
+  defaultRedirectRoute: import.meta.env.VITE_BRIDGE_DEFAULT_REDIRECT_ROUTE ?? '/',
+};
 ```
 
 ## Next steps

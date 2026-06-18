@@ -104,6 +104,8 @@ Access the current user's profile with `profileStore`:
 
 `profileStore` is `undefined` while loading, `null` when not authenticated, and a profile object when authenticated.
 
+A live snapshot of the signed-in user (`id`, `email`, `role`, `tenantId`) plus workspace and subscription state is also available on the unified bridge surface (`bridge.user`, `bridge.tenant.*`), kept current over the live channel — see [Live Updates & the Bridge Surface](../live-updates/live-updates.md).
+
 ### ProfileName component
 
 A drop-in component that renders the user's display name. No configuration needed:

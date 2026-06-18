@@ -10,7 +10,7 @@
  * Also tests the basic signup form rendering and validation.
  */
 
-import { test, expect } from '../../fixtures/auth';
+import { test, expect, readBridgeTokens } from '../../fixtures/auth';
 import { MED_TIMEOUT, LONG_TIMEOUT } from '../../fixtures/timeouts';
 
 test.describe('SDK Signup', () => {
@@ -130,25 +130,13 @@ test.describe('SDK Signup', () => {
     await page.locator('button[type="submit"]:has-text("Sign in")').click();
 
     // Wait for tokens to appear in localStorage
-    await page.waitForFunction(
-      () => {
-        const raw = localStorage.getItem('bridge_tokens');
-        if (!raw) return false;
-        try {
-          const tokens = JSON.parse(raw);
-          return !!tokens?.accessToken;
-        } catch {
-          return false;
-        }
-      },
-      { timeout: LONG_TIMEOUT },
-    );
+    await expect
+      .poll(async () => !!(await readBridgeTokens(page))?.accessToken, {
+        timeout: LONG_TIMEOUT,
+      })
+      .toBe(true);
 
-    const hasTokens = await page.evaluate(() => {
-      const raw = localStorage.getItem('bridge_tokens');
-      const tokens = JSON.parse(raw ?? '{}');
-      return !!tokens?.accessToken;
-    });
+    const hasTokens = !!(await readBridgeTokens(page))?.accessToken;
     expect(hasTokens).toBe(true);
 
     // Cleanup

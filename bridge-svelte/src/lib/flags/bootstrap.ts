@@ -49,11 +49,10 @@ export class BrowserIdentityStorage implements IdentityStorage {
   constructor(mode: 'persistent' | 'session', key = 'bridge.anon_id') {
     this.mode = mode;
     this.key = key;
-    if (typeof globalThis === 'undefined' || !(globalThis as any).window) {
+    if (typeof window === 'undefined') {
       throw new Error('BrowserIdentityStorage requires a window — use MemoryIdentityStorage on the server');
     }
-    const w = (globalThis as any).window as Window;
-    this.storage = mode === 'persistent' ? w.localStorage : w.sessionStorage;
+    this.storage = mode === 'persistent' ? window.localStorage : window.sessionStorage;
   }
 
   read(): string | undefined {

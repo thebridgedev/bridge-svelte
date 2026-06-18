@@ -1,195 +1,188 @@
 # Feature Flags
 
-### Bulk vs live
+Bridge Feature Flags evaluates locally — the SDK keeps the flag rules in memory, evaluates against in-process context, and receives rule changes live over a push channel. A flag check is an O(1) lookup: no network call, safe in render paths.
 
-Bridge provides two ways to check feature flags:
+Flags work standalone: an `appId` is all the configuration you need. Bridge auth and billing are optional context sources (see "Bridge-managed attributes" below).
 
-1. **Bulk (recommended)** — all flags are fetched once and cached for 5 minutes. The `FeatureFlag` component uses this by default.
-2. **Live** — bypasses the cache and queries the API on each check. Use for flags that must reflect changes immediately.
+### Setup
 
-### FeatureFlag component
+Bridge bootstraps flags automatically when the flags module is on your dependency graph:
 
-**Basic usage** — renders children only when the flag is enabled:
+```svelte
+<!-- src/routes/+layout.svelte -->
+<script lang="ts">
+  import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
+  // Keep the flags module on the static dependency graph —
+  // <BridgeBootstrap /> auto-attaches it (rule cache, live updates, telemetry).
+  import '@nebulr-group/bridge-svelte/flags';
+
+  let { children } = $props();
+</script>
+
+<BridgeBootstrap />
+{@render children()}
+```
+
+No flag-specific init call is needed — configuration comes from the same `bridgeBootstrap(url, config, routeConfig)` you already call in `+layout.ts` (only `appId` is required for flags-only apps).
+
+### useFlag — reactive flag values
 
 ```svelte
 <script lang="ts">
-  import { FeatureFlag } from '@nebulr-group/bridge-svelte';
+  import { useFlag } from '@nebulr-group/bridge-svelte/flags';
+
+  const banner = useFlag('show_banner', false);
 </script>
 
-<FeatureFlag flagName="new-dashboard">
-  <p>The new dashboard is enabled!</p>
-</FeatureFlag>
+{#if banner.value}
+  <div class="banner">New stuff!</div>
+{/if}
 ```
 
-**Force live check:**
+`useFlag(key, defaultValue, context?)` returns `{ value, passed }` backed by Svelte 5 runes:
+
+- **`value`** — the evaluated flag value, typed from your default (`boolean` | `string` | `number` | JSON object).
+- **`passed`** — whether a rule branch matched.
+- The result is **reactive**: when an admin changes the flag (or a live rule update arrives), `value` updates in place.
+- The default is mandatory — it's what your app gets when the flag isn't configured or Bridge is unreachable. A flag call can never break your app.
+
+All three arguments accept getter functions for reactive inputs:
 
 ```svelte
-<FeatureFlag flagName="new-dashboard" forceLive>
-  <p>Live-checked flag is enabled</p>
-</FeatureFlag>
+<script lang="ts">
+  const greeting = useFlag(
+    () => `greeting_${locale}`,        // reactive key
+    'Hello',
+    () => ({ attributes: { locale } }) // reactive per-call context
+  );
+</script>
 ```
 
-**Conditional rendering (enabled/disabled)** — use `renderWhenDisabled` with the snippet API to render different content:
+### Per-call context
+
+The optional third argument supplies per-call identity/attributes. Per-call attributes win over everything else on key collision:
+
+```ts
+const checkout = useFlag('new_checkout', false, () => ({
+  attributes: { cart_size: cart.items.length },
+}));
+```
+
+### App-wide attributes (`bridge.attributes`)
+
+For attributes that every flag evaluation should see — not just one call site — publish them once on the unified bridge surface:
+
+```ts
+import { bridge } from '@nebulr-group/bridge-svelte';
+
+bridge.attributes.set('beta_cohort', true);                    // static value
+bridge.attributes.bind('cart_size', () => cart.items.length); // re-read on every eval
+bridge.attributes.bindMany(() => ({ theme, locale }));         // bulk getter
+```
+
+Precedence on key collision: per-call context > `bridge.attributes` > Bridge-managed providers. The `bridge:` namespace is reserved — writes to it are rejected with a console warning. See the Live Updates guide for the full `bridge.attributes` API.
+
+### FeatureFlag component
+
+Declarative gating with optional fallback content. The snippets receive the evaluated value:
 
 ```svelte
-<FeatureFlag flagName="premium-feature" renderWhenDisabled>
-  {#snippet children({ enabled, rawEnabled })}
-    {#if enabled}
-      <button>Use premium feature</button>
-    {:else}
-      <button disabled title="Upgrade to unlock">
-        Premium feature (locked)
-      </button>
-    {/if}
+<script lang="ts">
+  import { FeatureFlag } from '@nebulr-group/bridge-svelte/flags';
+</script>
+
+<FeatureFlag key="new_dashboard" defaultValue={false}>
+  <NewDashboard />
+</FeatureFlag>
+
+<!-- With fallback for the non-matching case: -->
+<FeatureFlag key="premium_feature" defaultValue={false}>
+  {#snippet children(value)}
+    <button>Use premium feature</button>
+  {/snippet}
+  {#snippet fallback(value)}
+    <button disabled title="Upgrade to unlock">Premium (locked)</button>
   {/snippet}
 </FeatureFlag>
 ```
-
-The snippet receives `{ enabled, rawEnabled }` where `enabled` respects the `negate` prop and `rawEnabled` is the raw API value.
 
 **Props:**
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `flagName` | `string` | **(required)** | The feature flag key |
-| `forceLive` | `boolean` | `false` | Bypass cache and check live |
-| `negate` | `boolean` | `false` | Invert the flag value |
-| `renderWhenDisabled` | `boolean` | `false` | Always render children (pass `enabled` via snippet) |
+| `key` | `string` | **(required)** | The flag key |
+| `defaultValue` | `T` | **(required)** | Safe value; also sets the flag's inferred type |
+| `context` | `Partial<EvalContext>` | — | Per-call eval context (attributes win on collision) |
+| `children` | snippet | — | Rendered when the flag passes; receives the value |
+| `fallback` | snippet | — | Rendered when it doesn't; receives the value |
+
+### flagStore — store-contract variant
+
+For code that prefers the Svelte store contract (e.g. usage outside `.svelte` files):
+
+```ts
+import { flagStore } from '@nebulr-group/bridge-svelte/flags';
+
+const banner = flagStore('show_banner', false);
+const unsubscribe = banner.subscribe(({ value, passed }) => {
+  // re-runs on every live flag change
+});
+```
+
+### Multi-type values
+
+One API for boolean, string, number, and JSON flags — the type is inferred from the default:
+
+```ts
+const isDark = useFlag('dark_mode', false);
+const cta    = useFlag('checkout_text', 'Submit');
+const limit  = useFlag('max_uploads', 10);
+const cfg    = useFlag('rate_limit', { window: 60, max: 100 });
+```
+
+A type mismatch (admin stored a different type than your default suggests) returns the default and logs a warning.
+
+### Identity & anonymous visitors
+
+The SDK manages identity for you:
+
+- On first load, it generates an anonymous ID and persists it (configurable: `persistent` localStorage / `session` sessionStorage / `none` in-memory) — anonymous visitors get stable bucketing for A/B tests and percentage rollouts.
+- With Bridge auth enabled, the session identity is used automatically and pre-login activity is linked on login.
+
+### Live connection status
+
+```ts
+import { realtimeStatus } from '@nebulr-group/bridge-svelte/flags';
+// reactive ConnectionState: 'connecting' | 'open' | 'closed' …
+```
+
+When the live channel drops, flags freeze on last-known values and refetch on reconnect — your app keeps working through Bridge outages.
+
+### Bridge-managed attributes
+
+With Bridge auth and/or billing enabled, attributes like `bridge:user.role`, `bridge:tenant.plan`, and `bridge:billing.plan` merge into every evaluation automatically — no app code. Your own (dev-supplied) attributes always win on key collision, and the admin UI surfaces collisions on the flag detail page.
+
+With billing enabled this includes quota and entitlement attributes (`bridge:billing.quota.<metric>.*`, `bridge:billing.entitlement.<name>`) — the recommended way to gate plan-granted features is a flag whose rule targets an entitlement attribute. See the Payments guide's Entitlements section for the pattern.
+
+### Propagating context to your backend
+
+If your backend also evaluates flags for the same user, forward the eval context so both sides agree on identity and bucketing. The SDK serializes the context into the `x-bridge-context` header; backend SDKs (e.g. `@nebulr-group/bridge-nestjs/flags` with `BridgeContextInterceptor`) pick it up automatically.
+
+Only propagate identity and attributes the backend can't derive itself — never `role`/`plan`-style attributes (the backend reads those from its own verified sources).
 
 ### Route-level flags
 
-Gate entire routes behind feature flags using `routeConfig` rules:
-
-**Single flag:**
+Gate entire routes behind flags with `routeConfig` rules:
 
 ```ts
 const routeConfig: RouteGuardConfig = {
   rules: [
     { match: '/', public: true },
-    { match: new RegExp('^/auth($|/)'), public: true },
     { match: '/premium/*', featureFlag: 'premium-feature', redirectTo: '/upgrade' },
-    { match: '/beta/*', featureFlag: 'beta-feature', redirectTo: '/' },
-  ],
-  defaultAccess: 'protected',
-};
-```
-
-**`any` / `all` requirements:**
-
-```ts
-const routeConfig: RouteGuardConfig = {
-  rules: [
-    // Route allowed if ANY of the flags are enabled
-    { match: '/labs/*', featureFlag: { any: ['labs-v1', 'labs-v2'] }, redirectTo: '/' },
-
-    // Route allowed only if ALL flags are enabled
-    { match: '/premium/*', featureFlag: { all: ['paid', 'kyc-verified'] }, redirectTo: '/upgrade' },
-
-    { match: '/', public: true },
-    { match: new RegExp('^/auth($|/)'), public: true },
-  ],
-  defaultAccess: 'protected',
-};
-```
-
-**Global flag plus per-route criteria:**
-
-The first matching rule wins. Place specific routes before the global catch-all:
-
-```ts
-const routeConfig: RouteGuardConfig = {
-  rules: [
-    // Specific route — its own criteria
     { match: '/beta/*', featureFlag: { any: ['beta-feature', 'internal'] }, redirectTo: '/' },
-
-    // Public routes
-    { match: '/', public: true },
-    { match: new RegExp('^/auth($|/)'), public: true },
-
-    // Global flag — requires 'app-enabled' for all other protected routes
-    { match: '/*', featureFlag: 'app-enabled', redirectTo: '/maintenance' },
   ],
   defaultAccess: 'protected',
 };
 ```
 
-### Programmatic access
-
-Access flags from JavaScript/TypeScript:
-
-```ts
-import { get } from 'svelte/store';
-import { featureFlags, isFeatureEnabled, loadFeatureFlags } from '@nebulr-group/bridge-svelte';
-
-// Load all flags (usually done automatically by bootstrap)
-await loadFeatureFlags();
-
-// Read the flags store (reactive)
-const allFlags = get(featureFlags.flags); // Record<string, boolean>
-
-// Check a single flag (cached)
-const enabled = await isFeatureEnabled('my-flag');
-
-// Check a single flag (live, bypasses cache)
-const enabledLive = await isFeatureEnabled('my-flag', true);
-
-// Refresh all flags
-await featureFlags.refresh();
-```
-
-### Generic usage patterns
-
-**Resource limits via flags:**
-
-Use flags to represent plan capabilities and enforce limits:
-
-```ts
-// src/lib/services/usage.ts
-import { get } from 'svelte/store';
-import { featureFlags, profileStore } from '@nebulr-group/bridge-svelte';
-
-const LIMIT_FLAGS = {
-  UNLIMITED: 'limit-unlimited',
-  LIMIT_50: 'limit-50',
-};
-
-export function getPlanLimit(): number {
-  const flags = get(featureFlags.flags);
-  if (flags[LIMIT_FLAGS.UNLIMITED]) return Infinity;
-  if (flags[LIMIT_FLAGS.LIMIT_50]) return 50;
-  return 5; // Free tier default
-}
-```
-
-**Upgrade CTA when a flag is disabled:**
-
-```svelte
-<script lang="ts">
-  import { FeatureFlag } from '@nebulr-group/bridge-svelte';
-</script>
-
-<FeatureFlag flagName="advanced-export" renderWhenDisabled>
-  {#snippet children({ enabled })}
-    {#if enabled}
-      <button onclick={exportData}>Export data</button>
-    {:else}
-      <div class="upgrade-prompt">
-        <p>Upgrade your plan to export data.</p>
-        <a href="/subscription">View plans</a>
-      </div>
-    {/if}
-  {/snippet}
-</FeatureFlag>
-```
-
-**Gating a UI element with disabled state:**
-
-```svelte
-<FeatureFlag flagName="bulk-actions" renderWhenDisabled>
-  {#snippet children({ enabled })}
-    <button disabled={!enabled} title={enabled ? 'Run bulk action' : 'Upgrade to unlock'}>
-      Bulk action
-    </button>
-  {/snippet}
-</FeatureFlag>
-```
+A `featureFlag` requirement on a route rule is evaluated server-side by the SDK's route guard before the route renders — it's independent of the in-component `useFlag` / `<FeatureFlag>` surface. `bridgeBootstrap()` warms the route-guard's flag cache internally, so no extra setup is needed: declare the rule and the guard redirects when the flag is off.

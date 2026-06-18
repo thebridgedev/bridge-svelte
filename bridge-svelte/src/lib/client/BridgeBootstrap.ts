@@ -85,22 +85,15 @@ export async function bridgeBootstrap(
           logger.error('[bridgeBootstrap] OAuth callback error:', err);
         }
       } else if (stripeSuccess && sessionId) {
-        // Stripe payment success — verify with bridge-api (server calls Stripe directly),
-        // then refresh tokens so the new JWT has shouldSelectPlan: false before redirect.
+        // Stripe payment success — auth-core's confirmStripeCheckout() verifies the session
+        // with bridge-api (server calls Stripe directly) and refreshes tokens so the new JWT
+        // has shouldSelectPlan: false before we redirect. It throws on a non-OK response or
+        // network error → we fall through to the payment-error redirect. (TBP-369: the HTTP +
+        // token-refresh logic now lives in auth-core so every plugin port can reuse it.)
         logger.debug('[bridgeBootstrap] Stripe success callback — confirming with bridge-api');
         const bridge = getBridgeAuth();
-        const ctx = bridge.getApiContext();
         try {
-          const res = await (kitFetch ?? fetch)(`${ctx.apiBaseUrl}/v1/account/stripe/confirm-checkout`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId, appId: ctx.appId }),
-          });
-          if (!res.ok) {
-            logger.warn('[bridgeBootstrap] confirm-checkout failed', res.status);
-            redirect(303, getConfig().billing?.paymentErrorRoute ?? '/payment-error');
-          }
-          await bridge.refreshTokens();
+          await bridge.confirmStripeCheckout(sessionId, kitFetch);
           redirect(303, redirectTo);
         } catch (err) {
           if (isRedirect(err)) throw err;
@@ -130,22 +123,19 @@ export async function bridgeBootstrap(
     // Non-fatal — stale tokens will be caught by route guard
   }
 
-  // 2b. Paywall redirect — fires before any page renders. Reads shouldSelectPlan
-  //     and paymentsAutoRedirect from getSubscriptionStatus(). Only redirects when:
+  // 2b. Paywall redirect — fires before any page renders. The framework-agnostic
+  //     decision (authenticated + shouldSelectPlan + not opted out via
+  //     paymentsAutoRedirect) now lives in auth-core's shouldRedirectToPaywall()
+  //     (TBP-369). We only own the route/config guards here:
   //     - billing.paywallRoute is configured
   //     - the current path is not already the paywall route (no redirect loop)
-  //     - the tenant is authenticated but has not selected a plan
-  //     - the app has not opted out via paymentsAutoRedirect: false
   try {
     const paywallRoute = getConfig().billing?.paywallRoute;
     if (paywallRoute && url.pathname !== paywallRoute) {
       const bridge = getBridgeAuth();
-      if (bridge.isAuthenticated()) {
-        const status = await bridge.getSubscriptionStatus();
-        if (status?.shouldSelectPlan === true && status?.paymentsAutoRedirect !== false) {
-          logger.debug('[bridgeBootstrap] paywall redirect', paywallRoute);
-          redirect(303, paywallRoute);
-        }
+      if (await bridge.shouldRedirectToPaywall()) {
+        logger.debug('[bridgeBootstrap] paywall redirect', paywallRoute);
+        redirect(303, paywallRoute);
       }
     }
   } catch (e) {

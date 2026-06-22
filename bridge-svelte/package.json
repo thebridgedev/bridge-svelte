@@ -55,7 +55,7 @@
   "peerDependencies": {
     "svelte": "^5.0.0",
     "@sveltejs/kit": "^2.0.0",
-    "@simplewebauthn/browser": ">=10.0.0",
+    "@simplewebauthn/browser": "^13",
     "@stripe/stripe-js": ">=4.0.0"
   },
   "peerDependenciesMeta": {

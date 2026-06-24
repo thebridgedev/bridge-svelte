@@ -1,3 +1,10 @@
+---
+title: Team Management
+order: 50
+oneLiner: Drop in a full team admin surface — members, roles, invites — with one component.
+related: [multi-tenancy, sdk-auth]
+---
+
 # Team Management
 
 ### TeamManagementPanel

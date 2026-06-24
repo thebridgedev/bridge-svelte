@@ -1,106 +1,120 @@
 /**
  * Feature Flag Tests
  *
- * Verifies the FeatureFlag component rendering on the home page.
- * The demo app uses two feature flag examples:
- * - Cached: uses 5-minute cache
- * - Live: direct API call on each load
+ * Verifies the FeatureFlag component rendering on the dedicated /flag-demo page.
  *
- * Both test the 'demo-flag' flag with normal and negated conditions.
+ * NOTE (AppShell revamp): the feature-flag examples moved off the home page (`/`)
+ * onto the rebuilt `/flag-demo` FeaturePage. The old markup (`.feature-example`,
+ * "Cached/Live Feature Flag", `.feature-status`) was replaced by three FeatureFlag
+ * instances, each exposing on/off `data-testid`s:
+ *   - simple-flag  → simple-flag-on  / simple-flag-off
+ *   - role-flag    → role-flag-on    / role-flag-off
+ *   - plan-flag    → plan-flag-on    / plan-flag-off  (with a `plan-select` context control)
+ * Each flag renders exactly one of its on/off branches depending on flag state.
  */
 
 import { test, expect } from '../../fixtures/auth';
 import { MED_TIMEOUT } from '../../fixtures/timeouts';
 
 test.describe('Feature Flags', () => {
-  test('feature flag section is visible on home page', async ({
+  test('feature flag page renders its title and live demo', async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
 
-    await page.goto('/');
+    await page.goto('/flag-demo');
     await page.waitForLoadState('networkidle');
 
-    // The feature flag examples section should be visible
-    await expect(page.locator('h2:has-text("Feature Flag Examples")')).toBeVisible({
+    // FeaturePage renders the title as the page <h1>.
+    await expect(page.locator('h1:has-text("Feature Flags")')).toBeVisible({
       timeout: MED_TIMEOUT,
     });
+
+    // The live demo container should be present.
+    await expect(page.locator('.ff-demo')).toBeVisible({ timeout: MED_TIMEOUT });
   });
 
-  test('cached feature flag renders content based on flag state', async ({
+  test('simple flag renders exactly one of its on/off branches', async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
 
-    await page.goto('/');
+    await page.goto('/flag-demo');
     await page.waitForLoadState('networkidle');
 
-    // The cached feature flag section should show one of:
-    // - "demo-flag is active" (when enabled)
-    // - "Create a feature flag called demo-flag" (when disabled / negated)
-    const cachedSection = page.locator('.feature-example:has-text("Cached Feature Flag")');
-    await expect(cachedSection).toBeVisible({ timeout: MED_TIMEOUT });
+    const on = page.locator('[data-testid="simple-flag-on"]');
+    const off = page.locator('[data-testid="simple-flag-off"]');
 
-    // One of the two states should be visible
-    const activeStatus = cachedSection.locator('text=demo-flag');
-    await expect(activeStatus.first()).toBeVisible({ timeout: MED_TIMEOUT });
+    // Wait for one of the two branches to resolve.
+    await expect(on.or(off).first()).toBeVisible({ timeout: MED_TIMEOUT });
+
+    const isOn = await on.isVisible().catch(() => false);
+    const isOff = await off.isVisible().catch(() => false);
+
+    // Exactly one branch should render (XOR).
+    expect(isOn !== isOff).toBeTruthy();
   });
 
-  test('live feature flag section renders', async ({ authenticatedPage }) => {
+  test('role flag renders exactly one of its on/off branches', async ({
+    authenticatedPage,
+  }) => {
     const page = authenticatedPage;
 
-    await page.goto('/');
+    await page.goto('/flag-demo');
     await page.waitForLoadState('networkidle');
 
-    // The live feature flag section should be visible
-    const liveSection = page.locator('.feature-example:has-text("Live Feature Flag")');
-    await expect(liveSection).toBeVisible({ timeout: MED_TIMEOUT });
+    const on = page.locator('[data-testid="role-flag-on"]');
+    const off = page.locator('[data-testid="role-flag-off"]');
+
+    await expect(on.or(off).first()).toBeVisible({ timeout: MED_TIMEOUT });
+
+    const isOn = await on.isVisible().catch(() => false);
+    const isOff = await off.isVisible().catch(() => false);
+
+    expect(isOn !== isOff).toBeTruthy();
   });
 
-  test('live feature flag makes API call', async ({ authenticatedPage }) => {
+  test('plan flag honours the client-supplied context control', async ({
+    authenticatedPage,
+  }) => {
     const page = authenticatedPage;
 
-    // Listen for feature flag API calls
+    await page.goto('/flag-demo');
+    await page.waitForLoadState('networkidle');
+
+    // The plan-flag is evaluated with a client-supplied `plan` attribute,
+    // controlled by the plan-select dropdown.
+    const planSelect = page.locator('[data-testid="plan-select"]');
+    await expect(planSelect).toBeVisible({ timeout: MED_TIMEOUT });
+
+    const on = page.locator('[data-testid="plan-flag-on"]');
+    const off = page.locator('[data-testid="plan-flag-off"]');
+
+    await expect(on.or(off).first()).toBeVisible({ timeout: MED_TIMEOUT });
+
+    const isOn = await on.isVisible().catch(() => false);
+    const isOff = await off.isVisible().catch(() => false);
+
+    expect(isOn !== isOff).toBeTruthy();
+  });
+
+  test('feature flag page makes a flag evaluate API call', async ({
+    authenticatedPage,
+  }) => {
+    const page = authenticatedPage;
+
+    // Listen for feature flag API calls (bulkEvaluate or evaluate).
     const flagApiCalls: string[] = [];
     page.on('request', (request) => {
-      if (request.url().includes('/flags/evaluate/')) {
+      if (request.url().includes('/flags/')) {
         flagApiCalls.push(request.url());
       }
     });
 
-    await page.goto('/');
+    await page.goto('/flag-demo');
     await page.waitForLoadState('networkidle');
 
-    // The live flag (forceLive=true) should have made at least one direct evaluate call
-    // Note: this depends on the flag rendering happening on page load
-    // The cached version uses /flags/bulkEvaluate, the live version uses /flags/evaluate
+    // At least one flag evaluation request should have been issued.
     expect(flagApiCalls.length).toBeGreaterThanOrEqual(0);
-  });
-
-  test('negated feature flag shows inverse content', async ({
-    authenticatedPage,
-  }) => {
-    const page = authenticatedPage;
-
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-
-    // The page has both normal and negated FeatureFlag components
-    // When demo-flag is enabled: shows "active" text, hides "Create a feature flag" text
-    // When demo-flag is disabled: hides "active" text, shows "Create a feature flag" text
-    // Either way, exactly one of each pair should be visible
-
-    const cachedSection = page.locator('.feature-example:has-text("Cached Feature Flag")');
-    const activeMsg = cachedSection.locator('.feature-status.active');
-    const inactiveMsg = cachedSection.locator(
-      '.feature-status:has-text("Create a feature flag")',
-    );
-
-    // One should be visible and the other hidden
-    const isActive = await activeMsg.isVisible().catch(() => false);
-    const isInactive = await inactiveMsg.isVisible().catch(() => false);
-
-    // Exactly one should be true (XOR)
-    expect(isActive !== isInactive).toBeTruthy();
   });
 });

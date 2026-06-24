@@ -19,6 +19,11 @@ export default defineConfig({
 		strictPort: true,       // <== optional: fail if port is in use
 		watch: {
 		  usePolling: true      // <== optional: fixes HMR issues in some containers
+		},
+		fs: {
+		  // Allow build-time import of ../learning/*.md (sibling of demo/ in the
+		  // bridge-svelte repo) — the docs single source of truth.
+		  allow: ['..']
 		}
 	  }
 });

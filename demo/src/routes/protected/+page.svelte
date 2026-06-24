@@ -1,77 +1,97 @@
 <script lang="ts">
   import { isAuthenticated } from '@bridge-svelte/lib/core/bridge-instance';
   import { profileStore } from '@bridge-svelte/lib/shared/profile';
+  import FeaturePage from '$lib/components/FeaturePage.svelte';
+  import { getDoc, section } from '$lib/learning';
 
-  const { profile, error, isOnboarded, hasMultiTenantAccess } = profileStore;
+  const { profile } = profileStore;
+
+  // Content from the single source of truth — bridge-svelte/learning/auth.
+  const doc = getDoc('auth');
+  const guard = section(doc, 'Route protection');
+  const check = section(doc, 'Checking auth status');
+
+  const codeTabs = [
+    guard?.code[0] && { label: '+layout.ts', code: guard.code[0].code, lang: 'ts' },
+    guard?.code[1] && { label: '+layout.svelte', code: guard.code[1].code, lang: 'svelte' },
+    check?.code[0] && { label: 'Auth status', code: check.code[0].code, lang: 'svelte' },
+  ].filter(Boolean) as { label: string; code: string; lang: string }[];
+
+  const related = [
+    { label: 'Login', href: '/auth/login' },
+    { label: 'Feature Flags', href: '/flag-demo' },
+  ];
 </script>
 
-<div class="container">
-  <h1>Protected Page</h1>
-  
-  {#if $isAuthenticated}
-    <div class="content">
-      <p class="message">
-        This is a protected page. You can only see this content when you're logged in.
-      </p>
-      
-      <div class="info-card">
-        <h2>authentication Status</h2>
-        <p>You are currently authenticated</p>
-        <h2>Your Profile</h2>
-        <p><strong>Name:</strong> {$profile?.fullName}</p>
-        <p><strong>Email:</strong> {$profile?.email}</p>
-        <p><strong>Username:</strong> {$profile?.username}</p>
-        {#if $profile?.tenant}
-          <div style="margin-top: 1rem;">
-            <h3>Tenant Information</h3>
-            <p><strong>Tenant Name:</strong> {$profile.tenant.name}</p>
-            <p><strong>Tenant ID:</strong> {$profile.tenant.id}</p>
-          </div>
-        {/if}
+<FeaturePage
+  title="Protected Page"
+  breadcrumb="Authentication / Route guards"
+  oneLiner="This route is gated by the SDK's route guard — you only see it when authenticated."
+  introHtml={guard?.html ?? ''}
+  {codeTabs}
+  {related}
+>
+  {#snippet live()}
+    {#if $isAuthenticated}
+      <div class="prot-card prot-card--ok">
+        <p class="prot-status">✅ You are currently authenticated</p>
+        <dl class="prot-dl">
+          <dt>Name</dt>
+          <dd>{$profile?.fullName ?? '—'}</dd>
+          <dt>Email</dt>
+          <dd>{$profile?.email ?? '—'}</dd>
+          <dt>Username</dt>
+          <dd>{$profile?.username ?? '—'}</dd>
+          {#if $profile?.tenant}
+            <dt>Tenant</dt>
+            <dd>{$profile.tenant.name}</dd>
+            <dt>Tenant ID</dt>
+            <dd><code>{$profile.tenant.id}</code></dd>
+          {/if}
+        </dl>
       </div>
-    </div>
-  {:else}
-    <p class="message">
-      Please log in to view this content.
-    </p>
-  {/if}
-</div>
+    {:else}
+      <div class="prot-card">
+        <p class="prot-status">Please log in to view this content.</p>
+      </div>
+    {/if}
+  {/snippet}
+</FeaturePage>
 
 <style>
-  .container {
-    text-align: center;
+  .prot-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-2);
+    padding: 16px;
   }
-
-  h1 {
-    font-size: 2.5rem;
-    color: #1f2937;
-    margin-bottom: 2rem;
+  .prot-card--ok {
+    border-color: var(--live);
+    background: var(--live-soft);
   }
-
-  .content {
-    max-width: 600px;
-    margin: 0 auto;
+  .prot-status {
+    margin: 0 0 12px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
   }
-
-  .message {
-    font-size: 1.25rem;
-    color: #4b5563;
-    margin-bottom: 2rem;
+  .prot-dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 16px;
+    margin: 0;
+    font-size: 13px;
   }
-
-  .info-card {
-    background-color: #ffffff;
-    padding: 2rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  .prot-dl dt {
+    color: var(--text-faint);
+    font-weight: 600;
   }
-
-  .info-card h2 {
-    color: #3b82f6;
-    margin-bottom: 1rem;
+  .prot-dl dd {
+    margin: 0;
+    color: var(--text-muted);
   }
-
-  .info-card p {
-    color: #6b7280;
+  .prot-dl code {
+    font-family: ui-monospace, monospace;
+    font-size: 0.85em;
   }
-</style> 
+</style>

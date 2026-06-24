@@ -66,9 +66,12 @@ test.describe('Login & Logout Flow', () => {
     await expect(page.locator('a.nav-link:has-text("Team Management")')).toBeVisible();
     await expect(page.locator('a.nav-link:has-text("Protected Page")')).toBeVisible();
 
-    // Logout button visible, Login link gone from navbar
+    // Logout button visible, topbar Login CTA gone.
+    // NOTE: the sidebar now renders the /auth/login link ALWAYS (un-gated), so
+    // assert on the auth-gated topbar login CTA (a.nav-link--login) instead of a
+    // bare nav[href] match.
     await expect(page.locator('button:has-text("Logout")')).toBeVisible();
-    await expect(page.locator('nav a[href="/auth/login"]')).not.toBeVisible();
+    await expect(page.locator('a.nav-link--login')).not.toBeVisible();
   });
 
   test('logout clears tokens and shows Login link again', async ({
@@ -85,8 +88,8 @@ test.describe('Login & Logout Flow', () => {
 
     await page.locator('button:has-text("Logout")').click();
 
-    // Wait for logout to complete — the Login link reappears in the navbar
-    await expect(page.locator('nav a[href="/auth/login"]')).toBeVisible({
+    // Wait for logout to complete — the auth-gated topbar Login CTA reappears.
+    await expect(page.locator('a.nav-link--login')).toBeVisible({
       timeout: MED_TIMEOUT,
     });
 

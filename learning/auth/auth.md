@@ -1,3 +1,10 @@
+---
+title: Authentication
+order: 20
+oneLiner: Embedded auth — login, signup, magic link, passkeys, SSO & MFA — plus route guards.
+related: [multi-tenancy, feature-flags]
+---
+
 # Authentication
 
 ### Route protection

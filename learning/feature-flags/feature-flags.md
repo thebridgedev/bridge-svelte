@@ -1,3 +1,10 @@
+---
+title: Feature Flags
+order: 40
+oneLiner: Ship behind a flag and change who sees what — live from admin, no redeploy.
+related: [live-updates, payments]
+---
+
 # Feature Flags
 
 Bridge Feature Flags evaluates locally — the SDK keeps the flag rules in memory, evaluates against in-process context, and receives rule changes live over a push channel. A flag check is an O(1) lookup: no network call, safe in render paths.
@@ -169,6 +176,35 @@ With billing enabled this includes quota and entitlement attributes (`bridge:bil
 If your backend also evaluates flags for the same user, forward the eval context so both sides agree on identity and bucketing. The SDK serializes the context into the `x-bridge-context` header; backend SDKs (e.g. `@nebulr-group/bridge-nestjs/flags` with `BridgeContextInterceptor`) pick it up automatically.
 
 Only propagate identity and attributes the backend can't derive itself — never `role`/`plan`-style attributes (the backend reads those from its own verified sources).
+
+### Under the hood
+
+- **No network on read** — `useFlag` / `<FeatureFlag>` evaluate against an in-memory rule cache (an O(1) lookup); there is no request per flag check, so they are safe in render paths.
+- **Live rule updates** arrive over the realtime channel as `flag.updated` / `flag.removed` messages and update values in place — no refresh, no flicker.
+- **Telemetry** evaluations are batched and reported in the background, off the render path.
+- **Bootstrap** warms the rule cache during `bridgeBootstrap()`; the route guard shares that same cache for `featureFlag` route rules.
+
+### Percentage rollout
+
+Roll a feature out to a fraction of users instead of flipping it for everyone. In admin, give the flag a rule with a percentage (say 10%) — the SDK evaluates it client-side against a **stable bucket** derived from the visitor's identity:
+
+```svelte
+<script lang="ts">
+  import { useFlag } from '@nebulr-group/bridge-svelte/flags';
+
+  // No code change for rollout — the percentage lives in the flag rule.
+  const newCheckout = useFlag('new_checkout', false);
+</script>
+
+{#if newCheckout.value}<NewCheckout />{:else}<OldCheckout />{/if}
+```
+
+- **Sticky buckets** — the same identity always lands in the same bucket, so a user who's in the 10% stays in as you ramp to 25%, 50%, 100%. No flicker, no re-rolling.
+- **Anonymous visitors** get a persisted anonymous ID (see Identity above), so they bucket consistently before they ever sign in; on login, pre-login activity links to the authenticated identity.
+- **A/B cohorts** — a multi-variant flag (string/number/JSON) splits traffic into buckets and returns the variant for each, giving you experiment arms with the same sticky guarantee.
+- **Combine with rules** — a rollout can sit behind a segment (e.g. 10% *of users whose `plan = pro`*), because the percentage applies after the rule's attribute conditions match.
+
+Because the percentage and segments live in the flag rule, ramping a rollout or killing it is an admin action — your deployed code never changes.
 
 ### Route-level flags
 

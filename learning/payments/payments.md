@@ -1,3 +1,10 @@
+---
+title: Payments & Subscriptions
+order: 60
+oneLiner: One canonical subscription per workspace — plans, checkout, quotas & entitlements, all live.
+related: [feature-flags, multi-tenancy]
+---
+
 # Payments & Subscriptions
 
 Bridge gives every workspace one canonical subscription — a plan, a status, and an optional trial — kept live in your app over the Bridge live channel. When a payment fails, a trial nears its end, or an admin changes the plan in Stripe, your UI reflects it within seconds, without polling.

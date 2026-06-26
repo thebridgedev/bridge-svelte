@@ -1,8 +1,15 @@
 <script lang="ts">
   import { beforeNavigate, goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import { onMount, onDestroy } from 'svelte';
   import { createRouteGuard } from '../auth/route-guard.js';
-  import { getBridgeAuth } from '../core/bridge-instance.js';
+  import {
+    getBridgeAuth,
+    isAuthenticated,
+    subscriptionStore,
+    loadSubscription,
+    ensureAppConfig,
+  } from '../core/bridge-instance.js';
   import { bridge as bridgeSurface } from '../core/bridge.js';
   import { setBridgeContext } from '../core/use-bridge.js';
   import { getConfig } from './stores/config.store.js';
@@ -11,7 +18,6 @@
     stopBridgeRuntime,
     type StartBridgeRuntimeOptions,
   } from '../core/bridge-runtime.js';
-  import { loadSubscription, ensureAppConfig } from '../core/bridge-instance.js';
 
   // Props: optional `runtime` overrides for advanced/debug use (websocketFactory,
   // reconnect overrides, etc.); `onBootstrapComplete` callback fires after the
@@ -29,6 +35,42 @@
   setBridgeContext(bridgeSurface);
 
   const guard = createRouteGuard();
+
+  // Reactive paywall enforcement.
+  //
+  // The one-shot redirect in bridgeBootstrap() (load) only fires on the very
+  // first load — it short-circuits on every later navigation (bridgeReadyStore),
+  // so it misses the post-login case where auth + subscription state resolve a
+  // beat AFTER load() ran. This guard owns correctness: it actively loads the
+  // subscription once known-authenticated, then redirects reactively whenever
+  // `shouldSelectPlan` resolves true. Same data source as <BridgePaywall>, so the
+  // overlay and the redirect agree. The load() redirect remains a no-flash
+  // fast-path for direct loads/refreshes only.
+  $effect(() => {
+    const paywallRoute = getConfig().billing?.paywallRoute;
+    if (!paywallRoute || !$isAuthenticated) return;
+
+    const { status, loading, error } = $subscriptionStore;
+
+    // Status unknown → trigger a single load. Guarding on `!error` avoids a
+    // tight refetch loop on persistent failure (fail-pending, not fail-open);
+    // a workspace switch resets the store and re-attempts.
+    if (!status && !loading && !error) {
+      loadSubscription().catch(() => { /* surfaced via store.error */ });
+      return;
+    }
+
+    // Status known → enforce. `$page.url.pathname` makes this re-run on
+    // navigation too, so manual nav to a protected page while plan-less is
+    // also caught. Path guard prevents a redirect loop on the paywall itself.
+    if (
+      status?.shouldSelectPlan === true &&
+      status?.paymentsAutoRedirect !== false &&
+      $page.url.pathname !== paywallRoute
+    ) {
+      goto(paywallRoute);
+    }
+  });
 
   async function handleRoute(pathname: string, cancel?: () => void) {
     const decision = await guard.getNavigationDecision(pathname);

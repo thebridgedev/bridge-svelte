@@ -219,7 +219,7 @@
 
 <!-- Inline forgot password -->
 {:else if step === 'forgot-password'}
-  <AuthFormWrapper heading="Reset your password">
+  <AuthFormWrapper heading={fpEmailSent ? null : 'Reset your password'}>
     {#if error}
       <Alert variant="error">{error}</Alert>
     {/if}
@@ -257,7 +257,7 @@
 
 <!-- Inline magic link -->
 {:else if step === 'magic-link'}
-  <AuthFormWrapper heading="Sign in with email link">
+  <AuthFormWrapper heading={mlSent ? null : 'Sign in with email link'}>
     {#if error}
       <Alert variant="error">{error}</Alert>
     {/if}

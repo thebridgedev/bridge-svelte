@@ -16,7 +16,7 @@
  * only exposes the singleton aggregate `bridge`; consumers can import it
  * directly until the context hook ships.
  */
-import { derived, type Readable } from 'svelte/store';
+import { derived, get, type Readable } from 'svelte/store';
 import {
   appBrandingStore,
   tenantEntitlementsStore,
@@ -29,9 +29,9 @@ import {
   type UserSnapshot,
 } from './snapshot-stores.js';
 import { LazySlice } from './lazy-slice.js';
-import type { Plan } from '@nebulr-group/bridge-auth-core';
+import type { CurrentUser, Plan, SubscriptionStatus } from '@nebulr-group/bridge-auth-core';
 import { DevAttributeProvider } from '@nebulr-group/bridge-auth-core';
-import { getBridgeAuth } from './bridge-instance.js';
+import { getBridgeAuth, tokenStore, subscriptionStore, loadSubscription } from './bridge-instance.js';
 import { bridgeEvents, type BridgeEventsDispatcher } from './events.js';
 
 export interface BridgeAppSurface {
@@ -49,7 +49,11 @@ export interface BridgeTenantSurface {
   id: Readable<string | null>;
   /** Workspace display name. Populated by session.snapshot. */
   name: Readable<string | null>;
-  /** Canonical subscription (plan + status + endsAt). Populated by session.snapshot. */
+  /**
+   * Canonical subscription (plan + status + endsAt). Live via `session.snapshot`
+   * when the realtime channel is active; otherwise transparently falls back to
+   * the REST subscription endpoint (fetched lazily on first read).
+   */
   subscription: Readable<SubscriptionSnapshot | null>;
   /**
    * Entitlements scope. `snapshot` is the full `{ key: boolean }` map;
@@ -66,7 +70,11 @@ export interface BridgeTenantSurface {
 export interface BridgeSurface {
   app: BridgeAppSurface;
   tenant: BridgeTenantSurface;
-  /** Authenticated user (id/email/role/tenantId). Populated by session.snapshot. */
+  /**
+   * Authenticated user (id/email/role/tenantId). Live via `session.snapshot`
+   * when the realtime channel is active; otherwise transparently seeded from the
+   * access-token claims (the only client-side source of `role`).
+   */
   user: Readable<UserSnapshot | null>;
   /**
    * Phase 5 (TBP-328) — single attribute write surface. `set/bind/bindMany`
@@ -118,6 +126,96 @@ const _plansSlice = new LazySlice<Plan[]>({
 // effectively the per-call equivalent for set/bind/bindMany).
 const _devAttributes = new DevAttributeProvider();
 
+// ── Layered sources behind `bridge.user` / `bridge.tenant.subscription` ──────
+//
+// Design contract (locked): the developer always reads the SAME store; whether
+// the value comes from the live realtime channel or a static fallback is
+// invisible to them.
+//   A. Default — the `session.snapshot` channel populates and live-updates the
+//      snapshot stores; they win whenever present.
+//   B. Fallback (channel not active) — `bridge.user` is seeded from the access
+//      token claims (instant, full-fidelity for role); `bridge.tenant.subscription`
+//      falls back to the REST subscription endpoint (full plan name/status,
+//      fetched lazily). These are NOT live-updated — by design, since the app
+//      opted out of the live channel.
+
+/**
+ * JWT-derived user, recomputed whenever the token set changes (login, refresh,
+ * workspace switch, logout). Reuses auth-core's `getCurrentUser()` — the single
+ * home for access-token claim parsing. `null` when unauthenticated.
+ */
+const _jwtUser: Readable<UserSnapshot | null> = derived(tokenStore, ($t) => {
+  if (!$t?.accessToken) return null;
+  let claims: CurrentUser | null = null;
+  try {
+    claims = getBridgeAuth().getCurrentUser();
+  } catch {
+    return null;
+  }
+  if (!claims) return null;
+  return {
+    id: claims.id,
+    email: claims.email,
+    // UserSnapshot requires these; the live snapshot supplies the authoritative
+    // values, the JWT fallback fills them when claims carry them.
+    role: claims.role ?? '',
+    tenantId: claims.tenantId ?? '',
+  };
+});
+
+/** `bridge.user`: live snapshot wins; JWT seed is the static fallback. */
+const _userSurface: Readable<UserSnapshot | null> = derived(
+  [userSnapshotStore, _jwtUser],
+  ([snap, jwt]) => snap ?? jwt,
+);
+
+/** Map the REST `SubscriptionStatus` to the canonical `SubscriptionSnapshot` shape. */
+function mapRestSubscription(status: SubscriptionStatus | null): SubscriptionSnapshot | null {
+  if (!status) return null;
+  const plan = status.plan;
+  let slug = '';
+  let name = '';
+  if (typeof plan === 'string') {
+    slug = plan;
+    name = plan;
+  } else if (plan) {
+    slug = plan.key;
+    name = plan.name;
+  }
+  // REST exposes lifecycle as booleans; derive a best-effort status string to
+  // parallel the snapshot's `status` field.
+  const statusStr = status.paymentFailed
+    ? 'past_due'
+    : status.trial
+      ? 'trialing'
+      : status.paymentsEnabled || status.plan
+        ? 'active'
+        : 'incomplete';
+  return { plan: { slug, name }, status: statusStr };
+}
+
+/**
+ * `bridge.tenant.subscription`: live snapshot wins; otherwise the REST endpoint
+ * is fetched lazily on first subscribe (only when no snapshot and not already
+ * loading/loaded). In live apps the snapshot is present, so REST is never hit.
+ */
+const _subscriptionMerged: Readable<SubscriptionSnapshot | null> = derived(
+  [tenantSubscriptionStore, subscriptionStore],
+  ([snap, rest]) => snap ?? mapRestSubscription(rest.status),
+);
+
+const _subscriptionSurface: Readable<SubscriptionSnapshot | null> = {
+  subscribe(run, invalidate) {
+    const noSnapshot = get(tenantSubscriptionStore) == null;
+    const rest = get(subscriptionStore);
+    if (noSnapshot && rest.status == null && !rest.loading) {
+      // Lazy fallback fetch — throws if unauthenticated; swallow (stays null).
+      loadSubscription().catch(() => {});
+    }
+    return _subscriptionMerged.subscribe(run, invalidate);
+  },
+};
+
 export const bridge: BridgeSurface = {
   app: {
     branding: appBrandingStore,
@@ -126,13 +224,13 @@ export const bridge: BridgeSurface = {
   tenant: {
     id: tenantIdStore,
     name: tenantNameStore,
-    subscription: tenantSubscriptionStore,
+    subscription: _subscriptionSurface,
     entitlements: {
       snapshot: tenantEntitlementsStore,
       can: entitlementsCan,
     },
   },
-  user: userSnapshotStore,
+  user: _userSurface,
   attributes: _devAttributes,
   events: bridgeEvents,
 };

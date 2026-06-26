@@ -13,7 +13,8 @@
     showLoginLink?: boolean;
     /** Override login page URL. Default: derived from BridgeConfig loginRoute. */
     loginHref?: string | undefined;
-    heading?: string;
+    /** Heading text. Pass `null`/`''` to render no heading and use your own page title. */
+    heading?: string | null;
     footer?: Snippet;
   }
 
@@ -55,7 +56,9 @@
   }
 </script>
 
-<AuthFormWrapper {heading} class={className} {style} {...rest}>
+<!-- In the success state, the "Check your email" heading below is the title,
+     so suppress the form heading to avoid two stacked headings. -->
+<AuthFormWrapper heading={success ? null : heading} class={className} {style} {...rest}>
   {#if success}
     <h2 class="bridge-success-heading">Check your email</h2>
     <p class="bridge-step-desc">We sent a verification link to <strong>{email}</strong>. Check your inbox to activate your account.</p>

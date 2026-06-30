@@ -1,6 +1,6 @@
 {
   "name": "@nebulr-group/bridge-svelte",
-  "version": "0.4.0-beta.6",
+  "version": "0.4.0-beta.7",
   "description": "Bridge Svelte library, This library helps you to add bridge authentication and feature flags, and payments to your svelte application.",
   "author": "Iman Pouya",
   "license": "MIT",
@@ -67,7 +67,7 @@
     }
   },
   "dependencies": {
-    "@nebulr-group/bridge-auth-core": "0.4.0-beta.7"
+    "@nebulr-group/bridge-auth-core": "0.4.0-beta.8"
   },
   "devDependencies": {
     "@sveltejs/kit": "^2.16.0",

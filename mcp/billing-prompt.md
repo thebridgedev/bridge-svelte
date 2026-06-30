@@ -141,9 +141,9 @@ Import `PlanSelector` / `BridgePaywall` from `@nebulr-group/bridge-svelte`.
 
 Skip if the plans have no per-resource limits or feature differences.
 
-> Quotas and entitlements were configured in the master prompt via `bridge plan quota set` and `bridge plan entitlement set`. This step only covers surfacing them in the UI.
+> Quotas were configured in the master prompt via `bridge plan quota set` (`--policy hard` for blocking caps, `--policy metered --price-amount <n>` for per-unit billing). Entitlements are derived from `hard` quotas automatically — there is no `plan entitlement set` command. This step only covers surfacing them in the UI.
 
-To show a live quota counter, drop in `<BridgeQuotaBanner metric="ai_completions" />` — it renders nothing if no quota is configured for the current plan.
+To show a live quota counter, drop in `<BridgeQuotaBanner metric="ai_completions" />` — it renders nothing if no quota is configured for the current plan. For **metered** quotas the banner shows live usage **and projected cost** (per-unit price × overage) and is informational (never blocking); read `useBridge().quota(metric)` for the raw `unitAmount` / `currency` / `overageEstimate` / `overcap` fields to build a custom metered cost display.
 
 To gate a feature by entitlement, use `bridge.tenant.entitlements.can('key')` from `useBridge()`. Returns `false` until hydrated (fail-closed), updates live when the plan changes or quota exhausts.
 

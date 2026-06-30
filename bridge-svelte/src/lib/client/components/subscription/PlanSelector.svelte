@@ -121,8 +121,13 @@
     picking = true;
     pickError = null;
     try {
-      if (price.amount === 0) {
-        // Free plan — select directly
+      if (price.amount === 0 && !plan.hasCost) {
+        // Free plan — select directly. TBP-275: guard on `!plan.hasCost` so a
+        // $0-base plan that carries METERED pricing is NOT treated as free —
+        // it falls through to checkout/changePlan below, capturing a payment
+        // method so per-unit overage can be billed (US-C). Without this guard a
+        // metered $0-base plan would hit selectFreePlan, which the backend now
+        // rejects ("has a cost — use the checkout endpoint instead").
         await getBridgeAuth().selectFreePlan(plan.key);
         await loadSubscription();
         onSelect?.({ plan, price });

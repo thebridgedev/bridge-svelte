@@ -16,7 +16,8 @@
     /**
      * Which billing interval tab is selected by default (`'month'` | `'year'` |
      * `'week'` | `'day'`). Falls back to the first available interval when the
-     * requested one isn't offered by any plan. Default: `'month'`.
+     * requested one isn't offered by any plan. Default: `'year'` (TBP-34 —
+     * annual is the default; apps without yearly prices fall back gracefully).
      */
     defaultInterval?: BillingInterval;
     onSelect?: (detail: { plan: Plan; price: PriceOfferSdk }) => void;
@@ -29,7 +30,7 @@
   let {
     successRedirect = '/subscription',
     cancelRedirect = '/subscription',
-    defaultInterval = 'month',
+    defaultInterval = 'year',
     onSelect,
     planCard,
     emptyState,
@@ -117,6 +118,52 @@
     }
   });
 
+  // ── Plan-change confirmation (TBP-33) ─────────────────────────────────
+  // Switching an existing subscriber's plan is instant (no Stripe checkout
+  // page), so it needs an explicit confirm step. Free selection and the
+  // checkout redirect keep their existing single-click behavior.
+  let confirmTarget = $state<{ plan: Plan; price: PriceOfferSdk } | null>(null);
+  let confirmBusy = $state(false);
+  let confirmError = $state<string | null>(null);
+  let successNotice = $state<string | null>(null);
+  let successTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const currentPlanName = $derived.by(() => {
+    const found = (plans ?? []).find((p) => p.key === currentPlanKey);
+    return found?.name ?? currentPlanKey ?? 'your current plan';
+  });
+
+  function formatPrice(price: PriceOfferSdk): string {
+    return price.amount === 0
+      ? 'Free'
+      : `${price.amount} ${price.currency.toUpperCase()} / ${price.recurrenceInterval}`;
+  }
+
+  function showSuccess(message: string): void {
+    successNotice = message;
+    clearTimeout(successTimer);
+    successTimer = setTimeout(() => (successNotice = null), 6000);
+  }
+
+  async function confirmPlanChange(): Promise<void> {
+    if (!confirmTarget) return;
+    const { plan, price } = confirmTarget;
+    confirmBusy = true;
+    confirmError = null;
+    try {
+      await getBridgeAuth().changePlan(plan.key, price);
+      await loadSubscription();
+      confirmTarget = null;
+      showSuccess(`You're now on ${plan.name} (${formatPrice(price)}).`);
+      onSelect?.({ plan, price });
+    } catch (err) {
+      // AC: failure surfaces inside the dialog, not just a banner.
+      confirmError = err instanceof Error ? err.message : 'Plan change failed';
+    } finally {
+      confirmBusy = false;
+    }
+  }
+
   async function handlePick(plan: Plan, price: PriceOfferSdk): Promise<void> {
     picking = true;
     pickError = null;
@@ -132,10 +179,10 @@
         await loadSubscription();
         onSelect?.({ plan, price });
       } else if (status?.paymentsEnabled) {
-        // Already has payment method — change plan
-        await getBridgeAuth().changePlan(plan.key, price);
-        await loadSubscription();
-        onSelect?.({ plan, price });
+        // Already has payment method — instant switch, so require an explicit
+        // confirmation (TBP-33). The actual changePlan runs in confirmPlanChange.
+        confirmTarget = { plan, price };
+        confirmError = null;
       } else {
         // Needs checkout — redirect to Stripe (or direct plan set when Stripe not configured)
         const base = getConfig().callbackUrl ?? `${window.location.origin}/auth/oauth-callback`;
@@ -190,6 +237,12 @@
   {:else}
     {#if pickError}
       <Alert variant="error">{pickError}</Alert>
+    {/if}
+
+    {#if successNotice}
+      <div class="bridge-plan-success" data-bridge-plan-success role="status">
+        <Alert variant="success">{successNotice}</Alert>
+      </div>
     {/if}
 
     {#if uiState === 'payment-failed'}
@@ -293,5 +346,43 @@
         {/each}
       </div>
     {/if}
+  {/if}
+
+  {#if confirmTarget}
+    <div class="bridge-plan-confirm-backdrop" data-bridge-plan-confirm role="dialog" aria-modal="true" aria-labelledby="bridge-plan-confirm-title" tabindex="-1">
+      <div class="bridge-plan-confirm">
+        <h3 id="bridge-plan-confirm-title" class="bridge-plan-confirm-title">Change plan?</h3>
+        <p class="bridge-plan-confirm-body">
+          Switch from <strong>{currentPlanName}</strong> to
+          <strong>{confirmTarget.plan.name}</strong> ({formatPrice(confirmTarget.price)}).
+        </p>
+        <p class="bridge-plan-confirm-note">
+          The change takes effect immediately — any price difference is prorated
+          on your next invoice.
+        </p>
+        {#if confirmError}
+          <Alert variant="error">{confirmError}</Alert>
+        {/if}
+        <div class="bridge-plan-confirm-actions">
+          <button
+            type="button"
+            class="bridge-btn-secondary"
+            disabled={confirmBusy}
+            onclick={() => (confirmTarget = null)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="bridge-btn-primary"
+            data-bridge-plan-confirm-btn
+            disabled={confirmBusy}
+            onclick={confirmPlanChange}
+          >
+            {confirmBusy ? 'Switching…' : 'Confirm change'}
+          </button>
+        </div>
+      </div>
+    </div>
   {/if}
 </div>

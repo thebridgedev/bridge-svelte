@@ -968,6 +968,60 @@
   color: var(--bridge-muted, #64748b);
 }
 
+/* Plan-change confirmation dialog + success notice (TBP-33) */
+.bridge-plan-success {
+  margin-bottom: 1rem;
+}
+
+.bridge-plan-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  padding: 1.25rem;
+}
+
+.bridge-plan-confirm {
+  background: var(--bridge-bg, #fff);
+  border: 1px solid var(--bridge-border, #e2e8f0);
+  border-radius: var(--bridge-border-radius, 0.5rem);
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.35);
+  max-width: 26rem;
+  width: 100%;
+  padding: 1.25rem 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bridge-plan-confirm-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.bridge-plan-confirm-body {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.bridge-plan-confirm-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--bridge-muted, #64748b);
+  line-height: 1.5;
+}
+
+.bridge-plan-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
 .bridge-plan-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

@@ -10,6 +10,11 @@
     onComplete?: () => void;
     onError?: (error: Error) => void;
     loginHref?: string;
+    /**
+     * Override the built-in heading ("Set new password" / "Reset your password").
+     * Pass `null`/`''` to render no heading and use your own page title.
+     */
+    heading?: string | null;
   }
 
   let {
@@ -17,6 +22,7 @@
     onComplete,
     onError,
     loginHref = '/login',
+    heading = undefined,
     class: className,
     style,
     ...rest
@@ -32,6 +38,14 @@
   let showPasswords = $state(false);
 
   const isSetMode = $derived(!!token);
+
+  // In a success state ("Password set" / the email-sent alert) the form heading
+  // is redundant, so suppress it. Otherwise use the override (if provided) or
+  // the built-in, state-appropriate heading.
+  const builtInHeading = $derived(isSetMode ? 'Set new password' : 'Reset your password');
+  const wrapperHeading = $derived(
+    passwordReset || emailSent ? null : heading !== undefined ? heading : builtInHeading,
+  );
 
   async function handleSendLink() {
     if (loading) return;
@@ -77,7 +91,7 @@
 </script>
 
 <AuthFormWrapper
-  heading={isSetMode ? 'Set new password' : 'Reset your password'}
+  heading={wrapperHeading}
   class={className}
   {style}
   {...rest}

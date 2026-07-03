@@ -81,7 +81,12 @@ States it covers: trial active, trial ending soon, past due, cancellation schedu
 
 #### `<BridgeQuotaBanner />`
 
-A live usage-cap banner for one metric. Renders nothing while usage is below 80% of the plan's quota (or when the plan has no quota for that metric); shows a warning at 80–94%, critical at 95%+, and over-cap copy when the limit is exceeded. Updates live on `quota.updated` pushes.
+A live usage banner for one metric. Behaviour depends on the quota's `policy`:
+
+- **`hard`** caps — renders nothing below 80% of the limit (or when the plan has no quota for the metric); shows a warning at 80–94%, critical at 95%+, and over-cap copy when the limit is exceeded.
+- **`metered`** pricing (TBP-275) — shows live usage **and projected cost** once billing engages (usage past the included allotment, or from unit 1 when `limit = 0`). Metered banners are informational (never "critical"/blocking) and render copy like _"120 over your 1,000 included · ~$1.20 estimated this period"_ or, for pure per-unit, _"4,200 api_calls · ~$42.00 estimated this period"_.
+
+Updates live on `quota.updated` pushes.
 
 ```svelte
 <script lang="ts">
@@ -96,7 +101,7 @@ A live usage-cap banner for one metric. Renders nothing while usage is below 80%
 | `metric` | `string` | required | Metric key to watch |
 | `label` | `string` | metric key | Humanized display label |
 | `class` | `string` | `''` | Class applied to the root element |
-| `onActionClick` | `(snap) => void` | — | Override the default Upgrade CTA handler |
+| `onActionClick` | `(snap) => void` | — | Override the default Upgrade CTA handler (hard caps only) |
 
 For a fully custom quota UI, read the underlying snapshot directly:
 
@@ -105,6 +110,12 @@ import { useBridge } from '@nebulr-group/bridge-auth-core';
 
 const q = useBridge().quota('ai_completions');
 // q?.used, q?.limit, q?.remaining, q?.warningLevel ('approaching' | 'critical' | null)
+// q?.policy ('hard' | 'metered')
+// TBP-275 metered fields (present when policy === 'metered'):
+//   q?.unitAmount      per-unit price (whole currency units, e.g. 0.01)
+//   q?.currency        ISO currency of unitAmount / overageEstimate
+//   q?.overageEstimate estimated overage cost this period
+//   q?.overcap         true once billing engaged (past the allotment; limit 0 ⇒ used > 0)
 ```
 
 #### `<BridgePaywall />`

@@ -40,6 +40,10 @@
           Subscription
         </a>
 
+        <a href="/usage-metered" class="nav-link">
+          Metered Usage
+        </a>
+
         <a href="/billing-lifecycle" class="nav-link">
           Billing Lifecycle
         </a>

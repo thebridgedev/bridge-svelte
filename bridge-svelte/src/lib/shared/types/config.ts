@@ -16,5 +16,9 @@ export interface BridgeConfig extends BridgeAuthConfig {
     /** Route to redirect to when a Stripe checkout confirmation fails.
      *  Defaults to '/payment-error'. */
     paymentErrorRoute?: string;
+    /** Route where your plan/billing management page lives — the default
+     *  destination of the Upgrade/Manage CTA in <BridgeQuotaBanner> and
+     *  <BridgeBillingNotice>. Defaults to '/billing'. */
+    manageRoute?: string;
   };
 }

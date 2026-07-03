@@ -27,6 +27,7 @@
     type QuotaSnapshot,
   } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
+  import { getConfig } from '../../stores/config.store.js';
 
   type Chassis = 'rail';
   type Severity = 'warn' | 'critical';
@@ -43,6 +44,9 @@
     class?: string;
     /** Override the default Upgrade CTA click handler. */
     onActionClick?: (snap: QuotaSnapshot) => void;
+    /** CTA destination for this instance. Overrides `billing.manageRoute`
+     *  config; `onActionClick` takes precedence over both. */
+    actionHref?: string;
     /**
      * Optional display label override. Defaults to the snapshot's `.label`
      * (raw metric key for US-11; the framework wrapper will eventually
@@ -56,6 +60,7 @@
     chassis = 'rail',
     class: className = '',
     onActionClick,
+    actionHref,
     label,
   }: Props = $props();
 
@@ -223,8 +228,16 @@
       onActionClick(snapshot);
       return;
     }
+    // Destination priority: `actionHref` prop → `billing.manageRoute` config
+    // → '/billing'.
     if (typeof window !== 'undefined') {
-      window.location.href = '/billing';
+      let manageRoute: string | undefined;
+      try {
+        manageRoute = getConfig().billing?.manageRoute;
+      } catch {
+        // Config not initialized — fall through to the default.
+      }
+      window.location.href = actionHref ?? manageRoute ?? '/billing';
     }
   }
 </script>

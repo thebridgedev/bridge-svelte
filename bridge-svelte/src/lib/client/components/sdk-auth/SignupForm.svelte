@@ -15,6 +15,12 @@
     loginHref?: string | undefined;
     /** Heading text. Pass `null`/`''` to render no heading and use your own page title. */
     heading?: string | null;
+    /** TBP-36 — preselected plan applied at tenant creation (from ?signupPlan= links). */
+    plan?: string | null;
+    /** TBP-36 — currency of the preselected plan's price offer. */
+    currency?: string | null;
+    /** TBP-36 — recurrence interval of the preselected plan's price offer. */
+    recurrenceInterval?: string | null;
     footer?: Snippet;
   }
 
@@ -24,6 +30,9 @@
     showLoginLink = true,
     loginHref = undefined,
     heading = 'Create your account',
+    plan = null,
+    currency = null,
+    recurrenceInterval = null,
     footer,
     class: className,
     style,
@@ -44,7 +53,11 @@
     error = null;
     loading = true;
     try {
-      await getBridgeAuth().signup(email, firstName, lastName);
+      await getBridgeAuth().signup(email, firstName, lastName, plan ? {
+        plan,
+        currency: currency ?? undefined,
+        recurrenceInterval: recurrenceInterval ?? undefined,
+      } : undefined);
       success = true;
       onSignup?.();
     } catch (err: any) {

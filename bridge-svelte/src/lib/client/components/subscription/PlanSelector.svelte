@@ -23,6 +23,11 @@
     onSelect?: (detail: { plan: Plan; price: PriceOfferSdk }) => void;
     /** Custom card renderer. `prices` is the plan's full price list; `interval` is the active tab. */
     planCard?: Snippet<[{ plan: Plan; prices: PriceOfferSdk[]; isCurrent: boolean; interval: BillingInterval; onPick: (price: PriceOfferSdk) => void }]>;
+    /** Replaces the built-in description paragraph of the default card —
+     *  custom copy or markup per plan without reimplementing the whole card. */
+    planDescription?: Snippet<[{ plan: Plan; isCurrent: boolean }]>;
+    /** Rendered at the bottom of the default card, after the price buttons. */
+    planFooter?: Snippet<[{ plan: Plan; isCurrent: boolean }]>;
     emptyState?: Snippet;
     loadingState?: Snippet;
   }
@@ -33,6 +38,8 @@
     defaultInterval = 'year',
     onSelect,
     planCard,
+    planDescription,
+    planFooter,
     emptyState,
     loadingState,
     class: className,
@@ -306,7 +313,9 @@
                 {/if}
               </div>
 
-              {#if plan.description}
+              {#if planDescription}
+                {@render planDescription({ plan, isCurrent })}
+              {:else if plan.description}
                 <p class="bridge-plan-description">{plan.description}</p>
               {/if}
 
@@ -341,6 +350,10 @@
                   </p>
                 {/if}
               </div>
+
+              {#if planFooter}
+                {@render planFooter({ plan, isCurrent })}
+              {/if}
             </div>
           {/if}
         {/each}

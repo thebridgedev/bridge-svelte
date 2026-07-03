@@ -55,18 +55,15 @@
   "peerDependencies": {
     "svelte": "^5.0.0",
     "@sveltejs/kit": "^2.0.0",
-    "@simplewebauthn/browser": ">=10.0.0",
     "@stripe/stripe-js": ">=4.0.0"
   },
   "peerDependenciesMeta": {
-    "@simplewebauthn/browser": {
-      "optional": true
-    },
     "@stripe/stripe-js": {
       "optional": true
     }
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^13.0.0",
     "@nebulr-group/bridge-auth-core": "0.4.0-dev.20260702100544.converge"
   },
   "devDependencies": {

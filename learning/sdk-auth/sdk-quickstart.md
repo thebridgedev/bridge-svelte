@@ -15,7 +15,14 @@ Optional peer dependencies (install only if you need the feature):
 | Package | When needed |
 |---------|-------------|
 | `@stripe/stripe-js` | Paid subscription plans (Stripe Checkout) |
-| `@simplewebauthn/browser` | Passkey (WebAuthn) authentication |
+
+Passkey (WebAuthn) support (`@simplewebauthn/browser`) is bundled with the plugin — no extra install.
+
+Before wiring the routes, enable the auth methods you want on your Bridge app (password, magic link, passkeys, SSO providers) — components only render a method's UI when the app has it enabled:
+
+```bash
+bridge app update --magic-link-enabled true --passkeys-enabled true
+```
 
 ## 2. Configuration (`+layout.ts`)
 

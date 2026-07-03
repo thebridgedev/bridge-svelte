@@ -76,6 +76,16 @@ The unified billing banner. Renders **nothing** while the subscription is health
 | `mode` | `'soft' \| 'hard'` | `'soft'` | `soft` always renders inline; `hard` renders a full-screen lockscreen when the workspace is billing-locked |
 | `class` | `string` | `''` | Class applied to the root element |
 | `onActionClick` | `(state) => void` | — | Override the default CTA click handler |
+| `actionHref` | `string` | — | CTA destination for this instance (see routing note below) |
+
+The CTA navigates to, in priority order: `onActionClick` → `actionHref` prop → the `billing.manageRoute` config value → `/billing`. If your plan/billing page lives elsewhere (e.g. `/subscription`), set it once in config:
+
+```ts
+const config: BridgeConfig = {
+  appId: '...',
+  billing: { manageRoute: '/subscription' },
+};
+```
 
 States it covers: trial active, trial ending soon, past due, cancellation scheduled, canceled, dunning retry scheduled, final retry, exhausted (locked). Each state has two role variants: workspace admins get an action CTA ("Update card", "Upgrade"); members get an informational variant pointing them to their workspace owner.
 
@@ -102,6 +112,7 @@ Updates live on `quota.updated` pushes.
 | `label` | `string` | metric key | Humanized display label |
 | `class` | `string` | `''` | Class applied to the root element |
 | `onActionClick` | `(snap) => void` | — | Override the default Upgrade CTA handler (hard caps only) |
+| `actionHref` | `string` | — | Upgrade CTA destination for this instance; falls back to `billing.manageRoute` config, then `/billing` |
 
 For a fully custom quota UI, read the underlying snapshot directly:
 
@@ -224,6 +235,8 @@ Drop `<PlanSelector>` onto your subscription page. It loads plans and status aut
 | `cancelRedirect` | `string` | `'/subscription'` | In-app route to land on if the user cancels checkout |
 | `onSelect` | `({ plan, price }) => void` | — | Called after a free plan is selected or a plan change completes |
 | `planCard` | `Snippet<[{ plan, prices, isCurrent, onPick }]>` | — | Override the default plan card layout |
+| `planDescription` | `Snippet<[{ plan, isCurrent }]>` | — | Replace just the description inside the default card (custom copy/markup per plan without rebuilding the card) |
+| `planFooter` | `Snippet<[{ plan, isCurrent }]>` | — | Rendered at the bottom of the default card, after the price buttons |
 | `emptyState` | `Snippet` | — | Override the "no plans" message |
 | `loadingState` | `Snippet` | — | Override the loading spinner |
 
@@ -249,6 +262,19 @@ All standard `HTMLAttributes<HTMLDivElement>` props (`class`, `style`, `data-*`,
         </button>
       {/each}
     </div>
+  {/snippet}
+</PlanSelector>
+```
+
+**Custom description or footer only** — when the default card layout is fine and you just want your own copy or extra content per plan:
+
+```svelte
+<PlanSelector>
+  {#snippet planDescription({ plan })}
+    <p class="my-plan-copy">{plan.key === 'PRO' ? 'Everything in Team, plus…' : plan.description}</p>
+  {/snippet}
+  {#snippet planFooter({ plan, isCurrent })}
+    {#if !isCurrent}<a href="/compare">Compare plans</a>{/if}
   {/snippet}
 </PlanSelector>
 ```

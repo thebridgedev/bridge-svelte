@@ -24,7 +24,6 @@ import { writable, type Writable } from 'svelte/store';
 // ── Test fixtures: in-memory tokenStore + stub BridgeAuth ───────────────────
 
 type TokenSet = { accessToken: string | null; refreshToken?: string | null } | null;
-let _tokenStore: Writable<TokenSet>;
 
 function makeJwt(claims: Record<string, unknown>): string {
   // Browser-compatible base64url (no padding). atob lives in Node 18+ and in the
@@ -44,12 +43,15 @@ function makeJwt(claims: Record<string, unknown>): string {
 
 // Mock the bridge-instance module so we don't bring up real BridgeAuth.
 // `tokenStore` is a real svelte writable so we can push JWT-shaped values
-// during the test; the rest is a safe stub.
-vi.mock('../core/bridge-instance.js', () => {
+// during the test; the rest is a safe stub. The store must be created INSIDE
+// the hoisted factory: bridge.ts derives from `tokenStore` at module-eval
+// time (during import), before any test-body binding would initialize.
+vi.mock('../core/bridge-instance.js', async () => {
+  const { writable } = await import('svelte/store');
   return {
-    get tokenStore() {
-      return _tokenStore;
-    },
+    tokenStore: writable(null),
+    subscriptionStore: writable({ status: null, plans: null, loading: false, error: null }),
+    loadSubscription: async () => {},
     getBridgeAuth: () => ({
       getApiContext: () => ({ appId: 'app-1', accessToken: null }),
       refreshTokens: async () => {},
@@ -92,7 +94,7 @@ vi.mock('@nebulr-group/bridge-auth-core', async (importOriginal) => {
 // bootstrap (which fires `void fetch(...)`) doesn't write to a real network.
 // Bootstrap swallows the resulting non-ok response, so a 500 is fine.
 beforeEach(() => {
-  _tokenStore = writable<TokenSet>(null);
+  _tokenStore.set(null);
   vi.stubGlobal(
     'fetch',
     vi.fn(async () =>
@@ -107,6 +109,10 @@ beforeEach(() => {
 
 import { createBridgeFlags } from './bootstrap.js';
 import { AuthAttributeProvider, BillingAttributeProvider } from '@nebulr-group/bridge-auth-core';
+import { tokenStore as _mockedTokenStore } from '../core/bridge-instance.js';
+
+// The mocked writable, typed for test-side .set() pushes.
+const _tokenStore = _mockedTokenStore as unknown as Writable<TokenSet>;
 
 // After the TBP-Live-Channel-Unification hoist, the realtime client lives
 // in `core/bridge-runtime.ts` and is owned by `<BridgeBootstrap />`. Tests

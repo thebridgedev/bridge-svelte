@@ -36,6 +36,19 @@ For almost everything you build, read the signed-in user from `bridge.user` — 
 
 It's populated from the live channel's session snapshot on connect and every reconnect, so it's always current — see [How the user token is updated](/auth/user-token/object-updates/).
 
+## A one-off imperative read: `getCurrentUser()`
+
+For a single read outside a reactive context — a plain function, an event handler, an analytics call — `bridge.user` is overkill if you don't want to set up a subscription just to read a value once. `getBridgeAuth().getCurrentUser()` reads the same claims synchronously, straight off the current access token, no subscription required:
+
+```ts
+import { getBridgeAuth } from '@nebulr-group/bridge-svelte';
+
+const user = getBridgeAuth().getCurrentUser();
+// { id, email?, role?, tenantId?, plan? } | null
+```
+
+It returns `null` when there's no valid token. Unlike `bridge.user`, it also includes `plan` — the tenant's plan key — so it's a reasonable choice when you need that alongside identity in one synchronous call. It won't update on its own the way `bridge.user` does — call it again to get a fresh read.
+
 ## Richer profile fields: `profileStore`
 
 `bridge.user` is intentionally minimal. For display fields like full name, avatar-worthy details, or tenant name/logo, use `profileStore`:

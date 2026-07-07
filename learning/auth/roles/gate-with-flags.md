@@ -1,6 +1,6 @@
 # Gate features by role or privilege
 
-Role and privilege are both available as feature flag targeting attributes automatically, decoded from the JWT — no wiring, no context you have to pass by hand.
+Role and privilege are both available as feature flag targeting attributes automatically, decoded from the JWT — no wiring, no context you have to pass by hand. For more on flags and rules in general, see [How flags work](/feature-flags/how-it-works/) and [Write targeting rules](/feature-flags/targeting/).
 
 | Attribute | Value | Example |
 |-----------|-------|---------|

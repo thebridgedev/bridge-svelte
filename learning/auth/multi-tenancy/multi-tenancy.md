@@ -1,6 +1,10 @@
 # Multi-tenancy
 
-Every Bridge user belongs to one or more **workspaces** (tenants). The active workspace scopes everything the SDK sees — team members, subscription, quotas, entitlements, feature-flag attributes, and branding all resolve against it. A user with access to several workspaces can switch between them, and the whole `bridge` surface re-snapshots for the new tenant.
+Bridge has first-class multi-tenant architecture: a user can belong to more than one **tenant** (also called a **workspace** — Bridge and these docs use both words for the same thing).
+
+The same login credentials get a user into every tenant they belong to, but everything tenant-scoped is configured *separately* per tenant — role, plan, entitlements, quotas, and branding can all differ. The same person can be `ADMIN` in one workspace and `OWNER` in another, signing in with the exact same email and password either way.
+
+`bridge.user.role` (see [Getting the user token](/auth/user-token/getting-the-token/)) always reflects that person's role in whichever tenant is currently active — switch tenants and it updates to the role they hold there. Roles are assigned per tenant too — see [Assign roles to users](/auth/roles/assign-roles/).
 
 ## The active tenant
 
@@ -20,9 +24,13 @@ The current workspace is exposed live on the unified `bridge` surface:
 
 `bridge.tenant.*` is kept current over the live channel — when an admin renames the workspace or changes its plan, the values update without a reload.
 
-## WorkspaceSelector
+## Selecting a tenant after login
 
-A drop-in switcher that lists the workspaces the signed-in user can access and switches the active one. On switch, the SDK re-issues a session for the chosen tenant and the whole `bridge` surface re-snapshots.
+When a user's credentials map to more than one tenant, `LoginForm` surfaces a `TenantSelector` step automatically so they pick which workspace to enter. You don't wire anything — it appears when `authState` becomes `'tenant-selection'`. See [Auth states](/auth/user-token/auth-states/) for the full list of states.
+
+## Switching tenants
+
+A drop-in `WorkspaceSelector` component lists the workspaces the signed-in user can access and switches the active one. On switch, the SDK re-issues a session for the chosen tenant and the whole `bridge` surface re-snapshots — including that person's role, which may not be the same in the new tenant as it was in the last one.
 
 **Props:**
 
@@ -57,10 +65,6 @@ A drop-in switcher that lists the workspaces the signed-in user can access and s
   {/snippet}
 </WorkspaceSelector>
 ```
-
-## TenantSelector at login
-
-When a user's credentials map to more than one tenant, `LoginForm` surfaces a `TenantSelector` step automatically so they pick which workspace to enter. You don't wire anything — it appears when `authState` becomes `'tenant-selection'`. See [Auth states](/auth/user-token/auth-states/) for the full list of states.
 
 ## Isolation
 

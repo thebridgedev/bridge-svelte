@@ -26,11 +26,13 @@ The current workspace is exposed live on the unified `bridge` surface:
 
 ## Selecting a tenant after login
 
-When a user's credentials map to more than one tenant, `LoginForm` surfaces a `TenantSelector` step automatically so they pick which workspace to enter. You don't wire anything — it appears when `authState` becomes `'tenant-selection'`. See [Auth states](/auth/user-token/auth-states/) for the full list of states.
+When a user has more than one **enabled** membership in an **active** tenant, `LoginForm` surfaces a `TenantSelector` step automatically so they pick which workspace to enter. You don't wire anything — it appears when `authState` becomes `'tenant-selection'`. See [Auth states](/auth/user-token/auth-states/) for the full list of states.
+
+Both conditions matter: a membership that's been disabled, or a tenant that isn't active (for example, suspended for non-payment), doesn't count and won't show up as an option — even though the underlying tenant-user record still exists. A user with memberships in three tenants but only one enabled-and-active goes straight in, no selector shown.
 
 ## Switching tenants
 
-A drop-in `WorkspaceSelector` component lists the workspaces the signed-in user can access and switches the active one. On switch, the SDK re-issues a session for the chosen tenant and the whole `bridge` surface re-snapshots — including that person's role, which may not be the same in the new tenant as it was in the last one.
+A drop-in `WorkspaceSelector` component lists the workspaces the signed-in user can access and switches the active one — the same enabled-and-active filter from tenant selection at login applies here too. On switch, the SDK re-issues a session for the chosen tenant and the whole `bridge` surface re-snapshots — including that person's role, which may not be the same in the new tenant as it was in the last one.
 
 **Props:**
 

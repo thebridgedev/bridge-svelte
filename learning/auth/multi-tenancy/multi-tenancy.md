@@ -60,7 +60,7 @@ A drop-in switcher that lists the workspaces the signed-in user can access and s
 
 ## TenantSelector at login
 
-When a user's credentials map to more than one tenant, `LoginForm` surfaces a `TenantSelector` step automatically so they pick which workspace to enter. You don't wire anything — it appears when `authState` becomes `'tenant-selection-required'`.
+When a user's credentials map to more than one tenant, `LoginForm` surfaces a `TenantSelector` step automatically so they pick which workspace to enter. You don't wire anything — it appears when `authState` becomes `'tenant-selection'`. See [Auth states](/auth/user-token/auth-states/) for the full list of states.
 
 ## Isolation
 

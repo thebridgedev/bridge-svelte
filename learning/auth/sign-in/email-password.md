@@ -1,49 +1,18 @@
 ---
 title: Email & password
-description: Bridge email & password login for Svelte.
+description: Enable email & password sign-in.
 sidebar:
   label: Svelte
 ---
 
 # Email & password
 
-A complete login form with email/password fields. Handles multi-step auth flows inline: forgot password, magic link, passkey login, MFA challenge, MFA setup, and tenant selection all appear automatically within the same component when the auth state requires them.
+Sign in with an email address and password. This is Bridge's default sign-in method.
 
-**Usage:**
+## Enable it
 
-```svelte
-<script lang="ts">
-  import { goto } from '$app/navigation';
-  import { LoginForm } from '@nebulr-group/bridge-svelte';
-</script>
+Enabled by default — there's nothing to turn on. It's always available alongside whatever other sign-in methods you enable.
 
-<LoginForm
-  showSignupLink
-  signupHref="/auth/signup"
-  showForgotPassword
-  showMagicLink
-  showPasskeys
-  onLogin={() => goto('/dashboard')}
-  onError={(err) => console.error(err)}
-/>
-```
+## UI components
 
-**Props:**
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `showSignupLink` | `boolean` | `false` | Show a link to the signup page |
-| `signupHref` | `string` | `'/signup'` | Signup page URL |
-| `showForgotPassword` | `boolean` | `true` | Show the forgot password link |
-| `forgotPasswordHref` | `string` | `undefined` | External forgot password URL. If set, navigates there instead of showing the inline form |
-| `showMagicLink` | `boolean` | `true` | Show the magic link login option |
-| `showPasskeys` | `boolean` | `false` | Show the passkey login button |
-| `onLogin` | `() => void` | — | Called after successful login (all steps complete) |
-| `onError` | `(error: Error) => void` | — | Called on any login error |
-| `onSsoClick` | `(connectionType: string) => void` | — | Called when an SSO button is clicked |
-| `heading` | `string` | `''` | Custom heading text |
-| `ssoConnections` | `FederationConnection[]` | `[]` | SSO connections to display. Auto-derived from app config if not set |
-| `ssoMode` | `'redirect' \| 'popup'` | `'redirect'` | SSO kickoff strategy for the built-in buttons. See [SSO mode](#sso-mode-redirect-vs-popup). Ignored when `onSsoClick` is provided. |
-| `footer` | `Snippet` | — | Custom footer content (Svelte 5 snippet) |
-
-**Auth state transitions:** After a successful email/password login, the `LoginForm` checks the resulting auth state. If MFA is required, it automatically shows `MfaChallenge`. If MFA setup is required, it shows `MfaSetup`. If tenant selection is needed (multi-tenant user), it shows `TenantSelector`. The `onLogin` callback fires only after all steps are complete and the user is fully authenticated.
+A ready-made login form handles this for you — see [Email & password](/auth/ui/email-password/) in UI components.

@@ -1,60 +1,29 @@
+---
+title: MFA / 2FA
+description: Enable MFA / 2FA sign-in.
+sidebar:
+  label: Svelte
+---
+
 # MFA / 2FA
 
-## MfaChallenge
+Require a second factor — an authenticator app code, with recovery codes as backup — at login.
 
-Prompts the user to enter an MFA code. Appears automatically inside `LoginForm` when `authState` transitions to `'mfa-required'`. Can also be used standalone.
+## Enable it
 
-**Props:**
+- **CLI:**
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `onVerified` | `() => void` | — | Called after successful MFA verification |
-| `onError` | `(error: Error) => void` | — | Called on verification error |
-| `showRecoveryOption` | `boolean` | `true` | Show the recovery code toggle |
+  ```bash
+  bridge app update --mfa-enabled true
+  ```
 
-The component supports two modes:
-1. **Auth code** — the user enters a 6-digit code from their authenticator app.
-2. **Recovery code** — the user enters a backup recovery code.
+- **Control Center:** [Auth → Login](https://app.thebridge.dev/auth?tab=login)
+- **MCP:** not yet available — coming soon.
 
-**Standalone usage:**
+## What you need
 
-```svelte
-<script lang="ts">
-  import { MfaChallenge, authState } from '@nebulr-group/bridge-svelte';
-  import { goto } from '$app/navigation';
-</script>
+Nothing extra. Bridge issues and verifies the authenticator secret and recovery codes itself.
 
-{#if $authState === 'mfa-required'}
-  <MfaChallenge
-    onVerified={() => goto('/dashboard')}
-    onError={(err) => console.error(err)}
-  />
-{/if}
-```
+## UI components
 
-## MfaSetup
-
-Guides the user through a 3-step MFA setup flow: enter phone number, verify code, save backup codes. Appears automatically inside `LoginForm` when `authState` transitions to `'mfa-setup-required'`.
-
-**Props:**
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `onComplete` | `() => void` | — | Called after MFA setup is complete |
-| `onError` | `(error: Error) => void` | — | Called on setup error |
-
-**Standalone usage:**
-
-```svelte
-<script lang="ts">
-  import { MfaSetup, authState } from '@nebulr-group/bridge-svelte';
-  import { goto } from '$app/navigation';
-</script>
-
-{#if $authState === 'mfa-setup-required'}
-  <MfaSetup
-    onComplete={() => goto('/dashboard')}
-    onError={(err) => console.error(err)}
-  />
-{/if}
-```
+Ready-made components handle the challenge and setup flows — see [MFA / 2FA](/auth/ui/mfa/) in UI components.

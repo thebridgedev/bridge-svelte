@@ -1,28 +1,29 @@
+---
+title: Magic link
+description: Enable magic link sign-in.
+sidebar:
+  label: Svelte
+---
+
 # Magic link
 
-Standalone magic link request form. When a user clicks a magic link from their email, the token is in the URL and Bridge processes it automatically during bootstrap.
+Let users sign in via a one-time link emailed to them — no password.
 
-**Props:**
+## Enable it
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `onSent` | `() => void` | — | Called after the magic link email is sent |
-| `onError` | `(error: Error) => void` | — | Called on error |
-| `loginHref` | `string` | `'/login'` | Link back to the login page |
+- **CLI:**
 
-**Usage:**
+  ```bash
+  bridge app update --magic-link-enabled true
+  ```
 
-```svelte
-<!-- src/routes/auth/magic-link/+page.svelte -->
-<script lang="ts">
-  import { MagicLink } from '@nebulr-group/bridge-svelte';
-</script>
+- **Control Center:** [Auth → Login](https://app.thebridge.dev/auth?tab=login)
+- **MCP:** not yet available — coming soon.
 
-<MagicLink
-  loginHref="/auth/login"
-  onSent={() => console.log('Check your email!')}
-  onError={(err) => console.error(err)}
-/>
-```
+## What you need
 
-When the user clicks the link in their email, they are brought to your app. The token URL parameter is auto-handled by Bridge bootstrap.
+Nothing extra to turn it on. Magic links are delivered by email, so if you haven't already configured an email/communication provider, do that first with `bridge setup communication`.
+
+## UI components
+
+A ready-made request form handles this — see [Magic link](/auth/ui/magic-link/) in UI components.

@@ -8,34 +8,31 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 # Configurations
 
-The config object you pass to `bridgeBootstrap`:
+The config object you pass to `bridgeBootstrap` — every option in one place:
+
+| Option | Type | Default | Description |
+|--------|------|---------|--------------|
+| `appId` | `string` | — (required) | Your Bridge application ID |
+| `apiBaseUrl` | `string` | `'https://api.thebridge.dev'` | Base URL for the Bridge API. All API endpoints are derived from this |
+| `hostedUrl` | `string` | `'https://auth.thebridge.dev'` | Base URL for Bridge's hosted UI (login page, plan selection, etc.) |
+| `callbackUrl` | `string` | `${origin}/auth/oauth-callback` | Where the login flow redirects back to after a successful login |
+| `defaultRedirectRoute` | `string` | `'/'` | Route to redirect to after login |
+| `loginRoute` | `string` | `'/login'` | Route to redirect to when authentication fails |
+| `signupRoute` | `string` | — | Route where your signup page lives; `LoginForm` links to it when set |
+| `billing.paywallRoute` | `string` | — | Route to redirect to when the tenant has no plan selected |
+| `billing.paymentErrorRoute` | `string` | `'/payment-error'` | Route to redirect to when a Stripe checkout confirmation fails |
+| `storage` | `TokenStorage` | `localStorage` (browser) / memory (SSR) | Token storage adapter — implement `get`/`set`/`remove` to bring your own |
+| `debug` | `boolean` | `false` | Enable debug logging |
+
+The sections below cover the ones worth a closer look — everything else is used exactly as it reads in the table above.
 
 ## Allowed URLs
 
-```typescript
-interface BridgeConfig {
-  /** Base URL for the Bridge API. All endpoints are derived from this.
-   *  @default 'https://api.thebridge.dev' */
-  apiBaseUrl?: string;
-
-  /** Base URL for the Bridge hosted UI (login page, plan selection, etc.).
-   *  @default 'https://auth.thebridge.dev' */
-  hostedUrl?: string;
-}
-```
+`apiBaseUrl` and `hostedUrl` are the two you're most likely to override — for example, pointing at a region-specific or self-hosted Bridge deployment instead of the defaults above.
 
 ## Callback URLs
 
-```typescript
-interface BridgeConfig {
-  /** Where the login flow redirects back to.
-   *  @default `${window.location.origin}/auth/oauth-callback` */
-  callbackUrl?: string;
-
-  /** Route to redirect to after login. @default '/' */
-  defaultRedirectRoute?: string;
-}
-```
+`callbackUrl` and `defaultRedirectRoute` control what happens right after login: `callbackUrl` is where the OAuth/SSO flow itself lands, `defaultRedirectRoute` is where the user ends up once that's done.
 
 ## Other configs
 

@@ -17,14 +17,24 @@ Let users sign in with their Google account.
   bridge setup sso --provider google --client-id <id> --client-secret <secret>
   ```
 
-  Saves your OAuth credentials and turns the connection on. The command returns a `callbackUrl` — register it as an authorized redirect URI on the OAuth client in your Google Cloud Console.
-
-- **Control Center:** [Auth → Login](https://app.thebridge.dev/auth?tab=login)
+- **Control Center:** [Auth → Login](https://app.thebridge.dev/auth?tab=login) → **Google SSO** → **Configuration**
 - **MCP:** not yet available — coming soon.
 
-## What you need
+Either path saves the credentials and turns the connection on. You need a Google OAuth client first — see below.
 
-A Google OAuth 2.0 client ID and secret. Bridge derives the redirect URI for you — you only need to register it back with Google.
+## Set up the Google side
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create (or open) an OAuth 2.0 **Web application** client. (The Control Center's Configuration dialog has a **Find your keys here** shortcut straight to this page.)
+2. Under **Authorised JavaScript origins**, add Bridge's hosted auth domain: `https://auth.thebridge.dev` (or your own [`hostedUrl`](/auth/config/allowed-urls/), if you've customized it).
+3. Under **Authorised redirect URIs**, add:
+
+   ```
+   https://api.thebridge.dev/auth/federated/google/return
+   ```
+
+   This is a fixed URL shared by every app on Bridge — it isn't specific to yours, and it's the same value the Control Center's Configuration dialog shows you. Always use whatever value is shown there if it differs from this.
+
+4. Copy the **Client ID** and **Client secret** Google gives you back into Bridge — via the CLI command above, or the Control Center dialog.
 
 ## UI components
 

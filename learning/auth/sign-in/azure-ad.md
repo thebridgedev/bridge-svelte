@@ -17,14 +17,24 @@ Let users sign in with their Microsoft / Azure AD account.
   bridge setup sso --provider azure --client-id <id> --client-secret <secret>
   ```
 
-  Saves your OAuth credentials and turns the connection on. The command returns a `callbackUrl` — register it as a redirect URI on the app registration in your Azure portal.
-
-- **Control Center:** [Auth → Login](https://app.thebridge.dev/auth?tab=login)
+- **Control Center:** [Auth → Login](https://app.thebridge.dev/auth?tab=login) → **Azure AD SSO** → **Configuration**
 - **MCP:** not yet available — coming soon.
 
-## What you need
+Either path saves the credentials and turns the connection on. You need an Azure AD app registration first — see below.
 
-An Azure AD app registration's client ID and secret. Bridge derives the redirect URI for you — you only need to register it back with Azure.
+## Set up the Azure side
+
+1. In the [Azure Portal](https://portal.azure.com/), create (or open) an **App registration**.
+2. Under **Authentication → Redirect URIs**, add a **Web** platform redirect URI:
+
+   ```
+   https://api.thebridge.dev/auth/federated/ms-azure-ad/return
+   ```
+
+   This is a fixed URL shared by every app on Bridge — it isn't specific to yours, and it's the same value the Control Center's Configuration dialog shows you. Always use whatever value is shown there if it differs from this.
+
+3. Under **Certificates & secrets**, create a new client secret.
+4. Copy the **Application (client) ID** and the secret **value** back into Bridge — via the CLI command above, or the Control Center dialog.
 
 ## UI components
 

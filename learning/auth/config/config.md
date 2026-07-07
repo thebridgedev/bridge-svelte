@@ -1,14 +1,45 @@
 ---
-title: Other configuration
-description: Other BridgeConfig options for Svelte.
+title: Configurations
+description: The BridgeConfig options you pass to bridgeBootstrap.
 sidebar:
   label: Svelte
 ---
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-# Other configuration
+# Configurations
 
-## bridgeBootstrap()
+The config object you pass to `bridgeBootstrap`:
+
+## Allowed URLs
+
+```typescript
+interface BridgeConfig {
+  /** Base URL for the Bridge API. All endpoints are derived from this.
+   *  @default 'https://api.thebridge.dev' */
+  apiBaseUrl?: string;
+
+  /** Base URL for the Bridge hosted UI (login page, plan selection, etc.).
+   *  @default 'https://auth.thebridge.dev' */
+  hostedUrl?: string;
+}
+```
+
+## Callback URLs
+
+```typescript
+interface BridgeConfig {
+  /** Where the login flow redirects back to.
+   *  @default `${window.location.origin}/auth/oauth-callback` */
+  callbackUrl?: string;
+
+  /** Route to redirect to after login. @default '/' */
+  defaultRedirectRoute?: string;
+}
+```
+
+## Other configs
+
+### bridgeBootstrap()
 
 Call it from your root `+layout.ts` load function:
 
@@ -52,7 +83,7 @@ bridgeBootstrap(
 
 Bootstrap is idempotent — calling it again after it has completed is a no-op.
 
-## Passing values via .env
+### Passing values via .env
 
 Keep environment-specific values in a `.env` file instead of hardcoding them, and read them with Vite's `import.meta.env` when you build the config. The `VITE_` prefix is required for values to reach the browser; the SDK does not read environment variables automatically.
 
@@ -80,7 +111,7 @@ const config: BridgeConfig = {
 </TabItem>
 </Tabs>
 
-## Reading the resolved config
+### Reading the resolved config
 
 Read the active config at runtime via the `readonlyConfig` store:
 

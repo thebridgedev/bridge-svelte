@@ -86,28 +86,6 @@ const config: BridgeConfig = {
 };
 ```
 
-## Configs managed in Control Center
-
-Some settings aren't passed in code at all — they're set once per app, and Bridge enforces them server-side:
-
-| Setting | What it does |
-|---------|---------------|
-| Redirect URIs | The allowlist of callback URLs Bridge is allowed to redirect to. Any `callbackUrl` you pass to `bridgeBootstrap` must already be on this list. |
-| Allowed origins | The CORS allowlist — origins permitted to call the Bridge API directly from the browser. |
-| Default callback URL | Used whenever your app doesn't pass a `callbackUrl` in code — see [Callback URL](#callback-url). |
-
-- **CLI:**
-
-  ```bash
-  bridge app update \
-    --redirect-uris "https://app.example.com/oauth-callback,https://admin.example.com/oauth-callback" \
-    --allowed-origins "https://app.example.com,https://admin.example.com" \
-    --default-callback-uri "https://app.example.com/oauth-callback"
-  ```
-
-- **Control Center:** the same settings, managed from your app's settings.
-- **MCP:** not yet available — coming soon.
-
 ## All config options
 
 | Option | Type | Default | Description |
@@ -149,3 +127,25 @@ const config: BridgeConfig = {
 
 </TabItem>
 </Tabs>
+
+## Configs managed in Control Center
+
+Some settings aren't passed in code at all — they're set once per app, and Bridge enforces them server-side:
+
+| Setting | What it does |
+|---------|---------------|
+| Redirect URIs | The allowlist of callback URLs Bridge is allowed to redirect to. Any `callbackUrl` you pass to `bridgeBootstrap` must already be on this list. |
+| Allowed origins | The CORS allowlist — origins permitted to call the Bridge API directly from the browser. |
+| Default callback URL | Used whenever your app doesn't pass a `callbackUrl` in code — see [Callback URL](#callback-url). |
+
+- **CLI:**
+
+  ```bash
+  bridge app update \
+    --redirect-uris "https://app.example.com/oauth-callback,https://admin.example.com/oauth-callback" \
+    --allowed-origins "https://app.example.com,https://admin.example.com" \
+    --default-callback-uri "https://app.example.com/oauth-callback"
+  ```
+
+- **Control Center:** the same settings, managed from your app's settings.
+- **MCP:** not yet available — coming soon.

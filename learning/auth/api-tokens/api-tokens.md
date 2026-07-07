@@ -1,40 +1,25 @@
 # API tokens
 
-API tokens give scripts, CI, and backend services programmatic access to your workspace without a user session. Each token carries an explicit set of **privileges** (scopes) and is bound to the workspace it was created in, so a leaked token can never reach beyond its grant.
+Bridge lets you offer your own users a self-service way to create API tokens for programmatic access to your API — the same idea as a GitHub or Stripe personal access token, without you having to build token issuance, storage, or revocation yourself.
 
-## ApiTokenManagement
+## Use cases
 
-A drop-in component for managing API tokens. Renders a complete token management UI.
+- **CI/CD and scripts** — a user wires a token into a pipeline or cron job to call your API unattended.
+- **Personal automation** — a power user scripts against your API for their own workflows (exports, syncs, bulk edits).
+- **Third-party integrations** — a user hands a token to a tool they use (a BI dashboard, a Zapier-style integration) so it can read or write on their behalf without sharing their password.
 
-**Usage:**
+None of these need a real login session — that's exactly the gap API tokens fill.
 
-```svelte
-<!-- src/routes/settings/api-tokens/+page.svelte -->
-<script lang="ts">
-  import { ApiTokenManagement } from '@nebulr-group/bridge-svelte';
-</script>
+## How it works
 
-<ApiTokenManagement class="my-token-panel" />
-```
-
-The component provides:
-- List of existing API tokens
-- Create new tokens with a privilege picker (searchable)
-- Revoke tokens with confirmation
-- Display a new token value once after creation (show/hide/copy)
-- Token expiry date display
-
-No additional props are required. Standard `HTMLAttributes<HTMLDivElement>` props (`class`, `style`, etc.) are forwarded to the root element.
-
-## Scopes & the one-time secret
-
-When you create a token you choose its **privileges** from the searchable picker — the same privilege keys your roles use. A token can never do more than the privileges you grant it.
-
-The full token value is shown **exactly once**, immediately after creation. Bridge stores only a hash, so it can never display the secret again — copy it into your secret manager before dismissing the dialog. If it's lost, revoke it and issue a new one.
+- **Privilege-scoped** — a token is created with an explicit set of privileges (the same privilege keys your [roles](/auth/roles/how-it-works/) use), picked from a searchable list. It can never do more than what it's granted.
+- **Workspace-scoped** — a token is bound to the tenant it was created in and can't be replayed against another one.
+- **Hash-at-rest, shown once** — Bridge stores only a salted hash. The full token value is shown exactly once, right after creation — if it's lost, the user revokes it and issues a new one.
+- **Revocation is immediate** — any caller still presenting a revoked token gets a `401` on its very next request.
 
 ## Using a token from a server
 
-Send the token as a bearer credential on the `Authorization` header:
+Send it as a bearer credential:
 
 ```ts
 const res = await fetch('https://api.example.com/work', {
@@ -42,14 +27,8 @@ const res = await fetch('https://api.example.com/work', {
 });
 ```
 
-Backend SDKs (e.g. `@nebulr-group/bridge-nestjs`) validate the token, resolve its workspace + privileges, and expose them to your guards — no extra round-trip.
+Backend SDKs (e.g. `@nebulr-group/bridge-nestjs`) validate the token, resolve its workspace and privileges, and expose them to your guards — no extra round-trip.
 
-## Revoking
+## Letting your users manage their own tokens
 
-Revoking a token takes effect immediately and is irreversible. Any caller still presenting it gets a `401`. Revoke generously: tokens are cheap to reissue, and a stale grant is the most common way access leaks.
-
-## Under the hood
-
-- **Hash-at-rest** — only a salted hash of the token is stored; the plaintext exists solely in the show-once dialog.
-- **Workspace-scoped** — a token resolves to the workspace it was minted in; it can't be replayed against another tenant.
-- **Privilege-checked per request** — the backend re-evaluates the token's privileges on every call, so revoking a privilege from the role narrows existing tokens too.
+A drop-in component handles the whole self-service flow — listing, creating, revoking — so you don't have to build a token management screen yourself. See [Tokens](/auth/ui/tokens/) in UI components.

@@ -8,7 +8,7 @@ paid feature.
 ## Verify the request, then check the plan
 
 First authenticate the request with the backend SDK so you have a trusted
-tenant context — see [Backend: verifying tokens & protecting APIs](/auth/express/).
+tenant context — see [Route guards](/auth/securing/route-guards/).
 Once verified, the request carries the workspace identity you can use to check
 entitlements before doing paid work.
 
@@ -27,8 +27,10 @@ if (!hasEntitlement(req, 'ai_completions')) {
 - **Entitlements & quotas** describe what the plan grants — the same concepts the
   frontend uses (see [Lock features to a plan](/billing/limits/lock-features/) and
   [Set usage limits](/billing/limits/usage-limits/)).
-- For authoritative, server-side subscription and plan details, call the API:
-  **Get Tenant Payment Details** in [Manage billing via the API](/api-reference/payments/).
+- For authoritative, server-side subscription and plan details, call the API —
+  [Get subscription state](/api-reference/subscriptions/#get-subscription-state) and
+  [Get entitlements](/api-reference/subscriptions/#get-entitlements) in the
+  [Subscriptions & Entitlements](/api-reference/subscriptions/) reference.
 
 > Recommended: express paid-feature gates as **feature flags** targeting
 > `bridge:billing.*` attributes, so product and ops can adjust access without a

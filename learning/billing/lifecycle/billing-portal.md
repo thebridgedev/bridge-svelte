@@ -1,16 +1,30 @@
 # Let users manage their billing
 
-Send users to the Stripe billing portal to update their payment method, view invoices, or cancel:
+Give users a "Manage billing" entry point to the **Stripe billing portal**, where they can update their payment method, view invoices, or cancel. Bridge exposes the portal as a REST endpoint — `GET /account/subscription/portal` returns a one-time `portalUrl` to redirect to.
+
+There's no SDK wrapper for it yet, so call the endpoint directly with the signed-in user's access token:
 
 ```svelte
 <script lang="ts">
-  import { getBridgeAuth } from '@nebulr-group/bridge-svelte';
+  import { get } from 'svelte/store';
+  import { tokenStore } from '@nebulr-group/bridge-svelte';
 
   async function openPortal() {
-    const url = await getBridgeAuth().getPortalUrl();
-    window.location.href = url;
+    const token = get(tokenStore)?.accessToken;
+    const res = await fetch('https://api.thebridge.dev/account/subscription/portal', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'x-app-id': import.meta.env.VITE_BRIDGE_APP_ID,
+      },
+    });
+    const { portalUrl } = await res.json();
+    window.location.href = portalUrl;
   }
 </script>
 
 <button onclick={openPortal}>Manage billing</button>
 ```
+
+See [Subscriptions & Entitlements → Open the billing portal](/api-reference/subscriptions/#open-the-billing-portal) for the endpoint reference.
+
+> **Recovering from a billing problem?** You don't need this button for that. When a workspace is past due, in dunning, or locked, `<BridgeBillingNotice />` already renders a recovery CTA wired to the server-provided recovery URL. Use this "Manage billing" button for the healthy, everyday case. See [Warn about billing problems](/billing/status/billing-notices/).

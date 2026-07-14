@@ -1,6 +1,6 @@
 # Use subscription management on its own
 
-The original checkout flow — plan picker, Stripe Checkout, billing portal — remains fully supported and is what `<PlanSelector>` and `<BridgePaywall>` use under the hood.
+This is the **lower-level API** for building custom checkout UIs — the subscription store and service methods that `<PlanSelector>` and `<BridgePaywall>` are built on under the hood. Reach for it when you need a plan picker or checkout flow the drop-in components can't express; otherwise consume billing state from the `bridge` surface as shown in [How billing works](/billing/how-it-works/).
 
 ## Subscription state store
 

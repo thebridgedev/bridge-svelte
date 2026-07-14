@@ -1,5 +1,7 @@
 # Choose & switch plans
 
+This is the self-service billing page most apps need: one place where a user picks their first plan, upgrades, downgrades, or switches billing interval. `<PlanSelector>` is the whole thing in one component — unlike [`<BridgePaywall>`](/billing/onboarding/require-plan/), which *forces* a choice before the app loads, this is the always-available page a user visits when they choose to.
+
 Drop `<PlanSelector>` onto your subscription page. It loads plans and status automatically, renders plan cards, and handles free plan selection, Stripe Checkout, and plan changes.
 
 ```svelte
@@ -26,6 +28,8 @@ All standard `HTMLAttributes<HTMLDivElement>` props (`class`, `style`, `data-*`,
 
 **Custom plan card:**
 
+The default plan cards are intentionally plain. If you want them to match your product's design, pass a **`planCard` snippet** and render the cards yourself — you get the plan data and a ready-made pick handler, and Bridge still owns the free-select / checkout / change branching. You only write markup; you never touch the SDK. Here's an example:
+
 ```svelte
 <script lang="ts">
   import { PlanSelector, type Plan, type PriceOfferSdk } from '@nebulr-group/bridge-svelte';
@@ -48,10 +52,22 @@ All standard `HTMLAttributes<HTMLDivElement>` props (`class`, `style`, `data-*`,
 </PlanSelector>
 ```
 
-The `onPick(price)` callback handles branching internally:
+The snippet is called once per plan and receives four parameters:
+
+| Parameter | Type | What it's for |
+|-----------|------|---------------|
+| `plan` | `Plan` | The plan to render — `key`, `name`, `description`, `trial`, `trialDays`, etc. |
+| `prices` | `PriceOfferSdk[]` | The plan's price offers (`amount`, `currency`, `recurrenceInterval`) — one button per price is the usual layout |
+| `isCurrent` | `boolean` | `true` when this is the workspace's current plan — use it to highlight the card and disable its buttons |
+| `onPick` | `(price: PriceOfferSdk) => void` | The pick handler — call it with the chosen price when the user clicks |
+
+All you have to wire is calling **`onPick(price)`**; the component figures out whether that's a free selection, a paid checkout, or a plan change. Under the hood, `onPick(price)` branches on the price and the workspace's payment state:
+
 - `price.amount === 0` → calls `selectFreePlan`, refreshes the store
 - paid + `paymentsEnabled` → calls `changePlan`, refreshes the store
 - paid + no payment method yet → calls `startCheckout`, launches Stripe Checkout
+
+> **Tip:** Keep your snippet purely presentational. Don't call `selectFreePlan`, `changePlan`, or `startCheckout` yourself — `onPick` already routes to the right one, and calling `onSelect` on the `<PlanSelector>` is how you react after a free selection or plan change completes.
 
 **Data attributes for CSS styling:**
 

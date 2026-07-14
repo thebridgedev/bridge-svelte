@@ -1,5 +1,22 @@
 # How flags work
 
+A feature flag is a switch on a piece of behavior in your app that you control
+from Control Center instead of from a deploy. Wrap something in a flag and you
+can:
+
+- **Ship dark** — merge and deploy a feature while it's still off for everyone,
+  then turn it on when it's ready.
+- **Roll out gradually** — turn it on for 10% of users, watch, then ramp to
+  25%, 50%, 100%.
+- **Target a segment** — turn it on only for a role, a plan, an internal
+  cohort, or any attribute your app sends.
+- **Kill it instantly** — something's wrong in production? Flip it off. No
+  rollback, no redeploy.
+
+Every one of those is an action you take in Control Center. Flip a flag there
+and it reaches every connected app in about a second, live — no refresh, no
+redeploy. That's possible because of how flags evaluate:
+
 Bridge Feature Flags **evaluates locally**. The SDK keeps your flag rules in
 memory, evaluates them against in-process context, and receives rule changes
 live over a push channel. A flag check is an O(1) lookup — no network call — so

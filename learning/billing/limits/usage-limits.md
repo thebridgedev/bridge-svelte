@@ -1,6 +1,8 @@
 # Set usage limits
 
-A live usage-cap banner for one metric. Renders nothing while usage is below 80% of the plan's quota (or when the plan has no quota for that metric); shows a warning at 80–94%, critical at 95%+, and over-cap copy when the limit is exceeded. Updates live on `quota.updated` pushes.
+Where an [entitlement](/billing/limits/lock-features/) is a yes/no switch, a **quota** is a metered allowance — 10,000 AI calls a month, 20 seats — that a workspace can run down and hit. `<BridgeQuotaBanner>` warns users as they approach a metric's cap so a hard stop never comes as a surprise, and it nudges them to upgrade.
+
+It's a live usage-cap banner for one metric. Renders nothing while usage is below 80% of the plan's quota (or when the plan has no quota for that metric); shows a warning at 80–94%, critical at 95%+, and over-cap copy when the limit is exceeded. Updates live on `quota.updated` pushes.
 
 ```svelte
 <script lang="ts">

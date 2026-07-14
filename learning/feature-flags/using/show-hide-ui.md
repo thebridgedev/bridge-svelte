@@ -22,6 +22,22 @@ Declarative gating with optional fallback content. The snippets receive the eval
 </FeatureFlag>
 ```
 
+## Sending context
+
+`<FeatureFlag>` takes the same per-call context as `useFlag`'s third argument — use it when the rule targets an app-specific attribute Bridge doesn't already know (see [Send context from your code](/feature-flags/targeting/send-context/)):
+
+```svelte
+<FeatureFlag
+  key="new_dashboard"
+  defaultValue={false}
+  context={{ attributes: { project_count: projects.length } }}
+>
+  <NewDashboard />
+</FeatureFlag>
+```
+
+Since `context` is a plain prop, it's reactive for free — Svelte re-evaluates the object expression (and re-renders the flag) whenever `projects.length` changes, no getter function needed the way `useFlag` requires for its standalone rune.
+
 **Props:**
 
 | Prop | Type | Default | Description |

@@ -1,6 +1,6 @@
 # Use flags on your backend
 
-Evaluating a flag in Svelte is local and instant — great for the browser. But sometimes the same decision has to be made again on a backend you control: an API route that should only exist while a flag is on, or a server job that needs to agree with what the browser just decided. If each side evaluates independently, they can disagree — your Svelte app knows the visitor's identity and whatever attributes it set; a NestJS API has no way to know either unless you send them.
+Evaluating a flag in Svelte is local and instant, which is great for the browser. But sometimes the same decision has to be made again on a backend you control: an API route that should only exist while a flag is on, or a server job that needs to agree with what the browser just decided. If each side evaluates independently, they can disagree: your Svelte app knows the visitor's identity and whatever attributes it set; a NestJS API has no way to know either unless you send them.
 
 ## Forwarding context from Svelte
 
@@ -21,7 +21,7 @@ await fetch('https://your-api.example.com/checkout', {
 });
 ```
 
-`getBridgeFlagsInstance().getContext()` returns the same `{ identity, attributes }` your `useFlag` calls resolve against — including anything you've set via per-call context or `bridge.attributes` (see [Send context from your code](/feature-flags/targeting/send-context/)).
+`getBridgeFlagsInstance().getContext()` returns the same `{ identity, attributes }` your `useFlag` calls resolve against, including anything you've set via per-call context or `bridge.attributes` (see [Send context from your code](/feature-flags/targeting/send-context/)).
 
 ## Reading it on a NestJS backend
 
@@ -80,6 +80,6 @@ export class BetaController {
 }
 ```
 
-## What to propagate — and what not to
+## What to propagate, and what not to
 
-Only forward identity and attributes the backend genuinely can't derive itself — an anonymous visitor ID, a cart size held in client state, a locale picked in the UI. Never forward `role`- or `plan`-style attributes: the backend should read those from its own verified sources (the user's JWT, its own tenant record), not trust a value the browser handed it.
+Only forward identity and attributes the backend genuinely can't derive itself: an anonymous visitor ID, a cart size held in client state, a locale picked in the UI. Never forward `role`- or `plan`-style attributes: the backend should read those from its own verified sources (the user's JWT, its own record of the workspace, which the API calls a *tenant*), not trust a value the browser handed it.

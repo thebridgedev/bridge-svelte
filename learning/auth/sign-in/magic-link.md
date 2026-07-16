@@ -7,7 +7,7 @@ sidebar:
 
 # Magic link
 
-Let users sign in via a one-time link emailed to them — no password.
+Let users sign in via a one-time link emailed to them, no password needed.
 
 ## Enable it
 
@@ -17,8 +17,8 @@ Let users sign in via a one-time link emailed to them — no password.
   bridge app update --magic-link-enabled true
   ```
 
-- **Control Center:** [Auth → Login](https://app.thebridge.dev/auth?tab=login)
-- **MCP:** not yet available — coming soon.
+- **Control Center** (your admin dashboard at app.thebridge.dev): [Auth → Login](https://app.thebridge.dev/auth?tab=login)
+- **MCP (AI-assistant integration):** coming soon.
 
 ## What you need
 
@@ -26,4 +26,4 @@ Nothing extra to turn it on. Magic links are delivered by email, so if you haven
 
 ## UI components
 
-A ready-made request form handles this — see [Magic link](/auth/ui/magic-link/) in UI components.
+A ready-made request form handles this. See [Magic link](/auth/ui/magic-link/) in UI components.

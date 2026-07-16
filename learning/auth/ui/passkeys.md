@@ -12,9 +12,9 @@ A button that triggers passkey authentication via the browser's WebAuthn API.
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `onLogin` | `() => void` | — | Called after successful passkey login |
-| `onError` | `(error: Error) => void` | — | Called on error |
-| `onSetupPasskey` | `() => void` | — | Called when the user wants to set up a passkey instead |
+| `onLogin` | `() => void` | (none) | Called after successful passkey login |
+| `onError` | `(error: Error) => void` | (none) | Called on error |
+| `onSetupPasskey` | `() => void` | (none) | Called when the user wants to set up a passkey instead |
 | `autofill` | `boolean` | `false` | Use WebAuthn conditional UI (autofill) |
 
 ```svelte
@@ -38,10 +38,10 @@ Registers a new passkey using a setup token (emailed to the user).
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `token` | `string` | **(required)** | The setup token from the URL |
-| `onComplete` | `() => void` | — | Called after passkey registration |
-| `onError` | `(error: Error) => void` | — | Called on error |
-| `onBack` | `() => void` | — | Called when user clicks back |
-| `onExpired` | `() => void` | — | Called when the token has expired |
+| `onComplete` | `() => void` | (none) | Called after passkey registration |
+| `onError` | `(error: Error) => void` | (none) | Called on error |
+| `onBack` | `() => void` | (none) | Called when user clicks back |
+| `onExpired` | `() => void` | (none) | Called when the token has expired |
 
 ```svelte
 <!-- src/routes/auth/passkey-setup/+page.svelte -->

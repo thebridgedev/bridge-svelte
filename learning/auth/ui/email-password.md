@@ -7,7 +7,7 @@ sidebar:
 
 # Email & password
 
-A complete login form with email/password fields. Handles multi-step auth flows inline: forgot password, magic link, passkey login, MFA challenge, MFA setup, and tenant selection all appear automatically within the same component when the auth state requires them.
+A complete login form with email/password fields. Handles multi-step auth flows inline: forgot password, magic link, passkey login, MFA challenge, MFA setup, and workspace selection all appear automatically within the same component when the auth state requires them.
 
 **Usage:**
 
@@ -38,12 +38,12 @@ A complete login form with email/password fields. Handles multi-step auth flows 
 | `forgotPasswordHref` | `string` | `undefined` | External forgot password URL. If set, navigates there instead of showing the inline form |
 | `showMagicLink` | `boolean` | `true` | Show the magic link login option |
 | `showPasskeys` | `boolean` | `false` | Show the passkey login button |
-| `onLogin` | `() => void` | — | Called after successful login (all steps complete) |
-| `onError` | `(error: Error) => void` | — | Called on any login error |
-| `onSsoClick` | `(connectionType: string) => void` | — | Called when an SSO button is clicked |
+| `onLogin` | `() => void` | (none) | Called after successful login (all steps complete) |
+| `onError` | `(error: Error) => void` | (none) | Called on any login error |
+| `onSsoClick` | `(connectionType: string) => void` | (none) | Called when an SSO button is clicked |
 | `heading` | `string` | `''` | Custom heading text |
-| `ssoConnections` | `FederationConnection[]` | `[]` | SSO connections to display. Auto-derived from app config if not set |
-| `ssoMode` | `'redirect' \| 'popup'` | `'redirect'` | SSO kickoff strategy for the built-in buttons. See [SSO mode](#sso-mode-redirect-vs-popup). Ignored when `onSsoClick` is provided. |
-| `footer` | `Snippet` | — | Custom footer content (Svelte 5 snippet) |
+| `ssoConnections` | `FederationConnection[]` | `[]` | SSO connections to display (a federation connection is an SSO identity provider configured for your app, e.g. Google or Azure AD). Auto-derived from app config if not set |
+| `ssoMode` | `'redirect' \| 'popup'` | `'redirect'` | SSO kickoff strategy for the built-in buttons. See [SSO mode](/auth/ui/google-sso/#sso-mode-redirect-vs-popup). Ignored when `onSsoClick` is provided. |
+| `footer` | `Snippet` | (none) | Custom footer content (Svelte 5 snippet) |
 
-**Auth state transitions:** After a successful email/password login, the `LoginForm` checks the resulting auth state. If MFA is required, it automatically shows `MfaChallenge`. If MFA setup is required, it shows `MfaSetup`. If tenant selection is needed (multi-tenant user), it shows `TenantSelector`. The `onLogin` callback fires only after all steps are complete and the user is fully authenticated.
+**Auth state transitions:** After a successful email/password login, the `LoginForm` checks the resulting auth state. If MFA is required, it automatically shows `MfaChallenge`. If MFA setup is required, it shows `MfaSetup`. If workspace selection is needed (multi-workspace user), it shows `TenantSelector`. The `onLogin` callback fires only after all steps are complete and the user is fully authenticated.

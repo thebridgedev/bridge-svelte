@@ -6,8 +6,8 @@ Standalone magic link request form. When a user clicks a magic link from their e
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `onSent` | `() => void` | — | Called after the magic link email is sent |
-| `onError` | `(error: Error) => void` | — | Called on error |
+| `onSent` | `() => void` | (none) | Called after the magic link email is sent |
+| `onError` | `(error: Error) => void` | (none) | Called on error |
 | `loginHref` | `string` | `'/login'` | Link back to the login page |
 
 **Usage:**

@@ -1,6 +1,6 @@
 # Show or hide UI
 
-Declarative gating with optional fallback content. The snippets receive the evaluated value:
+The most common thing to do with a flag is decide whether a piece of UI renders at all. The `<FeatureFlag>` component does that declaratively, with optional fallback content for the off case. The snippets receive the evaluated value:
 
 ```svelte
 <script lang="ts">
@@ -24,7 +24,7 @@ Declarative gating with optional fallback content. The snippets receive the eval
 
 ## Sending context
 
-`<FeatureFlag>` takes the same per-call context as `useFlag`'s third argument — use it when the rule targets an app-specific attribute Bridge doesn't already know (see [Send context from your code](/feature-flags/targeting/send-context/)):
+`<FeatureFlag>` takes the same per-call eval context (the identity and attributes a flag rule evaluates against) as `useFlag`'s third argument. Use it when the rule targets an app-specific attribute Bridge doesn't already know (see [Send context from your code](/feature-flags/targeting/send-context/)):
 
 ```svelte
 <FeatureFlag
@@ -36,7 +36,7 @@ Declarative gating with optional fallback content. The snippets receive the eval
 </FeatureFlag>
 ```
 
-Since `context` is a plain prop, it's reactive for free — Svelte re-evaluates the object expression (and re-renders the flag) whenever `projects.length` changes, no getter function needed the way `useFlag` requires for its standalone rune.
+Since `context` is a plain prop, it's reactive for free: Svelte re-evaluates the object expression (and re-renders the flag) whenever `projects.length` changes, with no getter function needed the way `useFlag` requires for its standalone rune.
 
 **Props:**
 
@@ -44,6 +44,6 @@ Since `context` is a plain prop, it's reactive for free — Svelte re-evaluates 
 |------|------|---------|-------------|
 | `key` | `string` | **(required)** | The flag key |
 | `defaultValue` | `T` | **(required)** | Safe value; also sets the flag's inferred type |
-| `context` | `Partial<EvalContext>` | — | Per-call eval context (attributes win on collision) |
-| `children` | snippet | — | Rendered when the flag passes; receives the value |
-| `fallback` | snippet | — | Rendered when it doesn't; receives the value |
+| `context` | `Partial<EvalContext>` | (none) | Per-call eval context (attributes win on collision) |
+| `children` | snippet | (none) | Rendered when the flag passes; receives the value |
+| `fallback` | snippet | (none) | Rendered when it doesn't; receives the value |

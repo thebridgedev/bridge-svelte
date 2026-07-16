@@ -17,10 +17,10 @@ Let users sign in with their Microsoft / Azure AD account.
   bridge setup sso --provider azure --client-id <id> --client-secret <secret>
   ```
 
-- **Control Center:** [Auth → Login](https://app.thebridge.dev/auth?tab=login) → **Azure AD SSO** → **Configuration**
-- **MCP:** not yet available — coming soon.
+- **Control Center** (your admin dashboard at app.thebridge.dev): [Auth → Login](https://app.thebridge.dev/auth?tab=login) → **Azure AD SSO** → **Configuration**
+- **MCP (AI-assistant integration):** coming soon.
 
-Either path saves the credentials and turns the connection on. You need an Azure AD app registration first — see below.
+Either path saves the credentials and turns the connection on. You need an Azure AD app registration first; see below.
 
 ## Set up the Azure side
 
@@ -31,11 +31,11 @@ Either path saves the credentials and turns the connection on. You need an Azure
    https://api.thebridge.dev/auth/federated/ms-azure-ad/return
    ```
 
-   This is a fixed URL shared by every app on Bridge — it isn't specific to yours, and it's the same value the Control Center's Configuration dialog shows you. Always use whatever value is shown there if it differs from this.
+   This is a fixed URL shared by every app on Bridge; it isn't specific to yours, and it's the same value the Control Center's Configuration dialog shows you. Always use whatever value is shown there if it differs from this.
 
 3. Under **Certificates & secrets**, create a new client secret.
-4. Copy the **Application (client) ID** and the secret **value** back into Bridge — via the CLI command above, or the Control Center dialog.
+4. Copy the **Application (client) ID** and the secret **value** back into Bridge, via the CLI command above or the Control Center dialog.
 
 ## UI components
 
-The same SSO button and login form used for Google SSO work here too — see [SSO login button](/auth/ui/google-sso/) in UI components.
+The same SSO button and login form used for Google SSO work here too. See [SSO login button](/auth/ui/google-sso/) in UI components.

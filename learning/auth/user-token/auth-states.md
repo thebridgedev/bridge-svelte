@@ -7,20 +7,20 @@ sidebar:
 
 # Auth states
 
-`authState` is a single reactive store that tells you exactly where a user is in the login flow — from "not signed in" through any in-progress step, to fully authenticated. It's what drives `LoginForm`'s multi-step behavior (MFA, tenant selection, etc.) automatically, and you can read the same store yourself to build custom flows.
+`authState` is a single reactive store that tells you exactly where a user is in the login flow, from "not signed in" through any in-progress step, to fully authenticated. It's what drives `LoginForm`'s multi-step behavior (MFA, workspace selection, etc.) automatically, and you can read the same store yourself to build custom flows.
 
 ## The states
 
 | State | Meaning |
 |-------|---------|
-| `'unauthenticated'` | No valid tokens — the user isn't signed in |
-| `'credentials-validated'` | Email/password (or equivalent) passed; Bridge is deciding whether MFA or tenant selection is needed next |
+| `'unauthenticated'` | No valid tokens; the user isn't signed in |
+| `'credentials-validated'` | Email/password (or equivalent) passed; Bridge is deciding whether MFA or workspace selection is needed next |
 | `'mfa-required'` | An MFA code challenge is pending |
 | `'mfa-setup-required'` | The user must set up MFA before continuing (first-time enrollment) |
-| `'tenant-selection'` | The user has access to more than one workspace and needs to pick one |
-| `'authenticated'` | Fully signed in with valid tokens — the user can use the app |
+| `'tenant-selection'` | The user has access to more than one workspace (called a *tenant* in the API) and needs to pick one |
+| `'authenticated'` | Fully signed in with valid tokens; the user can use the app |
 
-Any state returns to `'unauthenticated'` on logout or if the tokens are cleared.
+Any state returns to `'unauthenticated'` on logout or if the tokens are cleared. For how the tokens behind these states are stored, refreshed, and erased, see [Logging in and logging out](/auth/user-token/logging-in-and-out/).
 
 ## Branching on it yourself
 
@@ -46,9 +46,9 @@ Any state returns to `'unauthenticated'` on logout or if the tokens are cleared.
 {/if}
 ```
 
-## Checking just "am I logged in"
+## Checking just "am I signed in"
 
-For the common case — gating a route or showing/hiding a nav item — you don't need the full state machine, just whether it resolved to `'authenticated'`. The `isAuthenticated` / `isLoading` stores cover that:
+For the common case (gating a route or showing/hiding a nav item), you don't need the full state machine, just whether it resolved to `'authenticated'`. The `isAuthenticated` / `isLoading` stores cover that:
 
 ```svelte
 <script lang="ts">

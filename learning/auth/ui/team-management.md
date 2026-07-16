@@ -11,8 +11,8 @@ A drop-in panel for managing team members, team profile, and workspace settings.
 | `defaultTab` | `'users' \| 'profile' \| 'workspace'` | `'users'` | Which tab is active by default |
 | `showProfileTab` | `boolean` | `true` | Show the profile tab |
 | `showWorkspaceTab` | `boolean` | `true` | Show the workspace tab |
-| `onError` | `(error: Error) => void` | — | Called on any error |
-| `tabBar` | `Snippet<[{ tabs, activeTab, setTab }]>` | — | Custom tab bar render snippet |
+| `onError` | `(error: Error) => void` | (none) | Called on any error |
+| `tabBar` | `Snippet<[{ tabs, activeTab, setTab }]>` | (none) | Custom tab bar render snippet |
 
 **Usage:**
 
@@ -48,9 +48,9 @@ A drop-in panel for managing team members, team profile, and workspace settings.
 ```
 
 The panel includes:
-- **Users tab** — list team members, invite new users, update roles, remove members.
-- **Profile tab** — update team name and other profile fields.
-- **Workspace tab** — update workspace settings.
+- **Users tab**: list team members, invite new users, update roles, remove members.
+- **Profile tab**: update team name and other profile fields.
+- **Workspace tab**: update workspace settings.
 
 ## Individual tab components
 

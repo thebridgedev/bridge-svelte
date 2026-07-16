@@ -1,8 +1,9 @@
 # Handle failed payments
 
-When a renewal payment fails, Bridge moves the workspace's subscription to
-`status: "past_due"` and starts its **dunning** flow (automatic retries). All of
-this arrives live on the `bridge` surface — you don't poll Stripe.
+When a renewal payment fails, Bridge moves the subscription of the workspace
+(called a *tenant* in the API) to `status: "past_due"` and starts **dunning**
+(automated payment retries). All of this arrives live on the `bridge` object;
+you don't poll Stripe.
 
 ## Surfacing it to users
 
@@ -12,21 +13,27 @@ payment recovers. See [Warn about billing problems](/billing/status/billing-noti
 
 ## Reacting to payment & dunning events
 
-For alerts, audit logs, or ops notifications, handle the events on the unified
-dispatcher — see [React to billing changes](/billing/lifecycle/billing-events/):
+For alerts, audit logs, or ops notifications, handle the payment and dunning
+event kinds (`payment.failed`, `payment.succeeded`, `dunning.entered`,
+`dunning.retry_scheduled`, `dunning.recovered`, `dunning.exhausted`) on the
+unified dispatcher. [React to billing changes](/billing/lifecycle/billing-events/)
+is the full kind and payload reference; a minimal example:
 
 ```ts
 import { bridge } from '@nebulr-group/bridge-svelte';
 
 bridge.events.handle({
-  'payment.failed':       (m) => alertOps(`Payment failed (card ••••${m.cardLast4})`),
-  'dunning.entered':      (m) => analytics.track('dunning_entered', m),
-  'dunning.retry_scheduled': (m) => log('retry scheduled', m),
-  'dunning.recovered':    (m) => analytics.track('dunning_recovered', m),
-  'dunning.exhausted':    (m) => analytics.track('dunning_exhausted', m),
+  'payment.failed':    (m) => alertOps(`Payment failed (card ••••${m.cardLast4})`),
+  'dunning.exhausted': (m) => analytics.track('dunning_exhausted', m),
 });
 ```
 
-If dunning is exhausted, the subscription is ultimately canceled and the
-workspace becomes billing-locked — gate the app with
-[Require a plan](/billing/onboarding/require-plan/) so they can re-subscribe.
+## If dunning runs out
+
+If every retry fails, the subscription is ultimately canceled and the workspace
+becomes **billing-locked**: the server sets `gateEngaged: true` on the
+subscription snapshot. This is the same lock mechanism described in
+[How billing works](/billing/how-it-works/#when-billing-locks-the-app).
+Gate the app with [Require a plan](/billing/onboarding/require-plan/) so the
+workspace can re-subscribe, or use `<BridgeBillingNotice mode="hard" />` for a
+lockscreen with a recovery CTA.

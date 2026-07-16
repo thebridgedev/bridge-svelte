@@ -30,7 +30,7 @@ export const load: LayoutLoad = async ({ url }) => {
     rules: [
       { match: '/', public: true },
       { match: new RegExp('^/auth($|/)'), public: true },
-      { match: '/beta/*', featureFlag: 'beta-feature', redirectTo: '/' },
+      { match: '/beta/*', featureFlag: 'beta_feature', redirectTo: '/' },
     ],
     defaultAccess: 'protected',
   };
@@ -72,6 +72,6 @@ export const load: LayoutLoad = async ({ url }) => {
 |--------|--------------|
 | `defaultAccess` | Sets whether unmatched routes are `'public'` or `'protected'`. |
 | `rules` | Marks individual paths as public and/or gates them behind feature flags. |
-| `loginRoute` | Unauthenticated users are redirected here (in-app) instead of to an external page. |
+| `loginRoute` | Unauthenticated users are redirected here (an in-app route). If you leave it unset, they go to Bridge's hosted login page instead. |
 
-Redirects are handled automatically by `BridgeBootstrap`.
+Redirects are handled automatically by `BridgeBootstrap`. For the full `RouteRule` shape, including billing gates, see the [config reference](/auth/config/#route-guard-config).

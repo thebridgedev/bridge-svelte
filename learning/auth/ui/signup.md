@@ -6,12 +6,12 @@ A signup form with email, full name, and password fields.
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `onSignup` | `() => void` | — | Called after successful signup |
-| `onError` | `(error: Error) => void` | — | Called on signup error |
+| `onSignup` | `() => void` | (none) | Called after successful signup |
+| `onError` | `(error: Error) => void` | (none) | Called on signup error |
 | `showLoginLink` | `boolean` | `true` | Show a link to the login page |
 | `loginHref` | `string` | `'/login'` | Login page URL |
 | `heading` | `string` | `'Create your account'` | Custom heading text |
-| `footer` | `Snippet` | — | Custom footer content |
+| `footer` | `Snippet` | (none) | Custom footer content |
 
 **Usage:**
 
@@ -29,4 +29,6 @@ A signup form with email, full name, and password fields.
 />
 ```
 
-After signup, the user receives a verification email. Once verified, they can log in.
+After signup, the user receives a verification email. Once verified, they can sign in.
+
+> **Tip:** tell Bridge where this page lives with the `signupRoute` config option (default `/auth/signup`); `LoginForm`'s signup link points there unless you override it with `signupHref`. See the [config reference](/auth/config/#all-config-options).

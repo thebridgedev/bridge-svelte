@@ -1,6 +1,6 @@
 # Signup
 
-A signup form with email, full name, and password fields.
+A signup form with email, first name, and last name fields. There is no password step here: the user activates the account through the verification email, then signs in with whichever method your app enables.
 
 **Props:**
 

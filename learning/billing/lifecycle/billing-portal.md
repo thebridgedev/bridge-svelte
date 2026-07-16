@@ -27,4 +27,4 @@ There's no SDK wrapper for it yet, so call the endpoint directly with the signed
 
 See [Subscriptions & Entitlements → Open the billing portal](/api-reference/subscriptions/#open-the-billing-portal) for the endpoint reference.
 
-> **Recovering from a billing problem?** You don't need this button for that. When a workspace (called a *tenant* in the API) is past due, in dunning, or billing-locked, `<BridgeBillingNotice />` already renders a recovery CTA wired to the server-provided recovery URL. Use this "Manage billing" button for the healthy, everyday case. See [Warn about billing problems](/billing/status/billing-notices/).
+> **Recovering from a billing problem?** You don't need this button for that. When a workspace (called a *tenant* in the API) is past due, in dunning, or billing-locked, `<BridgeBillingNotice />` already renders a recovery CTA (it sends the user to your billing page, `/billing` by default). Use this "Manage billing" button for the healthy, everyday case. See [Warn about billing problems](/billing/status/billing-notices/).

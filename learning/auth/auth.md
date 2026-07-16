@@ -37,7 +37,7 @@ Every flow has a ready-made component, imported from `@nebulr-group/bridge-svelt
 | Component(s) | What it does | Docs |
 |--------------|--------------|------|
 | `LoginForm` | Complete login form; handles forgot password, magic link, passkeys, MFA, and workspace selection inline | [Email & password](/auth/ui/email-password/) |
-| `SignupForm` | Signup with email, full name, and password | [Signup](/auth/ui/signup/) |
+| `SignupForm` | Signup with email, first name, and last name | [Signup](/auth/ui/signup/) |
 | `SsoButton` | Standalone SSO button, redirect or popup mode | [SSO login button](/auth/ui/google-sso/) |
 | `MagicLink` | Magic link request form | [Magic link](/auth/ui/magic-link/) |
 | `ForgotPassword` | Request and reset modes for password resets | [Forgot / reset password](/auth/ui/forgot-password/) |

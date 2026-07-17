@@ -1,6 +1,6 @@
-# Bridge Svelte — Hosted Auth Quickstart
+# Hosted auth quickstart
 
-The fastest way to add authentication to your SvelteKit app. Bridge handles the entire login UI on a hosted page — you don't need to build any auth forms.
+The fastest way to add authentication to your SvelteKit app. Bridge handles the entire login UI on a hosted page, so you don't need to build any auth forms.
 
 ## 1. Install the plugin
 
@@ -10,7 +10,7 @@ npm i @nebulr-group/bridge-svelte
 
 ## 2. Configuration (`+layout.ts`)
 
-Initialize Bridge in your root layout load function. For hosted auth, you only need `appId` and a `routeConfig` — no `loginRoute` is needed because Bridge redirects unauthenticated users to the hosted login page automatically.
+Initialize Bridge in your root layout load function. For hosted auth, you only need `appId` and a `routeConfig`. No `loginRoute` is needed because Bridge redirects unauthenticated users to the hosted login page automatically.
 
 ```ts
 // src/routes/+layout.ts
@@ -39,9 +39,9 @@ export const load: LayoutLoad = async ({ url }) => {
 ```
 
 Key points:
-- **No `loginRoute`** — without it, Bridge redirects to the hosted login page instead of an in-app route.
-- **`defaultAccess: 'protected'`** — all routes require auth unless explicitly marked `public`.
-- **`ssr = false`** — Bridge requires client-side rendering.
+- **No `loginRoute`**: without it, Bridge redirects to the hosted login page instead of an in-app route.
+- **`defaultAccess: 'protected'`**: all routes require auth unless explicitly marked `public`.
+- **`ssr = false`**: Bridge requires client-side rendering.
 
 ## 3. Bootstrap component (`+layout.svelte`)
 
@@ -68,13 +68,7 @@ Add the `BridgeBootstrap` component to your root layout. Use the `onBootstrapCom
 {/if}
 ```
 
-## 4. That's it — no login page needed
-
-With hosted auth, Bridge automatically redirects unauthenticated users to the Bridge hosted login UI. When the user completes authentication on the hosted page, they are redirected back to your app's callback URL.
-
-You do not need to create any login or signup pages.
-
-## 5. Add the callback route
+## 4. Add the callback route
 
 SvelteKit requires a route file to exist so it doesn't return a 404 when Bridge redirects back to your app. Create an empty page component:
 
@@ -84,21 +78,27 @@ SvelteKit requires a route file to exist so it doesn't return a 404 when Bridge 
 
 This file can be completely empty. The `BridgeBootstrap` component handles the OAuth callback token exchange automatically during bootstrap.
 
+## 5. That's it: no login page needed
+
+With hosted auth, Bridge automatically redirects unauthenticated users to the Bridge hosted login UI. When the user completes authentication on the hosted page, they are redirected back to the callback route you created in step 4.
+
+You do not need to create any login or signup pages.
+
 ## 6. Configuration
 
 The `config` object you pass to `bridgeBootstrap` is a `BridgeConfig`. The most common fields:
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `appId` | **(required)** | Your Bridge application ID |
+| `appId` | **(required)** | Your Bridge app ID |
 | `callbackUrl` | `<origin>/auth/oauth-callback` | Where the hosted login page redirects back to |
 | `defaultRedirectRoute` | `'/'` | Route to land on after login |
-| `loginRoute` | — | In-app login route — leave unset for hosted auth (that's what triggers the hosted page) |
+| `loginRoute` | (unset) | In-app login route; leave unset for hosted auth (that's what triggers the hosted page) |
 | `apiBaseUrl` | `https://api.thebridge.dev` | Root URL for the Bridge API (dev override) |
 | `hostedUrl` | `https://auth.thebridge.dev` | Bridge hosted UI URL (dev override) |
 | `debug` | `false` | Enable debug logging |
 
-See the [Configuration Reference](../configuration/configuration.md) for the full list (token storage, signup route, billing routes).
+See the [Configuration reference](/auth/config/) for the full list (token storage, signup route, billing routes).
 
 Rather than hardcoding environment-specific values, keep them in a `.env` file and read them with Vite's `import.meta.env` when you build the config (the `VITE_` prefix is required for values to reach the browser):
 
@@ -116,6 +116,6 @@ const config: BridgeConfig = {
 
 ## Next steps
 
-- **In-app auth forms** — If you want to embed login/signup forms directly in your app instead of using the hosted page, see the [SDK Auth Guide](../sdk-auth/sdk-quickstart.md).
-- **Theming** — Customize the look of Bridge components with CSS variables and overrides. See [Theming & Styles](../theming/theming.md).
-- **Feature flags, payments, team management** — See the [examples index](../examples/examples.md) for links to all feature guides.
+- **In-app auth forms**: if you want to embed login/signup forms directly in your app instead of using the hosted page, see the [SDK auth quickstart](../sdk-auth/sdk-quickstart.md).
+- **Theming**: customize the look of Bridge components with CSS variables and overrides. See [Theming & Styles](../theming/theming.md).
+- **Going further**: add [feature flags](/feature-flags/how-it-works/), [billing and subscriptions](/billing/how-it-works/), or explore the full [Auth](/auth/) section.

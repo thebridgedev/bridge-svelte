@@ -40,7 +40,7 @@
 
       let authResponse: any;
       if (typeof window !== 'undefined' && (window as any).__simpleWebAuthn?.startAuthentication) {
-        authResponse = await (window as any).__simpleWebAuthn.startAuthentication(options, autofill);
+        authResponse = await (window as any).__simpleWebAuthn.startAuthentication({ optionsJSON: options, useBrowserAutofill: autofill });
       } else {
         // @ts-ignore — @simplewebauthn/browser is an optional peer dependency
         const mod = await import('@simplewebauthn/browser');

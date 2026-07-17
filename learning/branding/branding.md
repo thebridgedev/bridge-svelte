@@ -7,7 +7,7 @@ related: [live-updates]
 
 # Branding
 
-Bridge ships a **branding snapshot** for each workspace (called a *tenant* in the API): logo, display name, and colours, exposed on [the `bridge` object](/live-updates/). It arrives with the `session.snapshot` and is replaced on every `branding.updated` push, so when an admin changes the logo or brand colour your UI reflects it within seconds, without a reload.
+Bridge ships a **branding snapshot** for each workspace (called a *tenant* in the API): logo, display name, and colours, exposed on [the `bridge` object](/live-updates/). It arrives with the `session.snapshot` and is replaced wholesale whenever a new snapshot is pushed, so when an admin changes the logo or brand colour your UI reflects it within seconds, without a reload.
 
 This is distinct from the static [Theming](/theming/) guide (which styles the Bridge components with your own CSS): branding is **workspace-supplied, live data** you read and apply yourself.
 
@@ -71,6 +71,6 @@ The cleanest way to white-label a whole app is to map the snapshot onto CSS cust
 
 ### Under the hood
 
-- **Live by default**: the snapshot is delivered on `session.snapshot` and swapped wholesale on each `branding.updated` event over the live channel (a persistent realtime connection the SDK maintains); no polling, no manual refetch.
+- **Live by default**: the snapshot is delivered and swapped wholesale on each `session.snapshot` push over the live channel (a persistent realtime connection the SDK maintains); no polling, no manual refetch.
 - **Fail-soft**: `branding` is `null` until the first snapshot lands. Guard your reads (`$branding?.logo`) and fall back to your own defaults so first paint never breaks.
 - **Per workspace**: switching workspace (see [Multi-tenancy](/auth/multi-tenancy/)) re-emits the snapshot for the new workspace, so the brand follows the active workspace automatically.

@@ -67,7 +67,7 @@
     }
   },
   "dependencies": {
-    "@nebulr-group/bridge-auth-core": "0.4.0-beta.5"
+    "@nebulr-group/bridge-auth-core": "0.4.0-beta.9"
   },
   "devDependencies": {
     "@sveltejs/kit": "^2.16.0",

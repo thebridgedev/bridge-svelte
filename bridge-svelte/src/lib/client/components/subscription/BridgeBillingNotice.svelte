@@ -52,9 +52,9 @@
   let snapshot = $state<BillingSubscriptionSnapshot>(useBridge().subscription.snapshot());
   let unsubscribe: (() => void) | undefined;
 
-  // Admin/member variant — read from existing auth context. The exact field
-  // name varies by SDK; we look up `billing` privilege on the current user.
-  // Defaults to non-admin if unavailable.
+  // Admin/member variant. v1 policy: workspace owner only, via
+  // canManageBilling() (immutable OWNER role key). Defaults to non-admin if
+  // unavailable.
   let isBillingAdmin = $state(false);
 
   onMount(() => {
@@ -65,15 +65,7 @@
     const auth = getBridgeAuth();
     const ctx = auth.getApiContext();
     if (ctx.accessToken) {
-      // Best-effort role read. Existing auth-core role probing varies by app;
-      // defensive cast so the component never crashes on missing fields.
-      const tokenManager = (auth as unknown as { tokenManager?: { getTokens?: () => { accessToken?: string } } }).tokenManager;
-      void tokenManager; // intentionally unused — placeholder until role API is finalized
-      // For US-5 default: assume admin if a JWT is present. Subsequent
-      // stories will read the exact privilege claim. Keeping permissive so
-      // the CTA shows by default; member variant lands when the role check
-      // is wired through.
-      isBillingAdmin = true;
+      isBillingAdmin = auth.canManageBilling();
     }
 
     if (!ctx.accessToken) {

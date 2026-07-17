@@ -64,9 +64,8 @@
   let snapshot = $state<QuotaSnapshot | undefined>(useBridge().quota(metric));
   let unsubscribe: (() => void) | undefined;
 
-  // Role variant mirrors BridgeBillingNotice: any authenticated user is
-  // treated as a billing admin for US-11 until the role/privilege API is
-  // finalized. Member variant lands when the role probe is wired through.
+  // Role variant mirrors BridgeBillingNotice: CTA only for the workspace
+  // owner (v1 canManageBilling() policy). Member variant renders otherwise.
   let isBillingAdmin = $state(false);
 
   onMount(() => {
@@ -78,11 +77,7 @@
     snapshot = useBridge().quota(metric);
 
     try {
-      const auth = getBridgeAuth();
-      const ctx = auth.getApiContext();
-      if (ctx.accessToken) {
-        isBillingAdmin = true;
-      }
+      isBillingAdmin = getBridgeAuth().canManageBilling();
     } catch {
       // No BridgeAuth instance — render the member variant.
     }

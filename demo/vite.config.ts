@@ -9,8 +9,14 @@ export default defineConfig({
 	// thrown from the plugin produces a `Redirect` instance from a different
 	// @sveltejs/kit copy, fails the demo's `instanceof Redirect` check, and
 	// surfaces as a pageerror instead of redirecting.
+	//
+	// @nebulr-group/bridge-auth-core is deduped for the same reason: the
+	// source-aliased bridge-svelte plugin and the demo's own imports must share
+	// ONE auth-core module instance, or `useBridge()` resolves to two separate
+	// quota-store singletons (the demo page reads one, the live realtime push
+	// feeds the other) — see TBP-275 usage-metered harness.
 	resolve: {
-		dedupe: ['@sveltejs/kit', 'svelte']
+		dedupe: ['@sveltejs/kit', 'svelte', '@nebulr-group/bridge-auth-core']
 	},
 
 	server: {

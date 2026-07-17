@@ -3,7 +3,8 @@
   import type { HTMLAttributes } from 'svelte/elements';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
-    heading?: string;
+    /** Heading text. Pass `null` or `''` to render no heading. */
+    heading?: string | null;
     headingSnippet?: Snippet;
     children?: Snippet;
   }

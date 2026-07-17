@@ -91,12 +91,28 @@
   });
 
   const warningLevel = $derived(snapshot?.warningLevel ?? null);
+  // TBP-275 — `metered` quotas bill overage instead of blocking. Prefer the
+  // server-authoritative `overcap` flag (handles limit === 0 pure-per-unit)
+  // over a UI-derived `used > limit`.
+  const isMetered = $derived(snapshot?.policy === 'metered');
   const overCap = $derived(
-    snapshot ? snapshot.used > snapshot.limit : false,
+    snapshot
+      ? (snapshot.overcap ?? snapshot.used > snapshot.limit)
+      : false,
   );
-  const visible = $derived(snapshot !== undefined && warningLevel !== null);
+  // Hard caps show only at the warning thresholds. Metered quotas also show
+  // once billing has engaged (overCap), even with no warningLevel — that's the
+  // live "you're now being billed for overage" state.
+  const visible = $derived(
+    snapshot !== undefined && (warningLevel !== null || (isMetered && overCap)),
+  );
+  // Metered never blocks, so it never renders as 'critical' — it's informational.
   const severity = $derived<Severity>(
-    warningLevel === 'critical' || overCap ? 'critical' : 'warn',
+    isMetered
+      ? 'warn'
+      : warningLevel === 'critical' || overCap
+        ? 'critical'
+        : 'warn',
   );
   const displayLabel = $derived(label ?? snapshot?.label ?? metric);
   const percent = $derived(
@@ -104,13 +120,58 @@
       ? Math.min(100, Math.round((snapshot.used / snapshot.limit) * 100))
       : 0,
   );
+  // Meter bar is meaningless for pure per-unit metered (limit 0) — hide it there.
+  const showMeter = $derived(!!snapshot && snapshot.limit > 0);
+
+  /** Format an estimated cost like "$1.00" / "1.00 SEK". */
+  function formatCost(amount: number | undefined, currency: string | undefined): string {
+    if (amount === undefined) return '';
+    const cur = (currency ?? '').toUpperCase();
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: cur || 'USD',
+      }).format(amount);
+    } catch {
+      // Unknown currency code → fall back to "<amount> <CUR>".
+      return `${amount.toFixed(2)}${cur ? ` ${cur}` : ''}`;
+    }
+  }
 
   function getCopy(
     snap: QuotaSnapshot | undefined,
     admin: boolean,
   ): { title: string; body: string; cta?: string } {
     if (!snap) return { title: '', body: '' };
-    const over = snap.used > snap.limit;
+
+    // TBP-275 — metered: live usage + projected cost, never a blocking message.
+    if (snap.policy === 'metered') {
+      const overUnits = snap.limit > 0 ? Math.max(0, snap.used - snap.limit) : snap.used;
+      const cost = formatCost(snap.overageEstimate, snap.currency);
+      const costSuffix = cost ? ` · ~${cost} estimated this period` : '';
+      if (snap.limit > 0) {
+        // included allotment + overage
+        if (overUnits > 0) {
+          return {
+            title: `${displayLabel} overage`,
+            body: `${overUnits.toLocaleString()} over your ${snap.limit.toLocaleString()} included${costSuffix}.`,
+          };
+        }
+        // approaching the included allotment (warningLevel drove visibility)
+        const unit = formatCost(snap.unitAmount, snap.currency);
+        return {
+          title: `${displayLabel} approaching included limit`,
+          body: `You've used ${snap.used.toLocaleString()} of ${snap.limit.toLocaleString()} included${unit ? ` — extra usage is billed at ${unit}/unit` : ''}.`,
+        };
+      }
+      // pure per-unit (limit 0) — billed from unit 1
+      return {
+        title: `${displayLabel} usage`,
+        body: `${snap.used.toLocaleString()} ${displayLabel}${costSuffix}.`,
+      };
+    }
+
+    const over = snap.overcap ?? snap.used > snap.limit;
     const remaining = Math.max(0, snap.remaining);
     if (over) {
       return admin
@@ -173,9 +234,11 @@
     <div class="bqb-content">
       <strong class="bqb-title">{copy.title}</strong>
       <span class="bqb-body">{copy.body}</span>
-      <div class="bqb-meter" aria-hidden="true">
-        <div class="bqb-meter-fill" style={`width: ${Math.min(100, percent)}%`}></div>
-      </div>
+      {#if showMeter}
+        <div class="bqb-meter" aria-hidden="true">
+          <div class="bqb-meter-fill" style={`width: ${Math.min(100, percent)}%`}></div>
+        </div>
+      {/if}
     </div>
     {#if copy.cta && isBillingAdmin}
       <button type="button" class="bqb-cta" onclick={handleAction}>{copy.cta}</button>

@@ -8,11 +8,20 @@
   import Alert from '../sdk-auth/shared/Alert.svelte';
   import Spinner from '../sdk-auth/shared/Spinner.svelte';
 
+  type BillingInterval = PriceOfferSdk['recurrenceInterval'];
+
   interface Props extends HTMLAttributes<HTMLDivElement> {
     successRedirect?: string;
     cancelRedirect?: string;
+    /**
+     * Which billing interval tab is selected by default (`'month'` | `'year'` |
+     * `'week'` | `'day'`). Falls back to the first available interval when the
+     * requested one isn't offered by any plan. Default: `'month'`.
+     */
+    defaultInterval?: BillingInterval;
     onSelect?: (detail: { plan: Plan; price: PriceOfferSdk }) => void;
-    planCard?: Snippet<[{ plan: Plan; prices: PriceOfferSdk[]; isCurrent: boolean; onPick: (price: PriceOfferSdk) => void }]>;
+    /** Custom card renderer. `prices` is the plan's full price list; `interval` is the active tab. */
+    planCard?: Snippet<[{ plan: Plan; prices: PriceOfferSdk[]; isCurrent: boolean; interval: BillingInterval; onPick: (price: PriceOfferSdk) => void }]>;
     emptyState?: Snippet;
     loadingState?: Snippet;
   }
@@ -20,6 +29,7 @@
   let {
     successRedirect = '/subscription',
     cancelRedirect = '/subscription',
+    defaultInterval = 'month',
     onSelect,
     planCard,
     emptyState,
@@ -36,6 +46,50 @@
   const plans = $derived($subscriptionStore.plans);
   const loading = $derived($subscriptionStore.loading);
   const storeError = $derived($subscriptionStore.error);
+
+  const INTERVAL_LABELS: Record<BillingInterval, string> = {
+    day: 'Daily',
+    week: 'Weekly',
+    month: 'Monthly',
+    year: 'Yearly',
+  };
+
+  // Distinct billing intervals offered by any *paid* price across all plans,
+  // in a stable display order. (Free, amount-0 prices are interval-agnostic
+  // and always shown, so they don't contribute a tab.)
+  const availableIntervals = $derived.by<BillingInterval[]>(() => {
+    const order: BillingInterval[] = ['day', 'week', 'month', 'year'];
+    return order.filter((i) =>
+      (plans ?? []).some((plan) =>
+        plan.prices.some((p) => p.amount > 0 && p.recurrenceInterval === i),
+      ),
+    );
+  });
+
+  // Only render the toggle when there's a genuine choice (≥2 intervals).
+  const showIntervalTabs = $derived(availableIntervals.length >= 2);
+
+  // The user's explicit tab choice (null until they pick one). The effective
+  // selection is derived — the override when still valid, else the requested
+  // `defaultInterval`, else the first available. Kept as $derived (rather than
+  // an $effect that writes state) so it reconciles automatically as plans load.
+  let intervalOverride = $state<BillingInterval | null>(null);
+  const selectedInterval = $derived.by<BillingInterval>(() => {
+    if (intervalOverride && availableIntervals.includes(intervalOverride)) {
+      return intervalOverride;
+    }
+    return availableIntervals.includes(defaultInterval)
+      ? defaultInterval
+      : (availableIntervals[0] ?? defaultInterval);
+  });
+
+  // Prices to show for a plan under the active tab: the matching interval, plus
+  // any free (amount-0) prices which apply regardless of interval.
+  function pricesForInterval(plan: Plan): PriceOfferSdk[] {
+    return plan.prices.filter(
+      (p) => p.amount === 0 || p.recurrenceInterval === selectedInterval,
+    );
+  }
 
   type UiState = 'idle' | 'payment-failed' | 'setup-payments' | 'select-plan' | 'active' | 'trial';
 
@@ -67,8 +121,13 @@
     picking = true;
     pickError = null;
     try {
-      if (price.amount === 0) {
-        // Free plan — select directly
+      if (price.amount === 0 && !plan.hasCost) {
+        // Free plan — select directly. TBP-275: guard on `!plan.hasCost` so a
+        // $0-base plan that carries METERED pricing is NOT treated as free —
+        // it falls through to checkout/changePlan below, capturing a payment
+        // method so per-unit overage can be billed (US-C). Without this guard a
+        // metered $0-base plan would hit selectFreePlan, which the backend now
+        // rejects ("has a cost — use the checkout endpoint instead").
         await getBridgeAuth().selectFreePlan(plan.key);
         await loadSubscription();
         onSelect?.({ plan, price });
@@ -151,13 +210,35 @@
         <p class="bridge-plan-empty">No plans available.</p>
       {/if}
     {:else if plans}
+      {#if showIntervalTabs}
+        <div
+          class="bridge-plan-interval-tabs"
+          data-bridge-plan-interval-tabs
+          role="group"
+          aria-label="Billing interval"
+        >
+          {#each availableIntervals as interval (interval)}
+            <button
+              type="button"
+              class="bridge-plan-interval-tab"
+              data-active={interval === selectedInterval}
+              aria-pressed={interval === selectedInterval}
+              onclick={() => (intervalOverride = interval)}
+            >
+              {INTERVAL_LABELS[interval]}
+            </button>
+          {/each}
+        </div>
+      {/if}
+
       <div class="bridge-plan-cards" data-bridge-plan-cards>
         {#each plans as plan (plan.key)}
           {@const isCurrent = plan.key === currentPlanKey}
           {@const onPick = (price: PriceOfferSdk) => handlePick(plan, price)}
+          {@const visiblePrices = pricesForInterval(plan)}
 
           {#if planCard}
-            {@render planCard({ plan, prices: plan.prices, isCurrent, onPick })}
+            {@render planCard({ plan, prices: plan.prices, isCurrent, interval: selectedInterval, onPick })}
           {:else}
             <div
               data-bridge-plan-card
@@ -177,7 +258,7 @@
               {/if}
 
               <div class="bridge-plan-prices">
-                {#each plan.prices as price (price.recurrenceInterval + price.currency)}
+                {#each visiblePrices as price (price.recurrenceInterval + price.currency)}
                   <button
                     class="bridge-btn-primary bridge-plan-select-btn"
                     disabled={isCurrent || picking}
@@ -201,6 +282,10 @@
                   >
                     {isCurrent ? 'Current plan' : 'Select plan'}
                   </button>
+                {:else if visiblePrices.length === 0}
+                  <p class="bridge-plan-unavailable" data-bridge-plan-unavailable>
+                    Not available {INTERVAL_LABELS[selectedInterval].toLowerCase()}
+                  </p>
                 {/if}
               </div>
             </div>

@@ -9,12 +9,15 @@
     onSent?: () => void;
     onError?: (error: Error) => void;
     loginHref?: string;
+    /** Heading text. Pass `null`/`''` to render no heading and use your own page title. */
+    heading?: string | null;
   }
 
   let {
     onSent,
     onError,
     loginHref = '/login',
+    heading = 'Sign in with email link',
     class: className,
     style,
     ...rest
@@ -51,7 +54,7 @@
   }
 </script>
 
-<AuthFormWrapper heading="Sign in with email link" class={className} {style} {...rest}>
+<AuthFormWrapper heading={sent ? null : heading} class={className} {style} {...rest}>
   {#if error}
     <Alert variant="error">{error}</Alert>
   {/if}

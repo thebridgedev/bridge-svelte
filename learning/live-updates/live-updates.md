@@ -47,6 +47,8 @@ import { bridge } from '@nebulr-group/bridge-svelte';
 const unsubscribe = bridge.events.handle({
   'flag.updated':              (m) => console.log('flag changed:', m.flag.key),
   'subscription.plan_changed': (m) => analytics.track('plan_changed', m),
+  // m.policy ('hard' | 'metered'); for metered also m.unitAmount / m.currency /
+  // m.overageEstimate / m.overcap (TBP-275) for live in-app cost display.
   'quota.updated':             (m) => updateMeter(m.metric, m.remaining),
   'session.snapshot':          (m) => analytics.track('hydrated'),
   '*':                         (m) => debugLog(m.kind, m),

@@ -43,15 +43,23 @@ afterEach(() => {
 
 // Stub the bridge-instance singleton so bridge.app.plans.load() doesn't
 // require a real BridgeAuth in vitest. The actual load impl reads from
-// getBridgeAuth() which throws when uninitialized.
-vi.mock('./bridge-instance.js', () => ({
-  getBridgeAuth: () => ({
-    getPlans: async () => [
-      { key: 'free', name: 'Free' },
-      { key: 'pro', name: 'Pro' },
-    ],
-  }),
-}));
+// getBridgeAuth() which throws when uninitialized. `tokenStore` must be
+// exported too — bridge.ts derives the JWT user fallback from it at
+// module-eval time.
+vi.mock('./bridge-instance.js', async () => {
+  const { writable } = await import('svelte/store');
+  return {
+    tokenStore: writable(null),
+    subscriptionStore: writable({ status: null, plans: null, loading: false, error: null }),
+    loadSubscription: async () => {},
+    getBridgeAuth: () => ({
+      getPlans: async () => [
+        { key: 'free', name: 'Free' },
+        { key: 'pro', name: 'Pro' },
+      ],
+    }),
+  };
+});
 
 describe('bridge surface (Phase 4, TBP-319)', () => {
   it('initial slice stores are null until a snapshot lands', () => {

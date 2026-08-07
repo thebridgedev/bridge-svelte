@@ -15,8 +15,9 @@ Two server-side settings on the Bridge app must be in place before any SDK auth 
 
 - **`tenantSelfSignup` must be enabled.** Without it, `SignupForm` returns `403 Forbidden` from `/auth/auth/signup`. Enable it via `bridge app update --tenant-self-signup true` or the Bridge admin dashboard.
 - **App origin must be in `allowedOrigins`.** This was set in the master integration prompt's Step 3b (`bridge app update --allowed-origins <frontend-url>`). Confirm it's present — both the `SdkOriginGuard` (signup, SSO) and the email-link generator depend on it. The signup verification email is built using the `Origin` header of the signup request and must match an allowed origin or it will fall back to a hosted handover URL.
+- **Enable the auth methods you intend to surface** (password, magic link, passkeys, SSO providers). The SDK components render a method's UI only when the app has it enabled — e.g. `LoginForm` shows the magic-link button only when `magicLinkEnabled` is on. Enable via `bridge app update --magic-link-enabled true --passkeys-enabled true` (or the Bridge admin dashboard) for every method the routes below wire up.
 
-Confirm both before proceeding. If either is missing, set them now — fixing this after the integration is wired in is a worse debugging experience.
+Confirm all of these before proceeding. If any is missing, set it now — fixing this after the integration is wired in is a worse debugging experience.
 
 ## Integration audit
 

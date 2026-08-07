@@ -54,7 +54,7 @@
 
       let regResponse: any;
       if (typeof window !== 'undefined' && (window as any).__simpleWebAuthn?.startRegistration) {
-        regResponse = await (window as any).__simpleWebAuthn.startRegistration(options);
+        regResponse = await (window as any).__simpleWebAuthn.startRegistration({ optionsJSON: options });
       } else {
         // @ts-ignore — @simplewebauthn/browser is an optional peer dependency
         const mod = await import('@simplewebauthn/browser');

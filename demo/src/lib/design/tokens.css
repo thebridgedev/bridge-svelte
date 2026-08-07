@@ -1,0 +1,62 @@
+/*
+ * Bridge Developer Demo — design tokens.
+ *
+ * One token set, two themes. The demo shell sets `data-theme` on <html>; every
+ * component (FeaturePage, Inspector, AppShell, migrated pages) reads these
+ * custom properties so a single switch reskins the whole app. The token NAMES
+ * match the light fallbacks already baked into FeaturePage.svelte / flag-demo,
+ * so defining them here simply "turns on" the themeable surface.
+ */
+
+:root,
+[data-theme='light'] {
+  --surface: #ffffff;
+  --surface-2: #f4f6f9;
+  --surface-3: #eceff4;
+  --border: #e5e9f0;
+  --border-2: #d8dee7;
+  --text: #0d1320;
+  --text-muted: #586273;
+  --text-faint: #8b95a4;
+  --primary: #2f5be0;
+  --primary-soft: rgba(47, 91, 224, 0.1);
+  --live: #0c9b73;
+  --live-soft: rgba(12, 155, 115, 0.12);
+  --warn: #c2691a;
+  --warn-soft: rgba(194, 105, 26, 0.12);
+  --danger: #d6453d;
+  --danger-soft: rgba(214, 69, 61, 0.1);
+  --code-bg: #0b1019;
+  --shell-bg: #f7f9fc;
+  --shadow-1: 0 1px 2px rgba(13, 19, 32, 0.06), 0 1px 3px rgba(13, 19, 32, 0.04);
+  --shadow-2: 0 8px 24px rgba(13, 19, 32, 0.1);
+}
+
+[data-theme='dark'] {
+  --surface: #141a24;
+  --surface-2: #1b2330;
+  --surface-3: #222c3c;
+  --border: #283242;
+  --border-2: #323e52;
+  --text: #e8edf4;
+  --text-muted: #9aa7b8;
+  --text-faint: #687589;
+  --primary: #5b86f5;
+  --primary-soft: rgba(91, 134, 245, 0.16);
+  --live: #2dd4a7;
+  --live-soft: rgba(45, 212, 167, 0.16);
+  --warn: #e0a050;
+  --warn-soft: rgba(224, 160, 80, 0.16);
+  --danger: #f06a62;
+  --danger-soft: rgba(240, 106, 98, 0.16);
+  --code-bg: #0b1019;
+  --shell-bg: #0d121b;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+html,
+body {
+  background: var(--shell-bg);
+  color: var(--text);
+}

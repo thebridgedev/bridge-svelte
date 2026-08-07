@@ -13,7 +13,10 @@ const config = {
 		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
 		adapter: adapter(),
 		alias: {
-			'@bridge-svelte': '../bridge-svelte/src'
+			'@bridge-svelte': '../bridge-svelte/src',
+			// Single source of truth for doc content — same `/learning` tree the
+			// public Astro docs hub renders via the sync-docs action.
+			$learning: '../learning'
 		}
 	}
 };

@@ -51,9 +51,10 @@ test.describe('Protected Routes', () => {
     // Should show authentication status
     await expect(page.locator('text=You are currently authenticated')).toBeVisible();
 
-    // Should display profile information
-    await expect(page.locator('text=Your Profile')).toBeVisible();
-    await expect(page.locator('text=Email')).toBeVisible();
+    // Should display profile information. The profile is now rendered as a <dl>
+    // with <dt> labels (Name / Email / Username) instead of a "Your Profile" card.
+    await expect(page.getByText('Email', { exact: true })).toBeVisible();
+    await expect(page.getByText('Name', { exact: true })).toBeVisible();
   });
 
   test('authenticated user sees their email on the protected page', async ({
@@ -65,9 +66,10 @@ test.describe('Protected Routes', () => {
     await page.goto('/protected');
     await page.waitForLoadState('networkidle');
 
-    // Profile is set asynchronously from the ID token; the email appears in a <p> with "Email: ..."
+    // Profile is set asynchronously from the ID token; the email now appears in a
+    // <dd> within the profile <dl> (was a <p> before the AppShell revamp).
     await expect(
-      page.locator('p').filter({ hasText: testUser.email }).first(),
+      page.locator('dd').filter({ hasText: testUser.email }).first(),
     ).toBeVisible({ timeout: LONG_TIMEOUT });
   });
 });

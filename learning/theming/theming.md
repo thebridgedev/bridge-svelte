@@ -14,8 +14,8 @@ import '@nebulr-group/bridge-svelte/styles';
 
 The stylesheet provides two layers:
 
-- **Structural CSS** — layout, spacing, and sizing that components need to render correctly.
-- **Visual defaults** — a minimal but complete out-of-the-box appearance so forms look reasonable with no extra work. These include a visible input border/focus ring, an indigo primary button, and colored error/success alert banners.
+- **Structural CSS**: layout, spacing, and sizing that components need to render correctly.
+- **Visual defaults**: a minimal but complete out-of-the-box appearance so forms look reasonable with no extra work. These include a visible input border/focus ring, an indigo primary button, and colored error/success alert banners.
 
 ## CSS variables reference
 
@@ -56,7 +56,7 @@ These variables are used by specific components and can also be overridden:
 
 ## Zero specificity
 
-All visual-default rules use the `:where()` pseudo-class, which has zero specificity. This means any class or element selector in your own CSS wins automatically — no `!important` needed.
+All visual-default rules use the `:where()` pseudo-class, which has zero specificity. This means any class or element selector in your own CSS wins automatically, no `!important` needed.
 
 For example, the default primary button is styled as:
 
@@ -103,19 +103,19 @@ Bridge components expose data attributes that you can use as CSS selectors for s
 | `[data-variant="info"]` | `"info"` | Info variant (alerts) |
 | `[data-variant="success"]` | `"success"` | Success variant (alerts) |
 | `[data-variant="danger"]` | `"danger"` | Danger variant (alerts) |
-| `[data-bridge-plan-selector]` | — | Plan selector root |
-| `[data-bridge-plan-card]` | — | Individual plan card |
+| `[data-bridge-plan-selector]` | (none) | Plan selector root |
+| `[data-bridge-plan-card]` | (none) | Individual plan card |
 | `[data-current="true"]` | `"true"` / `"false"` | Current plan card |
-| `[data-bridge-alert]` | — | Alert component |
-| `[data-bridge-auth-form]` | — | Auth form wrapper |
-| `[data-bridge-passkey-login]` | — | Passkey login button |
-| `[data-bridge-sso-button]` | — | SSO button |
-| `[data-bridge-spinner]` | — | Loading spinner |
-| `[data-bridge-api-tokens]` | — | API token management root |
-| `[data-bridge-workspace-selector]` | — | Workspace selector root |
-| `[data-bridge-workspace-item]` | — | Individual workspace item |
+| `[data-bridge-alert]` | (none) | Alert component |
+| `[data-bridge-auth-form]` | (none) | Auth form wrapper |
+| `[data-bridge-passkey-login]` | (none) | Passkey login button |
+| `[data-bridge-sso-button]` | (none) | SSO button |
+| `[data-bridge-spinner]` | (none) | Loading spinner |
+| `[data-bridge-api-tokens]` | (none) | API token management root |
+| `[data-bridge-workspace-selector]` | (none) | Workspace selector root |
+| `[data-bridge-workspace-item]` | (none) | Individual workspace item |
 
-Example — style the active workspace differently:
+Example: style the active workspace differently.
 
 ```css
 [data-bridge-workspace-item][data-active="true"] {

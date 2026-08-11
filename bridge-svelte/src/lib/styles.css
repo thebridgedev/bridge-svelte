@@ -936,7 +936,11 @@
 }
 
 .bridge-plan-interval-tabs {
-  display: inline-flex;
+  /* Centered above the plan cards; flex + fit-content (not inline-flex) so
+     auto margins can center it regardless of the host page's text alignment. */
+  display: flex;
+  width: fit-content;
+  margin-inline: auto;
   gap: 0.25rem;
   margin-bottom: 1.25rem;
   padding: 0.25rem;

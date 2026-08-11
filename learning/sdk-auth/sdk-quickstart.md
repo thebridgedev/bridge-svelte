@@ -176,6 +176,20 @@ const config: BridgeConfig = {
 };
 ```
 
+## 8. Logging out — stay in YOUR app
+
+Always pass `redirectTo` when calling `logout()` in SDK mode:
+
+```svelte
+<button onclick={() => getBridgeAuth().logout({ redirectTo: '/auth/login' })}>
+  Log out
+</button>
+```
+
+Without `redirectTo`, `logout()` sends the user to the **hosted Bridge portal**
+(`hostedUrl`, default `auth.thebridge.dev`) instead of your in-app login page —
+which is almost never what an SDK-mode app wants.
+
 ## Next steps
 
 - **More auth UI components**: [MFA](/auth/ui/mfa/), [passkeys](/auth/ui/passkeys/), [magic link](/auth/ui/magic-link/), [SSO login button](/auth/ui/google-sso/), [switching workspaces](/auth/ui/switching-workspaces/), and [user & team management](/auth/ui/team-management/).

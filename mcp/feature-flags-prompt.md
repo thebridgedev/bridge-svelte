@@ -135,7 +135,12 @@ bridge flag eval enterprise-export --identity user-123 --attribute tenant.plan=p
 bridge flag eval enterprise-export --identity user-123 --attribute tenant.plan=free  # → false
 ```
 
-`bridge flag list` / `get <key>` inspect the current state; `bridge flag update --key <key> --state on|off` flips a flag without touching its rule.
+`bridge flag list` / `get <key>` inspect the current state. To flip a flag without touching its rule, `bridge flag update` addresses it **by id, not by key** — read the id first:
+
+```bash
+bridge flag get <key>                      # id is in the output
+bridge flag update --id <id> --state on    # or --state off | on-with-rule
+```
 
 ## Step 4 — Feed the rule its inputs (eval context)
 
@@ -198,6 +203,6 @@ Flag not appearing in the dashboard within ~30s, or a read returns the default f
 ## Verify
 
 1. Navigate to `/flags-demo` in the browser. The grey striped box should appear — Bridge auto-creates `demo-flag` as off.
-2. Go to **Feature Control** in the Bridge dashboard and toggle `demo-flag` on (or run `bridge flag update --key demo-flag --state on`).
+2. Go to **Feature Control** in the Bridge dashboard and toggle `demo-flag` on (or take the id from `bridge flag get demo-flag` and run `bridge flag update --id <id> --state on`).
 3. The box turns green **without a page refresh** — realtime updates are on by default.
 4. Toggle it off again to confirm it reverts.

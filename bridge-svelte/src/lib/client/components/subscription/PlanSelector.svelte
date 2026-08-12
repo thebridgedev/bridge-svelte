@@ -91,12 +91,44 @@
       : (availableIntervals[0] ?? defaultInterval);
   });
 
-  // Prices to show for a plan under the active tab: the matching interval, plus
-  // any free (amount-0) prices which apply regardless of interval.
+  // Prices to show for a plan under the active tab — at most ONE, because each
+  // price renders its own select button.
+  //
+  // The previous filter was `p.amount === 0 || p.recurrenceInterval === selected`,
+  // where the zero-amount test short-circuited the interval test. A free plan
+  // defining both `0/month` and `0/year` therefore matched twice and rendered two
+  // identical "Select free plan" buttons — visible on The Bridge's own /plan page,
+  // whose free plan ("Startup") carries a zero price per interval.
+  //
+  // The intent behind that clause was that a free plan stays selectable under
+  // every tab, which is preserved below: prefer the active interval's price, and
+  // fall back to a free price from any interval so a free-on-yearly-only plan
+  // doesn't render as "Not available monthly".
   function pricesForInterval(plan: Plan): PriceOfferSdk[] {
-    return plan.prices.filter(
-      (p) => p.amount === 0 || p.recurrenceInterval === selectedInterval,
-    );
+    const exact = plan.prices.filter((p) => p.recurrenceInterval === selectedInterval);
+    if (exact.length > 0) return exact;
+
+    const free = plan.prices.find((p) => p.amount === 0);
+    return free ? [free] : [];
+  }
+
+  // Cheapest first. The API returns plans in catalog insertion order, which on
+  // prod is growth → starter → free — putting the free plan last, below the most
+  // expensive one.
+  //
+  // The sort key is each plan's cheapest price across ALL intervals, not the
+  // active interval's, so the order stays put when the user toggles
+  // Monthly/Yearly. A plan's tier is a property of the plan; cards reshuffling
+  // under the cursor on a tab switch is worse than the edge case it would fix
+  // (a catalog whose yearly ranking inverts its monthly one). Plans with no
+  // price sort last rather than being treated as free.
+  const sortedPlans = $derived(
+    [...(plans ?? [])].sort((a, b) => minAmount(a) - minAmount(b)),
+  );
+
+  function minAmount(plan: Plan): number {
+    const amounts = (plan.prices ?? []).map((p) => p.amount);
+    return amounts.length > 0 ? Math.min(...amounts) : Number.POSITIVE_INFINITY;
   }
 
   type UiState = 'idle' | 'payment-failed' | 'setup-payments' | 'select-plan' | 'active' | 'trial';
@@ -292,7 +324,7 @@
       {/if}
 
       <div class="bridge-plan-cards" data-bridge-plan-cards>
-        {#each plans as plan (plan.key)}
+        {#each sortedPlans as plan (plan.key)}
           {@const isCurrent = plan.key === currentPlanKey}
           {@const onPick = (price: PriceOfferSdk) => handlePick(plan, price)}
           {@const visiblePrices = pricesForInterval(plan)}

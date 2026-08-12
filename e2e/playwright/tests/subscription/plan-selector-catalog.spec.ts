@@ -322,24 +322,44 @@ test.describe('PlanSelector catalog rendering', () => {
     }
   });
 
-  // Regression: same root cause as the test above — this one pins the sort KEY
-  // to the active interval's price rather than a fixed one (2026-08-12)
-  test('re-orders plan cards when the active interval changes the ranking', async ({
+  // The sort key is deliberately each plan's cheapest price across ALL intervals,
+  // NOT the active interval's — so switching tabs never reshuffles the cards.
+  //
+  // This catalog is the case that distinguishes the two readings: Starter is
+  // cheaper monthly (10 vs 30 EUR) but dearer yearly (300 vs 100 EUR). Sorting on
+  // the active interval would reorder the cards under the cursor on a tab switch;
+  // a plan's tier is a property of the plan, not of the billing period, so the
+  // order holds and only the prices change. An earlier revision of this spec
+  // asserted the opposite; it was inverted once the sort key was decided.
+  test('keeps plan card order stable when the active interval changes the ranking', async ({
     authenticatedPage: page,
   }) => {
     await mockPlanCatalog(page, INVERTED_CATALOG);
     await openPlanSelector(page);
 
+    const ordersByInterval: string[][] = [];
     for (const interval of TABBED_INTERVALS) {
       await selectInterval(page, interval);
-
-      const expectedOrder = cheapestFirst(INVERTED_CATALOG, interval);
-      expect(
-        await renderedPlanOrder(page),
-        `this catalog prices Starter cheaper monthly (10 vs 30 EUR) but dearer yearly ` +
-          `(300 vs 100 EUR), so the "${INTERVAL_TAB_LABELS[interval]}" tab must order the cards ` +
-          `${expectedOrder.join(' → ')} — the ranking follows the ACTIVE interval's price.`,
-      ).toEqual(expectedOrder);
+      ordersByInterval.push(await renderedPlanOrder(page));
     }
+
+    const [first, ...rest] = ordersByInterval;
+    for (const [i, order] of rest.entries()) {
+      expect(
+        order,
+        `this catalog prices Starter cheaper monthly (10 vs 30 EUR) but dearer yearly ` +
+          `(300 vs 100 EUR). Card order must NOT depend on the active tab — the ` +
+          `"${INTERVAL_TAB_LABELS[TABBED_INTERVALS[i + 1]]}" tab rendered ` +
+          `${order.join(' → ')} but "${INTERVAL_TAB_LABELS[TABBED_INTERVALS[0]]}" rendered ` +
+          `${first.join(' → ')}.`,
+      ).toEqual(first);
+    }
+
+    // …and that stable order is still cheapest-first by the plan's floor price.
+    expect(
+      first,
+      `cards must be ordered by each plan's cheapest price across intervals ` +
+        `(Startup 0 → Starter 10 → Growth 30).`,
+    ).toEqual(['Startup', 'Starter', 'Growth']);
   });
 });

@@ -33,10 +33,16 @@ The common two-tier shape — a free plan with a hard cap, a premium plan that m
 
 `limit: 0` with `policy: "metered"` bills from the first unit. `policy: "hard"` must **not** carry `priceAmount`. `priceCurrency` defaults to the plan's price currency when the plan has exactly one — pass it explicitly otherwise. On the CLI these are `--policy hard` and `--policy metered --price-amount 0.002`.
 
-### Gaps — no MCP tool today
+### Operations that are not plain MCP writes
 
-- **Connecting Stripe is a human step.** There is no MCP tool for it. It is done in the dashboard, or with `bridge stripe connect --secret-key … --publishable-key …`. If Stripe isn't connected, say so and ask the user to do it — do not try to route around it.
-- **Reading Stripe connection status**: `bridge stripe status` on the CLI. Over MCP, `get_app` reports the app-level billing setup; there is no dedicated status tool.
+Two of these used to be listed as "no MCP tool exists". `connect_stripe`,
+`setup_payments` and `get_stripe_status` shipped in TBP-577, and the stale text
+actively told agents not to look for them — costing at least one real session a
+wrong answer to the user. If you find yourself writing "there is no tool for
+this", check first.
+
+- **Connecting Stripe.** `connect_stripe` over MCP (or `setup_payments`, which runs the whole payment setup), `bridge stripe connect --secret-key … --publishable-key …` on the CLI, or the dashboard. It needs a live Stripe secret key: ask the user for it. Never invent one and never reuse a key you found in a file.
+- **Reading Stripe connection status**: `get_stripe_status` over MCP, `bridge stripe status` on the CLI. `get_app` also reports the app-level billing setup.
 - **Turning the paywall off** (`bridge app update --payments-auto-redirect false`): CLI or dashboard only. `get_app` reads the setting; no MCP tool writes it.
 
 ## Prerequisites

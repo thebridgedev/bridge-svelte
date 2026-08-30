@@ -142,6 +142,13 @@ export type {
 } from '@nebulr-group/bridge-auth-core';
 export { BridgeAuth, BridgeAuthError, HttpError, TeamService, ApiTokenService } from '@nebulr-group/bridge-auth-core';
 export type { SessionStalePayload } from '@nebulr-group/bridge-auth-core';
+
+// Billing 2.0 quota shape. `useBridge().quota(metric)` returns this, so a
+// TypeScript consumer needs to be able to NAME it — without this re-export the
+// only way to type a quota read was to reach into @nebulr-group/bridge-auth-core
+// directly or hand-copy the interface, and hand-copied mirrors drift silently
+// the first time a field is added.
+export type { QuotaSnapshot } from '@nebulr-group/bridge-auth-core';
 export type {
   ApiToken,
   CreateApiTokenInput,

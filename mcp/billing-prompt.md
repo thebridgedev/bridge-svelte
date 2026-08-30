@@ -165,15 +165,43 @@ then disappears once a plan is chosen. Props:
 
 Import `PlanSelector` / `BridgePaywall` from `@nebulr-group/bridge-svelte`.
 
-## Step 3 — Quota and entitlement UI (optional)
+## Step 3 — Reading quota: client and server
 
-Skip if the plans have no per-resource limits or feature differences.
+**Required if any plan has a limit or a metered price.** (Skip only when every plan is flat-rate with no per-resource limits.)
 
-> Quotas are configured with `set_plan_quota` (MCP) or `bridge plan quota set` (CLI) — `hard` / `--policy hard` for blocking caps, `metered` + `priceAmount` / `--policy metered --price-amount <n>` for per-unit billing; see *Configuring plans, prices and quotas* above. Entitlements are derived from `hard` quotas automatically — there is no entitlement tool or `plan entitlement set` command. This step only covers surfacing them in the UI.
+> Quotas are configured with `set_plan_quota` (MCP) or `bridge plan quota set` (CLI) — `hard` / `--policy hard` for blocking caps, `metered` + `priceAmount` / `--policy metered --price-amount <n>` for per-unit billing; see *Configuring plans, prices and quotas* above. Entitlements are derived from `hard` quotas automatically — there is no entitlement tool or `plan entitlement set` command.
 
-To show a live quota counter, drop in `<BridgeQuotaBanner metric="ai_completions" />` — it renders nothing if no quota is configured for the current plan. For **metered** quotas the banner shows live usage **and projected cost** (per-unit price × overage) and is informational (never blocking); read `useBridge().quota(metric)` for the raw `unitAmount` / `currency` / `overageEstimate` / `overcap` fields to build a custom metered cost display.
+Pick by what you need:
 
-To gate a feature by entitlement, use `bridge.tenant.entitlements.can('key')` from `useBridge()`. Returns `false` until hydrated (fail-closed), updates live when the plan changes or quota exhausts.
+| What you need | Use | Where |
+|---|---|---|
+| A live usage counter, ready-made | `<BridgeQuotaBanner metric="decks" />` | component |
+| The raw numbers, for your own UI | `useBridge().quota(metric)` → `QuotaSnapshot` | component or `.svelte.ts` |
+| Gate a feature on/off by plan | `useBridge().entitlements.can('key')` | anywhere |
+| **Actually enforce a cap** | **Your server, not here** — see below | backend |
+
+### Do not proxy quota through your own API
+
+The client reads quota **directly from Bridge**. You do not need an endpoint on your own API that relays it, and you should not hand-copy the `QuotaSnapshot` shape into your codebase — `useBridge().quota(metric)` returns it typed.
+
+A `/quota` route on your own API, a hand-written `type MyQuota = { used, limit, remaining, … }`, and bespoke counter markup are three symptoms of the same wrong turn.
+
+### Enforcement is server-side. Always.
+
+A client-side check is **display, not enforcement** — anyone can call your API directly and skip it. Disabling a button is good UX and worth doing; it is not a cap.
+
+The cap itself belongs in your backend, which reads the same quota through its own SDK and refuses the write. For NestJS that is `BridgeService.fromJwt(jwt).usage.quota(metric)` plus `usage.report(metric, 1, idempotencyKey)` — see the **bridge-nestjs billing guide** (`get_integration_guide` with `topic=billing`, `framework=nestjs`). The two halves are independent: the client shows the number, the server decides.
+
+### `hard` vs `metered` — they behave oppositely
+
+- **`hard`** blocks. When `remaining <= 0` the action must be refused.
+- **`metered`** never blocks. Units above `limit` are billed per unit, so disabling the control on a metered plan means refusing money a customer has agreed to spend.
+
+Branch on `policy`, never on `remaining` alone.
+
+### Entitlements
+
+`useBridge().entitlements.can('key')` returns `false` until hydrated (fail-closed) and updates live when the plan changes or a quota exhausts.
 
 ## Step 4 — Billing portal
 

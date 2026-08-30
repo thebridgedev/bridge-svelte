@@ -4,21 +4,47 @@ You are wiring **billing UI** into a SvelteKit application that uses The Bridge.
 
 > **STOP — do not install any packages.** The only dependency is `@nebulr-group/bridge-svelte`, which is already installed. Do NOT install `@stripe/stripe-js` — the SDK redirects to Stripe Checkout via a plain URL redirect, no Stripe client library needed. `@stripe/stripe-js` appears in the package peer dep list for legacy reasons and must not be installed.
 
+## Configuring plans, prices and quotas
+
+These can be configured from the Bridge **MCP tools** or the **`bridge` CLI**. Same operations, same API:
+
+| Operation | MCP | CLI |
+|---|---|---|
+| List plans (with prices + quotas) | `list_plans` | `bridge plan list` / `bridge plan get <key>` |
+| Create a plan | `create_plan` — `key`, `name`, `description?`, `trial?`, `trialDays?` | `bridge plan create --key … --name …` |
+| Edit a plan | `update_plan` — `key`, `name?`, `description?` | `bridge plan update --key … --name …` |
+| Add/replace a price | `set_plan_price` — `key`, `amount`, `interval`, `currency?` | `bridge plan price set <key> --amount … --interval …` |
+| Remove a price | `remove_plan_price` — `key`, `interval`, `currency?` | `bridge plan price rm <key> --interval …` |
+| Add/replace a quota | `set_plan_quota` — `key`, `metric`, `limit`, `policy`, `priceAmount?`, `priceCurrency?` | `bridge plan quota set <key> --metric … --limit … --policy …` |
+| Remove a quota | `remove_plan_quota` — `key`, `metric` | `bridge plan quota rm <key> --metric …` |
+
+Use whichever is already set up. **If the user asks for a specific surface, use that one** — both reach the same API. If neither is available, offer to install one; only fall back to the dashboard if they decline.
+
+The common two-tier shape — a free plan with a hard cap, a premium plan that meters the overage — is two `set_plan_quota` calls on the same metric:
+
+```jsonc
+// free: blocks at 1000
+{ "key": "free",    "metric": "ai_completions", "limit": 1000, "policy": "hard" }
+
+// premium: 10000 included, then $0.002 per extra unit
+{ "key": "premium", "metric": "ai_completions", "limit": 10000, "policy": "metered",
+  "priceAmount": 0.002, "priceCurrency": "USD" }
+```
+
+`limit: 0` with `policy: "metered"` bills from the first unit. `policy: "hard"` must **not** carry `priceAmount`. `priceCurrency` defaults to the plan's price currency when the plan has exactly one — pass it explicitly otherwise. On the CLI these are `--policy hard` and `--policy metered --price-amount 0.002`.
+
+### Gaps — no MCP tool today
+
+- **Connecting Stripe is a human step.** There is no MCP tool for it. It is done in the dashboard, or with `bridge stripe connect --secret-key … --publishable-key …`. If Stripe isn't connected, say so and ask the user to do it — do not try to route around it.
+- **Reading Stripe connection status**: `bridge stripe status` on the CLI. Over MCP, `get_app` reports the app-level billing setup; there is no dedicated status tool.
+- **Turning the paywall off** (`bridge app update --payments-auto-redirect false`): CLI or dashboard only. `get_app` reads the setting; no MCP tool writes it.
+
 ## Prerequisites
 
 Verify before starting:
 
-```bash
-bridge plan list
-```
-
-- At least one plan must be listed. If empty, run `bridge guide billing` (no `--framework`) first — the master prompt handles plan creation and Stripe setup, then comes back here.
-
-```bash
-bridge stripe status
-```
-
-- If any plan has a price, Stripe must be connected. If it isn't, `<PlanSelector>` will silently fail when a user picks a paid plan. Return to the master prompt (`bridge guide billing`) to connect Stripe before continuing. Free-only setups can skip this check.
+- **At least one plan must exist** — `list_plans` (MCP) or `bridge plan list` (CLI). If there are none, create them with the table above, or run `bridge guide billing` (no `--framework`) for the master prompt's guided plan + Stripe setup, then come back here.
+- **If any plan has a price, Stripe must be connected** — `bridge stripe status`, or `get_app` over MCP. If it isn't, `<PlanSelector>` will silently fail when a user picks a paid plan. Connecting Stripe is the human step described above. Free-only setups can skip this check.
 
 - Bridge Auth must be set up in this project:
   - `@nebulr-group/bridge-svelte` in `package.json`
@@ -114,6 +140,8 @@ off so users reach the app without choosing a plan:
 bridge app update --payments-auto-redirect false
 ```
 
+There is no MCP tool for this app-level setting — `get_app` reads it, nothing over MCP writes it. Use the CLI or the dashboard.
+
 **Alternative — in-layout overlay.** If you'd rather gate in place than redirect to a route,
 wrap the app in `<BridgePaywall>` instead of creating `/welcome`:
 
@@ -141,7 +169,7 @@ Import `PlanSelector` / `BridgePaywall` from `@nebulr-group/bridge-svelte`.
 
 Skip if the plans have no per-resource limits or feature differences.
 
-> Quotas were configured in the master prompt via `bridge plan quota set` (`--policy hard` for blocking caps, `--policy metered --price-amount <n>` for per-unit billing). Entitlements are derived from `hard` quotas automatically — there is no `plan entitlement set` command. This step only covers surfacing them in the UI.
+> Quotas are configured with `set_plan_quota` (MCP) or `bridge plan quota set` (CLI) — `hard` / `--policy hard` for blocking caps, `metered` + `priceAmount` / `--policy metered --price-amount <n>` for per-unit billing; see *Configuring plans, prices and quotas* above. Entitlements are derived from `hard` quotas automatically — there is no entitlement tool or `plan entitlement set` command. This step only covers surfacing them in the UI.
 
 To show a live quota counter, drop in `<BridgeQuotaBanner metric="ai_completions" />` — it renders nothing if no quota is configured for the current plan. For **metered** quotas the banner shows live usage **and projected cost** (per-unit price × overage) and is informational (never blocking); read `useBridge().quota(metric)` for the raw `unitAmount` / `currency` / `overageEstimate` / `overcap` fields to build a custom metered cost display.
 
@@ -159,7 +187,7 @@ The subscription state is available via `bridge.tenant.subscription` from `useBr
 
 Before verifying, confirm every item was applied:
 
-- [ ] `bridge plan list` returns at least one plan
+- [ ] At least one plan exists (`list_plans` over MCP, `bridge plan list` on the CLI)
 - [ ] `src/routes/subscription/+page.svelte` created with `<PlanSelector>` (no props needed for standard plan-change flow)
 - [ ] `<BridgeBillingNotice />` added to root layout
 - [ ] Paywall (default): `src/routes/welcome/+page.svelte` created with `<PlanSelector>`, `billing.paywallRoute: '/welcome'` set in `+layout.ts`, and `/welcome` marked public in the route guard — OR `<BridgePaywall>` wrapping `{@render children()}` for the overlay alternative

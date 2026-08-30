@@ -178,23 +178,68 @@ A rule is **branches + otherwiseValue + rolloutPct**, first match wins:
 - `attribute` is a dotted path into the eval context (next step). With Bridge Auth, `user.id` `user.role` `user.email` `tenant.id` `tenant.plan` are populated for you.
 - **`rolloutPct` below 100 requires an identity** on the eval context — bucketing is `hash(flagKey + identity) mod 100`. With no identity the SDK refuses to bucket and returns the safe value rather than randomizing per call.
 
-Configure it either in the dashboard under **Feature Control**, or from the CLI — prefer the CLI when you are an agent, since it is scriptable and verifiable:
+### Where to configure it
+
+Configure it on whichever surface you have — the Bridge **MCP tools** or the **`bridge` CLI**. Same operation either way:
+
+| | Create the flag with a rule |
+|---|---|
+| **MCP** | `create_feature_flag` — `key`, `valueType`, `state: "on-with-rule"`, `rule` (a structured object, not a JSON string) |
+| **CLI** | `bridge flag create --key … --value-type … --state on-with-rule --rule '<json>'` |
+
+Use whichever is already set up. **If the user asks for a specific surface, use that one** — both reach the same API. If neither is available, offer to install one; only fall back to the dashboard (**Feature Control**) if they decline.
+
+CLI:
 
 ```bash
 bridge flag create --key enterprise-export --value-type boolean --state on-with-rule \
   --rule '{"branches":[{"conditions":[{"attribute":"tenant.plan","operator":"in","values":["pro","enterprise"]}],"returnValue":true}],"otherwiseValue":false,"rolloutPct":100}'
+```
 
-# prove the rule does what you meant, without touching the app:
+MCP — `create_feature_flag`, same rule as structured arguments:
+
+```jsonc
+{
+  "key": "enterprise-export",
+  "valueType": "boolean",
+  "state": "on-with-rule",
+  "rule": {
+    "branches": [
+      { "conditions": [ { "attribute": "tenant.plan", "operator": "in", "values": ["pro", "enterprise"] } ],
+        "returnValue": true }
+    ],
+    "otherwiseValue": false,
+    "rolloutPct": 100
+  }
+}
+```
+
+### Inspect and flip
+
+| | Read current state | Flip on/off without touching the rule |
+|---|---|---|
+| **MCP** | `list_feature_flags` | `toggle_feature_flag` — `key`, `enabled` |
+| **CLI** | `bridge flag list` / `bridge flag get <key>` | `bridge flag get <key>` for the id, then `bridge flag toggle --id <id> --enabled true` |
+
+The CLI addresses a flag **by id, not by key**: both `bridge flag update` and `bridge flag toggle` require `--id`, so they need a `bridge flag get <key>` lookup first.
+
+```bash
+bridge flag get <key>                        # id is in the output
+bridge flag toggle --id <id> --enabled true  # or --enabled false
+```
+
+`toggle_feature_flag` takes the **key** and resolves the id internally — one call instead of two. Use `update_feature_flag` (which does take an `id`, from `list_feature_flags`) only when changing the rule, values or value type.
+
+### Dry-running a rule — CLI only
+
+`bridge flag eval` evaluates a rule against a synthetic identity and attributes, with the app out of the way:
+
+```bash
 bridge flag eval enterprise-export --identity user-123 --attribute tenant.plan=pro   # → true
 bridge flag eval enterprise-export --identity user-123 --attribute tenant.plan=free  # → false
 ```
 
-`bridge flag list` / `get <key>` inspect the current state. To flip a flag without touching its rule, `bridge flag update` addresses it **by id, not by key** — read the id first:
-
-```bash
-bridge flag get <key>                      # id is in the output
-bridge flag update --id <id> --state on    # or --state off | on-with-rule
-```
+**There is no MCP equivalent today.** Over MCP the nearest check is reading the stored rule back with `list_feature_flags` and confirming the branches, operators and attribute paths are what you intended — that verifies the rule was *saved* correctly, not what it *evaluates to*. When you need the actual verdict, use the CLI.
 
 ## Step 4 — Feed the rule its inputs (eval context)
 
@@ -249,7 +294,7 @@ Flag not appearing in the dashboard within ~30s, or a read returns the default f
 - **`<BridgeBootstrap />` is mounted and `appId` is set.** The flag layer initializes on its mount; without it every read returns the default. Confirm `VITE_BRIDGE_APP_ID` is set and `initConfig({ appId })` ran in `+layout.ts`.
 - **Something is imported from `/flags`.** That subpath import is what puts the flag runtime on the dependency graph.
 - **A flag registers only once it has been evaluated** — load a page that actually reads the key.
-- **Rule never matches?** Run `bridge flag eval <key> --identity … --attribute k=v` to see the verdict without the app in the way, then confirm the app sends those same attributes.
+- **Rule never matches?** Read the stored rule back — `list_feature_flags` over MCP, `bridge flag get <key>` on the CLI — and confirm the app sends exactly those attribute paths. To see the verdict without the app in the way, `bridge flag eval <key> --identity … --attribute k=v` (CLI only — no MCP equivalent).
 - **`rolloutPct < 100` with no identity** returns the safe value by design.
 - **Realtime.** Live toggles ride the realtime channel; if a proxy blocks WebSockets the value still resolves on next load, just not instantly.
 - **First-render flicker is expected** — flags hydrate async. Set `defaultValue` to the safe-off state. This is a reason to gate a whole route with a `routeConfig` rule rather than in the page component, not a reason to hand-roll a readiness probe.
@@ -259,6 +304,6 @@ Flag not appearing in the dashboard within ~30s, or a read returns the default f
 ## Verify
 
 1. Navigate to `/flags-demo` in the browser. The grey striped box should appear — Bridge auto-creates `demo-flag` as off.
-2. Go to **Feature Control** in the Bridge dashboard and toggle `demo-flag` on (or take the id from `bridge flag get demo-flag` and run `bridge flag update --id <id> --state on`).
+2. Toggle `demo-flag` on — `toggle_feature_flag` with `key: "demo-flag"`, `enabled: true` over MCP, or `bridge flag get demo-flag` for the id then `bridge flag toggle --id <id> --enabled true` on the CLI. With neither surface available, flip it under **Feature Control** in the Bridge dashboard.
 3. The box turns green **without a page refresh** — realtime updates are on by default.
 4. Toggle it off again to confirm it reverts.

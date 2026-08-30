@@ -17,6 +17,9 @@ let _tokenStore: Writable<TokenSet>;
 let _onOpen: (() => void) | undefined;
 let _onClose: (() => void) | undefined;
 let _onSnapshot: ((msg: { kind: string; data: unknown }) => void) | undefined;
+let _onDegraded: (() => void) | undefined;
+let _invalidateCalls = 0;
+let _onFlagChange: ((change: { key: string; kind: string }) => void) | undefined;
 let _onUserState: ((msg: { reason: string }) => Promise<void> | void) | undefined;
 
 const _channelScopeCalls: Array<{ method: string; value: string | undefined }> = [];
@@ -28,6 +31,9 @@ let _capturedRealtimeConfig: Record<string, unknown> | undefined;
 // Reset the spy state between tests.
 function resetSpies() {
   _onOpen = _onClose = _onSnapshot = _onUserState = undefined;
+  _onDegraded = undefined;
+  _onFlagChange = undefined;
+  _invalidateCalls = 0;
   _channelScopeCalls.length = 0;
   _reauthCalls.length = 0;
   _startCalls = 0;
@@ -44,6 +50,7 @@ vi.mock('./bridge-instance.js', () => ({
   getBridgeAuth: () => ({
     getApiContext: () => ({ appId: 'app-1', accessToken: null }),
     refreshTokens: async () => {},
+    invalidateFeatureFlagCache: () => { _invalidateCalls += 1; },
   }),
 }));
 
@@ -67,6 +74,8 @@ vi.mock('@nebulr-group/bridge-auth-core', () => {
     setOnOpen(fn: () => void) { _onOpen = fn; }
     setOnClose(fn: () => void) { _onClose = fn; }
     setOnSnapshot(fn: (msg: { kind: string; data: unknown }) => void) { _onSnapshot = fn; }
+    setOnDegraded(fn: () => void) { _onDegraded = fn; }
+    setOnFlagChange(fn: (change: { key: string; kind: string }) => void) { _onFlagChange = fn; }
     setOnUserState(fn: (msg: { reason: string }) => Promise<void> | void) { _onUserState = fn; }
     setAppId(v: string | undefined) { _channelScopeCalls.push({ method: 'setAppId', value: v }); }
     setWorkspaceId(v: string | undefined) { _channelScopeCalls.push({ method: 'setWorkspaceId', value: v }); }
@@ -106,6 +115,7 @@ import {
   onBridgeRealtimeClose,
   onBridgeRealtimeSnapshot,
   onBridgeRealtimeUserState,
+  onBridgeFlagChange,
 } from './bridge-runtime.js';
 import { realtimeStatus } from './realtime-status.js';
 
@@ -242,5 +252,68 @@ describe('stopBridgeRuntime', () => {
 
   it('is safe to call without a prior start', async () => {
     await expect(stopBridgeRuntime()).resolves.not.toThrow();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TBP-575 — route flags were never push-updated.
+//
+// Route guards read FeatureFlagService (a 5-minute TTL cache fed by
+// bulkEvaluate). `<FeatureFlag>` reads BridgeFlags. Realtime only ever wrote to
+// the second one, so a flag flip took up to five minutes to affect a route —
+// not because the TTL was wrong, but because nothing told that cache anything
+// had changed.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('realtime flag changes reach the route-guard cache (TBP-575)', () => {
+  it('invalidates the route-guard flag cache on a flag mutation', () => {
+    startBridgeRuntime();
+    expect(_invalidateCalls).toBe(0);
+    _onFlagChange?.({ key: 'holo-experimental', kind: 'updated' });
+    expect(_invalidateCalls).toBe(1);
+  });
+
+  it('invalidates on removal too — a deleted flag changes route verdicts', () => {
+    startBridgeRuntime();
+    _onFlagChange?.({ key: 'holo-experimental', kind: 'removed' });
+    expect(_invalidateCalls).toBe(1);
+  });
+
+  it('fans the change out to subscribers so they can re-evaluate the route', () => {
+    startBridgeRuntime();
+    const seen: Array<{ key: string; kind: string }> = [];
+    const off = onBridgeFlagChange((c) => seen.push(c));
+    _onFlagChange?.({ key: 'holo-experimental', kind: 'updated' });
+    expect(seen).toEqual([{ key: 'holo-experimental', kind: 'updated' }]);
+    off();
+    _onFlagChange?.({ key: 'other', kind: 'updated' });
+    expect(seen).toHaveLength(1);
+  });
+
+  it('invalidates BEFORE notifying subscribers, so a re-check reads fresh values', () => {
+    startBridgeRuntime();
+    let invalidatedWhenNotified = -1;
+    onBridgeFlagChange(() => { invalidatedWhenNotified = _invalidateCalls; });
+    _onFlagChange?.({ key: 'x', kind: 'updated' });
+    expect(invalidatedWhenNotified).toBe(1);
+  });
+
+  it('a throwing subscriber does not stop the others', () => {
+    startBridgeRuntime();
+    let reached = false;
+    onBridgeFlagChange(() => { throw new Error('boom'); });
+    onBridgeFlagChange(() => { reached = true; });
+    _onFlagChange?.({ key: 'x', kind: 'updated' });
+    expect(reached).toBe(true);
+  });
+});
+
+describe('degraded realtime is reported as degraded, not open (TBP-575)', () => {
+  it('mirrors the degraded state into realtimeStatus', () => {
+    startBridgeRuntime();
+    _onDegraded?.();
+    // A socket that is connected but subscribed to nothing used to report
+    // 'open' — which is exactly how a dead transport passed for healthy.
+    expect(get(realtimeStatus)).toBe('degraded');
   });
 });

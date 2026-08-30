@@ -2,7 +2,7 @@
   import { beforeNavigate, goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { onMount, onDestroy } from 'svelte';
-  import { createRouteGuard } from '../auth/route-guard.js';
+  import { createRouteGuard, routeRulesReferenceFlag } from '../auth/route-guard.js';
   import {
     getBridgeAuth,
     isAuthenticated,
@@ -14,6 +14,7 @@
   import { setBridgeContext } from '../core/use-bridge.js';
   import { getConfig } from './stores/config.store.js';
   import {
+    onBridgeFlagChange,
     startBridgeRuntime,
     stopBridgeRuntime,
     type StartBridgeRuntimeOptions,
@@ -91,6 +92,31 @@
     }
   }
 
+  // TBP-575 — re-evaluate the CURRENT route when a flag it depends on changes.
+  //
+  // Route rules are only evaluated on navigation. Without this, flipping a
+  // flag off never ejects the user sitting on the route it gates — they keep
+  // the page until they happen to navigate. That makes a route flag useless as
+  // a kill switch, which is most of the reason to put a flag on a route.
+  //
+  // Debounced because one admin action can emit several flag messages, and
+  // each re-check costs a bulkEvaluate round-trip.
+  let _recheckTimer: ReturnType<typeof setTimeout> | undefined;
+  let _stopFlagWatch: (() => void) | undefined;
+
+  function scheduleRouteRecheck() {
+    if (_recheckTimer) clearTimeout(_recheckTimer);
+    _recheckTimer = setTimeout(() => {
+      _recheckTimer = undefined;
+      // No `cancel` here: there is no navigation in flight to cancel. A denied
+      // verdict redirects the user off the page they are already on.
+      handleRoute(window.location.pathname).catch(() => {
+        /* a failed re-check must never break the page; the next navigation
+           re-evaluates anyway */
+      });
+    }, 150);
+  }
+
   // Stash a teardown for the dynamically-attached capabilities (today: flags).
   let _capabilityStop: (() => Promise<void>) | undefined;
 
@@ -98,6 +124,13 @@
     // Start the core runtime — realtime client, channel scoping, billing-store
     // attach, session.snapshot fanout, billing-family event dispatch.
     startBridgeRuntime(runtime);
+
+    // TBP-575 — subscribe AFTER the runtime exists so the hook is registered
+    // on the live client. Filtered to keys the route rules actually name; a
+    // flag nothing routes on must not cost every client a round-trip.
+    _stopFlagWatch = onBridgeFlagChange((change) => {
+      if (routeRulesReferenceFlag(change.key)) scheduleRouteRecheck();
+    });
 
     // Fetch app config outside load() so we use the correct fetch context.
     // LoginForm also calls ensureAppConfig() — both share the same in-flight promise.
@@ -130,6 +163,12 @@
   });
 
   onDestroy(() => {
+    if (_recheckTimer) {
+      clearTimeout(_recheckTimer);
+      _recheckTimer = undefined;
+    }
+    _stopFlagWatch?.();
+    _stopFlagWatch = undefined;
     void (async () => {
       if (_capabilityStop) {
         try { await _capabilityStop(); } catch { /* ignore */ }

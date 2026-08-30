@@ -2,7 +2,61 @@
 
 You are adding **Feature Flags** to a SvelteKit application that uses The Bridge. The goal is to ship code behind a switch you control from the Bridge dashboard — no redeploy needed.
 
+## Choose the surface first
+
+Read this table before writing anything. Every case below is already solved by the SDK; **do not subscribe to the flag cache by hand.** If you find yourself reaching for `subscribeToFlagChanges`, `getBridgeFlagsInstance()` or a `cacheSize()` probe to work around flags "not being ready yet", you are rebuilding one of these three and will get the hydration edge cases wrong.
+
+| What you are gating | Use | Where |
+|---|---|---|
+| **A whole route** — the page should not exist when the flag is off | a `routeConfig` rule: `featureFlag` + `redirectTo` | `+layout.ts`, in the `bridgeBootstrap()` call |
+| **Markup** — a button, panel, menu entry inside a page | `<FeatureFlag>` | the component |
+| **A value or behaviour** — which endpoint, what limit, a string/number/JSON flag | `useFlag` | the component or a `.svelte.ts` module |
+
+Gating a route in the page component is the common mistake: the page still loads, its `load`/`onMount` still runs, and you then have to redirect *after* the flag resolves — which is where the hand-rolled hydration probes come from. The route guard runs before the route renders and has no such race.
+
+## Gate a whole route
+
+`RouteGuardConfig` rules take a `featureFlag` and a `redirectTo`. The guard runs inside `bridgeBootstrap()` in your root `load`, on every navigation, before the route renders:
+
+```ts
+// src/routes/+layout.ts
+import { bridgeBootstrap, type RouteGuardConfig } from '@nebulr-group/bridge-svelte';
+
+const routeConfig: RouteGuardConfig = {
+  rules: [
+    { match: '/', public: true },
+    { match: '/premium/*', featureFlag: 'premium-feature', redirectTo: '/upgrade' },
+    { match: '/beta/*', featureFlag: { any: ['beta-feature', 'internal'] }, redirectTo: '/' },
+  ],
+  defaultAccess: 'protected',
+};
+
+export const load = async ({ url }) => {
+  await bridgeBootstrap(url, { appId: 'your-app-id' }, routeConfig);
+};
+```
+
+`featureFlag` accepts `'key'`, `{ any: [...] }` or `{ all: [...] }`. `match` accepts a string pattern or a `RegExp`. A rule can carry `featureFlag` **and** `public: true` together — the route needs no session, but still disappears when the flag is off.
+
+**Adding a flag to a route that already has a rule is an edit, not a new rule.** Look for an existing entry matching that path before adding one.
+
+### What the route guard does differently
+
+It is a separate evaluation path from `<FeatureFlag>` / `useFlag`, and the difference is worth knowing before you pick it:
+
+| | Route guard | `<FeatureFlag>` / `useFlag` |
+|---|---|---|
+| Evaluated | server-side, via the Bridge eval API, against the session | in-browser, against the local flag cache |
+| Freshness | cached ~5 min — a dashboard toggle is **not** instant | realtime push, instant |
+| Context | derived from the access token (`user.*`, `tenant.*`) | local context + `bridge.attributes` + per-call `context` |
+| Values | boolean gate only | any value type |
+
+Both run the same FF 2.0 rule evaluator over the same flag records, so they agree on the verdict. They differ on *when* and on *what context they can see*: a rule targeting attributes you publish client-side with `bridge.attributes.set(...)` is invisible to the route guard. If a route must react to a toggle instantly, gate the route's *content* with `<FeatureFlag>` as well.
+
+> Route guards ride the full Bridge bootstrap (`bridgeBootstrap` from the package root). An app running flags-only — the auth-free `/flags` subpath, no `bridgeBootstrap` — does not have them; gate with `<FeatureFlag>` instead.
+
 ## Prerequisites check
+
 
 Before starting, verify that Bridge is set up in this project:
 
@@ -184,7 +238,7 @@ Per-call context wins on key collision. **With Bridge Auth**, the signed-in user
 </script>
 ```
 
-For anything this prompt doesn't cover — classic stores, non-runes contexts, route guards — read the docs at `learning/feature-flags/` (`using/in-logic.md`, `using/guard-routes.md`, `targeting/`) rather than guessing an API.
+For anything this prompt doesn't cover — classic stores, non-runes contexts — read the docs at `learning/feature-flags/` (`using/in-logic.md`, `using/guard-routes.md`, `targeting/`) rather than guessing an API.
 
 > Flags evaluate **client-side** in SvelteKit today. There is no server-side evaluation in this SDK — don't try to read a flag in `+page.server.ts` or a `+layout.server.ts` load.
 
@@ -198,7 +252,9 @@ Flag not appearing in the dashboard within ~30s, or a read returns the default f
 - **Rule never matches?** Run `bridge flag eval <key> --identity … --attribute k=v` to see the verdict without the app in the way, then confirm the app sends those same attributes.
 - **`rolloutPct < 100` with no identity** returns the safe value by design.
 - **Realtime.** Live toggles ride the realtime channel; if a proxy blocks WebSockets the value still resolves on next load, just not instantly.
-- **First-render flicker is expected** — flags hydrate async. Set `defaultValue` to the safe-off state.
+- **First-render flicker is expected** — flags hydrate async. Set `defaultValue` to the safe-off state. This is a reason to gate a whole route with a `routeConfig` rule rather than in the page component, not a reason to hand-roll a readiness probe.
+- **A route-guard flag toggle seems to do nothing.** The guard's evaluation is cached ~5 minutes; unlike components it gets no realtime push. Wait it out or reload after the TTL. If the route must react instantly, gate its content with `<FeatureFlag>` too.
+- **A route-guard rule ignores attributes that work in components.** The guard evaluates server-side from the session token, so it never sees attributes you publish with `bridge.attributes.set(...)`. Target token-derived paths (`user.*`, `tenant.*`) in rules used by route guards.
 
 ## Verify
 

@@ -31,3 +31,24 @@ export function createRouteGuard(flagsReady?: Promise<void>) {
     }
   };
 }
+
+/**
+ * Does any route rule's `featureFlag` requirement mention this key?
+ * (TBP-575.)
+ *
+ * The live re-check runs on every flag mutation the app receives, and most of
+ * them have nothing to do with routing. Without this filter, flipping any flag
+ * in a busy app would cost a `bulkEvaluate` round-trip on every connected
+ * client — so this is a cost guard, not a correctness one.
+ */
+export function routeRulesReferenceFlag(key: string): boolean {
+  const rules = getRouteGuardConfig()?.rules ?? [];
+  return rules.some((rule) => {
+    const req = rule.featureFlag;
+    if (!req) return false;
+    if (typeof req === 'string') return req === key;
+    if ('any' in req) return req.any.includes(key);
+    if ('all' in req) return req.all.includes(key);
+    return false;
+  });
+}

@@ -43,6 +43,7 @@
  */
 import {
   RealtimeClient,
+  type FlagChange,
   type RealtimeClientConfig,
   type SessionSnapshotMessage,
   type UserStateMessage,
@@ -64,6 +65,9 @@ let _originalFetch: typeof fetch | undefined;
 const _onOpenSubs: Set<() => void> = new Set();
 const _onCloseSubs: Set<() => void> = new Set();
 const _onSnapshotSubs: Set<(msg: SessionSnapshotMessage) => void> = new Set();
+// TBP-575 — realtime flag mutations, fanned out so the route guard can
+// invalidate its (separate) cache and re-evaluate the current route.
+const _onFlagChangeSubs: Set<(change: FlagChange) => void> = new Set();
 const _onUserStateSubs: Set<(event: { reason: string }) => void> = new Set();
 
 /**
@@ -165,6 +169,32 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
     _setRealtimeStatus('closed');
     for (const fn of _onCloseSubs) {
       try { fn(); } catch { /* subscriber errors swallowed */ }
+    }
+  });
+
+  // TBP-575 — connected, handshaken, and subscribed to nothing. Distinct from
+  // 'closed': the socket is alive, so no reconnect is coming, but nothing will
+  // ever arrive on it. Surfacing this is the whole point — this state used to
+  // report as 'open'.
+  // Guarded: bridge-svelte and auth-core version independently, so a consumer
+  // can resolve an older auth-core that has no such hook. An unguarded call
+  // would crash bootstrap — a worse failure than the missing signal.
+  _realtime.setOnDegraded?.(() => {
+    _setRealtimeStatus('degraded');
+  });
+
+  // TBP-575 — a flag changed on the wire. Two caches need to hear about it and
+  // only one of them was ever told:
+  //   - BridgeFlags (FF 2.0)      — driven by realtime already, via attach()
+  //   - FeatureFlagService        — what ROUTE GUARDS read, 5-min TTL, deaf
+  // Invalidating here is what makes a route flag take effect on the next
+  // navigation instead of up to five minutes later.
+  _realtime.setOnFlagChange?.((change) => {
+    try {
+      getBridgeAuth().invalidateFeatureFlagCache();
+    } catch { /* auth instance may not exist yet; next hydrate covers it */ }
+    for (const fn of _onFlagChangeSubs) {
+      try { fn(change); } catch { /* subscriber errors swallowed */ }
     }
   });
 
@@ -321,6 +351,17 @@ export function onBridgeRealtimeClose(handler: () => void): () => void {
   return () => _onCloseSubs.delete(handler);
 }
 
+/**
+ * Subscribe to realtime flag mutations (TBP-575). Returns an unsubscribe fn.
+ *
+ * The route-guard cache is already invalidated before subscribers run, so a
+ * handler that re-evaluates a route will read fresh values.
+ */
+export function onBridgeFlagChange(handler: (change: FlagChange) => void): () => void {
+  _onFlagChangeSubs.add(handler);
+  return () => _onFlagChangeSubs.delete(handler);
+}
+
 /** Subscribe to `session.snapshot` messages. Returns an unsubscribe fn. */
 export function onBridgeRealtimeSnapshot(
   handler: (msg: SessionSnapshotMessage) => void,
@@ -348,6 +389,7 @@ export function __resetBridgeRuntime(): void {
   _onOpenSubs.clear();
   _onCloseSubs.clear();
   _onSnapshotSubs.clear();
+  _onFlagChangeSubs.clear();
   _onUserStateSubs.clear();
   _currentAuthToken = undefined;
   if (_unsubscribeAuth) {

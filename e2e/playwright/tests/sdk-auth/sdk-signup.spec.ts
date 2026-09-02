@@ -8,7 +8,7 @@ test.describe('SDK Signup', () => {
 
     const emailInput = page.locator('#signup-email');
     await emailInput.waitFor({ state: 'visible', timeout: MED_TIMEOUT });
-    await emailInput.fill(`sdk-test-${Date.now()}@example.com`);
+    await emailInput.fill(`iman+playwright-test-sdk-${Date.now()}@nebulr.group`);
 
     await page.locator('#signup-first-name').fill('Test');
     await page.locator('#signup-last-name').fill('User');

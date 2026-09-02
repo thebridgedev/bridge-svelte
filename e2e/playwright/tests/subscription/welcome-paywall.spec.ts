@@ -75,15 +75,16 @@ test.describe('Welcome Paywall — first-time user flow', () => {
       // ---- 1a. Force the "no plan selected" state. createPlaywrightTestAccount
       //          auto-binds the new tenant to the app's hardcoded `TEAM` trial
       //          plan, so `shouldSelectPlan` would be `false` out of the gate.
-      //          Deleting the TEAM plan leaves the tenant pointing at a plan
-      //          key that no longer exists in the app → the API flips
-      //          shouldSelectPlan back to `true`. We recreate TEAM in finally
-      //          to restore the app's seeded shape (matches the bootstrap from
-      //          test-data.service.ts:398).
       //
-      //          The describe runs serially (playwright.config.ts:
-      //          fullyParallel: false) so this temporary mutation is safe.
-      await testDataClient.deletePlan('TEAM').catch(() => {});
+      //          TBP-370: this used to delete the app's TEAM plan and recreate
+      //          it in a `finally`, relying on the whole describe running
+      //          serially. That was app-level state every spec shares, held
+      //          hostage to one test's cleanup — an interrupted run left the
+      //          app with no TEAM plan at all. `clearTenantPlan` reaches the
+      //          same state by clearing the field on THIS tenant only, so
+      //          nothing else can observe it.
+      const cleared = await testDataClient.clearTenantPlan(testUser.tenantId);
+      expect(cleared.shouldSelectPlan).toBe(true);
 
       // ---- 1. Sign in the fresh test user via SDK auth (no plan selected yet)
       await loginViaSdkAuth(page, testUser.email, testUser.password);
@@ -212,22 +213,18 @@ test.describe('Welcome Paywall — first-time user flow', () => {
         timeout: MED_TIMEOUT,
       });
     } finally {
-      // ---- Cleanup: restore the TEAM trial plan that other tests rely on and
-      //               disable Stripe.
+      // ---- Cleanup: disable Stripe.
+      //
+      // TBP-370: the TEAM plan no longer needs restoring here. This block used
+      // to recreate it because the setup deleted it app-wide; the plan is now
+      // untouched, so there is nothing to put back. That also removes the
+      // failure mode where an interrupted run left the app permanently missing
+      // its seeded TEAM plan.
       //
       // We do NOT delete the stable `e2e-paywall-pro` plan: it is meant to persist
       // and be reused across runs so its Stripe price stays synced+active. Deleting
       // it would re-run the Stripe archive sweep AND force the next run to recreate
       // (and re-race) the price — exactly the flake this change removes.
-      await testDataClient
-        .createPlan({
-          key: 'TEAM',
-          name: 'Team',
-          trial: true,
-          trialDays: 14,
-          prices: [{ amount: 99, currency: 'EUR', recurrenceInterval: 'month' }],
-        })
-        .catch(() => {});
       await testDataClient
         .configureApp({ paymentsAutoRedirect: false, stripeEnabled: false })
         .catch(() => {});

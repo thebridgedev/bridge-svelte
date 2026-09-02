@@ -32,6 +32,20 @@
     onError?: (error: Error) => void;
     onSsoClick?: (connectionType: string) => void;
     heading?: string;
+    /**
+     * TBP-537 — renders in place of `heading` on the CREDENTIALS step only.
+     *
+     * Sub-steps (forgot-password, magic-link, passkey-request) each own their
+     * heading, so a consumer that wraps this component in its own titled layout
+     * ends up stacking two headings the moment the user leaves the credentials
+     * step — "Log in to your account" sitting above "Create a passkey".
+     *
+     * Passing the outer title down as a snippet puts every step's heading under
+     * this component's control: the consumer's markup (title + subtitle, or
+     * whatever it needs) appears on the credentials step and disappears on the
+     * others, without the consumer having to track which step is active.
+     */
+    headingSnippet?: Snippet;
     ssoConnections?: FederationConnection[];
     /**
      * SSO kickoff strategy for the built-in SsoButtons.
@@ -54,6 +68,7 @@
     onError,
     onSsoClick,
     heading = '',
+    headingSnippet,
     ssoConnections = [],
     ssoMode = 'redirect',
     footer,
@@ -299,7 +314,7 @@
 
 <!-- Credentials step (email + password together) -->
 {:else}
-  <AuthFormWrapper {heading} class={className} {style} {...rest}>
+  <AuthFormWrapper {heading} {headingSnippet} class={className} {style} {...rest}>
     {#if error}
       <Alert variant="error">{error}</Alert>
     {/if}

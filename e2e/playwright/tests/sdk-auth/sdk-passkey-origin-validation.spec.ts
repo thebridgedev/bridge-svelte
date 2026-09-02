@@ -47,7 +47,7 @@ test.describe('SDK Passkey Origin Validation (live HTTP)', () => {
         data: {
           domain: TEST_APP_DOMAIN,
           appName: 'Bridge Svelte Passkey Origin Test',
-          ownerEmail: 'playwright-passkey-origin-test@thebridge.io',
+          ownerEmail: 'iman+playwright-test-passkey-origin@nebulr.group',
           ownerPassword: 'helloworld',
         },
       },

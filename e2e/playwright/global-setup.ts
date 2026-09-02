@@ -41,7 +41,7 @@ async function globalSetup() {
 
   const testAppDomain = process.env.TEST_APP_DOMAIN || 'BRIDGE_SVELTE_TEST_DASHBOARD';
   const testAppName = process.env.TEST_APP_NAME || 'Bridge Svelte Test Dashboard';
-  const ownerEmail = process.env.TEST_OWNER_EMAIL || 'playwright-e2e@thebridge.io';
+  const ownerEmail = process.env.TEST_OWNER_EMAIL || 'iman+playwright-test-owner@nebulr.group';
   const ownerPassword = process.env.TEST_OWNER_PASSWORD || 'helloworld';
 
   console.log(`[global-setup] Fetching test app (domain: ${testAppDomain})...`);

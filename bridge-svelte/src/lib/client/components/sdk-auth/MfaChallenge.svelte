@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { HTMLAttributes } from 'svelte/elements';
+  import type { MessageOverrides } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
+  import { getTranslator } from '../../stores/i18n.js';
   import AuthFormWrapper from './shared/AuthFormWrapper.svelte';
   import Spinner from './shared/Spinner.svelte';
   import Alert from './shared/Alert.svelte';
@@ -9,16 +11,21 @@
     onVerified?: () => void;
     onError?: (error: Error) => void;
     showRecoveryOption?: boolean;
+    /** Per-key copy overrides for this component only (TBP-630). */
+    messages?: MessageOverrides;
   }
 
   let {
     onVerified,
     onError,
     showRecoveryOption = true,
+    messages,
     class: className,
     style,
     ...rest
   }: Props = $props();
+
+  const t = $derived(getTranslator(messages));
 
   let code = $state('');
   let backupCode = $state('');
@@ -49,7 +56,7 @@
       code = '';
       startResendCooldown();
     } catch (err: any) {
-      error = err.message || 'Failed to resend code.';
+      error = err.message || t('mfa.error.resend');
       onError?.(err);
     } finally {
       loading = false;
@@ -64,7 +71,7 @@
       await getBridgeAuth().verifyMfa(code);
       onVerified?.();
     } catch (err: any) {
-      error = err.message || 'Invalid code. Please try again.';
+      error = err.message || t('mfa.error.invalidCode');
       onError?.(err);
     } finally {
       loading = false;
@@ -79,7 +86,7 @@
       await getBridgeAuth().resetMfa(backupCode);
       onVerified?.();
     } catch (err: any) {
-      error = err.message || 'Invalid recovery code.';
+      error = err.message || t('mfa.error.invalidRecoveryCode');
       onError?.(err);
     } finally {
       loading = false;
@@ -87,7 +94,7 @@
   }
 </script>
 
-<AuthFormWrapper heading="Two-factor authentication" class={className} {style} {...rest}>
+<AuthFormWrapper heading={t('mfa.challengeHeading')} class={className} {style} {...rest}>
   {#if error}
     <Alert variant="error">{error}</Alert>
   {/if}
@@ -95,55 +102,55 @@
   {#if !useRecovery}
     <form onsubmit={(e) => { e.preventDefault(); handleVerify(); }}>
       <div class="bridge-form-group">
-        <label for="mfa-code">Authentication code</label>
+        <label for="mfa-code">{t('field.authenticationCode')}</label>
         <input
           id="mfa-code"
           type="text"
           inputmode="numeric"
           autocomplete="one-time-code"
-          placeholder="Enter 6-digit code"
+          placeholder={t('placeholder.sixDigitCode')}
           maxlength={6}
           bind:value={code}
           disabled={loading}
         />
       </div>
       <button type="submit" class="bridge-btn bridge-btn-primary" disabled={loading || code.length < 6}>
-        {#if loading}<Spinner size={16} />{:else}Verify{/if}
+        {#if loading}<Spinner size={16} />{:else}{t('mfa.submit')}{/if}
       </button>
     </form>
     <p class="bridge-mfa-help">
       {#if resendCountdown > 0}
-        Didn't get your text message? You can resend in {resendCountdown}s.
+        {t('mfa.resendCountdown', { seconds: resendCountdown })}
       {:else}
-        Didn't get your text message? <button type="button" class="bridge-link" onclick={handleResendCode} disabled={loading}>Resend code</button>.
+        {t('mfa.resendPrompt')} <button type="button" class="bridge-link" onclick={handleResendCode} disabled={loading}>{t('action.resendCode')}</button>.
       {/if}
     </p>
     {#if showRecoveryOption}
       <div class="bridge-form-footer">
         <button type="button" class="bridge-link" onclick={() => { useRecovery = true; error = null; }}>
-          Use recovery code
+          {t('mfa.useRecoveryCode')}
         </button>
       </div>
     {/if}
   {:else}
     <form onsubmit={(e) => { e.preventDefault(); handleRecovery(); }}>
       <div class="bridge-form-group">
-        <label for="backup-code">Recovery code</label>
+        <label for="backup-code">{t('field.recoveryCode')}</label>
         <input
           id="backup-code"
           type="text"
-          placeholder="Enter recovery code"
+          placeholder={t('placeholder.recoveryCode')}
           bind:value={backupCode}
           disabled={loading}
         />
       </div>
       <button type="submit" class="bridge-btn bridge-btn-primary" disabled={loading || !backupCode.trim()}>
-        {#if loading}<Spinner size={16} />{:else}Recover{/if}
+        {#if loading}<Spinner size={16} />{:else}{t('mfa.recoverSubmit')}{/if}
       </button>
     </form>
     <div class="bridge-form-footer">
       <button type="button" class="bridge-link" onclick={() => { useRecovery = false; error = null; }}>
-        Use authentication code
+        {t('mfa.useAuthenticationCode')}
       </button>
     </div>
   {/if}

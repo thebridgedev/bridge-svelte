@@ -1,7 +1,9 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
+  import type { MessageOverrides } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
+  import { getTranslator } from '../../stores/i18n.js';
   import { getConfig } from '../../stores/config.store.js';
   import AuthFormWrapper from './shared/AuthFormWrapper.svelte';
   import Spinner from './shared/Spinner.svelte';
@@ -15,6 +17,21 @@
     loginHref?: string | undefined;
     /** Heading text. Pass `null`/`''` to render no heading and use your own page title. */
     heading?: string | null;
+    /**
+     * Success-state description. Pass `null`/`''` to render nothing (TBP-631).
+     *
+     * NOT lifted into AuthFormWrapper: it follows the "Check your email"
+     * success heading, which is rendered inside the wrapper's children rather
+     * than as the wrapper heading. Hoisting it would print the description
+     * above the heading it belongs under.
+     *
+     * A string override loses the `<strong>{email}</strong>` emphasis, since a
+     * plain prop cannot carry markup — that is the trade for a simple API, and
+     * the default keeps the emphasis.
+     */
+    description?: string | null;
+    /** Per-key copy overrides for this component only (TBP-630). */
+    messages?: MessageOverrides;
     /** TBP-36 — preselected plan applied at tenant creation (from ?signupPlan= links). */
     plan?: string | null;
     /** TBP-36 — currency of the preselected plan's price offer. */
@@ -29,7 +46,9 @@
     onError,
     showLoginLink = true,
     loginHref = undefined,
-    heading = 'Create your account',
+    heading = undefined,
+    description = undefined,
+    messages,
     plan = null,
     currency = null,
     recurrenceInterval = null,
@@ -38,6 +57,18 @@
     style,
     ...rest
   }: Props = $props();
+
+  const t = $derived(getTranslator(messages));
+
+  // `undefined` = not passed, fall through to the catalogue; `null` = the host
+  // suppressed it and that must survive (TBP-631).
+  const wrapperHeading = $derived(heading !== undefined ? heading : t('signup.heading'));
+
+  // The success sentence needs `<strong>{email}</strong>` in the middle of it.
+  // The catalogue holds the WHOLE sentence with a `{email}` placeholder, so a
+  // locale is free to move the address anywhere; the split happens on the
+  // already-translated string, not on the English word order.
+  const successDescriptionParts = $derived(t('signup.successDescription').split('{email}'));
 
   let effectiveLoginHref = $derived(loginHref ?? getConfig().loginRoute);
 
@@ -61,7 +92,7 @@
       success = true;
       onSignup?.();
     } catch (err: any) {
-      error = err.message || 'Failed to create account.';
+      error = err.message || t('signup.error.create');
       onError?.(err);
     } finally {
       loading = false;
@@ -71,15 +102,19 @@
 
 <!-- In the success state, the "Check your email" heading below is the title,
      so suppress the form heading to avoid two stacked headings. -->
-<AuthFormWrapper heading={success ? null : heading} class={className} {style} {...rest}>
+<AuthFormWrapper heading={success ? null : wrapperHeading} class={className} {style} {...rest}>
   {#if success}
-    <h2 class="bridge-success-heading">Check your email</h2>
-    <p class="bridge-step-desc">We sent a verification link to <strong>{email}</strong>. Check your inbox to activate your account.</p>
+    <h2 class="bridge-success-heading">{t('signup.successHeading')}</h2>
+    {#if description === undefined}
+      <p class="bridge-step-desc">{successDescriptionParts[0]}<strong>{email}</strong>{successDescriptionParts[1] ?? ''}</p>
+    {:else if description}
+      <p class="bridge-step-desc">{description}</p>
+    {/if}
     {#if footer}
       {@render footer()}
     {:else if showLoginLink}
       <div class="bridge-form-footer">
-        Already have an account? <a href={effectiveLoginHref}>Log in</a>
+        {t('signup.loginPrompt')} <a href={effectiveLoginHref}>{t('signup.loginLink')}</a>
       </div>
     {/if}
   {:else}
@@ -89,38 +124,38 @@
 
     <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
       <div class="bridge-form-group">
-        <label for="signup-email">Email</label>
+        <label for="signup-email">{t('field.email')}</label>
         <input
           id="signup-email"
           type="email"
-          placeholder="you@example.com"
+          placeholder={t('placeholder.email')}
           required
           bind:value={email}
           disabled={loading}
         />
       </div>
       <div class="bridge-form-group">
-        <label for="signup-first-name">First name</label>
+        <label for="signup-first-name">{t('field.firstName')}</label>
         <input
           id="signup-first-name"
           type="text"
-          placeholder="First name"
+          placeholder={t('placeholder.firstName')}
           bind:value={firstName}
           disabled={loading}
         />
       </div>
       <div class="bridge-form-group">
-        <label for="signup-last-name">Last name</label>
+        <label for="signup-last-name">{t('field.lastName')}</label>
         <input
           id="signup-last-name"
           type="text"
-          placeholder="Last name"
+          placeholder={t('placeholder.lastName')}
           bind:value={lastName}
           disabled={loading}
         />
       </div>
       <button type="submit" class="bridge-btn bridge-btn-primary" disabled={loading || !email.trim()}>
-        {#if loading}<Spinner size={16} />{:else}Sign up{/if}
+        {#if loading}<Spinner size={16} />{:else}{t('signup.submit')}{/if}
       </button>
     </form>
 
@@ -128,7 +163,7 @@
       {@render footer()}
     {:else if showLoginLink}
       <div class="bridge-form-footer">
-        Already have an account? <a href={effectiveLoginHref}>Log in</a>
+        {t('signup.loginPrompt')} <a href={effectiveLoginHref}>{t('signup.loginLink')}</a>
       </div>
     {/if}
   {/if}

@@ -1,6 +1,8 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import type { MessageOverrides } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
+  import { getTranslator } from '../../stores/i18n.js';
   import AuthFormWrapper from './shared/AuthFormWrapper.svelte';
   import Spinner from './shared/Spinner.svelte';
   import Alert from './shared/Alert.svelte';
@@ -8,9 +10,25 @@
   interface Props {
     initialEmail?: string;
     onBack: () => void;
+    /**
+     * Step description. Pass `null`/`''` to render nothing and use your own
+     * subtitle (TBP-631). Applies to whichever view is showing; the two views
+     * have different built-in copy, and the 'sent' one carries markup, so a
+     * string override replaces both with the same sentence.
+     */
+    description?: string | null;
+    /** Per-key copy overrides for this component only (TBP-630). */
+    messages?: MessageOverrides;
   }
 
-  let { initialEmail = '', onBack }: Props = $props();
+  let { initialEmail = '', onBack, description = undefined, messages }: Props = $props();
+
+  const t = $derived(getTranslator(messages));
+
+  // The catalogue holds the whole sentence with a `{email}` placeholder so a
+  // locale can put the address wherever it belongs; the split below runs on the
+  // already-translated string purely to wrap it in `<strong>`.
+  const sentDescriptionParts = $derived(t('passkey.sentDescription').split('{email}'));
 
   type ViewState = 'form' | 'sent';
 
@@ -30,37 +48,42 @@
       await getBridgeAuth().requestPasskeySetupLink(email);
       view = 'sent';
     } catch (err: any) {
-      error = err.message || 'Failed to send setup link.';
+      error = err.message || t('passkey.error.sendLink');
     } finally {
       loading = false;
     }
   }
 </script>
 
+{#snippet sentDescription()}
+  <p class="bridge-step-desc">{sentDescriptionParts[0]}<strong>{email}</strong>{sentDescriptionParts[1] ?? ''}</p>
+{/snippet}
+
 {#if view === 'sent'}
-  <AuthFormWrapper heading="Check your email">
-    <p class="bridge-step-desc">
-      We sent a passkey setup link to <strong>{email}</strong>. Please check your inbox and click the link to create your passkey and finish signing in.
-    </p>
+  <AuthFormWrapper
+    heading={t('passkey.sentHeading')}
+    description={description === undefined ? undefined : description}
+    descriptionSnippet={description === undefined ? sentDescription : undefined}
+  >
     <button type="button" class="bridge-btn bridge-btn-secondary" onclick={onBack}>
-      Back to login
+      {t('action.backToLogin')}
     </button>
   </AuthFormWrapper>
 {:else}
-  <AuthFormWrapper heading="Create a passkey">
-    <p class="bridge-step-desc">
-      Enter your email and we will send a link to create your passkey.
-    </p>
+  <AuthFormWrapper
+    heading={t('passkey.createHeading')}
+    description={description === undefined ? t('passkey.requestDescription') : description}
+  >
     {#if error}
       <Alert variant="error">{error}</Alert>
     {/if}
     <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
       <div class="bridge-form-group">
-        <label for="passkey-request-email">Email</label>
+        <label for="passkey-request-email">{t('field.email')}</label>
         <input
           id="passkey-request-email"
           type="email"
-          placeholder="you@example.com"
+          placeholder={t('placeholder.email')}
           required
           bind:value={email}
           disabled={loading}
@@ -71,12 +94,12 @@
         class="bridge-btn bridge-btn-primary"
         disabled={loading || !email.trim()}
       >
-        {#if loading}<Spinner size={16} />{:else}Send setup link{/if}
+        {#if loading}<Spinner size={16} />{:else}{t('passkey.requestSubmit')}{/if}
       </button>
     </form>
     <div class="bridge-form-footer">
       <button type="button" class="bridge-link" onclick={onBack}>
-        &larr; Back to login
+        &larr; {t('action.backToLogin')}
       </button>
     </div>
   </AuthFormWrapper>

@@ -157,30 +157,39 @@ export async function loginViaBridgeAuth(
 
   console.log(`[login] Redirected to auth page: ${page.url()}`);
 
-  // 4. Enter email (step 1 of two-step login)
-  const emailInput = page
-    .locator('#email, input[name="username"], input[type="email"]')
-    .first();
+  await completeHostedPortalLogin(page, email, password);
+}
+
+/**
+ * Complete a hosted-portal (OAuth) login **from the portal page the browser is
+ * already on**, and follow the round-trip all the way back to the app.
+ *
+ * Split out of {@link loginViaBridgeAuth} for TBP-629: the hosted deep-link test
+ * arrives at the portal because the route guard sent it there, not because it
+ * clicked a login button, and it must assert where the callback lands rather
+ * than have a helper wait for a fixed destination.
+ */
+export async function completeHostedPortalLogin(
+  page: Page,
+  email: string,
+  password: string,
+): Promise<void> {
+  // 4. Credentials. The hosted portal is a SINGLE-step form — email and password
+  // on one screen. It used to be two steps behind a "Continue" button, and this
+  // helper still described that shape as of 2026-09-11 even though no spec
+  // exercised it, so nothing caught the drift.
+  const emailInput = page.getByRole('textbox', { name: 'Email' });
   await emailInput.waitFor({ state: 'visible', timeout: MED_TIMEOUT });
   await emailInput.fill(email);
 
-  const continueButton = page
-    .locator('button[type="submit"]:has-text("Continue")')
-    .first();
-  await continueButton.waitFor({ state: 'visible', timeout: MED_TIMEOUT });
-  await continueButton.click();
-
-  // 5. Enter password (step 2)
-  const passwordInput = page
-    .locator('#password, input[name="password"], input[type="password"]')
-    .first();
+  const passwordInput = page.getByRole('textbox', { name: 'Password' });
   await passwordInput.waitFor({ state: 'visible', timeout: MED_TIMEOUT });
   await passwordInput.fill(password);
 
-  const signInButton = page
-    .locator('button[type="submit"]:has-text("Sign in")')
-    .first();
-  await signInButton.waitFor({ state: 'visible', timeout: MED_TIMEOUT });
+  // The button is disabled until both fields validate, so wait for enabled
+  // rather than merely visible.
+  const signInButton = page.getByRole('button', { name: 'Sign in', exact: true });
+  await expect(signInButton).toBeEnabled({ timeout: MED_TIMEOUT });
   await signInButton.click();
 
   console.log(`[login] Submitted credentials, waiting for OAuth flow...`);
@@ -232,6 +241,40 @@ export async function loginViaBridgeAuth(
 }
 
 /**
+ * Fill and submit the SDK login form **on whatever login page the browser is
+ * already sitting on**, then wait for tokens to land in localStorage.
+ *
+ * Split out of {@link loginViaSdkAuth} for TBP-629: the deep-link tests must
+ * arrive at the login route via the route guard (so the `?redirectUri=…` the
+ * guard attached is still on the URL), which rules out the `goto('/auth/login')`
+ * that `loginViaSdkAuth` starts with. Deliberately does NOT assert where the app
+ * navigates afterwards — that destination is the thing under test.
+ */
+export async function submitSdkLoginForm(
+  page: Page,
+  email: string,
+  password: string,
+): Promise<void> {
+  // Fill email and password on the single-step form
+  const emailInput = page.locator('#login-email');
+  await emailInput.waitFor({ state: 'visible', timeout: MED_TIMEOUT });
+  await emailInput.fill(email);
+
+  const passwordInput = page.locator('#login-password');
+  await passwordInput.fill(password);
+
+  const signInBtn = page.locator('button[type="submit"]:has-text("Sign in")');
+  await signInBtn.click();
+
+  // Wait for tokens to appear (SDK auth stores directly).
+  await expect
+    .poll(async () => !!(await readBridgeTokens(page))?.accessToken, {
+      timeout: LONG_TIMEOUT,
+    })
+    .toBe(true);
+}
+
+/**
  * Login via the SDK auth flow (direct email/password on the demo app — no redirect).
  *
  * Flow:
@@ -250,23 +293,7 @@ export async function loginViaSdkAuth(
   await page.goto('/auth/login');
   await page.waitForLoadState('networkidle');
 
-  // Fill email and password on the single-step form
-  const emailInput = page.locator('#login-email');
-  await emailInput.waitFor({ state: 'visible', timeout: MED_TIMEOUT });
-  await emailInput.fill(email);
-
-  const passwordInput = page.locator('#login-password');
-  await passwordInput.fill(password);
-
-  const signInBtn = page.locator('button[type="submit"]:has-text("Sign in")');
-  await signInBtn.click();
-
-  // Wait for tokens to appear (SDK auth stores directly).
-  await expect
-    .poll(async () => !!(await readBridgeTokens(page))?.accessToken, {
-      timeout: LONG_TIMEOUT,
-    })
-    .toBe(true);
+  await submitSdkLoginForm(page, email, password);
 
   // Wait for the post-login redirect to settle
   // (handleLogin calls goto('/protected') on successful login)

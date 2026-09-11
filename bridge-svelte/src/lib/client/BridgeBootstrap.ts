@@ -11,10 +11,10 @@ import {
   waitForBridge as _waitForBridge,
 } from '../core/bridge-instance.js';
 import { installBridgeAuthFetch } from '../core/bridge-runtime.js';
-import { useBridge } from '@nebulr-group/bridge-auth-core';
+import { useBridge, stashReturnTo, takeReturnTo, withReturnTo } from '@nebulr-group/bridge-auth-core';
 import { logger } from '../shared/logger.js';
 import type { BridgeConfig } from '../shared/types/config.js';
-import { bridgeConfig, getConfig } from './stores/config.store.js';
+import { bridgeConfig, getConfig, getRouteGuardConfig } from './stores/config.store.js';
 
 export async function bridgeBootstrap(
   url: URL,
@@ -78,7 +78,20 @@ export async function bridgeBootstrap(
             history.replaceState = svelteReplaceState;
           }
           const payment = url.searchParams.get('payment');
-          redirect(303, payment ? `/?payment=${payment}` : '/');
+          // TBP-629 — this line used to hard-code '/', which is where hosted
+          // mode lost the deep link even though the OAuth round-trip itself
+          // worked fine. `takeReturnTo()` is one-shot and re-sanitizes, and
+          // returns null when nothing was stashed, so the old behaviour is
+          // exactly what happens when there is no deep link to restore.
+          //
+          // `payment` wins: it signals a just-completed checkout whose landing
+          // page the billing flow owns, and that is a deliberate destination
+          // rather than a remembered one.
+          const stashedReturnTo = takeReturnTo();
+          redirect(
+            303,
+            payment ? `/?payment=${payment}` : (stashedReturnTo ?? '/'),
+          );
         } catch (err) {
           if (isRedirect(err)) throw err;
           logger.error('[bridgeBootstrap] OAuth callback error:', err);
@@ -182,13 +195,33 @@ export async function bridgeBootstrap(
     hasTokens: !!currentTokens?.accessToken,
     isAuthenticated: currentAuth
   });
-  const decision = await guard.getNavigationDecision(url.pathname);
+  // TBP-629 — hand the guard the FULL attempted target, not just the pathname.
+  // `?key=…` style query is part of the deep link for plenty of routes, and an
+  // exported-file link that loses its query is as broken as one that loses its
+  // path.
+  const attempted = `${url.pathname}${url.search}`;
+  const decision = await guard.getNavigationDecision(url.pathname, attempted);
   logger.debug('[bridgeBootstrap] navigation decision', decision);
   if (decision.type === 'login') {
     const { loginRoute } = getConfig();
+    const returnToParam = getRouteGuardConfig()?.returnTo?.param;
     // SDK mode: consumer explicitly set loginRoute → redirect to in-app login view
     // Hosted mode (default): no loginRoute → redirect to hosted auth portal
-    redirect(303, loginRoute ?? bridge.createLoginUrl());
+    //
+    // TBP-629: only SDK mode gains the return target. Hosted mode is left exactly
+    // as it was — `createLoginUrl()` already carries its own `redirectUri` (the
+    // configured callbackUrl) and changing what that means would alter an OAuth
+    // round-trip that consumers have registered redirect URIs against.
+    if (loginRoute) {
+      redirect(303, withReturnTo(loginRoute, decision.returnTo, returnToParam));
+    }
+    // Hosted mode (TBP-629): the target CANNOT ride on the URL. `createLoginUrl()`
+    // feeds `redirectUri` to the OAuth authorize call and bridge-api validates it
+    // with an exact `allowedRedirectUris.includes()` match, so adding a query to
+    // it would break login rather than improve it. Stash it instead and pick it
+    // up at the callback below — the OAuth request itself stays untouched.
+    stashReturnTo(decision.returnTo);
+    redirect(303, bridge.createLoginUrl());
   }
   if (decision.type === 'redirect' && url.pathname !== decision.to) {
     redirect(303, decision.to);

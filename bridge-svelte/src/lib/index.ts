@@ -252,3 +252,14 @@ export type {
   UpdateFlagInput,
   FlagSchedule,
 } from '@nebulr-group/bridge-auth-core';
+
+// TBP-629 — deep-link preservation. Re-exported from auth-core so a SvelteKit
+// login page can import the reader (and its open-redirect validation) from the
+// same package it already depends on, instead of reaching past bridge-svelte.
+export {
+  DEFAULT_RETURN_TO_PARAM,
+  readReturnTo,
+  sanitizeReturnTo,
+  withReturnTo,
+} from '@nebulr-group/bridge-auth-core';
+export type { ReturnToConfig } from '@nebulr-group/bridge-auth-core';

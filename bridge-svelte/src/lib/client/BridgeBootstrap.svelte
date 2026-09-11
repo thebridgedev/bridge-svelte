@@ -3,6 +3,7 @@
   import { page } from '$app/stores';
   import { onMount, onDestroy } from 'svelte';
   import { createRouteGuard, routeRulesReferenceFlag } from '../auth/route-guard.js';
+  import { stashReturnTo, withReturnTo } from '@nebulr-group/bridge-auth-core';
   import {
     getBridgeAuth,
     isAuthenticated,
@@ -12,7 +13,7 @@
   } from '../core/bridge-instance.js';
   import { bridge as bridgeSurface } from '../core/bridge.js';
   import { setBridgeContext } from '../core/use-bridge.js';
-  import { getConfig } from './stores/config.store.js';
+  import { getConfig, getRouteGuardConfig } from './stores/config.store.js';
   import {
     onBridgeFlagChange,
     startBridgeRuntime,
@@ -73,14 +74,24 @@
     }
   });
 
-  async function handleRoute(pathname: string, cancel?: () => void) {
-    const decision = await guard.getNavigationDecision(pathname);
+  async function handleRoute(pathname: string, cancel?: () => void, search?: string) {
+    // TBP-629 — client-side navigation loses the deep link the same way the
+    // load-time path did. Fixing only BridgeBootstrap.ts would leave somebody
+    // who clicks an in-app link into a protected route while their session is
+    // gone landing on the default route, which is the same bug with a different
+    // trigger.
+    const attempted = `${pathname}${search ?? ''}`;
+    const decision = await guard.getNavigationDecision(pathname, attempted);
     if (decision.type === 'login') {
       if (cancel) cancel();
       const { loginRoute } = getConfig();
       if (loginRoute) {
-        goto(loginRoute);
+        goto(withReturnTo(loginRoute, decision.returnTo, getRouteGuardConfig()?.returnTo?.param));
       } else {
+        // Hosted mode (TBP-629) — stash before handing off to the portal; the
+        // callback in BridgeBootstrap.ts picks it up. Same reason as there: the
+        // OAuth redirectUri is exact-matched server-side and must not be touched.
+        stashReturnTo(decision.returnTo);
         getBridgeAuth().login();
       }
       return;
@@ -110,7 +121,7 @@
       _recheckTimer = undefined;
       // No `cancel` here: there is no navigation in flight to cancel. A denied
       // verdict redirects the user off the page they are already on.
-      handleRoute(window.location.pathname).catch(() => {
+      handleRoute(window.location.pathname, undefined, window.location.search).catch(() => {
         /* a failed re-check must never break the page; the next navigation
            re-evaluates anyway */
       });
@@ -180,6 +191,6 @@
 
   beforeNavigate(async ({ to, cancel }) => {
     if (!to) return;
-    await handleRoute(to.url.pathname, cancel);
+    await handleRoute(to.url.pathname, cancel, to.url.search);
   });
 </script>

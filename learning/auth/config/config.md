@@ -124,6 +124,23 @@ interface RouteGuardConfig {
   rules: RouteRule[];
   /** Access for routes no rule matches. @default 'protected' */
   defaultAccess?: 'public' | 'protected';
+  /** Deep-link preservation across login. On by default. */
+  returnTo?: ReturnToConfig;
+}
+
+interface ReturnToConfig {
+  /** Set false to send every login to defaultRedirectRoute, ignoring
+   *  where the visitor was heading. @default true */
+  enabled?: boolean;
+  /** Query parameter carrying the attempted path in SDK mode.
+   *  @default 'redirectUri' */
+  param?: string;
+  /** Paths that must never become a return target, on top of your
+   *  loginRoute (always excluded). Same match forms as RouteRule.match. */
+  exclude?: (string | RegExp)[];
+  /** Your login route. Filled in from BridgeConfig.loginRoute — only set
+   *  this if you call createRouteGuard directly. */
+  loginRoute?: string;
 }
 
 interface RouteRule {
@@ -142,7 +159,7 @@ interface RouteRule {
 }
 ```
 
-See [Route guards](/auth/securing/route-guards/) for a walkthrough.
+See [Route guards](/auth/securing/route-guards/) for a walkthrough, including [returning to the attempted page](/auth/securing/route-guards/#returning-to-the-page-they-asked-for).
 
 ## Passing values via .env
 

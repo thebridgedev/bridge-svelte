@@ -1,13 +1,29 @@
 // src/lib/auth/route-guard.ts — thin wrapper delegating to auth-core via bridge-instance
 import { getBridgeAuth } from '../core/bridge-instance.js';
-import { getRouteGuardConfig } from '../client/stores/config.store.js';
+import { getConfig, getRouteGuardConfig } from '../client/stores/config.store.js';
+import type { RouteGuardConfig } from '@nebulr-group/bridge-auth-core';
 
 // Re-export types from auth-core
 export type { FlagRequirement, NavigationDecision, RouteGuard, RouteGuardConfig, RouteRule } from '@nebulr-group/bridge-auth-core';
 
 export function createRouteGuard(flagsReady?: Promise<void>) {
   const config = getRouteGuardConfig();
-  const guard = getBridgeAuth().createRouteGuard(config);
+
+  // TBP-629 — feed the app's own loginRoute into the guard so it can refuse to
+  // make the login page its own return target. The consumer already told us
+  // where their login page is via BridgeConfig; making them repeat it under
+  // routeConfig.returnTo would be a second source of truth that can drift.
+  // An explicit routeConfig value still wins.
+  const { loginRoute } = getConfig();
+  const guardConfig: RouteGuardConfig = {
+    ...config,
+    returnTo: {
+      ...config?.returnTo,
+      loginRoute: config?.returnTo?.loginRoute ?? loginRoute,
+    },
+  };
+
+  const guard = getBridgeAuth().createRouteGuard(guardConfig);
 
   if (!flagsReady) return guard;
 
@@ -18,9 +34,19 @@ export function createRouteGuard(flagsReady?: Promise<void>) {
       await flagsReady;
       return guard.checkRouteRestrictions(pathname);
     },
-    async getNavigationDecision(pathname: string) {
+    async getNavigationDecision(pathname: string, attempted?: string) {
       if (guard.shouldRedirectToLogin(pathname)) {
-        return { type: 'login' as const, loginUrl: guard.getLoginRedirect() };
+        // TBP-629 — this branch short-circuits before flagsReady on purpose
+        // (an unauthenticated visitor needs no flag evaluation), which is
+        // exactly why `attempted` has to be threaded through here too. The
+        // wrapper previously rebuilt the decision by hand and would silently
+        // drop any argument auth-core's version learned to accept.
+        const returnTo = guard.resolveReturnTo(attempted ?? pathname);
+        return {
+          type: 'login' as const,
+          loginUrl: guard.getLoginRedirect(),
+          ...(returnTo ? { returnTo } : {}),
+        };
       }
       await flagsReady;
       const redirectTo = await guard.checkRouteRestrictions(pathname);

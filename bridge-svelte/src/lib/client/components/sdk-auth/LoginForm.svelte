@@ -1,10 +1,11 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
-  import type { AppConfig, FederationConnection } from '@nebulr-group/bridge-auth-core';
+  import type { AppConfig, FederationConnection, MessageOverrides } from '@nebulr-group/bridge-auth-core';
   import { onMount } from 'svelte';
   import { getBridgeAuth, authState, appConfigStore, ensureAppConfig } from '../../../core/bridge-instance.js';
   import { getConfig } from '../../stores/config.store.js';
+  import { getTranslator } from '../../stores/i18n.js';
   import AuthFormWrapper from './shared/AuthFormWrapper.svelte';
   import Spinner from './shared/Spinner.svelte';
   import Alert from './shared/Alert.svelte';
@@ -55,6 +56,8 @@
      */
     ssoMode?: 'redirect' | 'popup';
     footer?: Snippet;
+    /** Per-key copy overrides for this component only (TBP-630). */
+    messages?: MessageOverrides;
   }
 
   let {
@@ -72,10 +75,13 @@
     ssoConnections = [],
     ssoMode = 'redirect',
     footer,
+    messages,
     class: className,
     style,
     ...rest
   }: Props = $props();
+
+  const t = $derived(getTranslator(messages));
 
   type Step = 'credentials' | 'forgot-password' | 'magic-link' | 'passkey-request';
 
@@ -133,7 +139,7 @@
       await getBridgeAuth().authenticate(email, password);
       // authState store will drive MFA / tenant-selection / authenticated transitions
     } catch (err: any) {
-      error = err.message || 'Invalid email or password.';
+      error = err.message || t('login.error.invalidCredentials');
       onError?.(err);
       loading = false;
     }
@@ -147,7 +153,7 @@
       await getBridgeAuth().sendResetPasswordLink(email);
       fpEmailSent = true;
     } catch (err: any) {
-      error = err.message || 'Failed to send reset link.';
+      error = err.message || t('forgot.error.send');
     } finally {
       fpLoading = false;
     }
@@ -162,7 +168,7 @@
       mlExpiresIn = result.expiresIn;
       mlSent = true;
     } catch (err: any) {
-      error = err.message || 'Failed to send magic link.';
+      error = err.message || t('magicLink.error.send');
     } finally {
       mlLoading = false;
     }
@@ -177,9 +183,10 @@
 
   function formatExpiry(seconds: number): string {
     if (seconds >= 60) {
-      return `${Math.floor(seconds / 60)} minute${Math.floor(seconds / 60) !== 1 ? 's' : ''}`;
+      const count = Math.floor(seconds / 60);
+      return t(count === 1 ? 'magicLink.expiryMinute' : 'magicLink.expiryMinutes', { count });
     }
-    return `${seconds} seconds`;
+    return t('magicLink.expirySeconds', { count: seconds });
   }
 
   $effect(() => {
@@ -215,7 +222,7 @@
       await getBridgeAuth().authenticateWithMagicLinkToken(magicToken);
       // authState effect handles onLogin callback
     } catch (err: any) {
-      error = err.message || 'Magic link authentication failed.';
+      error = err.message || t('magicLink.error.auth');
       onError?.(err);
       loading = false;
     }
@@ -224,33 +231,33 @@
 
 <!-- Auth state overrides: MFA / Tenant Selection -->
 {#if currentAuthState === 'mfa-required'}
-  <MfaChallenge onError={onError} />
+  <MfaChallenge onError={onError} {messages} />
 
 {:else if currentAuthState === 'mfa-setup-required'}
-  <MfaSetup onError={onError} />
+  <MfaSetup onError={onError} {messages} />
 
 {:else if currentAuthState === 'tenant-selection'}
   <TenantSelector onError={onError} />
 
 <!-- Inline forgot password -->
 {:else if step === 'forgot-password'}
-  <AuthFormWrapper heading={fpEmailSent ? null : 'Reset your password'}>
+  <AuthFormWrapper heading={fpEmailSent ? null : t('forgot.headingRequest')}>
     {#if error}
       <Alert variant="error">{error}</Alert>
     {/if}
     {#if fpEmailSent}
-      <Alert variant="success">Check your email for a password reset link.</Alert>
+      <Alert variant="success">{t('forgot.emailSent')}</Alert>
       <div class="bridge-form-footer">
-        <button type="button" class="bridge-link" onclick={goBackToCredentials}>Back to login</button>
+        <button type="button" class="bridge-link" onclick={goBackToCredentials}>{t('action.backToLogin')}</button>
       </div>
     {:else}
       <form onsubmit={(e) => { e.preventDefault(); handleForgotSend(); }}>
         <div class="bridge-form-group">
-          <label for="forgot-email">Email</label>
+          <label for="forgot-email">{t('field.email')}</label>
           <input
             id="forgot-email"
             type="email"
-            placeholder="you@example.com"
+            placeholder={t('placeholder.email')}
             required
             bind:value={email}
             disabled={fpLoading}
@@ -261,34 +268,34 @@
           class="bridge-btn bridge-btn-primary"
           disabled={fpLoading || !email.trim()}
         >
-          {#if fpLoading}<Spinner size={16} />{:else}Send reset link{/if}
+          {#if fpLoading}<Spinner size={16} />{:else}{t('forgot.submit')}{/if}
         </button>
       </form>
       <div class="bridge-form-footer">
-        <button type="button" class="bridge-link" onclick={goBackToCredentials}>Back to login</button>
+        <button type="button" class="bridge-link" onclick={goBackToCredentials}>{t('action.backToLogin')}</button>
       </div>
     {/if}
   </AuthFormWrapper>
 
 <!-- Inline magic link -->
 {:else if step === 'magic-link'}
-  <AuthFormWrapper heading={mlSent ? null : 'Sign in with email link'}>
+  <AuthFormWrapper heading={mlSent ? null : t('magicLink.heading')}>
     {#if error}
       <Alert variant="error">{error}</Alert>
     {/if}
     {#if mlSent}
-      <Alert variant="success">Check your email — link expires in {formatExpiry(mlExpiresIn)}.</Alert>
+      <Alert variant="success">{t('magicLink.sent', { expiry: formatExpiry(mlExpiresIn) })}</Alert>
       <div class="bridge-form-footer">
-        <button type="button" class="bridge-link" onclick={goBackToCredentials}>Back to login</button>
+        <button type="button" class="bridge-link" onclick={goBackToCredentials}>{t('action.backToLogin')}</button>
       </div>
     {:else}
       <form onsubmit={(e) => { e.preventDefault(); handleMagicLinkSend(); }}>
         <div class="bridge-form-group">
-          <label for="magic-link-email">Email</label>
+          <label for="magic-link-email">{t('field.email')}</label>
           <input
             id="magic-link-email"
             type="email"
-            placeholder="you@example.com"
+            placeholder={t('placeholder.email')}
             required
             bind:value={email}
             disabled={mlLoading}
@@ -299,18 +306,18 @@
           class="bridge-btn bridge-btn-primary"
           disabled={mlLoading || !email.trim()}
         >
-          {#if mlLoading}<Spinner size={16} />{:else}Send magic link{/if}
+          {#if mlLoading}<Spinner size={16} />{:else}{t('magicLink.submit')}{/if}
         </button>
       </form>
       <div class="bridge-form-footer">
-        <button type="button" class="bridge-link" onclick={goBackToCredentials}>Back to login</button>
+        <button type="button" class="bridge-link" onclick={goBackToCredentials}>{t('action.backToLogin')}</button>
       </div>
     {/if}
   </AuthFormWrapper>
 
 <!-- Inline passkey request -->
 {:else if step === 'passkey-request'}
-  <PasskeyRequestSetupLink initialEmail={email} onBack={goBackToCredentials} />
+  <PasskeyRequestSetupLink initialEmail={email} onBack={goBackToCredentials} {messages} />
 
 <!-- Credentials step (email + password together) -->
 {:else}
@@ -320,11 +327,11 @@
     {/if}
     <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
       <div class="bridge-form-group">
-        <label for="login-email">Email</label>
+        <label for="login-email">{t('field.email')}</label>
         <input
           id="login-email"
           type="email"
-          placeholder="you@example.com"
+          placeholder={t('placeholder.email')}
           required
           bind:value={email}
           disabled={loading}
@@ -332,12 +339,12 @@
       </div>
 
       <div class="bridge-form-group">
-        <label for="login-password">Password</label>
+        <label for="login-password">{t('field.password')}</label>
         <div class="bridge-password-wrapper">
           <input
             id="login-password"
             type={showPassword ? 'text' : 'password'}
-            placeholder="Enter your password"
+            placeholder={t('placeholder.password')}
             required
             bind:value={password}
             disabled={loading}
@@ -347,7 +354,7 @@
             class="bridge-password-toggle"
             onclick={() => showPassword = !showPassword}
             tabindex={-1}
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            aria-label={showPassword ? t('action.hidePassword') : t('action.showPassword')}
           >
             {#if showPassword}
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
@@ -359,16 +366,16 @@
       </div>
 
       <button type="submit" class="bridge-btn bridge-btn-primary" disabled={loading || !email.trim() || !password}>
-        {#if loading}<Spinner size={16} /> Signing in…{:else}Sign in{/if}
+        {#if loading}<Spinner size={16} /> {t('login.submitting')}{:else}{t('login.submit')}{/if}
       </button>
 
       {#if effectiveShowForgotPassword}
         <div class="bridge-forgot-row">
           {#if forgotPasswordHref}
-            <a href={forgotPasswordHref} class="bridge-link">Forgot password?</a>
+            <a href={forgotPasswordHref} class="bridge-link">{t('login.forgotPassword')}</a>
           {:else}
             <button type="button" class="bridge-link" onclick={() => { step = 'forgot-password'; error = null; }}>
-              Forgot password?
+              {t('login.forgotPassword')}
             </button>
           {/if}
         </div>
@@ -376,12 +383,12 @@
     </form>
 
     {#if effectiveShowPasskeys || effectiveShowMagicLink || effectiveSsoConnections.length > 0}
-      <div class="bridge-divider">or</div>
+      <div class="bridge-divider">{t('divider.or')}</div>
     {/if}
 
     {#if effectiveShowPasskeys}
       <div class="bridge-sso-row">
-        <PasskeyLogin onLogin={onLogin} onError={onError} onSetupPasskey={() => { step = 'passkey-request'; error = null; }} class="bridge-btn bridge-btn-secondary bridge-sso-btn" />
+        <PasskeyLogin onLogin={onLogin} onError={onError} onSetupPasskey={() => { step = 'passkey-request'; error = null; }} {messages} class="bridge-btn bridge-btn-secondary bridge-sso-btn" />
       </div>
     {/if}
 
@@ -406,7 +413,7 @@
                 <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" fill="currentColor" stroke="none"/>
               </g>
             </svg>
-            <span>Sign in with Magic Link</span>
+            <span>{t('login.magicLink')}</span>
           </span>
         </button>
       </div>
@@ -443,7 +450,7 @@
       {@render footer()}
     {:else if effectiveShowSignupLink}
       <div class="bridge-form-footer">
-        Don't have an account? <a href={effectiveSignupHref}>Sign up</a>
+        {t('login.signupPrompt')} <a href={effectiveSignupHref}>{t('login.signupLink')}</a>
       </div>
     {/if}
   </AuthFormWrapper>

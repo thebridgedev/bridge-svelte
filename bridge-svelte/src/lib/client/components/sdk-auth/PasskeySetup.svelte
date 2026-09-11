@@ -1,7 +1,9 @@
 <script lang="ts">
   import type { HTMLAttributes } from 'svelte/elements';
+  import type { MessageOverrides } from '@nebulr-group/bridge-auth-core';
   import { onMount } from 'svelte';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
+  import { getTranslator } from '../../stores/i18n.js';
   import AuthFormWrapper from './shared/AuthFormWrapper.svelte';
   import Spinner from './shared/Spinner.svelte';
   import Alert from './shared/Alert.svelte';
@@ -12,6 +14,18 @@
     onError?: (error: Error) => void;
     onBack?: () => void;
     onExpired?: () => void;
+    /**
+     * Loading-step description. Pass `null`/`''` to render nothing (TBP-631).
+     *
+     * NOT lifted into AuthFormWrapper, unlike the other components: this
+     * paragraph sits inside `.bridge-passkey-loading` next to the Spinner and
+     * is laid out as part of that indicator. Hoisting it above the wrapper's
+     * children would silently change the visual arrangement, which is a worse
+     * outcome than one component guarding its own element.
+     */
+    description?: string | null;
+    /** Per-key copy overrides for this component only (TBP-630). */
+    messages?: MessageOverrides;
   }
 
   let {
@@ -20,10 +34,20 @@
     onError,
     onBack,
     onExpired,
+    description = undefined,
+    messages,
     class: className,
     style,
     ...rest
   }: Props = $props();
+
+  const t = $derived(getTranslator(messages));
+
+  // `undefined` = not passed, use the catalogue; `null` = host suppression that
+  // must survive (TBP-631).
+  const stepDescription = $derived(
+    description !== undefined ? description : t('passkey.setupDescription'),
+  );
 
   type ErrorType = 'expired' | 'cancelled' | 'unsupported' | 'network' | 'general';
   type ViewState = 'loading' | 'success' | 'error';
@@ -42,9 +66,9 @@
   }
 
   let heading = $derived(
-    viewState === 'loading' ? 'Setting up passkey'
-    : viewState === 'success' ? 'Passkey created'
-    : 'Passkey setup'
+    viewState === 'loading' ? t('passkey.settingUpHeading')
+    : viewState === 'success' ? t('passkey.setupSuccessHeading')
+    : t('passkey.setupHeading')
   );
 
   async function handleSetup() {
@@ -66,12 +90,12 @@
         viewState = 'success';
       } else {
         errorType = 'general';
-        errorMessage = 'Passkey registration could not be verified.';
+        errorMessage = t('passkey.error.verify');
         viewState = 'error';
       }
     } catch (err: any) {
       errorType = classifyError(err);
-      errorMessage = err.message || 'Passkey setup failed.';
+      errorMessage = err.message || t('passkey.error.setupFailed');
       viewState = 'error';
       onError?.(err);
     }
@@ -92,59 +116,61 @@
   {#if viewState === 'loading'}
     <div class="bridge-passkey-loading">
       <Spinner size={16} />
-      <p class="bridge-step-desc">Follow the prompt from your browser or device to complete passkey setup.</p>
+      {#if stepDescription}
+        <p class="bridge-step-desc">{stepDescription}</p>
+      {/if}
     </div>
 
   {:else if viewState === 'success'}
-    <Alert variant="success">Your passkey has been created.</Alert>
+    <Alert variant="success">{t('passkey.setupSuccessDescription')}</Alert>
     <button
       type="button"
       class="bridge-btn bridge-btn-primary"
       onclick={() => onComplete?.()}
     >
-      Sign in now
+      {t('passkey.signInNow')}
     </button>
 
   {:else if errorType === 'expired'}
-    <Alert variant="error">This setup link has expired or is invalid.</Alert>
+    <Alert variant="error">{t('passkey.error.expired')}</Alert>
     {#if onExpired}
       <button type="button" class="bridge-btn bridge-btn-primary" onclick={() => onExpired?.()}>
-        Request new setup link
+        {t('passkey.requestNewLink')}
       </button>
     {/if}
     {#if onBack}
       <button type="button" class="bridge-btn bridge-btn-ghost" onclick={() => onBack?.()}>
-        Back to sign in
+        {t('action.backToSignIn')}
       </button>
     {/if}
 
   {:else if errorType === 'cancelled'}
-    <Alert variant="error">Passkey setup was cancelled.</Alert>
+    <Alert variant="error">{t('passkey.error.cancelled')}</Alert>
     <button type="button" class="bridge-btn bridge-btn-primary" onclick={handleSetup}>
-      Try again
+      {t('action.tryAgain')}
     </button>
     {#if onBack}
       <button type="button" class="bridge-btn bridge-btn-ghost" onclick={() => onBack?.()}>
-        Back to sign in
+        {t('action.backToSignIn')}
       </button>
     {/if}
 
   {:else if errorType === 'unsupported'}
-    <Alert variant="info">Your browser does not support passkeys.</Alert>
+    <Alert variant="info">{t('passkey.error.unsupported')}</Alert>
     {#if onBack}
       <button type="button" class="bridge-btn bridge-btn-secondary" onclick={() => onBack?.()}>
-        Back to sign in
+        {t('action.backToSignIn')}
       </button>
     {/if}
 
   {:else}
-    <Alert variant="error">{errorMessage || 'An error occurred during passkey setup.'}</Alert>
+    <Alert variant="error">{errorMessage || t('passkey.error.setup')}</Alert>
     <button type="button" class="bridge-btn bridge-btn-primary" onclick={handleSetup}>
-      Try again
+      {t('action.tryAgain')}
     </button>
     {#if onBack}
       <button type="button" class="bridge-btn bridge-btn-ghost" onclick={() => onBack?.()}>
-        Back to sign in
+        {t('action.backToSignIn')}
       </button>
     {/if}
   {/if}

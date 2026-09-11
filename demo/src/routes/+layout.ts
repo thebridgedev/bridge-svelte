@@ -15,10 +15,18 @@ export const load: LayoutLoad = async ({ url, fetch }) => {
     import.meta.env.VITE_ENV === 'prod';
   console.log('isProd', isProd);
 
+  // TBP-629 — SDK mode and hosted mode are distinguished by exactly one thing:
+  // whether the consumer set `loginRoute`. The demo normally runs SDK mode, but
+  // the hosted branch (target stashed in sessionStorage, consumed at the OAuth
+  // callback) is otherwise unreachable from here and would go untested. This
+  // toggle lets a single demo server serve both, which is a demo concern — a
+  // real app picks one and hard-codes it.
+  const hostedMode = localStorage.getItem('bridge:hostedMode') === 'true';
+
   const baseConfig: BridgeConfig = {
     appId: localStorage.getItem('bridge:appId') || import.meta.env.VITE_BRIDGE_APP_ID || '',
     callbackUrl: import.meta.env.VITE_BRIDGE_CALLBACK_URL,
-    loginRoute: '/auth/login',
+    ...(hostedMode ? {} : { loginRoute: '/auth/login' }),
     debug: true,
     billing: { paywallRoute: '/welcome', paymentErrorRoute: '/payment-error' },
   };

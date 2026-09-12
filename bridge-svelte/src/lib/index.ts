@@ -263,3 +263,27 @@ export {
   withReturnTo,
 } from '@nebulr-group/bridge-auth-core';
 export type { ReturnToConfig } from '@nebulr-group/bridge-auth-core';
+
+// TBP-630 — SDK auth copy / translations. Re-exported from auth-core for the
+// same reason as the return-to helpers above: a consumer building its own
+// locale catalogue should import from the package it already depends on rather
+// than reaching past bridge-svelte to a peer dependency it never declared —
+// which pnpm's default layout and Yarn PnP refuse outright.
+//
+// bridge-react, -angular and -nextjs already export this surface; svelte was
+// the odd one out.
+export {
+  createTranslator,
+  en,
+  hasLocale,
+  interpolate,
+  LOCALES,
+  normalizeLocale,
+  sv,
+} from '@nebulr-group/bridge-auth-core';
+export type {
+  MessageKey,
+  MessageOverrides,
+  Messages,
+  Translator,
+} from '@nebulr-group/bridge-auth-core';

@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { HTMLButtonAttributes } from 'svelte/elements';
-  import type { FederationConnection } from '@nebulr-group/bridge-auth-core';
+  import type { FederationConnection, MessageOverrides } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
+  import { getTranslator } from '../../stores/i18n.js';
   import Spinner from './shared/Spinner.svelte';
 
   interface Props extends HTMLButtonAttributes {
@@ -19,6 +20,8 @@
     onSuccess?: () => void;
     onError?: (error: Error) => void;
     icon?: Snippet;
+    /** Per-key copy overrides for this component only (TBP-630). */
+    messages?: MessageOverrides;
   }
 
   let {
@@ -28,13 +31,18 @@
     onSuccess,
     onError,
     icon,
+    messages,
     class: className,
     style,
     ...rest
   }: Props = $props();
 
+  const t = $derived(getTranslator(messages));
+
   let loading = $state(false);
-  let buttonLabel = $derived(label ?? `Continue with ${connection.name}`);
+  // `label` still wins: an app naming its own provider button is voice, not
+  // mechanics, and the catalogue only supplies the default (TBP-634).
+  let buttonLabel = $derived(label ?? t('sso.continueWith', { provider: connection.name }));
 
   async function handleClick() {
     if (loading) return;
@@ -44,13 +52,13 @@
       if (result.type === 'auth_success') {
         onSuccess?.();
       } else if (result.type === 'auth_error') {
-        throw new Error(result.error || 'SSO login failed');
+        throw new Error(result.error || t('sso.error.login'));
       }
       // auth_mfa_required and auth_tenant_selection are handled by authState store
     } catch (err: any) {
       const message = err.message?.includes('popup')
-        ? 'Pop-up was blocked. Please allow pop-ups and try again.'
-        : err.message || 'SSO login failed';
+        ? t('sso.error.popupBlocked')
+        : err.message || t('sso.error.login');
       onError?.(new Error(message));
     } finally {
       loading = false;

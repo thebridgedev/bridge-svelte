@@ -237,7 +237,7 @@
   <MfaSetup onError={onError} {messages} />
 
 {:else if currentAuthState === 'tenant-selection'}
-  <TenantSelector onError={onError} />
+  <TenantSelector onError={onError} {messages} />
 
 <!-- Inline forgot password -->
 {:else if step === 'forgot-password'}

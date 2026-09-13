@@ -1,9 +1,10 @@
 <script lang="ts">
   import type { HTMLAttributes } from 'svelte/elements';
   import type { Snippet } from 'svelte';
-  import type { Workspace } from '@nebulr-group/bridge-auth-core';
+  import type { MessageOverrides, Workspace } from '@nebulr-group/bridge-auth-core';
   import { onMount } from 'svelte';
   import { getBridgeAuth, profileStore } from '../../../core/bridge-instance.js';
+  import { getTranslator } from '../../stores/i18n.js';
   import Spinner from './shared/Spinner.svelte';
   import Alert from './shared/Alert.svelte';
 
@@ -11,16 +12,21 @@
     onSwitch?: () => void;
     onError?: (error: Error) => void;
     workspaceItem?: Snippet<[{ workspace: Workspace; isActive: boolean; isLoading: boolean; onSelect: () => void }]>;
+    /** Per-key copy overrides for this component only (TBP-630). */
+    messages?: MessageOverrides;
   }
 
   let {
     onSwitch,
     onError,
     workspaceItem,
+    messages,
     class: className,
     style,
     ...rest
   }: Props = $props();
+
+  const t = $derived(getTranslator(messages));
 
   let workspaces = $state<Workspace[]>([]);
   let loadError = $state<string | null>(null);
@@ -34,7 +40,7 @@
     try {
       workspaces = await getBridgeAuth().getWorkspaces();
     } catch (err: any) {
-      loadError = err.message || 'Failed to load workspaces.';
+      loadError = err.message || t('workspace.error.load');
     } finally {
       loadingList = false;
     }
@@ -48,7 +54,7 @@
       await getBridgeAuth().switchWorkspace(workspace.id);
       onSwitch?.();
     } catch (err: any) {
-      switchError = err.message || 'Failed to switch workspace.';
+      switchError = err.message || t('workspace.error.switch');
       onError?.(err);
     } finally {
       switchingId = null;

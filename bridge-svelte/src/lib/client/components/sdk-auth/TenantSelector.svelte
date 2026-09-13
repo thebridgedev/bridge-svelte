@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
-  import type { TenantUser } from '@nebulr-group/bridge-auth-core';
+  import type { MessageOverrides, TenantUser } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth, tenantUsersStore } from '../../../core/bridge-instance.js';
+  import { getTranslator } from '../../stores/i18n.js';
   import AuthFormWrapper from './shared/AuthFormWrapper.svelte';
   import Spinner from './shared/Spinner.svelte';
   import Alert from './shared/Alert.svelte';
@@ -11,16 +12,21 @@
     onSelect?: () => void;
     onError?: (error: Error) => void;
     tenantItem?: Snippet<[TenantUser]>;
+    /** Per-key copy overrides for this component only (TBP-630). */
+    messages?: MessageOverrides;
   }
 
   let {
     onSelect,
     onError,
     tenantItem,
+    messages,
     class: className,
     style,
     ...rest
   }: Props = $props();
+
+  const t = $derived(getTranslator(messages));
 
   let loading = $state(false);
   let selectedId = $state<string | null>(null);
@@ -35,7 +41,7 @@
       await getBridgeAuth().selectTenant(tenantUser.id);
       onSelect?.();
     } catch (err: any) {
-      error = err.message || 'Failed to select workspace.';
+      error = err.message || t('tenant.error.select');
       onError?.(err);
     } finally {
       loading = false;
@@ -44,7 +50,7 @@
   }
 </script>
 
-<AuthFormWrapper heading="Choose a workspace" class={className} {style} {...rest}>
+<AuthFormWrapper heading={t('tenant.chooseHeading')} class={className} {style} {...rest}>
   {#if error}
     <Alert variant="error">{error}</Alert>
   {/if}

@@ -17,6 +17,13 @@ export interface BridgeConfig extends BridgeAuthConfig {
    *  an app genuinely needs to differ. Highest precedence in the chain. */
   messages?: MessageOverrides;
 
+  /** Show the "Live updates off — why?" corner badge that <BridgeBootstrap />
+   *  mounts while realtime is refused, degraded or stuck retrying (TBP-644).
+   *  It only ever renders in development builds; set `false` to hide it there
+   *  too. Production builds never show it, whatever this says.
+   *  @default true */
+  devBadge?: boolean;
+
   /** Billing paywall configuration. When set, Bridge redirects unauthenticated
    *  or plan-less users to `paywallRoute` before the page renders. */
   billing?: {

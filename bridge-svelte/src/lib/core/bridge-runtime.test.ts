@@ -21,6 +21,10 @@ let _onDegraded: (() => void) | undefined;
 let _invalidateCalls = 0;
 let _onFlagChange: ((change: { key: string; kind: string }) => void) | undefined;
 let _onUserState: ((msg: { reason: string }) => Promise<void> | void) | undefined;
+let _onStatusChange: ((status: Record<string, unknown>) => void) | undefined;
+let _refreshCalls = 0;
+let _refreshImpl: (() => unknown) | undefined;
+let _refreshThrows = false;
 
 const _channelScopeCalls: Array<{ method: string; value: string | undefined }> = [];
 const _reauthCalls: number[] = [];
@@ -39,6 +43,10 @@ function resetSpies() {
   _startCalls = 0;
   _stopCalls = 0;
   _capturedRealtimeConfig = undefined;
+  _onStatusChange = undefined;
+  _refreshCalls = 0;
+  _refreshImpl = undefined;
+  _refreshThrows = false;
 }
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
@@ -49,7 +57,11 @@ vi.mock('./bridge-instance.js', () => ({
   },
   getBridgeAuth: () => ({
     getApiContext: () => ({ appId: 'app-1', accessToken: null }),
-    refreshTokens: async () => {},
+    refreshTokens: async () => {
+      _refreshCalls += 1;
+      if (_refreshThrows) throw new Error('refresh failed');
+      return _refreshImpl ? _refreshImpl() : null;
+    },
     invalidateFeatureFlagCache: () => { _invalidateCalls += 1; },
   }),
 }));
@@ -77,6 +89,7 @@ vi.mock('@nebulr-group/bridge-auth-core', () => {
     setOnDegraded(fn: () => void) { _onDegraded = fn; }
     setOnFlagChange(fn: (change: { key: string; kind: string }) => void) { _onFlagChange = fn; }
     setOnUserState(fn: (msg: { reason: string }) => Promise<void> | void) { _onUserState = fn; }
+    setOnStatusChange(fn: (status: Record<string, unknown>) => void) { _onStatusChange = fn; }
     setAppId(v: string | undefined) { _channelScopeCalls.push({ method: 'setAppId', value: v }); }
     setWorkspaceId(v: string | undefined) { _channelScopeCalls.push({ method: 'setWorkspaceId', value: v }); }
     setUserId(v: string | undefined) { _channelScopeCalls.push({ method: 'setUserId', value: v }); }
@@ -116,8 +129,9 @@ import {
   onBridgeRealtimeSnapshot,
   onBridgeRealtimeUserState,
   onBridgeFlagChange,
+  onBridgeRealtimeStatus,
 } from './bridge-runtime.js';
-import { realtimeStatus } from './realtime-status.js';
+import { realtimeStatus, realtimeStatusDetail } from './realtime-status.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -315,5 +329,189 @@ describe('degraded realtime is reported as degraded, not open (TBP-575)', () => 
     // A socket that is connected but subscribed to nothing used to report
     // 'open' — which is exactly how a dead transport passed for healthy.
     expect(get(realtimeStatus)).toBe('degraded');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TBP-644 — the runtime only reauthorized on token ROTATION (A → B). A session
+// that signed in after page load (none → A) kept the anonymous connection, and
+// a client parked after a refusal stayed parked, until something else happened
+// to reconnect it.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const flush = async () => {
+  for (let i = 0; i < 10; i++) await Promise.resolve();
+};
+
+describe('reauthorizes on every token value change (TBP-644)', () => {
+  it('reauthorizes on first sign-in (no token → token)', () => {
+    startBridgeRuntime();
+    expect(_reauthCalls.length).toBe(0);
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1' }) });
+    expect(_reauthCalls.length).toBe(1);
+  });
+
+  it('reauthorizes on sign-out (token → no token)', () => {
+    startBridgeRuntime();
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1' }) });
+    _reauthCalls.length = 0;
+    _tokenStore.set(null);
+    expect(_reauthCalls.length).toBe(1);
+  });
+
+  it('does not reauthorize for the value already present at start — start() connects with it', () => {
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1' }) });
+    startBridgeRuntime();
+    expect(_reauthCalls.length).toBe(0);
+    expect(_startCalls).toBe(1);
+  });
+
+  it('does not reauthorize when the same token is emitted again', () => {
+    startBridgeRuntime();
+    const token = makeJwt({ sub: 'user-1' });
+    _tokenStore.set({ accessToken: token });
+    _reauthCalls.length = 0;
+    _tokenStore.set({ accessToken: token });
+    expect(_reauthCalls.length).toBe(0);
+  });
+
+  it('does not treat null → null (signed out, re-emitted) as a change', () => {
+    startBridgeRuntime();
+    _tokenStore.set({ accessToken: null });
+    _tokenStore.set(null);
+    expect(_reauthCalls.length).toBe(0);
+  });
+});
+
+describe('the self-induced refresh loop guard still holds (TBP-644)', () => {
+  it('the reconnect caused by a sign-in reauthorize does not fire the on-open refresh', () => {
+    startBridgeRuntime();
+    _onOpen?.(); // initial, anonymous connect
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1' }) }); // → reauthorize
+    _onOpen?.(); // the reconnect that reauthorize caused
+    expect(_refreshCalls).toBe(0);
+  });
+
+  it('a genuine reconnect still refreshes (catch-up for a missed user.state_changed)', () => {
+    startBridgeRuntime();
+    _onOpen?.();
+    _onOpen?.();
+    expect(_refreshCalls).toBe(1);
+  });
+
+  it('refresh → new token → reauthorize → open stops there instead of refreshing again', async () => {
+    startBridgeRuntime();
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1', iat: 1 }) });
+    _onOpen?.();
+    _refreshImpl = () => {
+      const t = { accessToken: makeJwt({ sub: 'user-1', iat: 2 }) };
+      _tokenStore.set(t);
+      return t;
+    };
+    _onOpen?.(); // genuine reconnect → catch-up refresh → token change → reauthorize
+    await flush();
+    expect(_refreshCalls).toBe(1);
+    _onOpen?.(); // the reauthorize's reconnect
+    await flush();
+    expect(_refreshCalls).toBe(1);
+  });
+});
+
+describe('refreshAuthToken is wired into the realtime client (TBP-644)', () => {
+  const refreshHook = () =>
+    _capturedRealtimeConfig!.refreshAuthToken as () => Promise<string | undefined>;
+
+  it('resolves to the NEW access token from BridgeAuth.refreshTokens()', async () => {
+    startBridgeRuntime();
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1', iat: 1 }) });
+    const fresh = makeJwt({ sub: 'user-1', iat: 2 });
+    _refreshImpl = () => {
+      _tokenStore.set({ accessToken: fresh });
+      return { accessToken: fresh };
+    };
+    await expect(refreshHook()()).resolves.toBe(fresh);
+    expect(_refreshCalls).toBe(1);
+  });
+
+  it('a signed-out session has nothing to refresh — resolves undefined without calling refresh', async () => {
+    startBridgeRuntime();
+    await expect(refreshHook()()).resolves.toBeUndefined();
+    expect(_refreshCalls).toBe(0);
+  });
+
+  it('a failed refresh resolves undefined instead of throwing', async () => {
+    startBridgeRuntime();
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1' }) });
+    _refreshThrows = true;
+    await expect(refreshHook()()).resolves.toBeUndefined();
+  });
+
+  it('the reconnect after a refreshAuthToken-driven token change does not refresh a second time', async () => {
+    startBridgeRuntime();
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1', iat: 1 }) });
+    _onOpen?.();
+    _refreshImpl = () => {
+      const t = { accessToken: makeJwt({ sub: 'user-1', iat: 2 }) };
+      _tokenStore.set(t);
+      return t;
+    };
+    await refreshHook()(); // realtime asked for it after a refusal
+    _onOpen?.(); // reconnect with the refreshed token
+    await flush();
+    expect(_refreshCalls).toBe(1);
+  });
+
+  it('an app-supplied refreshAuthToken override wins', () => {
+    const own = async () => 'own-token';
+    startBridgeRuntime({ realtime: { refreshAuthToken: own } });
+    expect(_capturedRealtimeConfig!.refreshAuthToken).toBe(own);
+  });
+});
+
+describe('full realtime status reaches the public API (TBP-644)', () => {
+  const unauthorized = {
+    state: 'unauthorized',
+    reason: 'expired',
+    side: 'app',
+    retrying: false,
+    docsUrl: 'https://thebridge.dev/docs/live-updates/troubleshooting/#expired',
+    ref: 'abcd1234',
+    since: 1,
+  };
+
+  it('propagates to realtimeStatusDetail, realtimeStatus and onBridgeRealtimeStatus', () => {
+    const seen: unknown[] = [];
+    onBridgeRealtimeStatus((s) => seen.push(s));
+    startBridgeRuntime();
+    _onStatusChange?.(unauthorized);
+    expect(get(realtimeStatusDetail)).toEqual(unauthorized);
+    expect(get(realtimeStatus)).toBe('unauthorized');
+    expect(seen).toEqual([unauthorized]);
+  });
+
+  it('a later open/close mirror does not clobber the detail of the same state', () => {
+    startBridgeRuntime();
+    const closing = { state: 'closed', reason: 'connection_lost', side: 'network', retrying: true, ref: 'r1', since: 2 };
+    _onStatusChange?.(closing);
+    _onClose?.();
+    expect(get(realtimeStatusDetail)).toEqual(closing);
+  });
+
+  it('a parked (unauthorized) client clears the self-induced flag so the next genuine reconnect refreshes', () => {
+    startBridgeRuntime();
+    _onOpen?.();
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1' }) }); // reauthorize → flag set
+    _onStatusChange?.(unauthorized); // …but it was refused and parked
+    _onOpen?.(); // a later, genuine reconnect
+    expect(_refreshCalls).toBe(1);
+  });
+
+  it('unsubscribes cleanly', () => {
+    const handler = vi.fn();
+    const off = onBridgeRealtimeStatus(handler);
+    startBridgeRuntime();
+    off();
+    _onStatusChange?.(unauthorized);
+    expect(handler).not.toHaveBeenCalled();
   });
 });

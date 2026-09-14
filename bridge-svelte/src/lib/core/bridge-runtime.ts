@@ -54,7 +54,11 @@ import {
 import { getConfig } from '../client/stores/config.store.js';
 import { getBridgeAuth, tokenStore } from './bridge-instance.js';
 import { wrapFetchWithBridgeAuth } from './bridge-fetch.js';
-import { applySessionSnapshot } from './snapshot-stores.js';
+import {
+  applyEntitlementsChanged,
+  applySessionSnapshot,
+  applySubscriptionPlanChanged,
+} from './snapshot-stores.js';
 import { bridgeEvents } from './events.js';
 import { _setRealtimeStatus, _setRealtimeStatusDetail } from './realtime-status.js';
 
@@ -256,8 +260,18 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
 
   // Phase 5 (TBP-331) + TBP-360 — billing-family events flow through the
   // unified bridge events surface via `useBridge().handle({...})`.
+  //
+  // TBP-644 — the two pushes that carry the complete new value also move the
+  // `bridge.tenant.*` stores, which were otherwise written only by
+  // `session.snapshot`. A plan change never re-sends a snapshot, so without
+  // this an upgraded app kept rendering the old plan until a reload. The store
+  // is patched BEFORE dispatch so a `bridge.events` handler that reads
+  // `bridge.tenant.subscription` already sees the new plan.
   useBridge().handle({
-    'subscription.plan_changed': (msg) => bridgeEvents._dispatch(msg),
+    'subscription.plan_changed': (msg) => {
+      try { applySubscriptionPlanChanged(msg); } catch { /* store updates shouldn't throw, defensive */ }
+      bridgeEvents._dispatch(msg);
+    },
     'payment.failed': (msg) => bridgeEvents._dispatch(msg),
     'payment.succeeded': (msg) => bridgeEvents._dispatch(msg),
     'subscription.created': (msg) => bridgeEvents._dispatch(msg),
@@ -273,7 +287,11 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
     'dunning.recovered': (msg) => bridgeEvents._dispatch(msg),
     'dunning.exhausted': (msg) => bridgeEvents._dispatch(msg),
     'quota.updated': (msg) => bridgeEvents._dispatch(msg),
-    'entitlements.changed': (msg) => bridgeEvents._dispatch(msg),
+    'entitlements.changed': (msg) => {
+      // Only the payload-carrying variant has a map; the signal-only one is a no-op here.
+      try { applyEntitlementsChanged(msg as { entitlements?: unknown }); } catch { /* defensive */ }
+      bridgeEvents._dispatch(msg);
+    },
   });
 
   // Token store subscription — owns realtime channel scoping + quotas HTTP

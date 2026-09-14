@@ -51,7 +51,8 @@ export interface BridgeTenantSurface {
   name: Readable<string | null>;
   /**
    * Canonical subscription (plan + status + endsAt). Live via `session.snapshot`
-   * when the realtime channel is active; otherwise transparently falls back to
+   * and every `subscription.plan_changed` push when the realtime channel is
+   * active; otherwise transparently falls back to
    * the REST subscription endpoint (fetched lazily on first read).
    */
   subscription: Readable<SubscriptionSnapshot | null>;

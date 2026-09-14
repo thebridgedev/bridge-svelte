@@ -70,8 +70,13 @@ vi.mock('../client/stores/config.store.js', () => ({
   getConfig: () => ({ appId: 'app-1', apiBaseUrl: 'http://test' }),
 }));
 
+// The billing-family handler table the runtime registers via useBridge().handle().
+let _billingHandlers: Record<string, (msg: unknown) => void> | undefined;
+
 vi.mock('./snapshot-stores.js', () => ({
   applySessionSnapshot: vi.fn(),
+  applySubscriptionPlanChanged: vi.fn(),
+  applyEntitlementsChanged: vi.fn(),
 }));
 
 vi.mock('./events.js', () => ({
@@ -102,7 +107,10 @@ vi.mock('@nebulr-group/bridge-auth-core', () => {
     useBridge: () => ({
       quotas: { configure: vi.fn() },
       attachToRealtimeClient: vi.fn(),
-      handle: vi.fn(() => () => {}),
+      handle: vi.fn((handlers: Record<string, (msg: unknown) => void>) => {
+        _billingHandlers = handlers;
+        return () => {};
+      }),
     }),
   };
 });
@@ -513,5 +521,64 @@ describe('full realtime status reaches the public API (TBP-644)', () => {
     off();
     _onStatusChange?.(unauthorized);
     expect(handler).not.toHaveBeenCalled();
+  });
+});
+
+// Regression: `subscription.plan_changed` and `entitlements.changed` were only
+// dispatched as events, so `bridge.tenant.*` kept the old plan / entitlements
+// until a reload (TBP-644, reproduced end to end on stage 2026-09-14).
+describe('billing pushes patch the bridge.tenant stores before dispatch (TBP-644)', () => {
+  const planChanged = {
+    kind: 'subscription.plan_changed',
+    tenantId: 'ws-1',
+    from: { slug: 'free' },
+    to: { slug: 'pro', name: 'Pro' },
+    status: 'active',
+    effectiveAt: '2026-09-14T15:56:31.654Z',
+  };
+  const entitlementsChanged = {
+    kind: 'entitlements.changed',
+    tenantId: 'ws-1',
+    effectiveAt: '2026-09-14T15:56:31.605Z',
+    entitlements: { app_active: true },
+  };
+
+  it('subscription.plan_changed patches the tenant subscription store, then dispatches', async () => {
+    const { bridgeEvents } = await import('./events.js');
+    const { applySubscriptionPlanChanged } = await import('./snapshot-stores.js');
+    const order: string[] = [];
+    vi.mocked(applySubscriptionPlanChanged).mockImplementationOnce(() => { order.push('store'); });
+    vi.mocked(bridgeEvents._dispatch).mockImplementationOnce(() => { order.push('dispatch'); });
+    _billingHandlers = undefined;
+    startBridgeRuntime();
+    _billingHandlers!['subscription.plan_changed'](planChanged);
+    expect(applySubscriptionPlanChanged).toHaveBeenCalledWith(planChanged);
+    expect(bridgeEvents._dispatch).toHaveBeenCalledWith(planChanged);
+    expect(order).toEqual(['store', 'dispatch']);
+  });
+
+  it('entitlements.changed replaces the tenant entitlements store, then dispatches', async () => {
+    const { bridgeEvents } = await import('./events.js');
+    const { applyEntitlementsChanged } = await import('./snapshot-stores.js');
+    const order: string[] = [];
+    vi.mocked(applyEntitlementsChanged).mockImplementationOnce(() => { order.push('store'); });
+    vi.mocked(bridgeEvents._dispatch).mockImplementationOnce(() => { order.push('dispatch'); });
+    _billingHandlers = undefined;
+    startBridgeRuntime();
+    _billingHandlers!['entitlements.changed'](entitlementsChanged);
+    expect(applyEntitlementsChanged).toHaveBeenCalledWith(entitlementsChanged);
+    expect(bridgeEvents._dispatch).toHaveBeenCalledWith(entitlementsChanged);
+    expect(order).toEqual(['store', 'dispatch']);
+  });
+
+  it('a failing store patch still dispatches the event to app handlers', async () => {
+    const { bridgeEvents } = await import('./events.js');
+    const { applySubscriptionPlanChanged } = await import('./snapshot-stores.js');
+    vi.mocked(applySubscriptionPlanChanged).mockImplementationOnce(() => { throw new Error('boom'); });
+    _billingHandlers = undefined;
+    startBridgeRuntime();
+    const msg = { ...planChanged, effectiveAt: 'throwing-case' };
+    expect(() => _billingHandlers!['subscription.plan_changed'](msg)).not.toThrow();
+    expect(bridgeEvents._dispatch).toHaveBeenCalledWith(msg);
   });
 });

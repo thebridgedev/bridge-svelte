@@ -15,7 +15,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { get, type Readable } from 'svelte/store';
 import {
+  applyEntitlementsChanged,
   applySessionSnapshot,
+  applySubscriptionPlanChanged,
   __resetSnapshotStores,
   type SessionSnapshotData,
 } from './snapshot-stores.js';
@@ -260,5 +262,91 @@ describe('bridge.app.plans lazy slice (Phase 4, TBP-321/322)', () => {
     await bridge.app.plans.load();
     bridge.app.plans.apply([{ key: 'enterprise', name: 'Enterprise', prices: [] }]);
     expect(get(bridge.app.plans)).toEqual([{ key: 'enterprise', name: 'Enterprise', prices: [] }]);
+  });
+});
+
+// Regression: a workspace upgrade reached the page as `subscription.plan_changed`
+// but `bridge.tenant.subscription` kept the old plan until a reload, because
+// only `session.snapshot` wrote it and a plan change never re-sends one
+// (TBP-644, reproduced end to end on stage 2026-09-14).
+describe('live pushes move bridge.tenant.* without a new snapshot (TBP-644)', () => {
+  const planChanged = (to: { slug: string; name: string }, status = 'active') => ({
+    kind: 'subscription.plan_changed' as const,
+    tenantId: 'ws-1',
+    from: { slug: 'free' },
+    to,
+    status,
+    effectiveAt: '2026-09-14T15:56:31.654Z',
+  });
+
+  function snapshotOnFree(extra: Partial<SessionSnapshotData['tenant']['subscription']> = {}) {
+    applySessionSnapshot({
+      ...fullSnapshot,
+      tenant: {
+        ...fullSnapshot.tenant,
+        subscription: { plan: { slug: 'free', name: 'Free' }, status: 'active', ...extra },
+      },
+    });
+  }
+
+  it('subscription.plan_changed replaces plan + status on bridge.tenant.subscription', () => {
+    snapshotOnFree();
+    applySubscriptionPlanChanged(planChanged({ slug: 'pro', name: 'Pro' }));
+    expect(get(bridge.tenant.subscription)).toEqual({ plan: { slug: 'pro', name: 'Pro' }, status: 'active' });
+  });
+
+  it('a subscriber sees free → pro live, with no further snapshot', () => {
+    snapshotOnFree();
+    const seen: Array<string | undefined> = [];
+    const unsub = bridge.tenant.subscription.subscribe((s) => seen.push(s?.plan.slug));
+    applySubscriptionPlanChanged(planChanged({ slug: 'pro', name: 'Pro' }));
+    unsub();
+    expect(seen).toEqual(['free', 'pro']);
+  });
+
+  it('keeps the fields the push does not carry (endsAt, gateEngaged)', () => {
+    snapshotOnFree({ endsAt: '2026-10-01T00:00:00.000Z', gateEngaged: false });
+    applySubscriptionPlanChanged(planChanged({ slug: 'pro', name: 'Pro' }));
+    expect(get(bridge.tenant.subscription)).toEqual({
+      plan: { slug: 'pro', name: 'Pro' },
+      status: 'active',
+      endsAt: '2026-10-01T00:00:00.000Z',
+      gateEngaged: false,
+    });
+  });
+
+  it('the pushed status wins over the snapshot status', () => {
+    snapshotOnFree({ status: 'trialing' });
+    applySubscriptionPlanChanged(planChanged({ slug: 'pro', name: 'Pro' }, 'active'));
+    expect(get(bridge.tenant.subscription)?.status).toBe('active');
+  });
+
+  it('works when no snapshot ever landed (the push alone populates the slice)', () => {
+    applySubscriptionPlanChanged(planChanged({ slug: 'pro', name: 'Pro' }));
+    expect(get(bridge.tenant.subscription)).toEqual({ plan: { slug: 'pro', name: 'Pro' }, status: 'active' });
+  });
+
+  it('ignores a push without a plan slug and never throws', () => {
+    snapshotOnFree();
+    expect(() => applySubscriptionPlanChanged(undefined)).not.toThrow();
+    expect(() => applySubscriptionPlanChanged({ to: null, status: 'active' })).not.toThrow();
+    expect(() => applySubscriptionPlanChanged({ to: { slug: '' } })).not.toThrow();
+    expect(get(bridge.tenant.subscription)?.plan.slug).toBe('free');
+  });
+
+  it('entitlements.changed with a map replaces the entitlements slice wholesale', () => {
+    applySessionSnapshot(fullSnapshot);
+    expect(bridge.tenant.entitlements.can('ai_completions')).toBe(true);
+    applyEntitlementsChanged({ entitlements: { app_active: true, projects: true } });
+    expect(get(bridge.tenant.entitlements.snapshot)).toEqual({ app_active: true, projects: true });
+    expect(bridge.tenant.entitlements.can('ai_completions')).toBe(false);
+    expect(bridge.tenant.entitlements.can('projects')).toBe(true);
+  });
+
+  it('the signal-only entitlements.changed (no map) leaves the slice untouched', () => {
+    applySessionSnapshot(fullSnapshot);
+    applyEntitlementsChanged({});
+    applyEntitlementsChanged(undefined);
+    expect(get(bridge.tenant.entitlements.snapshot)).toEqual(fullSnapshot.tenant.entitlements);
   });
 });

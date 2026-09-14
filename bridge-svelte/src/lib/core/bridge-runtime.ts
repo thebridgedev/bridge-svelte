@@ -45,6 +45,7 @@ import {
   RealtimeClient,
   type FlagChange,
   type RealtimeClientConfig,
+  type RealtimeStatus,
   type SessionSnapshotMessage,
   type UserStateMessage,
   useBridge,
@@ -55,7 +56,7 @@ import { getBridgeAuth, tokenStore } from './bridge-instance.js';
 import { wrapFetchWithBridgeAuth } from './bridge-fetch.js';
 import { applySessionSnapshot } from './snapshot-stores.js';
 import { bridgeEvents } from './events.js';
-import { _setRealtimeStatus } from './realtime-status.js';
+import { _setRealtimeStatus, _setRealtimeStatusDetail } from './realtime-status.js';
 
 let _realtime: RealtimeClient | undefined;
 let _unsubscribeAuth: (() => void) | undefined;
@@ -69,6 +70,8 @@ const _onSnapshotSubs: Set<(msg: SessionSnapshotMessage) => void> = new Set();
 // invalidate its (separate) cache and re-evaluate the current route.
 const _onFlagChangeSubs: Set<(change: FlagChange) => void> = new Set();
 const _onUserStateSubs: Set<(event: { reason: string }) => void> = new Set();
+// TBP-644 — full realtime status (state + reason + whose side + retrying).
+const _onStatusSubs: Set<(status: RealtimeStatus) => void> = new Set();
 
 /**
  * Advanced runtime overrides. Product consumers never pass these; tests,
@@ -131,6 +134,24 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
     apiKey: config.appId,
     appId: _bootstrapAppId,
     getAuthToken: () => _currentAuthToken,
+    // TBP-644 — a refused connection gets ONE session refresh per episode
+    // (auth-core enforces the once) and reconnects with the new token instead
+    // of parking. A signed-out session has nothing to refresh. Loop safety:
+    // the refreshed token lands in the tokenStore subscription below, whose
+    // reauthorize() is a no-op while that episode is still connecting, and
+    // the reconnect it produces is flagged self-induced so setOnOpen does not
+    // refresh a second time.
+    refreshAuthToken:
+      options.realtime?.refreshAuthToken ??
+      (async () => {
+        if (!_currentAuthToken) return undefined;
+        try {
+          const tokens = await getBridgeAuth().refreshTokens();
+          return tokens?.accessToken ?? undefined;
+        } catch {
+          return undefined;
+        }
+      }),
   });
 
   let _connectedOnce = false;
@@ -181,6 +202,20 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
   // would crash bootstrap — a worse failure than the missing signal.
   _realtime.setOnDegraded?.(() => {
     _setRealtimeStatus('degraded');
+  });
+
+  // TBP-644 — the full status: why the connection is not working, whose side
+  // the fault is on, and whether it is still retrying. Guarded for the same
+  // reason as setOnDegraded (an older auth-core has no such hook; the
+  // open/close/degraded mirrors above keep `realtimeStatus` working there).
+  _realtime.setOnStatusChange?.((status) => {
+    _setRealtimeStatusDetail(status);
+    // A parked client never opens, so a reauthorize that ended in a refusal
+    // must not leave the self-induced flag set for the next genuine reconnect.
+    if (status.state === 'unauthorized') _reauthInFlight = false;
+    for (const fn of _onStatusSubs) {
+      try { fn(status); } catch { /* subscriber errors swallowed */ }
+    }
   });
 
   // TBP-575 — a flag changed on the wire. Two caches need to hear about it and
@@ -245,9 +280,25 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
   // options + reauthorize on token-only refresh. Capability-specific subs
   // (e.g. flag eval context) are layered on top by their own bootstrappers.
   const apiBaseUrl = config.apiBaseUrl ?? 'https://api.thebridge.dev';
+
+  // TBP-644 — the realtime connection must be re-authorized whenever the
+  // token VALUE changes: rotation (A → B), but also first sign-in
+  // (none → A) and sign-out (A → none). Keying this on rotation only meant a
+  // session that signed in after page load kept the anonymous connection —
+  // or stayed parked after a refusal — until something else reconnected it.
+  // Flagged self-induced so setOnOpen skips its catch-up refresh (see the
+  // loop note there): the token we reconnect with is already current.
+  const reauthorizeForTokenChange = () => {
+    _reauthInFlight = true;
+    void _realtime!.reauthorize();
+  };
+  // `subscribe` emits the current value synchronously, before `start()` below.
+  // That first emission is not a change: start() connects with it anyway.
+  let _tokenSubscriptionLive = false;
   _unsubscribeAuth = tokenStore.subscribe((tokens) => {
     const prevAuthToken = _currentAuthToken;
-    _currentAuthToken = tokens?.accessToken;
+    _currentAuthToken = tokens?.accessToken ?? undefined;
+    const tokenChanged = _tokenSubscriptionLive && prevAuthToken !== _currentAuthToken;
 
     // Quota store hydrate requests carry the current access token; configure
     // here so post-login state is picked up. Best-effort: a missing
@@ -268,31 +319,28 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
       // its anonymous app-id auth.
       _realtime!.setUserId(undefined);
       _realtime!.setWorkspaceId(undefined);
+      // Reconnect as the signed-out session now, rather than riding the old
+      // user's socket until something else drops it.
+      if (tokenChanged) reauthorizeForTokenChange();
       return;
     }
 
     const claims = decodeJwtPayload(tokens.accessToken);
-    if (!claims) return;
-
-    // Wire all three SDK channel scopes from the JWT. `aid` → app, `tid` →
-    // workspace, `sub` → user. Each setter is idempotent; only changes trigger
-    // a reconnect.
-    _realtime!.setAppId(typeof claims.aid === 'string' ? claims.aid : undefined);
-    _realtime!.setWorkspaceId(typeof claims.tid === 'string' ? claims.tid : undefined);
-    _realtime!.setUserId(typeof claims.sub === 'string' ? claims.sub : undefined);
-
-    // Token-only refresh (same user, new JWT): setUserId is a no-op when
-    // userId hasn't changed, leaving the channel riding the OLD JWT until
-    // Centrifugo's connection-token TTL drops it. Force a reauthorize so the
-    // server re-validates against the new token immediately.
-    if (prevAuthToken && _currentAuthToken && prevAuthToken !== _currentAuthToken) {
-      // Flag this as a self-induced reconnect so setOnOpen does NOT fire its
-      // proactive refresh (which would mint a new token → land back here →
-      // loop forever). The token we're reauthorizing with is already current.
-      _reauthInFlight = true;
-      void _realtime!.reauthorize();
+    if (claims) {
+      // Wire all three SDK channel scopes from the JWT. `aid` → app, `tid` →
+      // workspace, `sub` → user. Each setter is idempotent; only changes
+      // trigger a reconnect.
+      _realtime!.setAppId(typeof claims.aid === 'string' ? claims.aid : undefined);
+      _realtime!.setWorkspaceId(typeof claims.tid === 'string' ? claims.tid : undefined);
+      _realtime!.setUserId(typeof claims.sub === 'string' ? claims.sub : undefined);
     }
+
+    // setUserId is a no-op when the user is unchanged (token-only refresh),
+    // and a setter-driven reconnect waits out a backoff and cannot lift a
+    // parked refusal — so reauthorize explicitly on every value change.
+    if (tokenChanged) reauthorizeForTokenChange();
   });
+  _tokenSubscriptionLive = true;
 
   // Best-effort start. RealtimeClient gracefully no-ops if the workspace's
   // `/realtime/config` returns `kind: 'noop'`.
@@ -371,6 +419,18 @@ export function onBridgeRealtimeSnapshot(
 }
 
 /**
+ * Subscribe to realtime status changes (TBP-644): state, the machine-readable
+ * reason, whose side a fault is on (`app` / `config` / `bridge` / `network`),
+ * whether the client is still retrying, a docs link and a support ref.
+ * Fires on every change, not with the current value — read
+ * `realtimeStatusDetail` for that. Returns an unsubscribe fn.
+ */
+export function onBridgeRealtimeStatus(handler: (status: RealtimeStatus) => void): () => void {
+  _onStatusSubs.add(handler);
+  return () => _onStatusSubs.delete(handler);
+}
+
+/**
  * Subscribe to server-side `user.state_changed` signals (fired before the
  * runtime triggers a token refresh). Useful for debug overlays + tests.
  */
@@ -391,6 +451,7 @@ export function __resetBridgeRuntime(): void {
   _onSnapshotSubs.clear();
   _onFlagChangeSubs.clear();
   _onUserStateSubs.clear();
+  _onStatusSubs.clear();
   _currentAuthToken = undefined;
   if (_unsubscribeAuth) {
     _unsubscribeAuth();

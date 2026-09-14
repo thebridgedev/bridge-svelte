@@ -20,6 +20,18 @@
     stopBridgeRuntime,
     type StartBridgeRuntimeOptions,
   } from '../core/bridge-runtime.js';
+  import RealtimeDevBadge from './components/developer/RealtimeDevBadge.svelte';
+
+  // TBP-644 — the "Live updates off — why?" badge is mounted here so every app
+  // gets it without code changes. It renders in development builds only;
+  // `devBadge: false` in the config turns it off there too.
+  const devBadgeEnabled = (() => {
+    try {
+      return getConfig().devBadge !== false;
+    } catch {
+      return true;
+    }
+  })();
 
   // Props: optional `runtime` overrides for advanced/debug use (websocketFactory,
   // reconnect overrides, etc.); `onBootstrapComplete` callback fires after the
@@ -194,3 +206,5 @@
     await handleRoute(to.url.pathname, cancel, to.url.search);
   });
 </script>
+
+<RealtimeDevBadge enabled={devBadgeEnabled} />

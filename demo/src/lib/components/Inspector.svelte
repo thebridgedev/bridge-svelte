@@ -104,7 +104,9 @@
   .ins-dot[data-state='connecting'] {
     background: var(--warn);
   }
-  .ins-dot[data-state='closed'] {
+  .ins-dot[data-state='closed'],
+  .ins-dot[data-state='degraded'],
+  .ins-dot[data-state='unauthorized'] {
     background: var(--danger);
   }
   .ins-actions {

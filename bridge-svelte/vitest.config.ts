@@ -1,3 +1,4 @@
+import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig } from 'vitest/config';
 
 /**
@@ -8,11 +9,16 @@ import { defineConfig } from 'vitest/config';
  * SvelteKit/Vite dev server. Browser-only globals (`window`, `dataLayer`)
  * are stubbed inline per test.
  *
+ * The svelte plugin compiles `.svelte` files so components can be rendered
+ * with `svelte/server` (TBP-644 dev badge). `$app/*` is not available here —
+ * tests that render a component mock the `$app/*` modules it imports.
+ *
  * NOTE: vitest is NOT added to the shipped package — the `files` whitelist
  * in package.json restricts the npm tarball to `dist/`, `README.md`, and
  * `LICENSE`. Test files co-located in `src/` are never published.
  */
 export default defineConfig({
+	plugins: [svelte()],
 	test: {
 		include: ['src/**/*.{spec,test}.ts'],
 		environment: 'node',

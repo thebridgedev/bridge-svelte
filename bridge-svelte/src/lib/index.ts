@@ -55,6 +55,16 @@ export type { BridgeEventHandlers, BridgeEventsDispatcher } from './core/events.
 // Components (Svelte components must have `export default`)
 export { default as BridgeBootstrap, default as BridgeProvider } from './client/BridgeBootstrap.svelte';
 export { default as ApiTokenManagement } from './client/components/developer/ApiTokenManagement.svelte';
+// TBP-644 — dev-only live-updates badge. <BridgeBootstrap /> already mounts it;
+// exported for apps that render their own bootstrap.
+export { default as RealtimeDevBadge } from './client/components/developer/RealtimeDevBadge.svelte';
+
+// TBP-644 — realtime status. `realtimeStatus` is the plain state string;
+// `realtimeStatusDetail` adds the reason, whose side it is and whether it is
+// still retrying. `onBridgeRealtimeStatus` is the event-style subscription.
+export { realtimeStatus, realtimeStatusDetail } from './core/realtime-status.js';
+export { onBridgeRealtimeStatus } from './core/bridge-runtime.js';
+export type { RealtimeStatus } from '@nebulr-group/bridge-auth-core';
 export { default as FeatureFlag } from './flags/FeatureFlag.svelte';
 export { default as ProfileName } from './client/components/ProfileName.svelte';
 export { default as TeamManagementPanel } from './client/components/team/TeamManagementPanel.svelte';

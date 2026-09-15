@@ -12,7 +12,13 @@ import {
   waitForBridge as _waitForBridge,
 } from '../core/bridge-instance.js';
 import { installBridgeAuthFetch } from '../core/bridge-runtime.js';
-import { useBridge, stashReturnTo, takeReturnTo, withReturnTo } from '@nebulr-group/bridge-auth-core';
+import {
+  useBridge,
+  sanitizeReturnTo,
+  stashReturnTo,
+  takeReturnTo,
+  withReturnTo,
+} from '@nebulr-group/bridge-auth-core';
 import { logger } from '../shared/logger.js';
 import type { BridgeConfig } from '../shared/types/config.js';
 import { bridgeConfig, getConfig, getRouteGuardConfig } from './stores/config.store.js';
@@ -206,6 +212,33 @@ function ensureInitialised(): Promise<{ flagsReady: Promise<void> }> {
   return _initialisation;
 }
 
+const STRIPE_DEFAULT_RETURN = '/subscription';
+
+// Where a Stripe success/cancel return lands (TBP-659).
+//
+// The `redirect` parameter arrives on the app's own callback URL, so anyone can
+// craft a link carrying it — no sign-in or Stripe session is needed to reach the
+// cancel branch. It is untrusted input: only a same-origin path is followed, and
+// anything auth-core's sanitizeReturnTo rejects (absolute URLs, `//` and `/\`
+// protocol-relative forms, schemes such as `javascript:`, control characters)
+// falls back to the default rather than being repaired.
+//
+// The query strip is kept on purpose. It arrived in 57dc474 together with the
+// {CHECKOUT_SESSION_ID} placeholder in PlanSelector: before the placeholder the
+// session id was appended as `?session_id=…` after `redirect=/path`, so it landed
+// inside this value. A checkout started by an older build, or a success URL a
+// consumer built for startCheckout themselves, can still come back in that shape,
+// and the session id must not leak into the consumer's route. The cost — a query
+// the consumer deliberately put on the target is dropped too — is unchanged
+// behaviour, not new.
+//
+// Validation runs on the stripped string because that is the one we navigate to.
+function stripeReturnTarget(url: URL): string {
+  const raw = url.searchParams.get('redirect');
+  if (raw === null) return STRIPE_DEFAULT_RETURN;
+  return sanitizeReturnTo(raw.split('?')[0]) ?? STRIPE_DEFAULT_RETURN;
+}
+
 // Unified callback handler — detects what is calling back and routes accordingly
 async function handleCallbackRoute(url: URL, kitFetch?: typeof globalThis.fetch): Promise<void> {
   try {
@@ -218,9 +251,7 @@ async function handleCallbackRoute(url: URL, kitFetch?: typeof globalThis.fetch)
       const sessionId     = url.searchParams.get('session_id');
       const stripeSuccess = url.searchParams.has('stripe_success');
       const stripeCancel  = url.searchParams.has('stripe_cancel');
-      // Strip any session_id Stripe appends to the redirect param destination
-      const rawRedirect   = url.searchParams.get('redirect') ?? '/subscription';
-      const redirectTo    = rawRedirect.split('?')[0];
+      const redirectTo    = stripeReturnTarget(url);
 
       if (code) {
         // OAuth callback

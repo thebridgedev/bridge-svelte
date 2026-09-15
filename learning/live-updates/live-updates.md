@@ -127,6 +127,8 @@ While the channel is down, everything keeps working from the last known state: f
 | `docsUrl` | Troubleshooting page for this `reason` |
 | `ref` | Support reference for this run of trouble |
 
+Every `reason` has an entry in [Live Updates Troubleshooting](/live-updates/troubleshooting/): what it means, whose side it is on, and the exact fix. The console message, `docsUrl` and the dev badge all link straight to it.
+
 ```svelte
 <script lang="ts">
   import { realtimeStatusDetail } from '@nebulr-group/bridge-svelte';

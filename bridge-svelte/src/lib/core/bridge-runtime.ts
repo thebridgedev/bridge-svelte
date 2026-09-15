@@ -63,7 +63,12 @@ import {
 } from './snapshot-stores.js';
 import { bridgeEvents } from './events.js';
 import { _setRealtimeStatus, _setRealtimeStatusDetail } from './realtime-status.js';
-import { invalidateRouteGuardCache } from '../auth/guard-cache.js';
+import {
+  clearPendingAuthorizationChange,
+  invalidateRouteGuardCache,
+  pendingAuthorizationChange,
+  trackAuthorizationChange,
+} from '../auth/guard-cache.js';
 
 /**
  * Why the route-guard cache was invalidated (TBP-654): a plan change, an
@@ -107,9 +112,45 @@ const _onAuthorizationChangeSubs: Set<(reason: BridgeAuthorizationChangeReason) 
 // refresh they cause all arrive within a second).
 function authorizationChanged(reason: BridgeAuthorizationChangeReason): void {
   invalidateRouteGuardCache();
+  // A new token IS the refreshed state; every other reason needs one.
+  if (reason !== 'token') refreshForAuthorizationChange();
   for (const fn of _onAuthorizationChangeSubs) {
     try { fn(reason); } catch { /* subscriber errors swallowed */ }
   }
+}
+
+// TBP-654 (upgrade race) — the page shows a new plan as soon as
+// `subscription.plan_changed` patches the store, but the access token that
+// carries the new plan only arrives with the next refresh. That refresh used to
+// start on `user.state_changed`, which the server publishes AFTER
+// `plan_changed` (TBP-660), so a user who clicked into a plan-gated route the
+// moment the page said "Pro" was judged on the old token and refused (2 of 6
+// stage runs; refresh landed ~300 ms after the click).
+//
+// So every authorization-affecting event starts the refresh immediately, and
+// registers it as the pending authorization change the route guards wait for
+// (bounded) before deciding. One refresh per burst: an event that arrives while
+// one is in flight joins it — and auth-core's refreshTokens() dedupes as well.
+// No loop: the refreshed token only re-runs `authorizationChanged('token')`,
+// which never refreshes, and the reconnect it causes is flagged self-induced.
+// A signed-out session has no token to refresh and no pending change.
+function refreshForAuthorizationChange(): Promise<void> | undefined {
+  if (!_currentAuthToken) return undefined;
+  const pending = pendingAuthorizationChange();
+  if (pending) return pending;
+  let auth: ReturnType<typeof getBridgeAuth>;
+  try {
+    auth = getBridgeAuth();
+  } catch {
+    return undefined; // BridgeAuth not constructed — nothing to refresh with.
+  }
+  let refresh: Promise<unknown>;
+  try {
+    refresh = Promise.resolve(auth.refreshTokens());
+  } catch (err) {
+    refresh = Promise.reject(err);
+  }
+  return trackAuthorizationChange(refresh);
 }
 
 /**
@@ -358,12 +399,28 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
   // user.state_changed → JWT refresh. The fresh tokens flow back through the
   // tokenStore subscription below and re-bind channel scopes / re-eval flags.
   _realtime.setOnUserState(async (msg: UserStateMessage) => {
-    // TBP-654 — role/attribute changes can flip a route verdict.
+    // TBP-654 — role/attribute changes can flip a route verdict. This starts
+    // the token refresh (or joins the one a preceding plan_changed started).
     authorizationChanged('user.state_changed');
     for (const fn of _onUserStateSubs) {
       try { fn({ reason: msg.reason }); } catch { /* subscriber errors swallowed */ }
     }
-    try { await getBridgeAuth().refreshTokens(); } catch { /* next scheduled refresh will pick it up */ }
+    // Never rejects; a failed refresh is picked up by the next scheduled one.
+    await pendingAuthorizationChange();
+    // The refresh this joined may have been minted BEFORE the server bumped
+    // the token version this message announces: a plan_changed that arrived
+    // first started it, and the server bumps after publishing plan_changed.
+    // Such a token carries the new plan but is `TOKEN_VERSION_STALE` for every
+    // version-checked endpoint. One follow-up refresh, only when the token we
+    // ended up with is behind the announced version — so it cannot loop, and
+    // an older server that sends no version keeps the single refresh.
+    const announced = (msg as { tokenVersion?: unknown }).tokenVersion;
+    if (typeof announced === 'number') {
+      const tv = decodeJwtPayload(_currentAuthToken ?? '')?.tv;
+      if (typeof tv === 'number' && tv < announced) {
+        await refreshForAuthorizationChange();
+      }
+    }
   });
 
   // Billing 2.0 US-11 — bind the billing stores to this realtime client so
@@ -604,6 +661,7 @@ export function __resetBridgeRuntime(): void {
   _onUserStateSubs.clear();
   _onStatusSubs.clear();
   _onAuthorizationChangeSubs.clear();
+  clearPendingAuthorizationChange();
   _currentAuthToken = undefined;
   if (_unsubscribeAuth) {
     _unsubscribeAuth();

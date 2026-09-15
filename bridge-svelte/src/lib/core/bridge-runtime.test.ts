@@ -643,6 +643,8 @@ describe('plan, entitlements, user-state and token changes reach the route-guard
   });
 
   it('user.state_changed invalidates once, before the token refresh it triggers', async () => {
+    // Signed in: a signed-out session has no token to refresh (upgrade race fix).
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'u1', tid: 'ws-1', aid: 'app-1' }) });
     startBridgeRuntime();
     let invalidatedAtRefresh = -1;
     _refreshImpl = () => { invalidatedAtRefresh = _invalidateCalls; return null; };

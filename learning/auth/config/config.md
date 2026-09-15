@@ -205,7 +205,7 @@ Some settings aren't passed in code at all. They're set once per app, and Bridge
 | Setting | What it does |
 |---------|---------------|
 | Redirect URIs | The allowlist of callback URLs Bridge is allowed to redirect to. Any `callbackUrl` you pass to `bridgeBootstrap` must already be on this list. |
-| Allowed origins | The origins (scheme, host and port) allowed to call the Bridge API from the browser. It is also enforced on in-app sign-in: from an origin not on the list, sign-in, signup, password reset, MFA and passkey requests answer `403 {"message":"Origin not allowed"}`. In Control Center: **Authentication** → **Security** tab → **Allowed Origins**. |
+| Allowed origins | The origins (scheme, host and port) allowed to call the Bridge API from the browser. It is also enforced on in-app sign-in: from an origin not on the list, sign-in itself (password sign-in, and the token exchange that finishes magic-link, passkey and MFA sign-in), signup and passkeys answer `403 {"message":"Origin not allowed"}`. Sending a magic link still succeeds, so the failure shows up after the link is clicked. In Control Center: **Authentication** → **Security** tab → **Allowed Origins**. |
 | Default callback URL | Used whenever your app doesn't pass a `callbackUrl` in code. See [Callback URL](#callback-url). |
 
 - **CLI:**

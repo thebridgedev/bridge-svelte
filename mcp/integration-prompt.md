@@ -145,7 +145,7 @@ bridge app update \
 
 If the Bridge CLI is not available, these values can also be set in the Bridge admin dashboard — allowed origins are under **Authentication** → **Security** tab → **Allowed Origins** — or directly in the database (`apps` collection: `redirectUris`, `allowedOrigins`, `defaultCallbackUri`, `uiUrl` fields).
 
-Allowed origins is more than CORS: Bridge checks the `Origin` header of in-app (SDK) auth requests against it — sign-in, signup, password reset, MFA, passkeys — and answers `403 {"message":"Origin not allowed"}` for an origin that is not listed. Add every origin the app is served from, each dev port included.
+Allowed origins is more than CORS: for in-app (SDK) auth, an origin that is not listed gets `403 {"message":"Origin not allowed"}` on sign-in itself — password sign-in and the token exchange that finishes magic-link, passkey and MFA sign-in — plus signup and passkeys. Sending a magic link still succeeds, so the failure shows up after the link is clicked. Add every origin the app is served from, each dev port included.
 
 ## Add login and logout
 

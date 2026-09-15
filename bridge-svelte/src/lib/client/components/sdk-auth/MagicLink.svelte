@@ -3,6 +3,7 @@
   import type { MessageOverrides } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
   import { getTranslator } from '../../stores/i18n.js';
+  import { authErrorMessage } from './shared/auth-error.js';
   import AuthFormWrapper from './shared/AuthFormWrapper.svelte';
   import Spinner from './shared/Spinner.svelte';
   import Alert from './shared/Alert.svelte';
@@ -57,7 +58,7 @@
       sent = true;
       onSent?.();
     } catch (err: any) {
-      error = err.message || t('magicLink.error.send');
+      error = authErrorMessage(err, t, 'magicLink.error.send');
       onError?.(err);
     } finally {
       loading = false;

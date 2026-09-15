@@ -16,6 +16,7 @@
   import TenantSelector from './TenantSelector.svelte';
   import PasskeyLogin from './PasskeyLogin.svelte';
   import PasskeyRequestSetupLink from './PasskeyRequestSetupLink.svelte';
+  import { authErrorMessage, isOriginNotAllowed } from './shared/auth-error.js';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** Override signup link visibility. Default: derived from app config (signupEnabled). */
@@ -90,6 +91,14 @@
   let password = $state('');
   let loading = $state(false);
   let error = $state<string | null>(null);
+  /**
+   * The auth state `error` was raised in (TBP-669). A failure that leaves the
+   * state where it was — an older auth-core keeps `credentials-validated`
+   * after a failed token exchange — must show the error, not the settling
+   * spinner; an error left over from an earlier attempt must not hijack a
+   * later sign-in that moved the state on. See the settling branch.
+   */
+  let errorAtState = $state<string | null>(null);
   let showPassword = $state(false);
 
   // Forgot password inline state
@@ -139,7 +148,8 @@
       await getBridgeAuth().authenticate(email, password);
       // authState store will drive MFA / tenant-selection / authenticated transitions
     } catch (err: any) {
-      error = err.message || t('login.error.invalidCredentials');
+      error = authErrorMessage(err, t, 'login.error.invalidCredentials');
+      errorAtState = currentAuthState;
       onError?.(err);
       loading = false;
     }
@@ -153,7 +163,8 @@
       await getBridgeAuth().sendResetPasswordLink(email);
       fpEmailSent = true;
     } catch (err: any) {
-      error = err.message || t('forgot.error.send');
+      error = authErrorMessage(err, t, 'forgot.error.send');
+      errorAtState = currentAuthState;
     } finally {
       fpLoading = false;
     }
@@ -168,10 +179,25 @@
       mlExpiresIn = result.expiresIn;
       mlSent = true;
     } catch (err: any) {
-      error = err.message || t('magicLink.error.send');
+      error = authErrorMessage(err, t, 'magicLink.error.send');
+      errorAtState = currentAuthState;
     } finally {
       mlLoading = false;
     }
+  }
+
+  /**
+   * TBP-669 — an origin refusal inside MFA or workspace selection ends the
+   * sign-in: auth-core returns to `unauthenticated`, which unmounts the child
+   * that caught the error. LoginForm keeps the message so the credentials
+   * form can show it. Other child errors stay with the child.
+   */
+  function handleChildError(err: Error) {
+    if (isOriginNotAllowed(err)) {
+      error = authErrorMessage(err, t, 'login.error.invalidCredentials');
+      errorAtState = currentAuthState;
+    }
+    onError?.(err);
   }
 
   function goBackToCredentials() {
@@ -222,7 +248,8 @@
       await getBridgeAuth().authenticateWithMagicLinkToken(magicToken);
       // authState effect handles onLogin callback
     } catch (err: any) {
-      error = err.message || t('magicLink.error.auth');
+      error = authErrorMessage(err, t, 'magicLink.error.auth');
+      errorAtState = currentAuthState;
       onError?.(err);
       loading = false;
     }
@@ -231,13 +258,13 @@
 
 <!-- Auth state overrides: MFA / Tenant Selection -->
 {#if currentAuthState === 'mfa-required'}
-  <MfaChallenge onError={onError} {messages} />
+  <MfaChallenge onError={handleChildError} {messages} />
 
 {:else if currentAuthState === 'mfa-setup-required'}
-  <MfaSetup onError={onError} {messages} />
+  <MfaSetup onError={handleChildError} {messages} />
 
 {:else if currentAuthState === 'tenant-selection'}
-  <TenantSelector onError={onError} {messages} />
+  <TenantSelector onError={handleChildError} {messages} />
 
 <!--
   Settling: the session is real and the host app has not navigated yet.
@@ -259,8 +286,14 @@
   `login.submitting` is reused rather than given its own key: it already says
   "Signing in…" in all twelve locales, and a second key rendering the same words
   would be a translation burden that buys nothing.
+
+  TBP-669: the one exception is a failure raised in the current state. With an
+  auth-core that leaves the state at `credentials-validated` when the token
+  exchange fails (a 403 "Origin not allowed" on stage), this branch showed
+  "Signing in…" forever and the error never rendered. An error raised at this
+  very state falls through to the credentials form, which shows it.
 -->
-{:else if currentAuthState !== 'unauthenticated'}
+{:else if currentAuthState !== 'unauthenticated' && !(error && errorAtState === currentAuthState)}
   <AuthFormWrapper heading={null} class={className} {style} {...rest}>
     <div class="bridge-auth-settling" data-bridge-auth-settling>
       <Spinner size={24} />

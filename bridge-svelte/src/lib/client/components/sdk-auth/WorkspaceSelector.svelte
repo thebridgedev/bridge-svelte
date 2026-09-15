@@ -5,6 +5,7 @@
   import { onMount } from 'svelte';
   import { getBridgeAuth, profileStore } from '../../../core/bridge-instance.js';
   import { getTranslator } from '../../stores/i18n.js';
+  import { authErrorMessage } from './shared/auth-error.js';
   import Spinner from './shared/Spinner.svelte';
   import Alert from './shared/Alert.svelte';
 
@@ -40,7 +41,7 @@
     try {
       workspaces = await getBridgeAuth().getWorkspaces();
     } catch (err: any) {
-      loadError = err.message || t('workspace.error.load');
+      loadError = authErrorMessage(err, t, 'workspace.error.load');
     } finally {
       loadingList = false;
     }
@@ -54,7 +55,7 @@
       await getBridgeAuth().switchWorkspace(workspace.id);
       onSwitch?.();
     } catch (err: any) {
-      switchError = err.message || t('workspace.error.switch');
+      switchError = authErrorMessage(err, t, 'workspace.error.switch');
       onError?.(err);
     } finally {
       switchingId = null;

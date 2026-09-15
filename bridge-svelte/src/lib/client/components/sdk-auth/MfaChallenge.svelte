@@ -3,6 +3,7 @@
   import type { MessageOverrides } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
   import { getTranslator } from '../../stores/i18n.js';
+  import { authErrorMessage } from './shared/auth-error.js';
   import AuthFormWrapper from './shared/AuthFormWrapper.svelte';
   import Spinner from './shared/Spinner.svelte';
   import Alert from './shared/Alert.svelte';
@@ -56,7 +57,7 @@
       code = '';
       startResendCooldown();
     } catch (err: any) {
-      error = err.message || t('mfa.error.resend');
+      error = authErrorMessage(err, t, 'mfa.error.resend');
       onError?.(err);
     } finally {
       loading = false;
@@ -71,7 +72,7 @@
       await getBridgeAuth().verifyMfa(code);
       onVerified?.();
     } catch (err: any) {
-      error = err.message || t('mfa.error.invalidCode');
+      error = authErrorMessage(err, t, 'mfa.error.invalidCode');
       onError?.(err);
     } finally {
       loading = false;
@@ -86,7 +87,7 @@
       await getBridgeAuth().resetMfa(backupCode);
       onVerified?.();
     } catch (err: any) {
-      error = err.message || t('mfa.error.invalidRecoveryCode');
+      error = authErrorMessage(err, t, 'mfa.error.invalidRecoveryCode');
       onError?.(err);
     } finally {
       loading = false;

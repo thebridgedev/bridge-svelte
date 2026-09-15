@@ -3,6 +3,7 @@
 // the component stays a thin view over it.
 
 import type { RealtimeStatus } from '@nebulr-group/bridge-auth-core';
+import { originNotAllowedHint } from '../shared/allowed-origins.js';
 
 /** A connection still retrying after this long is worth telling the developer about. */
 export const REALTIME_BADGE_RETRYING_AFTER_MS = 30_000;
@@ -19,6 +20,8 @@ export interface RealtimeBadgeView {
   reason: string;
   /** Plain-language owner of the fault. */
   sideLabel: string;
+  /** One sentence naming the fix, when known (TBP-669: `origin_not_allowed`). */
+  hint?: string;
   docsUrl?: string;
   ref?: string;
   /**
@@ -36,6 +39,10 @@ const SIDE_LABELS: Record<NonNullable<RealtimeStatus['side']>, string> = {
 };
 
 function sideLabel(status: RealtimeStatus): string {
+  // The generic `config` label names apiBaseUrl / appId — wrong for this one.
+  if (status.reason === 'origin_not_allowed') {
+    return "Your Bridge settings — this page's origin is not in the app's allowed origins";
+  }
   if (status.side) return SIDE_LABELS[status.side];
   if (status.state === 'degraded') return 'Channel access — connected, but Bridge accepted no channel';
   return 'Unknown';
@@ -75,14 +82,22 @@ export function realtimeBadgeView(
   retryingSince: number | undefined,
   now: number,
 ): RealtimeBadgeView | null {
-  const stuck = status.state === 'unauthorized' || status.state === 'degraded';
+  // `open` with a reason: some channels were refused and Bridge said why
+  // (TBP-669) — live updates on those channels are off.
+  const partial = status.state === 'open' && !!status.reason;
+  const stuck = status.state === 'unauthorized' || status.state === 'degraded' || partial;
   const retryingTooLong =
     status.retrying && retryingSince !== undefined && now - retryingSince >= REALTIME_BADGE_RETRYING_AFTER_MS;
   if (!stuck && !retryingTooLong) return null;
   const reason = status.reason ?? status.state;
+  // `hint` arrives from auth-core with TBP-669; supplied here for older ones.
+  const hint =
+    (status as RealtimeStatus & { hint?: string }).hint ??
+    (reason === 'origin_not_allowed' ? originNotAllowedHint() : undefined);
   return {
     reason,
     sideLabel: sideLabel(status),
+    ...(hint ? { hint } : {}),
     docsUrl: status.docsUrl ?? (status.reason ? `${DOCS_BASE_URL}#${status.reason}` : undefined),
     ref: status.ref,
     key: `${stuck ? status.state : 'retrying'}|${reason}|${status.ref ?? ''}`,

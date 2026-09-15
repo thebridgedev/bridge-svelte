@@ -72,11 +72,14 @@ vi.mock('../client/stores/config.store.js', () => ({
 
 // The billing-family handler table the runtime registers via useBridge().handle().
 let _billingHandlers: Record<string, (msg: unknown) => void> | undefined;
+// What the runtime handed auth-core's EntitlementsStore (TBP-660 catch-up).
+const _entitlementsApplied: unknown[] = [];
 
 vi.mock('./snapshot-stores.js', () => ({
   applySessionSnapshot: vi.fn(),
   applySubscriptionPlanChanged: vi.fn(),
   applyEntitlementsChanged: vi.fn(),
+  applyCatchUpSnapshot: vi.fn(() => ({ planChanged: false, entitlementsChanged: false })),
 }));
 
 vi.mock('./events.js', () => ({
@@ -107,6 +110,9 @@ vi.mock('@nebulr-group/bridge-auth-core', () => {
     useBridge: () => ({
       quotas: { configure: vi.fn() },
       attachToRealtimeClient: vi.fn(),
+      entitlementsStore: {
+        applyEntitlementsChanged: (snapshot: unknown) => { _entitlementsApplied.push(snapshot); },
+      },
       handle: vi.fn((handlers: Record<string, (msg: unknown) => void>) => {
         _billingHandlers = handlers;
         return () => {};
@@ -115,15 +121,22 @@ vi.mock('@nebulr-group/bridge-auth-core', () => {
   };
 });
 
+// Any signed-in reconnect now issues a TBP-660 catch-up request. Keep every
+// test off the network: the default answer is an unusable 503, and the TBP-660
+// tests install their own stub on top.
+const _realFetch = globalThis.fetch;
+
 beforeEach(() => {
   _tokenStore = writable<TokenSet>(null);
   resetSpies();
+  globalThis.fetch = (async () => ({ ok: false, status: 503, json: async () => ({}) })) as unknown as typeof fetch;
 });
 
 afterEach(async () => {
   const { __resetBridgeRuntime, stopBridgeRuntime } = await import('./bridge-runtime.js');
   await stopBridgeRuntime();
   __resetBridgeRuntime();
+  globalThis.fetch = _realFetch;
 });
 
 // ── Imports under test ─────────────────────────────────────────────────────
@@ -675,5 +688,185 @@ describe('plan, entitlements, user-state and token changes reach the route-guard
     const msg = { ...planChanged, effectiveAt: 'throwing-subscriber' };
     expect(() => _billingHandlers!['subscription.plan_changed'](msg)).not.toThrow();
     expect(bridgeEvents._dispatch).toHaveBeenCalledWith(msg);
+  });
+});
+
+// Regression (TBP-660): a plan change publishes user.state_changed first; the
+// token refresh it causes makes the SDK replace its socket, and AppSync has no
+// replay, so a subscription.plan_changed published during the swap was lost for
+// good — the reconnect our own reauthorize() caused skipped every catch-up.
+// Seen in 1 of 8 stage runs. Every reconnect must now re-read the session
+// snapshot, once, without re-arming the TBP-644 refresh loop.
+describe('every reconnect catches up on state the socket swap may have lost (TBP-660)', () => {
+  const SNAPSHOT = {
+    app: { branding: { logo: '', name: 'App' } },
+    tenant: {
+      id: 'ws-1',
+      name: 'Workspace',
+      subscription: { plan: { slug: 'pro', name: 'Pro' }, status: 'active' },
+      entitlements: { pro_page: true },
+    },
+    user: { id: 'user-1', role: 'OWNER', tenantId: 'ws-1' },
+  };
+  const tokenA = makeJwt({ sub: 'user-1', tid: 'ws-1', aid: 'app-1', v: 1 });
+  const tokenB = makeJwt({ sub: 'user-1', tid: 'ws-1', aid: 'app-1', v: 2 });
+  const ok = (data: unknown) => ({ ok: true, status: 200, json: async () => data }) as unknown as Response;
+
+  let realFetch: typeof fetch;
+  let fetchCalls: Array<{ url: string; headers: Record<string, string> }>;
+  let respond: () => Promise<Response>;
+
+  beforeEach(async () => {
+    realFetch = globalThis.fetch;
+    fetchCalls = [];
+    _entitlementsApplied.length = 0;
+    respond = async () => ok(SNAPSHOT);
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      fetchCalls.push({ url: String(input), headers: Object.fromEntries(new Headers(init?.headers).entries()) });      return respond();
+    }) as typeof fetch;
+    const { applyCatchUpSnapshot } = await import('./snapshot-stores.js');
+    vi.mocked(applyCatchUpSnapshot).mockReset();
+    vi.mocked(applyCatchUpSnapshot).mockReturnValue({ planChanged: false, entitlementsChanged: false });
+  });
+
+  afterEach(async () => {
+    await stopBridgeRuntime(); // restores the fetch the runtime wrapped
+    globalThis.fetch = realFetch;
+  });
+
+  // Signed in, connected, then a token refresh (e.g. after user.state_changed)
+  // → reauthorize → the replacement socket opens.
+  function signedInThenReauthorized() {
+    _tokenStore.set({ accessToken: tokenA });
+    startBridgeRuntime();
+    _onOpen?.(); // initial connect
+    _tokenStore.set({ accessToken: tokenB }); // → reauthorize
+    _onOpen?.(); // the replacement socket
+  }
+
+  it('the reconnect caused by reauthorize re-fetches the session snapshot and applies it', async () => {
+    const { applyCatchUpSnapshot } = await import('./snapshot-stores.js');
+    signedInThenReauthorized();
+    await vi.waitFor(() => expect(applyCatchUpSnapshot).toHaveBeenCalledWith(SNAPSHOT));
+    expect(fetchCalls).toHaveLength(1);
+    expect(fetchCalls[0].url).toBe('http://test/session/init');
+    expect(fetchCalls[0].headers.authorization).toBe(`Bearer ${tokenB}`);
+    expect(fetchCalls[0].headers['x-app-id']).toBe('app-1');
+    // …without re-arming the self-induced token refresh loop (TBP-644).
+    expect(_refreshCalls).toBe(0);
+  });
+
+  it('the initial connect does not fetch — bootstrap already loaded this state', async () => {
+    _tokenStore.set({ accessToken: tokenA });
+    startBridgeRuntime();
+    _onOpen?.();
+    await flush();
+    expect(fetchCalls).toHaveLength(0);
+  });
+
+  it('a genuine reconnect catches up too, alongside its token refresh', async () => {
+    _tokenStore.set({ accessToken: tokenA });
+    startBridgeRuntime();
+    _onOpen?.();
+    _onOpen?.();
+    await flush();
+    expect(fetchCalls).toHaveLength(1);
+    expect(_refreshCalls).toBe(1);
+  });
+
+  it('a signed-out session has nothing to catch up on', async () => {
+    startBridgeRuntime();
+    _onOpen?.();
+    _onOpen?.();
+    await flush();
+    expect(fetchCalls).toHaveLength(0);
+  });
+
+  it('opens that land while a catch-up is in flight coalesce into ONE follow-up — no storm', async () => {
+    let release!: () => void;
+    respond = () => new Promise((resolve) => { release = () => resolve(ok(SNAPSHOT)); });
+    signedInThenReauthorized(); // catch-up #1 in flight
+    _onOpen?.();
+    _onOpen?.();
+    _onOpen?.(); // three more reconnects meanwhile
+    expect(fetchCalls).toHaveLength(1);
+    release();
+    await vi.waitFor(() => expect(fetchCalls).toHaveLength(2)); // exactly one follow-up
+    release();
+    await flush();
+    expect(fetchCalls).toHaveLength(2);
+  });
+
+  it('a recovered plan change re-runs the route guard, as the lost push would have (TBP-654)', async () => {
+    const { applyCatchUpSnapshot } = await import('./snapshot-stores.js');
+    vi.mocked(applyCatchUpSnapshot).mockReturnValue({ planChanged: true, entitlementsChanged: false });
+    signedInThenReauthorized();
+    const invalidatedBefore = _invalidateCalls; // the token change already invalidated once
+    const reasons: string[] = [];
+    onBridgeAuthorizationChange((reason) => reasons.push(reason));
+    await vi.waitFor(() => expect(reasons).toEqual(['subscription.plan_changed']));
+    expect(_invalidateCalls).toBe(invalidatedBefore + 1);
+  });
+
+  it('recovered entitlements reach auth-core\'s store and the route guard', async () => {
+    const { applyCatchUpSnapshot } = await import('./snapshot-stores.js');
+    vi.mocked(applyCatchUpSnapshot).mockReturnValue({ planChanged: false, entitlementsChanged: true });
+    signedInThenReauthorized();
+    const reasons: string[] = [];
+    onBridgeAuthorizationChange((reason) => reasons.push(reason));
+    await vi.waitFor(() => expect(reasons).toEqual(['entitlements.changed']));
+    expect(_entitlementsApplied).toEqual([SNAPSHOT.tenant.entitlements]);
+  });
+
+  it('nothing changed → the route guard is left alone', async () => {
+    const { applyCatchUpSnapshot } = await import('./snapshot-stores.js');
+    signedInThenReauthorized();
+    const invalidatedBefore = _invalidateCalls;
+    const reasons: string[] = [];
+    onBridgeAuthorizationChange((reason) => reasons.push(reason));
+    await vi.waitFor(() => expect(applyCatchUpSnapshot).toHaveBeenCalled());
+    await flush();
+    expect(reasons).toEqual([]);
+    expect(_invalidateCalls).toBe(invalidatedBefore);
+    expect(_entitlementsApplied).toEqual([]);
+  });
+
+  it('a failed catch-up (HTTP error or network) is swallowed and applies nothing', async () => {
+    const { applyCatchUpSnapshot } = await import('./snapshot-stores.js');
+    respond = async () => ({ ok: false, status: 500, json: async () => ({}) }) as unknown as Response;
+    signedInThenReauthorized();
+    await flush();
+    respond = async () => { throw new TypeError('network down'); };
+    _onOpen?.();
+    await flush();
+    expect(fetchCalls).toHaveLength(2);
+    expect(applyCatchUpSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('an answer that lands after the session changed is discarded', async () => {
+    const { applyCatchUpSnapshot } = await import('./snapshot-stores.js');
+    let release!: () => void;
+    respond = () => new Promise((resolve) => { release = () => resolve(ok(SNAPSHOT)); });
+    signedInThenReauthorized(); // catch-up in flight with tokenB
+    _tokenStore.set(null); // sign-out while it is in flight
+    release();
+    await flush();
+    expect(applyCatchUpSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('a follow-up queued by a stopped runtime never fires into the next one', async () => {
+    let release!: () => void;
+    respond = () => new Promise((resolve) => { release = () => resolve(ok(SNAPSHOT)); });
+    signedInThenReauthorized(); // catch-up in flight
+    _onOpen?.(); // …and a follow-up queued behind it
+    const releaseOld = release;
+    await stopBridgeRuntime(); // e.g. <BridgeBootstrap> destroyed
+    _tokenStore.set({ accessToken: tokenA });
+    startBridgeRuntime(); // the next session on the same module state
+    _onOpen?.(); // its initial connect — no catch-up
+    releaseOld();
+    await flush();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(fetchCalls).toHaveLength(1);
   });
 });

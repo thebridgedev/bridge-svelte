@@ -14,7 +14,7 @@
  * can update them without pulling in the whole `bridge-instance` graph
  * (and so unit tests can reset them between cases via `__resetSnapshotStores`).
  */
-import { writable, type Readable, type Writable } from 'svelte/store';
+import { get, writable, type Readable, type Writable } from 'svelte/store';
 
 export interface BrandingSnapshot {
   logo: string;
@@ -122,6 +122,38 @@ export function applyEntitlementsChanged(msg: { entitlements?: unknown } | null 
   const map = msg?.entitlements;
   if (!map || typeof map !== 'object' || Array.isArray(map)) return;
   _tenantEntitlements.set({ ...(map as Record<string, boolean>) });
+}
+
+/**
+ * TBP-660 — apply a snapshot fetched to catch up after a reconnect, and report
+ * what it changed. A push lost during the socket swap is repaired here, and
+ * the caller has to know whether the plan or the entitlements actually moved
+ * so it can re-run the route guard the way the lost push would have — and
+ * leave it alone when nothing did. Never throws.
+ */
+export function applyCatchUpSnapshot(data: SessionSnapshotData): {
+  planChanged: boolean;
+  entitlementsChanged: boolean;
+} {
+  const subBefore = get(_tenantSubscription);
+  const entBefore = get(_tenantEntitlements);
+  applySessionSnapshot(data);
+  const subAfter = get(_tenantSubscription);
+  const entAfter = get(_tenantEntitlements);
+  return {
+    planChanged:
+      (subBefore?.plan?.slug ?? null) !== (subAfter?.plan?.slug ?? null) ||
+      (subBefore?.status ?? null) !== (subAfter?.status ?? null),
+    entitlementsChanged: !sameFlags(entBefore, entAfter),
+  };
+}
+
+function sameFlags(a: Record<string, boolean> | null, b: Record<string, boolean> | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) return false;
+  return keys.every((k) => a[k] === b[k]);
 }
 
 /** Test-only: reset every snapshot store to `null`. Vitest hook. */

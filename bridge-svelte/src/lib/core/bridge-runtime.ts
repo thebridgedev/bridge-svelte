@@ -55,9 +55,11 @@ import { getConfig } from '../client/stores/config.store.js';
 import { getBridgeAuth, tokenStore } from './bridge-instance.js';
 import { wrapFetchWithBridgeAuth } from './bridge-fetch.js';
 import {
+  applyCatchUpSnapshot,
   applyEntitlementsChanged,
   applySessionSnapshot,
   applySubscriptionPlanChanged,
+  type SessionSnapshotData,
 } from './snapshot-stores.js';
 import { bridgeEvents } from './events.js';
 import { _setRealtimeStatus, _setRealtimeStatusDetail } from './realtime-status.js';
@@ -196,6 +198,79 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
   // reconnect's setOnOpen handler knows the token is already fresh and skips
   // its proactive refresh — see the loop note in setOnOpen below.
   let _reauthInFlight = false;
+
+  // TBP-660 — catch up after ANY reconnect, including the one our own
+  // reauthorize() causes. AppSync Events has no replay, so a push published
+  // while the socket is being replaced is gone for good — and a plan change
+  // publishes exactly then: user.state_changed → token refresh → reauthorize,
+  // with subscription.plan_changed still on its way. The server's own repair
+  // (a session.snapshot sent on authorize) is published fire-and-forget during
+  // authorize, before the new subscription is live, so it can be lost in the
+  // same window. setOnOpen fires only once the subscribe is acknowledged:
+  // anything published before that is already in the database, so the REST
+  // snapshot sees it, and anything published after arrives on the socket.
+  //
+  // Storm safety: one GET per open. Opens that land while one is in flight
+  // coalesce into ONE follow-up — the in-flight answer may predate the newest
+  // socket going live, so it cannot stand in for it. The request uses the
+  // unwrapped fetch and never refreshes tokens, so it cannot feed the
+  // token → reauthorize → open loop described in setOnOpen below.
+  const rt = _realtime;
+  let _catchUpInFlight = false;
+  let _catchUpQueued = false;
+  const catchUpSessionSnapshot = async (): Promise<void> => {
+    // A stopped (or replaced) runtime must never fetch: its queued follow-up
+    // would read the module-level token and fetch of the NEXT session.
+    if (_realtime !== rt) return;
+    const token = _currentAuthToken;
+    const doFetch = _originalFetch ?? globalThis.fetch;
+    if (!token || typeof doFetch !== 'function') return;
+    let appId = config.appId;
+    try {
+      appId = getBridgeAuth().getApiContext().appId ?? appId;
+    } catch {
+      // BridgeAuth not constructed — config.appId it is.
+    }
+    try {
+      const res = await doFetch(`${config.apiBaseUrl ?? 'https://api.thebridge.dev'}/session/init`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}`, 'x-app-id': appId ?? '' },
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as SessionSnapshotData;
+      // Stopped, or the session changed while this was in flight: the answer
+      // describes a session we no longer have. A token change reauthorizes,
+      // and that reconnect catches up again with the right token.
+      if (_realtime !== rt || _currentAuthToken !== token) return;
+      const { planChanged, entitlementsChanged } = applyCatchUpSnapshot(data);
+      if (entitlementsChanged && data?.tenant?.entitlements) {
+        // Keep auth-core's copy (what flag targeting reads) in step too.
+        try { useBridge().entitlementsStore?.applyEntitlementsChanged(data.tenant.entitlements); } catch { /* defensive */ }
+      }
+      // TBP-654 — a recovered change must reach the route guard exactly like
+      // the push it replaces would have. Nothing changed → nothing to redo.
+      if (planChanged) authorizationChanged('subscription.plan_changed');
+      else if (entitlementsChanged) authorizationChanged('entitlements.changed');
+    } catch {
+      // Best-effort: the next reconnect or push repairs it.
+    }
+  };
+  const requestCatchUp = (): void => {
+    if (!_currentAuthToken) return; // signed out: no tenant or user scope to fetch
+    if (_catchUpInFlight) {
+      _catchUpQueued = true;
+      return;
+    }
+    _catchUpInFlight = true;
+    void catchUpSessionSnapshot().finally(() => {
+      _catchUpInFlight = false;
+      if (_catchUpQueued) {
+        _catchUpQueued = false;
+        requestCatchUp();
+      }
+    });
+  };
+
   _realtime.setOnOpen(() => {
     _setRealtimeStatus('open');
     // On reconnect (not initial connect), proactively refresh tokens.
@@ -217,6 +292,10 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
     if (_connectedOnce && !causedByReauthorize) {
       getBridgeAuth().refreshTokens().catch(() => { /* best-effort; wrapFetchWithBridgeAuth is the hard fallback */ });
     }
+    // TBP-660 — the TOKEN refresh above is skipped for a self-induced
+    // reconnect; the STATE catch-up is not. Losing pushes is a property of
+    // the socket swap, whoever caused it, and the catch-up cannot loop.
+    if (_connectedOnce) requestCatchUp();
     _connectedOnce = true;
     for (const fn of _onOpenSubs) {
       try { fn(); } catch { /* subscriber errors swallowed */ }

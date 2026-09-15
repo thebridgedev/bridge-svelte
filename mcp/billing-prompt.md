@@ -182,13 +182,15 @@ Pick by what you need:
 | What you need | Use | Where |
 |---|---|---|
 | A live usage counter, ready-made | `<BridgeQuotaBanner metric="decks" />` | component |
-| The raw numbers, for your own UI | `useBridge().quota(metric)` → `QuotaSnapshot` | component or `.svelte.ts` |
-| Gate a feature on/off by plan | `useBridge().entitlements.can('key')` | anywhere |
+| The raw numbers, for your own UI | `useBridge().quota(metric)` from `@nebulr-group/bridge-auth-core` → `QuotaSnapshot` | component or `.svelte.ts` |
+| Gate a feature on/off by plan | `bridge.tenant.entitlements.can('key')` (`bridge` from `@nebulr-group/bridge-svelte`) | anywhere |
 | **Actually enforce a cap** | **Your server, not here** — see below | backend |
+
+> `@nebulr-group/bridge-svelte` does **not** export `useBridge`. The quota read is the one place you import from `@nebulr-group/bridge-auth-core` (already installed — it is bridge-svelte's peer dependency): `import { useBridge } from '@nebulr-group/bridge-auth-core';`. Import the `QuotaSnapshot` type from `@nebulr-group/bridge-svelte`.
 
 ### Do not proxy quota through your own API
 
-The client reads quota **directly from Bridge**. You do not need an endpoint on your own API that relays it, and you should not hand-copy the `QuotaSnapshot` shape into your codebase — `useBridge().quota(metric)` returns it typed.
+The client reads quota **directly from Bridge**. You do not need an endpoint on your own API that relays it, and you should not hand-copy the `QuotaSnapshot` shape into your codebase — `useBridge().quota(metric)` (auth-core) returns it typed.
 
 A `/quota` route on your own API, a hand-written `type MyQuota = { used, limit, remaining, … }`, and bespoke counter markup are three symptoms of the same wrong turn.
 
@@ -207,7 +209,7 @@ Branch on `policy`, never on `remaining` alone.
 
 ### Entitlements
 
-`useBridge().entitlements.can('key')` returns `false` until hydrated (fail-closed) and updates live when the plan changes or a quota exhausts.
+`bridge.tenant.entitlements.can('key')` (`import { bridge } from '@nebulr-group/bridge-svelte'`) returns `false` until hydrated (fail-closed) and updates live when the plan changes or a quota exhausts. For a reactive read in a template, use the store: `const entitlements = bridge.tenant.entitlements.snapshot;` then `$entitlements?.key`.
 
 ## Step 4 — Billing portal
 
@@ -215,7 +217,7 @@ To let users manage their payment method or cancel, add a button that calls `get
 
 ## Reading subscription state
 
-The subscription state is available via `bridge.tenant.subscription` from `useBridge()`, or the `subscriptionStore` store. Both update reactively when the plan changes — no polling needed. Import from `@nebulr-group/bridge-svelte`.
+The subscription state is available via `bridge.tenant.subscription` (a store on the `bridge` singleton), or the `subscriptionStore` store. Both update reactively when the plan changes — no polling needed. Import `bridge` / `subscriptionStore` from `@nebulr-group/bridge-svelte` (it does not export a `useBridge()` hook).
 
 ## Billing checklist
 

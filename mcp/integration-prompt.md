@@ -56,6 +56,9 @@ export const ssr = false;
 export const load: LayoutLoad = async ({ url }) => {
   const config: BridgeConfig = {
     appId: import.meta.env.VITE_BRIDGE_APP_ID,
+    // The SDK reads no environment variables itself. Pass the API URL from
+    // your own env, or it defaults to production (https://api.thebridge.dev).
+    apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
   };
 
   const routeConfig: RouteGuardConfig = {
@@ -72,6 +75,7 @@ export const load: LayoutLoad = async ({ url }) => {
 
 **Key points:**
 - `ssr = false` is required — Bridge auth is client-side only.
+- **`apiBaseUrl` must be passed explicitly for any non-production app** (stage, local, self-hosted). The SDK never reads `import.meta.env`; without `apiBaseUrl` every request goes to the production API, and a stage or local app ID fails there with "Not Found".
 - `defaultAccess: 'protected'` means all routes require login unless marked `public`.
 - `/auth/*` must be public so the OAuth callback route is accessible.
 - The `appId` comes from the `VITE_BRIDGE_APP_ID` environment variable.
@@ -150,12 +154,10 @@ Add buttons to your navigation or header component:
 ```svelte
 <script lang="ts">
   import { auth, isAuthenticated, profileStore } from '@nebulr-group/bridge-svelte';
-
-  const { profile } = profileStore;
 </script>
 
 {#if $isAuthenticated}
-  <span>{$profile?.fullName ?? $profile?.email}</span>
+  <span>{$profileStore?.fullName ?? $profileStore?.email}</span>
   <button onclick={() => auth.logout()}>Log out</button>
 {:else}
   <button onclick={() => auth.login()}>Log in</button>
@@ -166,7 +168,7 @@ Add buttons to your navigation or header component:
 - `auth.login()` redirects to the Bridge hosted login page. After login, the user is redirected back to your app's callback URL (default: `{origin}/auth/oauth-callback`).
 - `auth.logout()` clears tokens and redirects to the Bridge hosted logout page. **In SDK mode** (`loginRoute` configured), pass `redirectTo` explicitly so the user lands on your in-app login page instead: `auth.logout({ redirectTo: '/auth/login' })`. Without `redirectTo`, logout always goes to the hosted portal.
 - `isAuthenticated` is a Svelte readable store — use `$isAuthenticated` in templates.
-- **Important:** `profileStore` is an object containing stores, not a store itself. You must destructure it first: `const { profile } = profileStore;` then use `$profile` in templates. Do NOT use `$profileStore` directly — it will throw a `store_invalid_shape` error in Svelte 5.
+- **Important:** `profileStore` IS the profile store (`Readable<Profile | null | undefined>`) — use `$profileStore` directly in templates. Do NOT destructure it (`const { profile } = profileStore` gives you `undefined`, and `$profile` then throws `store_invalid_shape` in Svelte 5).
 
 ## Route protection
 
@@ -199,7 +201,9 @@ const routeConfig: RouteGuardConfig = {
 
 **When an unauthenticated user hits a protected route:**
 - They are redirected to the Bridge hosted login page.
-- After login, they are returned to the app's callback URL, then redirected to the home page (`/`).
+- After login, they are returned to the app's callback URL, then redirected to the page they originally asked for (or `/` when there was none).
+
+**What the guard covers:** `bridgeBootstrap()` re-evaluates the route rules on every navigation — the first page load, client-side navigations, and redirects thrown from your own `load` functions (e.g. a public `/` whose `+page.ts` redirects into the app). If it cannot reach a decision (network error, broken config) it denies protected routes. For defence in depth on a sensitive page, also call `assertAuthorized(url)` from that page's own `load` (exported from `@nebulr-group/bridge-svelte`). Route guards control what the browser renders; they are **not** authorization — your API must still verify the user's token.
 
 **Default: protect everything.** The only route that must be public is `/auth/*` (the OAuth callback lives there). All other routes should be protected by default. The user can relax this later for specific pages (landing, search, docs, etc.) using the CLI or by editing the route config directly.
 
@@ -212,14 +216,28 @@ Add to your `.env` file (or `.env.local` for local dev):
 
 ```env
 VITE_BRIDGE_APP_ID=your-app-id-here
+# Only for a non-production app (stage, local, self-hosted):
+# VITE_BRIDGE_API_BASE_URL=https://api-stage.thebridge.dev
+# VITE_BRIDGE_HOSTED_URL=https://auth-stage.thebridge.dev
 ```
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `VITE_BRIDGE_APP_ID` | Yes | — | Your Bridge application ID |
-| `VITE_BRIDGE_API_BASE_URL` | No | `https://api.thebridge.dev` | Bridge API base URL |
-| `VITE_BRIDGE_HOSTED_URL` | No | `https://auth.thebridge.dev` | Bridge hosted UI URL (login page) |
-| `VITE_BRIDGE_DEBUG` | No | `false` | Enable debug logging in the console |
+**The SDK does not read environment variables.** These names are a convention for your own `+layout.ts`: read each one with `import.meta.env` and pass it into `BridgeConfig` yourself. Setting a variable without passing it does nothing.
+
+| Variable | Pass it as | Default when not passed | Description |
+|----------|-----------|-------------------------|-------------|
+| `VITE_BRIDGE_APP_ID` | `appId` (required) | — | Your Bridge application ID |
+| `VITE_BRIDGE_API_BASE_URL` | `apiBaseUrl` | `https://api.thebridge.dev` (production) | Bridge API base URL — required for any non-production app |
+| `VITE_BRIDGE_HOSTED_URL` | `hostedUrl` | `https://auth.thebridge.dev` (production) | Bridge hosted UI URL (login page) |
+| `VITE_BRIDGE_DEBUG` | `debug` | `false` | Enable debug logging in the console |
+
+```ts
+const config: BridgeConfig = {
+  appId: import.meta.env.VITE_BRIDGE_APP_ID,
+  apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
+  hostedUrl: import.meta.env.VITE_BRIDGE_HOSTED_URL || undefined,
+  debug: import.meta.env.VITE_BRIDGE_DEBUG === 'true',
+};
+```
 
 ## Accessing user context
 
@@ -228,20 +246,18 @@ After login, user and tenant information is available via stores:
 ```svelte
 <script lang="ts">
   import { profileStore, isAuthenticated } from '@nebulr-group/bridge-svelte';
-
-  const { profile } = profileStore;
 </script>
 
 {#if $isAuthenticated}
-  <p>Welcome, {$profile?.fullName}</p>
-  <p>Email: {$profile?.email}</p>
-  <p>Tenant: {$profile?.tenant?.name}</p>
+  <p>Welcome, {$profileStore?.fullName}</p>
+  <p>Email: {$profileStore?.email}</p>
+  <p>Tenant: {$profileStore?.tenant?.name}</p>
 {/if}
 ```
 
 **Available stores:**
 - `isAuthenticated` — `Readable<boolean>`
-- `profileStore.profile` — `Readable<{ fullName, email, tenant, onboarded, ... } | null>`
+- `profileStore` — `Readable<{ fullName, email, tenant, onboarded, ... } | null | undefined>` (the store itself — use `$profileStore`; `undefined` while loading, `null` when signed out)
 - `tokenStore` — `Readable<{ accessToken, refreshToken, idToken } | null>`
 - `authState` — `Readable<'unauthenticated' | 'authenticated' | 'tenant-selection' | ...>`
 
@@ -343,9 +359,7 @@ Phase 4 of the Live Channel Unification milestone introduces a single scoped rea
 ### Three scopes, one object
 
 ```ts
-import { useBridge } from '@nebulr-group/bridge-svelte';
-
-const bridge = useBridge();
+import { bridge } from '@nebulr-group/bridge-svelte';
 
 // app — anything tied to the app config (whitelabel, plan catalog, flag defs)
 bridge.app.branding              // Readable<BrandingSnapshot | null>
@@ -386,7 +400,9 @@ bridge.user                      // Readable<UserSnapshot | null>  // { id, emai
 
 ### Using in components
 
-`useBridge()` reads from Svelte context, falling back to the module-level singleton when no `<BridgeProvider>` is mounted. The `<BridgeBootstrap>` (and its `<BridgeProvider>` alias) automatically sets the context, so any descendant component can call `useBridge()` without further wiring.
+Import the `bridge` singleton from `@nebulr-group/bridge-svelte` wherever you need it — components, `.svelte.ts` modules or plain `.ts` files. Its scopes are Svelte stores, so use `$` in templates (for example `const subscription = bridge.tenant.subscription;` then `$subscription?.plan?.slug`). No provider or context wiring is needed beyond the `<BridgeBootstrap />` already in your root layout.
+
+> `@nebulr-group/bridge-svelte` does **not** export a `useBridge()` hook. Do not import one from it — use the `bridge` singleton above.
 
 ### Mapping from legacy exports
 

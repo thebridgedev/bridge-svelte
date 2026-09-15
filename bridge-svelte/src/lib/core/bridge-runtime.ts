@@ -61,6 +61,18 @@ import {
 } from './snapshot-stores.js';
 import { bridgeEvents } from './events.js';
 import { _setRealtimeStatus, _setRealtimeStatusDetail } from './realtime-status.js';
+import { invalidateRouteGuardCache } from '../auth/guard-cache.js';
+
+/**
+ * Why the route-guard cache was invalidated (TBP-654): a plan change, an
+ * entitlements change, a server-side user state change, or a new access token
+ * (sign-in, refresh, sign-out).
+ */
+export type BridgeAuthorizationChangeReason =
+  | 'subscription.plan_changed'
+  | 'entitlements.changed'
+  | 'user.state_changed'
+  | 'token';
 
 let _realtime: RealtimeClient | undefined;
 let _unsubscribeAuth: (() => void) | undefined;
@@ -76,6 +88,27 @@ const _onFlagChangeSubs: Set<(change: FlagChange) => void> = new Set();
 const _onUserStateSubs: Set<(event: { reason: string }) => void> = new Set();
 // TBP-644 — full realtime status (state + reason + whose side + retrying).
 const _onStatusSubs: Set<(status: RealtimeStatus) => void> = new Set();
+// TBP-654 — anything that can change a route verdict without changing a flag.
+const _onAuthorizationChangeSubs: Set<(reason: BridgeAuthorizationChangeReason) => void> = new Set();
+
+// TBP-654 — route guards read auth-core's FeatureFlagService (5-min TTL), and
+// a plan-targeted rule's verdict depends on the user's plan and token, not on
+// the flag definition. Before this, only a realtime FLAG change cleared that
+// cache, so an upgraded user stayed locked out of the page they had just paid
+// for until the TTL ran out or they reloaded.
+//
+// Called exactly once per triggering event, and always BEFORE the event is
+// dispatched to app handlers, so a handler that navigates is evaluated
+// against fresh state. Invalidation is free (no fetch); the refetch happens at
+// the next route evaluation, and the re-check subscribers debounce bursts
+// (plan_changed + entitlements.changed + user.state_changed + the token
+// refresh they cause all arrive within a second).
+function authorizationChanged(reason: BridgeAuthorizationChangeReason): void {
+  invalidateRouteGuardCache();
+  for (const fn of _onAuthorizationChangeSubs) {
+    try { fn(reason); } catch { /* subscriber errors swallowed */ }
+  }
+}
 
 /**
  * Advanced runtime overrides. Product consumers never pass these; tests,
@@ -229,9 +262,7 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
   // Invalidating here is what makes a route flag take effect on the next
   // navigation instead of up to five minutes later.
   _realtime.setOnFlagChange?.((change) => {
-    try {
-      getBridgeAuth().invalidateFeatureFlagCache();
-    } catch { /* auth instance may not exist yet; next hydrate covers it */ }
+    invalidateRouteGuardCache();
     for (const fn of _onFlagChangeSubs) {
       try { fn(change); } catch { /* subscriber errors swallowed */ }
     }
@@ -248,6 +279,8 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
   // user.state_changed → JWT refresh. The fresh tokens flow back through the
   // tokenStore subscription below and re-bind channel scopes / re-eval flags.
   _realtime.setOnUserState(async (msg: UserStateMessage) => {
+    // TBP-654 — role/attribute changes can flip a route verdict.
+    authorizationChanged('user.state_changed');
     for (const fn of _onUserStateSubs) {
       try { fn({ reason: msg.reason }); } catch { /* subscriber errors swallowed */ }
     }
@@ -270,6 +303,7 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
   useBridge().handle({
     'subscription.plan_changed': (msg) => {
       try { applySubscriptionPlanChanged(msg); } catch { /* store updates shouldn't throw, defensive */ }
+      authorizationChanged('subscription.plan_changed');
       bridgeEvents._dispatch(msg);
     },
     'payment.failed': (msg) => bridgeEvents._dispatch(msg),
@@ -290,6 +324,7 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
     'entitlements.changed': (msg) => {
       // Only the payload-carrying variant has a map; the signal-only one is a no-op here.
       try { applyEntitlementsChanged(msg as { entitlements?: unknown }); } catch { /* defensive */ }
+      authorizationChanged('entitlements.changed');
       bridgeEvents._dispatch(msg);
     },
   });
@@ -317,6 +352,12 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
     const prevAuthToken = _currentAuthToken;
     _currentAuthToken = tokens?.accessToken ?? undefined;
     const tokenChanged = _tokenSubscriptionLive && prevAuthToken !== _currentAuthToken;
+
+    // TBP-654 + TBP-653 — a new token (sign-in, refresh after a plan change,
+    // sign-out) invalidates every verdict taken with the old one, and the
+    // current route is re-evaluated: a signed-out session on a protected page
+    // goes to login instead of inheriting the signed-in decision.
+    if (tokenChanged) authorizationChanged('token');
 
     // Quota store hydrate requests carry the current access token; configure
     // here so post-login state is picked up. Best-effort: a missing
@@ -449,6 +490,19 @@ export function onBridgeRealtimeStatus(handler: (status: RealtimeStatus) => void
 }
 
 /**
+ * Subscribe to changes that can alter a route guard's verdict without a flag
+ * changing (TBP-654): plan change, entitlements change, user state change, new
+ * access token. The route-guard cache is already invalidated when subscribers
+ * run. Returns an unsubscribe fn.
+ */
+export function onBridgeAuthorizationChange(
+  handler: (reason: BridgeAuthorizationChangeReason) => void,
+): () => void {
+  _onAuthorizationChangeSubs.add(handler);
+  return () => _onAuthorizationChangeSubs.delete(handler);
+}
+
+/**
  * Subscribe to server-side `user.state_changed` signals (fired before the
  * runtime triggers a token refresh). Useful for debug overlays + tests.
  */
@@ -470,6 +524,7 @@ export function __resetBridgeRuntime(): void {
   _onFlagChangeSubs.clear();
   _onUserStateSubs.clear();
   _onStatusSubs.clear();
+  _onAuthorizationChangeSubs.clear();
   _currentAuthToken = undefined;
   if (_unsubscribeAuth) {
     _unsubscribeAuth();

@@ -15,6 +15,7 @@
   import { setBridgeContext } from '../core/use-bridge.js';
   import { getConfig, getRouteGuardConfig } from './stores/config.store.js';
   import {
+    onBridgeAuthorizationChange,
     onBridgeFlagChange,
     startBridgeRuntime,
     stopBridgeRuntime,
@@ -93,6 +94,25 @@
     // gone landing on the default route, which is the same bug with a different
     // trigger.
     const attempted = `${pathname}${search ?? ''}`;
+
+    // TBP-653 — SvelteKit reads `cancel()` synchronously: once this callback
+    // hits its first `await`, the navigation is already committed. The
+    // signed-out check needs no network, so do it before awaiting and cancel
+    // for real, rather than letting the protected route start loading and
+    // superseding it afterwards. If the check itself throws, nothing is
+    // cancelled here: the full decision below and the load-level guard in
+    // bridgeBootstrap() both fail closed, and cancelling without a redirect
+    // would strand a visitor who was heading somewhere public.
+    if (cancel) {
+      let signedOutOnProtected = false;
+      try {
+        signedOutOnProtected = guard.shouldRedirectToLogin(pathname);
+      } catch {
+        signedOutOnProtected = false;
+      }
+      if (signedOutOnProtected) cancel();
+    }
+
     const decision = await guard.getNavigationDecision(pathname, attempted);
     if (decision.type === 'login') {
       if (cancel) cancel();
@@ -126,6 +146,7 @@
   // each re-check costs a bulkEvaluate round-trip.
   let _recheckTimer: ReturnType<typeof setTimeout> | undefined;
   let _stopFlagWatch: (() => void) | undefined;
+  let _stopAuthzWatch: (() => void) | undefined;
 
   function scheduleRouteRecheck() {
     if (_recheckTimer) clearTimeout(_recheckTimer);
@@ -154,6 +175,13 @@
     _stopFlagWatch = onBridgeFlagChange((change) => {
       if (routeRulesReferenceFlag(change.key)) scheduleRouteRecheck();
     });
+
+    // TBP-654 — a plan upgrade, entitlements change, user state change or new
+    // token can flip a verdict without any flag changing. The runtime has
+    // already invalidated the route-guard cache; re-check the current route
+    // (debounced — these arrive in bursts) so a signed-out session leaves a
+    // protected page and a revoked entitlement ejects the user.
+    _stopAuthzWatch = onBridgeAuthorizationChange(() => scheduleRouteRecheck());
 
     // Fetch app config outside load() so we use the correct fetch context.
     // LoginForm also calls ensureAppConfig() — both share the same in-flight promise.
@@ -192,6 +220,8 @@
     }
     _stopFlagWatch?.();
     _stopFlagWatch = undefined;
+    _stopAuthzWatch?.();
+    _stopAuthzWatch = undefined;
     void (async () => {
       if (_capabilityStop) {
         try { await _capabilityStop(); } catch { /* ignore */ }

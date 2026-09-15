@@ -24,6 +24,9 @@ export const load: LayoutLoad = async ({ url }) => {
   const config: BridgeConfig = {
     appId: import.meta.env.VITE_BRIDGE_APP_ID,
     loginRoute: '/auth/login',
+    // The SDK reads no environment variables. Pass the API URL from your own
+    // env; without it every request goes to production (https://api.thebridge.dev).
+    apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
   };
 
   const routeConfig: RouteGuardConfig = {

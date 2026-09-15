@@ -47,11 +47,13 @@ It is a separate evaluation path from `<FeatureFlag>` / `useFlag`, and the diffe
 | | Route guard | `<FeatureFlag>` / `useFlag` |
 |---|---|---|
 | Evaluated | server-side, via the Bridge eval API, against the session | in-browser, against the local flag cache |
-| Freshness | cached ~5 min — a dashboard toggle is **not** instant | realtime push, instant |
+| Freshness | live: the current page is re-checked when a flag its rules name, the plan, entitlements or the session change | realtime push, instant |
 | Context | derived from the access token (`user.*`, `tenant.*`) | local context + `bridge.attributes` + per-call `context` |
 | Values | boolean gate only | any value type |
 
-Both run the same FF 2.0 rule evaluator over the same flag records, so they agree on the verdict. They differ on *when* and on *what context they can see*: a rule targeting attributes you publish client-side with `bridge.attributes.set(...)` is invisible to the route guard. If a route must react to a toggle instantly, gate the route's *content* with `<FeatureFlag>` as well.
+Both run the same FF 2.0 rule evaluator over the same flag records, so they agree on the verdict. They differ on *when* and on *what context they can see*: a rule targeting attributes you publish client-side with `bridge.attributes.set(...)` is invisible to the route guard.
+
+The route guard's verdict cache is dropped whenever a flag change, plan change, entitlements change, user state change or new access token arrives, and `<BridgeBootstrap />` re-checks the page the user is currently on, so flipping a route's flag off moves the user off that page within about a second — no navigation or reload needed. Only when live updates are off (e.g. a proxy blocks WebSockets) does the guard fall back to its 5-minute cache expiry.
 
 > Route guards ride the full Bridge bootstrap (`bridgeBootstrap` from the package root). An app running flags-only — the auth-free `/flags` subpath, no `bridgeBootstrap` — does not have them; gate with `<FeatureFlag>` instead.
 
@@ -61,7 +63,7 @@ Both run the same FF 2.0 rule evaluator over the same flag records, so they agre
 Before starting, verify that Bridge is set up in this project:
 
 1. `@nebulr-group/bridge-svelte` is in `package.json` dependencies
-2. `src/routes/+layout.ts` calls `bridgeConfig.initConfig({ appId })`
+2. `src/routes/+layout.ts` calls `bridgeBootstrap(url, config, routeConfig)` with a config holding `appId` (and `apiBaseUrl` for a non-production app)
 3. `src/routes/+layout.svelte` renders `<BridgeBootstrap />`
 4. `VITE_BRIDGE_APP_ID` is set in `.env`
 
@@ -76,7 +78,7 @@ Add one import from `/flags` in your root layout to activate it:
 ```svelte
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import BridgeBootstrap from '@nebulr-group/bridge-svelte/client/BridgeBootstrap.svelte';
+  import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
   import { FeatureFlag } from '@nebulr-group/bridge-svelte/flags';
 
   let { children } = $props();
@@ -291,14 +293,14 @@ For anything this prompt doesn't cover — classic stores, non-runes contexts �
 
 Flag not appearing in the dashboard within ~30s, or a read returns the default forever:
 
-- **`<BridgeBootstrap />` is mounted and `appId` is set.** The flag layer initializes on its mount; without it every read returns the default. Confirm `VITE_BRIDGE_APP_ID` is set and `initConfig({ appId })` ran in `+layout.ts`.
+- **`<BridgeBootstrap />` is mounted and `appId` is set.** The flag layer initializes on its mount; without it every read returns the default. Confirm `VITE_BRIDGE_APP_ID` is set and passed as `appId` to `bridgeBootstrap()` in `+layout.ts` — and, for a stage or local app, that `apiBaseUrl` is passed too (the SDK reads no environment variables; without it the app talks to production, where a stage app ID doesn't exist).
 - **Something is imported from `/flags`.** That subpath import is what puts the flag runtime on the dependency graph.
 - **A flag registers only once it has been evaluated** — load a page that actually reads the key.
 - **Rule never matches?** Read the stored rule back — `list_feature_flags` over MCP, `bridge flag get <key>` on the CLI — and confirm the app sends exactly those attribute paths. To see the verdict without the app in the way, `bridge flag eval <key> --identity … --attribute k=v` (CLI only — no MCP equivalent).
 - **`rolloutPct < 100` with no identity** returns the safe value by design.
-- **Realtime.** Live toggles ride the realtime channel; if a proxy blocks WebSockets the value still resolves on next load, just not instantly.
+- **Realtime.** Live toggles ride the realtime channel; if a proxy blocks WebSockets the value still resolves on next load, just not instantly. In a dev build, `<BridgeBootstrap />` shows a "Live updates off — why?" badge in the corner when the channel is refused, connected but receiving nothing, or has been retrying for over 30 s; it names the reason and whose side it is. Read the same thing in code from `realtimeStatusDetail` (`state`, `reason`, `side`, `retrying`, `docsUrl`).
 - **First-render flicker is expected** — flags hydrate async. Set `defaultValue` to the safe-off state. This is a reason to gate a whole route with a `routeConfig` rule rather than in the page component, not a reason to hand-roll a readiness probe.
-- **A route-guard flag toggle seems to do nothing.** The guard's evaluation is cached ~5 minutes; unlike components it gets no realtime push. Wait it out or reload after the TTL. If the route must react instantly, gate its content with `<FeatureFlag>` too.
+- **A route-guard flag toggle seems to do nothing.** A flag change arriving on the live channel drops the guard's cache and re-checks the current page within about a second, so a toggle that has no effect usually means live updates are off — check the dev badge or `realtimeStatusDetail`. Without the live channel the guard's cache expires after 5 minutes. Also confirm the rule's `match` covers the path and names the key you toggled.
 - **A route-guard rule ignores attributes that work in components.** The guard evaluates server-side from the session token, so it never sees attributes you publish with `bridge.attributes.set(...)`. Target token-derived paths (`user.*`, `tenant.*`) in rules used by route guards.
 
 ## Verify

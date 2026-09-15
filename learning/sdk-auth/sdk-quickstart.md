@@ -40,6 +40,9 @@ export const load: LayoutLoad = async ({ url }) => {
   const config: BridgeConfig = {
     appId: import.meta.env.VITE_BRIDGE_APP_ID,
     loginRoute: '/auth/login',
+    // The SDK reads no environment variables. Pass the API URL from your own
+    // env; without it every request goes to production (https://api.thebridge.dev).
+    apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
   };
 
   const routeConfig: RouteGuardConfig = {
@@ -57,6 +60,7 @@ export const load: LayoutLoad = async ({ url }) => {
 
 Key points:
 - **`loginRoute`**: tells Bridge where to redirect unauthenticated users (your in-app login page).
+- **`apiBaseUrl`**: required for any non-production app (stage, local, self-hosted). The SDK never reads `import.meta.env`; without `apiBaseUrl` a stage or local app ID talks to the production API and fails with "Not Found".
 - **`defaultAccess: 'protected'`**: all routes require auth unless explicitly marked `public`.
 - **`ssr = false`**: Bridge requires client-side rendering.
 
@@ -92,11 +96,18 @@ Drop the `LoginForm` component onto a page that matches your `loginRoute`.
 ```svelte
 <!-- src/routes/auth/login/+page.svelte -->
 <script lang="ts">
-  import { LoginForm } from '@nebulr-group/bridge-svelte';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
+  import { LoginForm, readReturnTo } from '@nebulr-group/bridge-svelte';
+
+  function onLogin() {
+    // Back to the page the visitor asked for (validated), else your default.
+    goto(readReturnTo($page.url) ?? '/');
+  }
 </script>
 
 <div class="login-page">
-  <LoginForm showSignupLink />
+  <LoginForm showSignupLink {onLogin} />
 </div>
 
 <!-- Optional: center the form on the page. Not required for the component to work. -->
@@ -109,11 +120,13 @@ Drop the `LoginForm` component onto a page that matches your `loginRoute`.
 </style>
 ```
 
-That's it: no callbacks needed. The route guard handles post-login redirect automatically. Auth method visibility (magic link, passkeys, SSO) is derived from your app's configuration in the Control Center (your admin dashboard at app.thebridge.dev).
+**`onLogin` is required.** `LoginForm` does not navigate after a successful sign-in; it calls `onLogin` and your page decides where to go. Without it the user stays on the login page. When the route guard sends a signed-out visitor here it attaches the page they asked for as `?redirectUri=…`; `readReturnTo` reads it back and returns `null` for anything that is not a same-origin path, so never read the parameter yourself (see [Returning to the page they asked for](/auth/securing/route-guards/#returning-to-the-page-they-asked-for)).
+
+Auth method visibility (magic link, passkeys, SSO) is derived from your app's configuration in the Control Center (your admin dashboard at app.thebridge.dev).
 
 `LoginForm` handles multi-step flows inline: forgot password, magic link requests, passkey login, MFA challenge, MFA setup, and workspace selection (a workspace is called a *tenant* in the API) all render within the same component automatically when needed.
 
-**Optional props:** `onLogin` (fires after successful auth, useful for analytics), `onError` (fires on auth failure).
+**Optional props:** `onError` (fires on auth failure), `signupHref` (overrides the `signupRoute` config for this form's signup link).
 
 ## 5. Create a signup page
 
@@ -153,26 +166,28 @@ The `config` object you pass to `bridgeBootstrap` is a `BridgeConfig`. The most 
 |-------|---------|-------------|
 | `appId` | **(required)** | Your Bridge app ID |
 | `loginRoute` | (unset) | In-app route of your login page; unauthenticated users are redirected here |
-| `signupRoute` | (unset) | In-app route of your signup page |
-| `defaultRedirectRoute` | `'/'` | Route to land on after login |
-| `apiBaseUrl` | `https://api.thebridge.dev` | Root URL for the Bridge API (dev override) |
-| `hostedUrl` | `https://auth.thebridge.dev` | Bridge hosted UI URL (dev override) |
+| `signupRoute` | `'/auth/signup'` | In-app route of your signup page; `LoginForm`'s signup link points here |
+| `apiBaseUrl` | `https://api.thebridge.dev` | Root URL for the Bridge API — required for any non-production app (stage, local, self-hosted) |
+| `hostedUrl` | `https://auth.thebridge.dev` | Bridge hosted UI URL (non-production override) |
 | `debug` | `false` | Enable debug logging |
+
+Where a user lands after sign-in is decided by your `onLogin` (above), not by a config field.
 
 See the [Configuration reference](/auth/config/) for the full list (token storage, billing routes).
 
-Rather than hardcoding environment-specific values, keep them in a `.env` file and read them with Vite's `import.meta.env` when you build the config (the `VITE_` prefix is required for values to reach the browser):
+Rather than hardcoding environment-specific values, keep them in a `.env` file and read them with Vite's `import.meta.env` when you build the config (the `VITE_` prefix is required for values to reach the browser). The SDK itself reads no environment variables — a variable you don't pass into the config does nothing:
 
 ```env
 VITE_BRIDGE_APP_ID=your-app-id-here
-VITE_BRIDGE_DEFAULT_REDIRECT_ROUTE=/dashboard
+# Only for a non-production app (stage, local, self-hosted):
+# VITE_BRIDGE_API_BASE_URL=https://api-stage.thebridge.dev
 ```
 
 ```ts
 const config: BridgeConfig = {
   appId: import.meta.env.VITE_BRIDGE_APP_ID,
   loginRoute: '/auth/login',
-  defaultRedirectRoute: import.meta.env.VITE_BRIDGE_DEFAULT_REDIRECT_ROUTE ?? '/',
+  apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
 };
 ```
 

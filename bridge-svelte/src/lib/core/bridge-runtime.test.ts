@@ -138,6 +138,7 @@ import {
   onBridgeRealtimeUserState,
   onBridgeFlagChange,
   onBridgeRealtimeStatus,
+  onBridgeAuthorizationChange,
 } from './bridge-runtime.js';
 import { realtimeStatus, realtimeStatusDetail } from './realtime-status.js';
 
@@ -578,6 +579,100 @@ describe('billing pushes patch the bridge.tenant stores before dispatch (TBP-644
     _billingHandlers = undefined;
     startBridgeRuntime();
     const msg = { ...planChanged, effectiveAt: 'throwing-case' };
+    expect(() => _billingHandlers!['subscription.plan_changed'](msg)).not.toThrow();
+    expect(bridgeEvents._dispatch).toHaveBeenCalledWith(msg);
+  });
+});
+
+// Regression (TBP-654): route guards read a flag cache with a 5-minute TTL
+// that only a realtime FLAG change cleared. A plan-targeted rule's verdict
+// depends on the plan and token, so an upgraded user stayed locked out of the
+// page they had just paid for. Each trigger must invalidate exactly once,
+// before the event reaches app handlers.
+describe('plan, entitlements, user-state and token changes reach the route-guard cache (TBP-654)', () => {
+  const planChanged = {
+    kind: 'subscription.plan_changed',
+    tenantId: 'ws-1',
+    from: { slug: 'free' },
+    to: { slug: 'pro', name: 'Pro' },
+    status: 'active',
+    effectiveAt: '2026-09-15T10:00:00.000Z',
+  };
+  const entitlementsChanged = {
+    kind: 'entitlements.changed',
+    tenantId: 'ws-1',
+    effectiveAt: '2026-09-15T10:00:00.000Z',
+    entitlements: { pro_page: true },
+  };
+
+  it('subscription.plan_changed invalidates once, notifies re-check subscribers, then dispatches', async () => {
+    const { bridgeEvents } = await import('./events.js');
+    const order: string[] = [];
+    _billingHandlers = undefined;
+    startBridgeRuntime();
+    onBridgeAuthorizationChange((reason) => order.push(`recheck:${reason}:${_invalidateCalls}`));
+    vi.mocked(bridgeEvents._dispatch).mockImplementationOnce(() => { order.push(`dispatch:${_invalidateCalls}`); });
+    _billingHandlers!['subscription.plan_changed'](planChanged);
+    expect(_invalidateCalls).toBe(1);
+    expect(order).toEqual(['recheck:subscription.plan_changed:1', 'dispatch:1']);
+  });
+
+  it('entitlements.changed invalidates once, notifies, then dispatches', async () => {
+    const { bridgeEvents } = await import('./events.js');
+    const order: string[] = [];
+    _billingHandlers = undefined;
+    startBridgeRuntime();
+    onBridgeAuthorizationChange((reason) => order.push(`recheck:${reason}:${_invalidateCalls}`));
+    vi.mocked(bridgeEvents._dispatch).mockImplementationOnce(() => { order.push(`dispatch:${_invalidateCalls}`); });
+    _billingHandlers!['entitlements.changed'](entitlementsChanged);
+    expect(_invalidateCalls).toBe(1);
+    expect(order).toEqual(['recheck:entitlements.changed:1', 'dispatch:1']);
+  });
+
+  it('user.state_changed invalidates once, before the token refresh it triggers', async () => {
+    startBridgeRuntime();
+    let invalidatedAtRefresh = -1;
+    _refreshImpl = () => { invalidatedAtRefresh = _invalidateCalls; return null; };
+    const reasons: string[] = [];
+    onBridgeAuthorizationChange((reason) => reasons.push(reason));
+    await _onUserState?.({ reason: 'attributes_changed' });
+    expect(_invalidateCalls).toBe(1);
+    expect(invalidatedAtRefresh).toBe(1);
+    expect(reasons).toEqual(['user.state_changed']);
+  });
+
+  it('a new access token invalidates once per change; the start value and a re-emit do not', () => {
+    const a = makeJwt({ sub: 'u1', tid: 'ws-1', aid: 'app-1', v: 1 });
+    const b = makeJwt({ sub: 'u1', tid: 'ws-1', aid: 'app-1', v: 2 });
+    _tokenStore.set({ accessToken: a });
+    startBridgeRuntime();
+    const reasons: string[] = [];
+    onBridgeAuthorizationChange((reason) => reasons.push(reason));
+    expect(_invalidateCalls).toBe(0);
+    _tokenStore.set({ accessToken: a });
+    expect(_invalidateCalls).toBe(0);
+    _tokenStore.set({ accessToken: b }); // refresh (e.g. after a plan change)
+    expect(_invalidateCalls).toBe(1);
+    _tokenStore.set(null); // sign-out
+    expect(_invalidateCalls).toBe(2);
+    expect(reasons).toEqual(['token', 'token']);
+  });
+
+  it('a flag-only change still invalidates exactly once and does not fan out as an authorization change', () => {
+    startBridgeRuntime();
+    const reasons: string[] = [];
+    onBridgeAuthorizationChange((reason) => reasons.push(reason));
+    _onFlagChange?.({ key: 'pro-page', kind: 'updated' });
+    expect(_invalidateCalls).toBe(1);
+    expect(reasons).toEqual([]);
+  });
+
+  it('a throwing re-check subscriber does not stop the dispatch', async () => {
+    const { bridgeEvents } = await import('./events.js');
+    _billingHandlers = undefined;
+    startBridgeRuntime();
+    onBridgeAuthorizationChange(() => { throw new Error('boom'); });
+    const msg = { ...planChanged, effectiveAt: 'throwing-subscriber' };
     expect(() => _billingHandlers!['subscription.plan_changed'](msg)).not.toThrow();
     expect(bridgeEvents._dispatch).toHaveBeenCalledWith(msg);
   });

@@ -4,6 +4,7 @@
   import type { FederationConnection, MessageOverrides } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
   import { getTranslator } from '../../stores/i18n.js';
+  import { authErrorMessage } from './shared/auth-error.js';
   import Spinner from './shared/Spinner.svelte';
 
   interface Props extends HTMLButtonAttributes {
@@ -58,7 +59,7 @@
     } catch (err: any) {
       const message = err.message?.includes('popup')
         ? t('sso.error.popupBlocked')
-        : err.message || t('sso.error.login');
+        : authErrorMessage(err, t, 'sso.error.login');
       onError?.(new Error(message));
     } finally {
       loading = false;

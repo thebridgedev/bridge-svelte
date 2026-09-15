@@ -100,6 +100,12 @@
               <span class="bridge-rt-label">Whose side</span>
               <span class="bridge-rt-value">{view.sideLabel}</span>
             </div>
+            {#if view.hint}
+              <div class="bridge-rt-row">
+                <span class="bridge-rt-label">Fix</span>
+                <span class="bridge-rt-value" data-testid="bridge-realtime-dev-badge-hint">{view.hint}</span>
+              </div>
+            {/if}
             {#if view.ref}
               <div class="bridge-rt-row">
                 <span class="bridge-rt-label">Ref</span>

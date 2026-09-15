@@ -3,6 +3,7 @@
   import type { MessageOverrides } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
   import { getTranslator } from '../../stores/i18n.js';
+  import { authErrorMessage } from './shared/auth-error.js';
   import AuthFormWrapper from './shared/AuthFormWrapper.svelte';
   import Spinner from './shared/Spinner.svelte';
   import Alert from './shared/Alert.svelte';
@@ -83,7 +84,7 @@
       await getBridgeAuth().sendResetPasswordLink(email);
       emailSent = true;
     } catch (err: any) {
-      error = err.message || t('forgot.error.send');
+      error = authErrorMessage(err, t, 'forgot.error.send');
       onError?.(err);
     } finally {
       loading = false;
@@ -110,7 +111,7 @@
       passwordReset = true;
       onComplete?.();
     } catch (err: any) {
-      error = err.message || t('forgot.error.update');
+      error = authErrorMessage(err, t, 'forgot.error.update');
       onError?.(err);
     } finally {
       loading = false;

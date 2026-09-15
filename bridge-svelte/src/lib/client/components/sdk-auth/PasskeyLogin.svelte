@@ -4,6 +4,7 @@
   import { onMount } from 'svelte';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
   import { getTranslator } from '../../stores/i18n.js';
+  import { authErrorMessage } from './shared/auth-error.js';
   import Spinner from './shared/Spinner.svelte';
   import Alert from './shared/Alert.svelte';
 
@@ -64,7 +65,7 @@
       if (err.name === 'NotAllowedError') {
         error = t('passkey.error.authCancelled');
       } else {
-        error = err.message || t('passkey.error.auth');
+        error = authErrorMessage(err, t, 'passkey.error.auth');
       }
       onError?.(err);
     } finally {

@@ -3,6 +3,7 @@
   import type { MessageOverrides } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
   import { getTranslator } from '../../stores/i18n.js';
+  import { authErrorMessage } from './shared/auth-error.js';
   import AuthFormWrapper from './shared/AuthFormWrapper.svelte';
   import Spinner from './shared/Spinner.svelte';
   import Alert from './shared/Alert.svelte';
@@ -82,7 +83,7 @@
       step = 'verify';
       startResendCooldown();
     } catch (err: any) {
-      error = err.message || t('mfaSetup.error.sendCode');
+      error = authErrorMessage(err, t, 'mfaSetup.error.sendCode');
       onError?.(err);
     } finally {
       loading = false;
@@ -98,7 +99,7 @@
       code = '';
       startResendCooldown();
     } catch (err: any) {
-      error = err.message || t('mfaSetup.error.resend');
+      error = authErrorMessage(err, t, 'mfaSetup.error.resend');
       onError?.(err);
     } finally {
       loading = false;
@@ -123,7 +124,7 @@
       backupCode = result.backupCode ?? null;
       step = 'backup';
     } catch (err: any) {
-      error = err.message || t('mfa.error.invalidCode');
+      error = authErrorMessage(err, t, 'mfa.error.invalidCode');
       onError?.(err);
     } finally {
       loading = false;

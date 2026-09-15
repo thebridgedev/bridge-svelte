@@ -271,6 +271,48 @@ describe('initialisation stays once per page load (TBP-653)', () => {
   });
 });
 
+// TBP-654 (upgrade race) — the page shows the new plan before the token that
+// carries it lands. A load-level decision taken in that window must wait for
+// the refresh (bounded) instead of judging the user on the old token.
+describe('load-level decisions wait for the refreshed token after a plan change (TBP-654)', () => {
+  async function upgradeInFlight() {
+    const { trackAuthorizationChange } = await import('../auth/guard-cache.js');
+    let plan = 'free';
+    h.s.flagImpl = async (key) => key !== 'pro-page' || plan === 'pro';
+    let land!: () => void;
+    trackAuthorizationChange(new Promise<void>((resolve) => { land = () => { plan = 'pro'; resolve(); }; }));
+    return () => land();
+  }
+
+  it('bridgeBootstrap: /pro during the refresh window is allowed with the new token', async () => {
+    const { bridgeBootstrap } = await load();
+    h.s.authenticated = true;
+    await bridgeBootstrap(at('/'), SDK_CONFIG, ROUTES);
+    const land = await upgradeInFlight();
+    const nav = bridgeBootstrap(at('/pro'), SDK_CONFIG, ROUTES);
+    setTimeout(land, 20);
+    await expect(nav).resolves.toBeDefined();
+  });
+
+  it('assertAuthorized: waits the same way', async () => {
+    const { bridgeBootstrap, assertAuthorized } = await load();
+    h.s.authenticated = true;
+    await bridgeBootstrap(at('/'), SDK_CONFIG, ROUTES);
+    const land = await upgradeInFlight();
+    const check = assertAuthorized(at('/pro'));
+    setTimeout(land, 20);
+    await expect(check).resolves.toBeUndefined();
+  });
+
+  it('with nothing pending the old verdict stands: a Free user is still refused /pro', async () => {
+    const { bridgeBootstrap } = await load();
+    h.s.authenticated = true;
+    h.s.flagImpl = async (key) => key !== 'pro-page';
+    await bridgeBootstrap(at('/'), SDK_CONFIG, ROUTES);
+    expect((await redirectOf(bridgeBootstrap(at('/pro'), SDK_CONFIG, ROUTES))).location).toBe('/');
+  });
+});
+
 describe('the guard fails closed (TBP-653)', () => {
   it('a flag check that errors denies a signed-in user, via the rule redirectTo', async () => {
     const { bridgeBootstrap } = await load();

@@ -56,13 +56,11 @@ It returns `null` when there's no valid token. Unlike `bridge.user`, it also inc
 ```svelte
 <script lang="ts">
   import { profileStore } from '@nebulr-group/bridge-svelte';
-
-  const { profile } = profileStore;
 </script>
 
-{#if $profile}
-  <h2>{$profile.fullName}</h2>
-  <p>{$profile.email}</p>
+{#if $profileStore}
+  <h2>{$profileStore.fullName}</h2>
+  <p>{$profileStore.email}</p>
 {/if}
 ```
 
@@ -79,7 +77,9 @@ It returns `null` when there's no valid token. Unlike `bridge.user`, it also inc
 | `multiTenantAccess` | `boolean \| undefined` | Whether the user can access more than one workspace |
 | `tenant` | `{ id, name, locale?, logo?, onboarded? } \| undefined` | The current workspace's details |
 
-Unlike `bridge.user`, `profileStore` isn't refreshed automatically when something changes server-side. Call `profileStore.updateProfile()` to re-fetch it on demand (for example, right after the user edits their name).
+`profileStore` is the store itself — read it with `$profileStore`, don't destructure it.
+
+Unlike `bridge.user`, `profileStore` isn't refreshed automatically when something changes server-side. Call `auth.getProfile()` (`auth` from `@nebulr-group/bridge-svelte`) to re-fetch it on demand (for example, right after the user edits their name); `profileStore` updates with the result.
 
 `profileStore` is `undefined` while loading, `null` when not authenticated, and a profile object when authenticated.
 

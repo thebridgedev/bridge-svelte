@@ -42,4 +42,4 @@ const q = useBridge().quota('ai_completions');
 //   q?.overcap         true once billing engaged (past the allotment; limit 0 ⇒ used > 0)
 ```
 
-> **Note:** this imports from the underlying `@nebulr-group/bridge-auth-core` package, not from `@nebulr-group/bridge-svelte`. It's a temporary escape hatch: the Svelte SDK doesn't yet expose quota state on the `bridge` object (and the `useBridge()` exported by `bridge-svelte` is a different function that returns the `bridge` object, without a `quota()` method). Until the SDK surfaces quotas, import the auth-core package directly for this one read.
+> **Note:** this imports from the underlying `@nebulr-group/bridge-auth-core` package, not from `@nebulr-group/bridge-svelte`. It's a temporary escape hatch: the Svelte SDK doesn't yet expose quota state on the `bridge` object, and `@nebulr-group/bridge-svelte` does not export a `useBridge()` of its own. Until the SDK surfaces quotas, import the auth-core package (already installed as bridge-svelte's peer dependency) directly for this one read.

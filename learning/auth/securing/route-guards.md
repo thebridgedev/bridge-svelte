@@ -76,6 +76,36 @@ export const load: LayoutLoad = async ({ url }) => {
 
 Redirects are handled automatically by `BridgeBootstrap`. For the full `RouteRule` shape, including billing gates, see the [config reference](/auth/config/#route-guard-config).
 
+## What each guard covers
+
+There are two guards, and they cover different moments:
+
+| Guard | Runs | Covers |
+|-------|------|--------|
+| `bridgeBootstrap(url, …)` in the root `+layout.ts` | In `load`, on **every** navigation (SvelteKit re-runs the root layout load whenever the URL changes) | The first page load, client-side navigations, and redirects thrown by your own `load` functions — for example a public `/` whose `+page.ts` redirects into the app |
+| `<BridgeBootstrap />` in the root `+layout.svelte` | Client-side, once the layout has mounted | Client-side navigations (a signed-out visitor is cancelled before the protected page loads), and re-checking the **current** page when a route flag, the plan, entitlements or the session change. It is **not** live during the first navigation of a page load — the load guard above covers that |
+
+Both fail closed: if a decision cannot be reached (a network error while evaluating a flag, broken route config), a protected route is denied rather than rendered. After a plan upgrade or sign-in, route verdicts are re-evaluated straight away rather than served from cache.
+
+### A second line of defence: `assertAuthorized`
+
+For pages that must never render for the wrong visitor, re-check the rules in the page's own `load`. It throws the same redirect `bridgeBootstrap` would:
+
+```ts
+// src/routes/admin/+page.ts
+import { assertAuthorized } from '@nebulr-group/bridge-svelte';
+import type { PageLoad } from './$types';
+
+export const load: PageLoad = async ({ url }) => {
+  await assertAuthorized(url);
+  // ...load the page's data
+};
+```
+
+:::caution[Route guards are not authorization]
+Guards decide what the browser renders. Anyone can call your API directly, so every API request must still verify the user's token server-side (for example with `@nebulr-group/bridge-nestjs` or `@nebulr-group/bridge-express`).
+:::
+
 ## Returning to the page they asked for
 
 Someone who follows a link into a protected page — an emailed document link, a

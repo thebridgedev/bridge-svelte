@@ -2,7 +2,7 @@
 
 You are integrating The Bridge into a SvelteKit application using **in-app SDK authentication**. Instead of redirecting users to an external hosted login page, the app renders its own login and signup forms using Bridge SDK components (`LoginForm`, `SignupForm`). Users never leave the app.
 
-> **SDK version:** This guide targets `@nebulr-group/bridge-svelte` `^0.3.0`. Specific behaviors called out below — `profileStore` being the store directly (not an object), `signupRoute` not existing on `BridgeConfig`, `LoginForm` not auto-navigating after auth — are 0.3.x semantics. Newer versions may differ; if the project is on a different version, double-check the published `.d.ts` files.
+> **SDK version:** Specific behaviors called out below — `profileStore` being the store directly (not an object), `signupRoute` not existing on `BridgeConfig`, `LoginForm` not auto-navigating after auth, the SDK reading no environment variables — hold from `@nebulr-group/bridge-svelte` 0.3 onwards. If in doubt, check the published `.d.ts` files of the installed version.
 
 ## Prerequisites
 
@@ -88,6 +88,9 @@ export const load: LayoutLoad = async ({ url }) => {
   const config: BridgeConfig = {
     appId: import.meta.env.VITE_BRIDGE_APP_ID,
     loginRoute: '/auth/login',
+    // The SDK reads no environment variables itself. Pass the API URL from
+    // your own env, or it defaults to production (https://api.thebridge.dev).
+    apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
   };
 
   const routeConfig: RouteGuardConfig = {
@@ -377,6 +380,7 @@ In `src/routes/+layout.ts`, update the config object:
 const config: BridgeConfig = {
   appId: import.meta.env.VITE_BRIDGE_APP_ID,
   loginRoute: '/auth/login',
+  apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined, // keep whatever you already pass
 };
 ```
 
@@ -459,6 +463,8 @@ const routeConfig: RouteGuardConfig = {
 
 **Key difference from hosted auth:** In hosted auth, unauthenticated users are redirected to an external Bridge login page. With SDK auth, they are redirected to your in-app login page at `/auth/login` (or whatever you set as `loginRoute`).
 
+**What the guard covers:** `bridgeBootstrap()` re-evaluates the route rules on every navigation — the first page load, client-side navigations, and redirects thrown from your own `load` functions (e.g. a public `/` whose `+page.ts` redirects into the app). If it cannot reach a decision (network error, broken config) it denies protected routes. For defence in depth on a sensitive page, also call `assertAuthorized(url)` from that page's own `load` (exported from `@nebulr-group/bridge-svelte`). Route guards control what the browser renders; they are **not** authorization — your API must still verify the user's token.
+
 **Default: protect everything.** The only routes that must be public are `/auth/*` (your login and signup pages live there). All other routes should be protected by default. The user can relax this later for specific pages (landing, search, docs, etc.) using the route config.
 
 **Detecting existing public route config:**
@@ -472,11 +478,13 @@ Add to your `.env` file (or `.env.local` for local dev):
 VITE_BRIDGE_APP_ID=your-app-id-here
 ```
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `VITE_BRIDGE_APP_ID` | Yes | -- | Your Bridge application ID |
-| `VITE_BRIDGE_API_BASE_URL` | No | `https://api.thebridge.dev` | Bridge API base URL (override for self-hosted or local dev) |
-| `VITE_BRIDGE_DEBUG` | No | `false` | Enable debug logging in the console |
+**The SDK does not read environment variables.** These names are a convention for your own `+layout.ts`: read each one with `import.meta.env` and pass it into `BridgeConfig` yourself (as in the `+layout.ts` above). Setting a variable without passing it does nothing — a stage or local app ID without `apiBaseUrl` talks to the production API and fails with "Not Found".
+
+| Variable | Pass it as | Default when not passed | Description |
+|----------|-----------|-------------------------|-------------|
+| `VITE_BRIDGE_APP_ID` | `appId` (required) | -- | Your Bridge application ID |
+| `VITE_BRIDGE_API_BASE_URL` | `apiBaseUrl` | `https://api.thebridge.dev` (production) | Bridge API base URL — required for stage, local dev or self-hosted |
+| `VITE_BRIDGE_DEBUG` | `debug` | `false` | Enable debug logging in the console (`debug: import.meta.env.VITE_BRIDGE_DEBUG === 'true'`) |
 
 Note: `VITE_BRIDGE_HOSTED_URL` is not needed for SDK auth since users are not redirected to the hosted login page.
 

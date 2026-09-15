@@ -87,6 +87,7 @@ const h = vi.hoisted(() => {
     shouldRedirectToPaywall: async () => s.paywall,
     createLoginUrl: () => 'https://hosted.example/login',
     createRouteGuard,
+    confirmStripeCheckout: () => Promise.resolve(),
   };
 
   return { s, auth, ready: undefined as undefined | { set(v: boolean): void } };
@@ -325,5 +326,53 @@ describe('assertAuthorized — consumer-callable second line of defence (TBP-653
     await bridgeBootstrap(at('/'), SDK_CONFIG, ROUTES);
     await child;
     expect(h.s.calls.loadFlags).toBe(1);
+  });
+});
+
+// TBP-659 — the Stripe return lands on the app's own callback URL with a
+// `redirect` query parameter. Anyone can craft that link, so the value is
+// untrusted: only a same-origin path may be followed, everything else falls
+// back to the default. Values are written into the URL the way an attacker
+// would type them (raw or percent-encoded), not pre-encoded by the test.
+describe('the Stripe callback only follows same-origin redirects (TBP-659)', () => {
+  const DEFAULT = '/subscription';
+  const callback = (query: string) => at(`/auth/oauth-callback?${query}`);
+
+  const HOSTILE: Array<[string, string]> = [
+    ['absolute URL', 'https://evil.test'],
+    ['protocol-relative', '//evil.test'],
+    ['backslash protocol-relative', '/\\evil.test'],
+    ['javascript: scheme', 'javascript:alert(1)'],
+    ['percent-encoded protocol-relative', '%2F%2Fevil.test'],
+    ['tab-prefixed protocol-relative', '%09%2F%2Fevil.test'],
+  ];
+
+  async function landing(query: string) {
+    const { bridgeBootstrap } = await load();
+    const { status, location } = await redirectOf(bridgeBootstrap(callback(query), SDK_CONFIG, ROUTES));
+    expect(status).toBe(303);
+    return location;
+  }
+
+  it.each(HOSTILE)('cancel: %s → default route, never off-origin', async (_label, value) => {
+    const location = await landing(`stripe_cancel=1&redirect=${value}`);
+    expect(location).toBe(DEFAULT);
+    expect(new URL(location, 'http://localhost').origin).toBe('http://localhost');
+  });
+
+  it.each(HOSTILE)('success: %s → default route, never off-origin', async (_label, value) => {
+    const location = await landing(`stripe_success=1&session_id=cs_test_1&redirect=${value}`);
+    expect(location).toBe(DEFAULT);
+    expect(new URL(location, 'http://localhost').origin).toBe('http://localhost');
+  });
+
+  it('honours a same-origin path (query stripped, as before)', async () => {
+    const value = encodeURIComponent('/billing?x=1');
+    expect(await landing(`stripe_cancel=1&redirect=${value}`)).toBe('/billing');
+    expect(await landing(`stripe_success=1&session_id=cs_test_1&redirect=${value}`)).toBe('/billing');
+  });
+
+  it('no redirect parameter → default route', async () => {
+    expect(await landing('stripe_cancel=1')).toBe(DEFAULT);
   });
 });

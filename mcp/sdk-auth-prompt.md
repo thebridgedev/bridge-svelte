@@ -2,7 +2,7 @@
 
 You are integrating The Bridge into a SvelteKit application using **in-app SDK authentication**. Instead of redirecting users to an external hosted login page, the app renders its own login and signup forms using Bridge SDK components (`LoginForm`, `SignupForm`). Users never leave the app.
 
-> **SDK version:** Specific behaviors called out below — `profileStore` being the store directly (not an object), `signupRoute` not existing on `BridgeConfig`, `LoginForm` not auto-navigating after auth, the SDK reading no environment variables — hold from `@nebulr-group/bridge-svelte` 0.3 onwards. If in doubt, check the published `.d.ts` files of the installed version.
+> **SDK version:** Specific behaviors called out below — `profileStore` being the store directly (not an object), `LoginForm` not navigating after sign-in (your `onLogin` does it), the SDK reading no environment variables — hold from `@nebulr-group/bridge-svelte` 0.3 onwards. `readReturnTo` (deep-link return after login) is exported from 0.7 onwards. If in doubt, check the published `.d.ts` files of the installed version.
 
 ## Prerequisites
 
@@ -14,7 +14,7 @@ You are integrating The Bridge into a SvelteKit application using **in-app SDK a
 Two server-side settings on the Bridge app must be in place before any SDK auth flow will work end-to-end. The master integration prompt covers `allowedOrigins` (Step 3b), but `tenantSelfSignup` is specific to SDK auth and must be confirmed here:
 
 - **`tenantSelfSignup` must be enabled.** Without it, `SignupForm` returns `403 Forbidden` from `/auth/auth/signup`. Enable it via `bridge app update --tenant-self-signup true` or the Bridge admin dashboard.
-- **App origin must be in `allowedOrigins`.** This was set in the master integration prompt's Step 3b (`bridge app update --allowed-origins <frontend-url>`). Confirm it's present — both the `SdkOriginGuard` (signup, SSO) and the email-link generator depend on it. The signup verification email is built using the `Origin` header of the signup request and must match an allowed origin or it will fall back to a hosted handover URL.
+- **App origin must be in `allowedOrigins`** — every origin the app is served from, including each local dev port (`http://localhost:5173` and `http://localhost:5175` are different origins). This was set in the master integration prompt's Step 3b (`bridge app update --allowed-origins <frontend-url>`). Confirm it's present: Bridge checks the `Origin` header of every SDK auth request against it, **including sign-in itself**. The final step of every password, magic-link and passkey sign-in (`POST /auth/token/direct`) answers `403 {"message":"Origin not allowed"}` from an origin that is not listed, and so do signup, password reset, MFA, workspace switching, passkey endpoints and SSO. The email-link generator depends on it too: the signup verification email is built from the `Origin` header of the signup request and falls back to a hosted handover URL when it doesn't match. To add an origin without the CLI: Bridge admin → **Authentication** → **Security** tab → **Allowed Origins**.
 - **Enable the auth methods you intend to surface** (password, magic link, passkeys, SSO providers). The SDK components render a method's UI only when the app has it enabled — e.g. `LoginForm` shows the magic-link button only when `magicLinkEnabled` is on. Enable via `bridge app update --magic-link-enabled true --passkeys-enabled true` (or the Bridge admin dashboard) for every method the routes below wire up.
 
 Confirm all of these before proceeding. If any is missing, set it now — fixing this after the integration is wired in is a worse debugging experience.
@@ -111,7 +111,7 @@ export const load: LayoutLoad = async ({ url }) => {
 - `defaultAccess: 'protected'` means all routes require login unless marked `public`.
 - `/auth/*` must be public so the login and signup pages are accessible to unauthenticated users.
 - The `appId` comes from the `VITE_BRIDGE_APP_ID` environment variable.
-- The signup link rendered by `LoginForm` is wired via the `signupHref` prop on the component (see the login page section below) — pass it directly rather than relying on a `signupRoute` config field.
+- The signup link rendered by `LoginForm` points at `BridgeConfig.signupRoute`, which defaults to `/auth/signup`. With the routes below you need neither; set `signupRoute` in the config (or the `signupHref` prop on `LoginForm`, which wins over it) only if your signup page lives elsewhere.
 
 ## Wire the root layout component
 
@@ -168,15 +168,18 @@ Create `src/routes/auth/login/+page.svelte`:
 ```svelte
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { LoginForm } from '@nebulr-group/bridge-svelte';
+  import { page } from '$app/stores';
+  import { LoginForm, readReturnTo } from '@nebulr-group/bridge-svelte';
+
+  function onLogin() {
+    // The page the visitor was turned away from (validated, same-origin only),
+    // or null — then fall back to your own default route.
+    goto(readReturnTo($page.url) ?? '/');
+  }
 </script>
 
 <div class="login-page">
-  <LoginForm
-    showSignupLink
-    signupHref="/auth/signup"
-    onLogin={() => goto('/')}
-  />
+  <LoginForm showSignupLink {onLogin} />
 </div>
 
 <style>
@@ -190,13 +193,13 @@ Create `src/routes/auth/login/+page.svelte`:
 
 **How it works:**
 - **`onLogin` is required to navigate the user away from the login page.** `LoginForm` does NOT auto-redirect after successful authentication. It only fires the `onLogin` callback, and your code is responsible for navigating. Without an `onLogin` handler the user stays on `/auth/login` after entering valid credentials — every API call succeeds but the page never changes, which looks broken.
-- The route guard (in `+layout.ts`) only runs on navigation events — it redirects unauthenticated users TO the login page, but it does not redirect authenticated users AWAY from the login page on auth state change. That's why `onLogin` is needed.
-- Pick the destination that fits your app: `goto('/')` for the home/dashboard, or read the originally-requested URL from a query string (`$page.url.searchParams.get('redirect')`) if you persist it before redirecting to login.
+- The route guard redirects unauthenticated users TO the login page, but never redirects authenticated users AWAY from it (the login route is public). That's why `onLogin` is needed.
+- **Returning to the page they asked for.** When the guard sends a signed-out visitor to your `loginRoute`, it appends the page they were heading to as `?redirectUri=/that/page`. `readReturnTo($page.url)` reads it back and validates it: it returns the path only when it is a same-origin path, and `null` otherwise (absent, absolute URL, `//host`, backslash tricks, `javascript:`). Always go through `readReturnTo` — never navigate to `$page.url.searchParams.get(...)` directly; whoever wrote the link controls that value, so navigating to it unchecked is an open redirect. If you customised the parameter name with `routeConfig.returnTo.param`, pass the same name as the second argument.
 - Auth method visibility (password, magic link, passkeys, SSO) is derived from your app's configuration in the Bridge dashboard. You don't need to configure this in code.
 - `LoginForm` handles multi-step flows inline: forgot password, magic link requests, passkey login, MFA challenge, MFA setup, and tenant selection all render within the same component automatically when needed.
-- `showSignupLink` + `signupHref="/auth/signup"` renders the "Sign up" link in the form footer. Always pass `signupHref` explicitly — the bundled `BridgeConfig` type in bridge-svelte 0.3.x does not declare a `signupRoute` config field, so the prop is the safe path.
+- `showSignupLink` renders the "Sign up" link in the form footer. It points at `BridgeConfig.signupRoute` (default `/auth/signup`); pass `signupHref` to override it for this form.
 
-**Optional props:** `onError` (fires on auth failure), `forgotPasswordHref` (sends users to `/auth/forgot-password` instead of the inline forgot-password step).
+**Optional props:** `onError` (fires on auth failure), `signupHref` (overrides `signupRoute`), `forgotPasswordHref` (sends users to `/auth/forgot-password` instead of the inline forgot-password step).
 
 ## Create the signup page
 
@@ -384,7 +387,7 @@ const config: BridgeConfig = {
 };
 ```
 
-`loginRoute` is what switches Bridge from hosted auth to SDK auth. When it's set, the route guard redirects unauthenticated users to your in-app page instead of the external hosted login. The signup link is wired via the `signupHref` prop on `LoginForm` (covered in the login page section).
+`loginRoute` is what switches Bridge from hosted auth to SDK auth. When it's set, the route guard redirects unauthenticated users to your in-app page instead of the external hosted login. `LoginForm`'s signup link points at `signupRoute` (default `/auth/signup`; covered in the login page section).
 
 ### 2. Create the login and signup pages
 
@@ -452,14 +455,14 @@ const routeConfig: RouteGuardConfig = {
 ```
 
 **Rule matching:**
-- `match` accepts a string (exact prefix match) or `RegExp`.
+- `match` accepts a string or a `RegExp`. A string is an **exact** path match unless it contains `*` (`'/beta/*'` matches everything under `/beta/`); the first matching rule wins.
 - `public: true` allows unauthenticated access.
 - `featureFlag` requires the user to be logged in AND have the flag enabled.
-- `redirectTo` specifies where to send users who don't meet the requirement (defaults to the login route).
+- `redirectTo` specifies where to send a signed-in user who doesn't meet the `featureFlag` requirement (defaults to `/`). A signed-out visitor on a protected route always goes to the login route.
 
 **When an unauthenticated user hits a protected route:**
-- They are redirected to your `loginRoute` (`/auth/login`) — the in-app login page.
-- After login, they are redirected back to the route they originally requested.
+- They are redirected to your `loginRoute` (`/auth/login`) — the in-app login page — with the page they asked for attached as `?redirectUri=…`.
+- After login, your `onLogin` sends them back to it with `goto(readReturnTo($page.url) ?? '/')` (see the login page section). `LoginForm` does not navigate by itself.
 
 **Key difference from hosted auth:** In hosted auth, unauthenticated users are redirected to an external Bridge login page. With SDK auth, they are redirected to your in-app login page at `/auth/login` (or whatever you set as `loginRoute`).
 
@@ -575,8 +578,8 @@ Before verifying, confirm every item was applied. Do not skip any:
 - [ ] `@nebulr-group/bridge-svelte` installed using the project's package manager
 - [ ] `src/routes/+layout.ts` — calls `bridgeBootstrap()` with `BridgeConfig` and `RouteGuardConfig`
 - [ ] `src/routes/+layout.ts` — exports `ssr = false`
-- [ ] `src/routes/+layout.ts` — `BridgeConfig` includes `loginRoute` (do NOT add `signupRoute` to the config — it is not in the 0.3.x type)
-- [ ] `LoginForm` is configured with `signupHref="/auth/signup"` AND `onLogin={() => goto('/')}` (or your chosen post-login destination) — without `onLogin` the user remains stuck on the login page after authenticating
+- [ ] `src/routes/+layout.ts` — `BridgeConfig` includes `loginRoute`, and `apiBaseUrl` for any non-production app (`signupRoute` only if the signup page is not at `/auth/signup`)
+- [ ] `LoginForm` has an `onLogin` that navigates with `goto(readReturnTo($page.url) ?? '/')` — without `onLogin` the user remains stuck on the login page after authenticating, and without `readReturnTo` deep links are lost (never read the query parameter by hand)
 - [ ] `src/routes/+layout.ts` — `defaultAccess` is `'protected'`, `/auth/*` is public
 - [ ] `src/routes/+layout.svelte` — imports and renders `<BridgeBootstrap>`
 - [ ] `src/routes/+layout.svelte` — imports `@nebulr-group/bridge-svelte/styles`
@@ -608,7 +611,7 @@ After completing the setup:
 3. **Protected route redirect:** Navigate to a protected route while logged out. You should be redirected to `/auth/login` (your in-app login page), NOT an external hosted page.
 4. **Login page renders:** The `/auth/login` page should display the `LoginForm` component with proper styling. The visible auth methods (password, magic link, passkeys, SSO) depend on your app's configuration in the Bridge dashboard.
 5. **Signup page renders:** The `/auth/signup` page should display the `SignupForm` component with proper styling.
-6. **Login flow works:** Enter credentials and submit. The network calls should succeed AND the page should navigate away from `/auth/login` to your post-login destination. **If the network calls succeed but the page does not navigate, your `LoginForm` is missing the `onLogin` handler — it will not auto-redirect.** Add `onLogin={() => goto('/')}` (or wherever you want the user to land).
+6. **Login flow works:** Enter credentials and submit. The network calls should succeed AND the page should navigate away from `/auth/login` to your post-login destination. **If the network calls succeed but the page does not navigate, your `LoginForm` is missing the `onLogin` handler — it will not auto-redirect.** Add the `onLogin` from the login page section. **If a sign-in request answers `403 {"message":"Origin not allowed"}`**, the origin you are serving from (scheme, host and port) is not in the app's allowed origins — add it with `bridge app update --allowed-origins …` or under Bridge admin → Authentication → Security → Allowed Origins.
 7. **Signup flow works end-to-end:** Create a new account via `/auth/signup`. Open the inbox and find the verification email. The link should point at `{your-app-origin}/auth/set-password/{token}?flow=signup`. Click it — the page should render the "Set new password" form (NOT a 404 and NOT a blank page). Set a password, confirm you land on a "password set" success state, then log in with the new credentials. **If you see a blank page or 404 after clicking the email link, the `set-password/[token]` route is missing — go back and create it.**
 8. **Styles render correctly:** Bridge UI components (LoginForm, SignupForm, buttons, inputs) should have proper styling. If they appear unstyled, confirm that `@nebulr-group/bridge-svelte/styles` is imported in the root layout.
 9. **Logout works in-app:** Clicking logout clears the session and lands the user on `/auth/login` of YOUR app — NOT on `auth.thebridge.dev`. If the user ends up on the hosted Bridge page, the logout call is missing `redirectTo`. Use `getBridgeAuth().logout({ redirectTo: '/auth/login' })`.

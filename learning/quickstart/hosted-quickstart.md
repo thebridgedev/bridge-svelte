@@ -23,6 +23,9 @@ export const ssr = false;
 export const load: LayoutLoad = async ({ url }) => {
   const config: BridgeConfig = {
     appId: import.meta.env.VITE_BRIDGE_APP_ID,
+    // The SDK reads no environment variables. Pass the API URL from your own
+    // env; without it every request goes to production (https://api.thebridge.dev).
+    apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
   };
 
   const routeConfig: RouteGuardConfig = {
@@ -92,25 +95,29 @@ The `config` object you pass to `bridgeBootstrap` is a `BridgeConfig`. The most 
 |-------|---------|-------------|
 | `appId` | **(required)** | Your Bridge app ID |
 | `callbackUrl` | `<origin>/auth/oauth-callback` | Where the hosted login page redirects back to |
-| `defaultRedirectRoute` | `'/'` | Route to land on after login |
 | `loginRoute` | (unset) | In-app login route; leave unset for hosted auth (that's what triggers the hosted page) |
-| `apiBaseUrl` | `https://api.thebridge.dev` | Root URL for the Bridge API (dev override) |
+| `apiBaseUrl` | `https://api.thebridge.dev` | Root URL for the Bridge API — required for any non-production app (stage, local, self-hosted) |
 | `hostedUrl` | `https://auth.thebridge.dev` | Bridge hosted UI URL (dev override) |
 | `debug` | `false` | Enable debug logging |
 
 See the [Configuration reference](/auth/config/) for the full list (token storage, signup route, billing routes).
 
-Rather than hardcoding environment-specific values, keep them in a `.env` file and read them with Vite's `import.meta.env` when you build the config (the `VITE_` prefix is required for values to reach the browser):
+After the hosted login the user returns to the page they were heading to, or `/` when there was none.
+
+Rather than hardcoding environment-specific values, keep them in a `.env` file and read them with Vite's `import.meta.env` when you build the config (the `VITE_` prefix is required for values to reach the browser). The SDK itself reads no environment variables — a variable you don't pass into the config does nothing:
 
 ```env
 VITE_BRIDGE_APP_ID=your-app-id-here
-VITE_BRIDGE_DEFAULT_REDIRECT_ROUTE=/dashboard
+# Only for a non-production app (stage, local, self-hosted):
+# VITE_BRIDGE_API_BASE_URL=https://api-stage.thebridge.dev
+# VITE_BRIDGE_HOSTED_URL=https://auth-stage.thebridge.dev
 ```
 
 ```ts
 const config: BridgeConfig = {
   appId: import.meta.env.VITE_BRIDGE_APP_ID,
-  defaultRedirectRoute: import.meta.env.VITE_BRIDGE_DEFAULT_REDIRECT_ROUTE ?? '/',
+  apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
+  hostedUrl: import.meta.env.VITE_BRIDGE_HOSTED_URL || undefined,
 };
 ```
 

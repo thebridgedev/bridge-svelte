@@ -72,7 +72,9 @@ Create `src/routes/subscription/+page.svelte`:
 <PlanSelector />
 ```
 
-`<PlanSelector>` handles everything: loads plans, shows the current plan, routes free plan selection directly, and launches Stripe Checkout for paid plans. After payment or cancellation, Stripe returns to Bridge's unified callback handler which syncs billing state and redirects the user. No redirect pages or URL configuration needed.
+`<PlanSelector>` handles everything: loads plans, shows the current plan, routes free plan selection directly, and launches Stripe Checkout for paid plans.
+
+**Where Stripe returns.** Stripe sends the user back to your app's `callbackUrl` — the same route as the OAuth callback, which defaults to `<your origin>/auth/oauth-callback` — with `?stripe_success=1&session_id=…` or `?stripe_cancel=1`, plus the destination as `redirect`. `bridgeBootstrap()` in your root `+layout.ts` recognises it there: on success it confirms the checkout with Bridge, refreshes the token so the new plan is in it, and redirects to `successRedirect`; on cancel it redirects to `cancelRedirect`. If confirmation fails it redirects to `billing.paymentErrorRoute` (default `/payment-error`). So the callback route file must exist (the SDK auth and hosted auth guides already create it) and must be public; no other pages or URL configuration are needed. Only same-origin paths are followed as a destination; anything else falls back to `/subscription`.
 
 **`<PlanSelector>` props:**
 

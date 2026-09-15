@@ -19,7 +19,16 @@ const routeConfig: RouteGuardConfig = {
 };
 
 export const load = async ({ url }) => {
-  await bridgeBootstrap(url, { appId: 'your-app-id' }, routeConfig);
+  await bridgeBootstrap(
+    url,
+    {
+      appId: import.meta.env.VITE_BRIDGE_APP_ID,
+      // The SDK reads no environment variables. Pass the API URL from your own
+      // env; without it every request goes to production (https://api.thebridge.dev).
+      apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
+    },
+    routeConfig,
+  );
 };
 ```
 
@@ -43,16 +52,23 @@ context they can see*:
 | | Route guard | `<FeatureFlag>` / `useFlag` |
 |---|---|---|
 | Evaluated | server-side, via the Bridge eval API, against the session | in-browser, against the local flag cache |
-| Freshness | cached ~5 minutes — a dashboard toggle is **not** instant | realtime push, instant |
+| Freshness | re-checked live — see below | realtime push, instant |
 | Context | derived from the access token (`user.*`, `tenant.*`) | local context + `bridge.attributes` + per-call `context` |
 | Values | boolean gate only | any value type |
 
-Two consequences worth planning around. A rule that targets attributes you
-publish client-side with `bridge.attributes.set(...)` is invisible to the route
-guard, so rules used by route guards should target token-derived paths. And if a
-route must react to a toggle immediately, gate the route's *content* with
-`<FeatureFlag>` in addition to the rule — the rule keeps the URL honest, the
-component keeps the pixels fresh.
+**Freshness.** The route guard keeps its verdicts in a cache, and the SDK drops
+that cache the moment something that can change a verdict arrives on the live
+channel: a flag change, a plan change, an entitlements change, a user state
+change, or a new access token. `<BridgeBootstrap />` then re-checks the page
+the user is **currently** on (not just the next navigation), so turning a route's
+flag off, or downgrading a plan, moves the user off a page they no longer
+qualify for within about a second. The current page is re-checked on a flag
+change only for flags your route rules name. If live updates are off (for
+example a proxy blocks WebSockets), the cache expires after 5 minutes instead.
+
+A rule that targets attributes you publish client-side with
+`bridge.attributes.set(...)` is invisible to the route guard, so rules used by
+route guards should target token-derived paths.
 
 Route rules can also guard on authentication and billing state; see
 [Route guards](/auth/securing/route-guards/) in the Auth section for the full

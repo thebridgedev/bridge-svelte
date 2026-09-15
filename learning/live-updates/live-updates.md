@@ -100,11 +100,11 @@ The `bridge:` namespace is reserved for Bridge-managed attributes; writes to it 
 
 ### Connection status
 
-The live channel's connection state is exposed as a store from the flags entry point:
+The live channel's connection state is exposed as a store, from the package root or the flags entry point:
 
 ```svelte
 <script lang="ts">
-  import { realtimeStatus } from '@nebulr-group/bridge-svelte/flags';
+  import { realtimeStatus } from '@nebulr-group/bridge-svelte';
 </script>
 
 {#if $realtimeStatus !== 'open'}
@@ -113,6 +113,41 @@ The live channel's connection state is exposed as a store from the flags entry p
 ```
 
 While the channel is down, everything keeps working from the last known state: flags evaluate from cache, stores hold their last snapshot. On reconnect the server re-sends a full `session.snapshot`, so every scope updates atomically and nothing is missed.
+
+### When live updates are off
+
+`realtimeStatus` is just the state (`'idle'`, `'connecting'`, `'open'`, `'closed'`, `'unauthorized'`, `'degraded'`). `realtimeStatusDetail` adds why:
+
+| Field | Meaning |
+|-------|---------|
+| `state` | Same value as `realtimeStatus` |
+| `reason` | Machine-readable reason when live updates are not working, e.g. `expired` |
+| `side` | Whose move it is: `app` (your app's session/token handling), `config` (your Bridge settings — `apiBaseUrl`, `appId` or the app's configuration in Bridge — don't match), `bridge` (nothing to change in your app) or `network` (transient; the client is retrying) |
+| `retrying` | `true` while the client keeps trying on its own |
+| `docsUrl` | Troubleshooting page for this `reason` |
+| `ref` | Support reference for this run of trouble |
+
+```svelte
+<script lang="ts">
+  import { realtimeStatusDetail } from '@nebulr-group/bridge-svelte';
+</script>
+
+{#if $realtimeStatusDetail.state === 'unauthorized'}
+  <p>Live updates are off ({$realtimeStatusDetail.reason}). <a href={$realtimeStatusDetail.docsUrl}>Why?</a></p>
+{/if}
+```
+
+For side effects (logging, alerting) subscribe instead; it returns an unsubscribe function:
+
+```ts
+import { onBridgeRealtimeStatus } from '@nebulr-group/bridge-svelte';
+
+const stop = onBridgeRealtimeStatus((status) => {
+  if (status.reason) console.warn('live updates:', status.reason, status.side);
+});
+```
+
+**Dev badge.** In development builds, `<BridgeBootstrap />` mounts a small "Live updates off — why?" badge in the corner whenever live updates are refused (`unauthorized`), connected but receiving nothing (`degraded`), or still retrying after 30 seconds. It shows the reason, whose side it is, a docs link and the support reference, and can be dismissed until a different problem appears. It never renders in production builds. Turn it off in development too with `devBadge: false` in the config you pass to `bridgeBootstrap`. If you render your own bootstrap instead of `<BridgeBootstrap />`, the badge is exported as `RealtimeDevBadge`.
 
 ### Relationship to the module-level stores
 

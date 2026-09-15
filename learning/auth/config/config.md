@@ -26,6 +26,9 @@ export const load: LayoutLoad = async ({ url, fetch }) => {
   const config: BridgeConfig = {
     appId: import.meta.env.VITE_BRIDGE_APP_ID,
     loginRoute: '/auth/login',
+    // The SDK reads no environment variables. Pass the API URL from your own
+    // env; without it every request goes to production (https://api.thebridge.dev).
+    apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
   };
 
   const routeConfig: RouteGuardConfig = {
@@ -52,7 +55,7 @@ bridgeBootstrap(
 )
 ```
 
-Bootstrap is idempotent: calling it again after it has completed is a no-op.
+SvelteKit re-runs the root layout load on every navigation, so `bridgeBootstrap` is called many times per page load. The one-time setup (applying the config, patching `fetch`, refreshing the token, loading billing state and warming the flag cache) runs once per page load, on the first call; a config passed on later calls is ignored. The route guard runs on **every** call, so each navigation is checked. See [Route guards](/auth/securing/route-guards/#what-each-guard-covers).
 
 ## Reading the resolved config
 
@@ -73,11 +76,13 @@ Read the active config at runtime via the `readonlyConfig` store:
 
 ## Callback URL
 
-`callbackUrl` is the URL Bridge calls back to once a login completes. If you omit it, the default callback URL set in Control Center is used instead.
+`callbackUrl` is the URL Bridge calls back to once a hosted or SSO login completes. If you omit it, the SDK uses `${window.location.origin}/auth/oauth-callback`, so that route file must exist (it can be empty; `bridgeBootstrap` handles the callback in your root layout load before the page renders) and must be public.
+
+The same URL is where **Stripe returns** after checkout. `<PlanSelector>` sends Stripe `callbackUrl` with `?stripe_success=1&session_id=…` (or `?stripe_cancel=1`) plus the destination, and `bridgeBootstrap` confirms the payment, refreshes the token and redirects to the selector's `successRedirect` / `cancelRedirect` (default `/subscription`), or to `billing.paymentErrorRoute` if confirmation fails.
 
 Passing a specific `callbackUrl` lets you send different parts of your app through different post-login destinations, for example an admin section and a regular user section of the same app, or entirely separate apps sharing one Bridge project.
 
-Whatever you pass here must already be registered as an allowed redirect URI in Control Center (see [Configs managed in Control Center](#configs-managed-in-control-center)); Bridge only redirects to callback URLs it's been told about.
+Whatever you pass here, and the default above, must be registered as an allowed redirect URI in Control Center (see [Configs managed in Control Center](#configs-managed-in-control-center)); Bridge only redirects to callback URLs it's been told about. The app's *Default callback URL* setting there is only used by the Bridge server when a login request carries no callback URL at all, which the SDK never does.
 
 ```typescript
 const config: BridgeConfig = {
@@ -88,10 +93,10 @@ const config: BridgeConfig = {
 
 ## Base URLs
 
-Two options point the SDK at Bridge itself. You only change them if you're on a dedicated or self-hosted Bridge environment; on the standard cloud, leave them alone.
+Two options point the SDK at Bridge itself. Both default to production, so a production app on the standard cloud can leave them out. **Any other app must pass them**: a stage, local or self-hosted app ID doesn't exist on the production API, and requests fail with "Not Found". The SDK reads no environment variables, so pass them from your own env as in the example above.
 
 - **`apiBaseUrl`** (default `https://api.thebridge.dev`): the base URL for the Bridge API. Every API endpoint the SDK calls is derived from it.
-- **`hostedUrl`** (default `https://auth.thebridge.dev`): the base URL for Bridge's hosted UI, such as the hosted login page and plan selection.
+- **`hostedUrl`** (default `https://auth.thebridge.dev`): the base URL for Bridge's hosted UI, such as the hosted login page and plan selection. Only needed with hosted auth.
 
 ## Login route
 
@@ -104,14 +109,18 @@ If you leave `loginRoute` unset, Bridge uses hosted auth instead: unauthenticate
 | Option | Type | Default | Description |
 |--------|------|---------|--------------|
 | `appId` | `string` | (required) | Your Bridge app ID, found in your app's settings in Control Center |
-| `apiBaseUrl` | `string` | `'https://api.thebridge.dev'` | Base URL for the Bridge API; all endpoints are derived from it. See [Base URLs](#base-urls) |
+| `apiBaseUrl` | `string` | `'https://api.thebridge.dev'` | Base URL for the Bridge API; all endpoints are derived from it. Required for any non-production app. See [Base URLs](#base-urls) |
 | `hostedUrl` | `string` | `'https://auth.thebridge.dev'` | Base URL for Bridge's hosted UI (login page, plan selection). See [Base URLs](#base-urls) |
-| `callbackUrl` | `string` | `${origin}/auth/oauth-callback` | Where the login flow redirects back to after a successful login. See [Callback URL](#callback-url) |
-| `defaultRedirectRoute` | `string` | `'/'` | Route to redirect to after login |
+| `callbackUrl` | `string` | `${origin}/auth/oauth-callback` | Where hosted/SSO login and Stripe checkout return to. See [Callback URL](#callback-url) |
+| `defaultRedirectRoute` | `string` | `'/'` | Accepted, but bridge-svelte does not currently read it: after hosted login the user returns to the page they asked for, or `/`; in SDK mode your `LoginForm`'s `onLogin` decides |
 | `loginRoute` | `string` | (unset) | In-app route of your login page. Leave unset for hosted auth: without it, unauthenticated users go to Bridge's hosted login page. See [Login route](#login-route) |
 | `signupRoute` | `string` | `'/auth/signup'` | Route where your signup page lives; `LoginForm`'s signup link points here unless its `signupHref` prop overrides it |
+| `locale` | `string` | `'en'` | UI language of the SDK auth components, e.g. `'sv'`. Unknown locales fall back to English |
+| `messages` | `MessageOverrides` | (none) | Per-key copy overrides on top of the locale |
+| `devBadge` | `boolean` | `true` | Show the "Live updates off — why?" badge in development builds. Never shown in production builds. See [Live updates](/live-updates/#when-live-updates-are-off) |
 | `billing.paywallRoute` | `string` | (none) | Route to redirect to when the workspace (called a *tenant* in the API) has no plan selected |
 | `billing.paymentErrorRoute` | `string` | `'/payment-error'` | Route to redirect to when a Stripe checkout confirmation fails |
+| `billing.manageRoute` | `string` | `'/billing'` | Your plan/billing page; where the Upgrade/Manage buttons in `<BridgeQuotaBanner>` and `<BridgeBillingNotice>` point |
 | `storage` | `TokenStorage` | `localStorage` (browser) / memory (SSR) | Token storage adapter; implement `get`/`set`/`remove` to bring your own |
 | `debug` | `boolean` | `false` | Enable debug logging |
 
@@ -129,8 +138,8 @@ interface RouteGuardConfig {
 }
 
 interface ReturnToConfig {
-  /** Set false to send every login to defaultRedirectRoute, ignoring
-   *  where the visitor was heading. @default true */
+  /** Set false to stop carrying the attempted page across login, so
+   *  every login lands on your default route. @default true */
   enabled?: boolean;
   /** Query parameter carrying the attempted path in SDK mode.
    *  @default 'redirectUri' */
@@ -170,8 +179,8 @@ See [Route guards](/auth/securing/route-guards/) for a walkthrough, including [r
 
 ```env
 VITE_BRIDGE_APP_ID=your-app-id-here
-VITE_BRIDGE_LOGIN_ROUTE=/auth/login
-VITE_BRIDGE_DEFAULT_REDIRECT_ROUTE=/dashboard
+# Only for a non-production app (stage, local, self-hosted):
+VITE_BRIDGE_API_BASE_URL=https://api-stage.thebridge.dev
 ```
 
 </TabItem>
@@ -180,8 +189,8 @@ VITE_BRIDGE_DEFAULT_REDIRECT_ROUTE=/dashboard
 ```typescript
 const config: BridgeConfig = {
   appId: import.meta.env.VITE_BRIDGE_APP_ID,
-  loginRoute: import.meta.env.VITE_BRIDGE_LOGIN_ROUTE,
-  defaultRedirectRoute: import.meta.env.VITE_BRIDGE_DEFAULT_REDIRECT_ROUTE ?? '/',
+  loginRoute: '/auth/login',
+  apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
   debug: import.meta.env.DEV,
 };
 ```
@@ -196,7 +205,7 @@ Some settings aren't passed in code at all. They're set once per app, and Bridge
 | Setting | What it does |
 |---------|---------------|
 | Redirect URIs | The allowlist of callback URLs Bridge is allowed to redirect to. Any `callbackUrl` you pass to `bridgeBootstrap` must already be on this list. |
-| Allowed origins | The CORS allowlist: origins permitted to call the Bridge API directly from the browser. |
+| Allowed origins | The origins (scheme, host and port) allowed to call the Bridge API from the browser. It is also enforced on in-app sign-in: from an origin not on the list, sign-in, signup, password reset, MFA and passkey requests answer `403 {"message":"Origin not allowed"}`. In Control Center: **Authentication** → **Security** tab → **Allowed Origins**. |
 | Default callback URL | Used whenever your app doesn't pass a `callbackUrl` in code. See [Callback URL](#callback-url). |
 
 - **CLI:**

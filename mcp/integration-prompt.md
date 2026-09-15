@@ -143,7 +143,9 @@ bridge app update \
 
 **Replace `http://localhost:3000`** with your actual frontend URL. For production, use your real domain.
 
-If the Bridge CLI is not available, these values can also be set in the Bridge dashboard under App Settings, or directly in the database (`apps` collection: `redirectUris`, `allowedOrigins`, `defaultCallbackUri`, `uiUrl` fields).
+If the Bridge CLI is not available, these values can also be set in the Bridge admin dashboard — allowed origins are under **Authentication** → **Security** tab → **Allowed Origins** — or directly in the database (`apps` collection: `redirectUris`, `allowedOrigins`, `defaultCallbackUri`, `uiUrl` fields).
+
+Allowed origins is more than CORS: Bridge checks the `Origin` header of in-app (SDK) auth requests against it — sign-in, signup, password reset, MFA, passkeys — and answers `403 {"message":"Origin not allowed"}` for an origin that is not listed. Add every origin the app is served from, each dev port included.
 
 ## Add login and logout
 
@@ -194,10 +196,10 @@ const routeConfig: RouteGuardConfig = {
 ```
 
 **Rule matching:**
-- `match` accepts a string (exact prefix match) or `RegExp`.
+- `match` accepts a string or a `RegExp`. A string is an **exact** path match unless it contains `*` (`'/beta/*'` matches everything under `/beta/`); the first matching rule wins.
 - `public: true` allows unauthenticated access.
 - `featureFlag` requires the user to be logged in AND have the flag enabled.
-- `redirectTo` specifies where to send users who don't meet the requirement (defaults to the login route).
+- `redirectTo` specifies where to send a signed-in user who doesn't meet the `featureFlag` requirement (defaults to `/`). A signed-out visitor on a protected route always goes to login.
 
 **When an unauthenticated user hits a protected route:**
 - They are redirected to the Bridge hosted login page.

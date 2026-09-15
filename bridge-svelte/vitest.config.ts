@@ -13,9 +13,10 @@ import { defineConfig } from 'vitest/config';
  * with `svelte/server` (TBP-644 dev badge). `$app/*` is not available here —
  * tests that render a component mock the `$app/*` modules it imports.
  *
- * NOTE: vitest is NOT added to the shipped package — the `files` whitelist
- * in package.json restricts the npm tarball to `dist/`, `README.md`, and
- * `LICENSE`. Test files co-located in `src/` are never published.
+ * NOTE: test files co-located in `src/lib` ARE compiled into `dist/` by
+ * svelte-package (it copies everything under src/lib). The `files` field in
+ * package.json keeps them out of the npm tarball with `!dist/**\/*.test.*` and
+ * `!dist/**\/*.spec.*` negations (TBP-647) — keep those if you touch `files`.
  */
 export default defineConfig({
 	plugins: [svelte()],

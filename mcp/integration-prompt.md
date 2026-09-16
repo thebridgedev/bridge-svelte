@@ -225,6 +225,8 @@ VITE_BRIDGE_APP_ID=your-app-id-here
 
 **The SDK does not read environment variables.** These names are a convention for your own `+layout.ts`: read each one with `import.meta.env` and pass it into `BridgeConfig` yourself. Setting a variable without passing it does nothing.
 
+**This fails silently and badly.** `apiBaseUrl` defaults to production. A stage or local app ID that never reaches `BridgeConfig` sends every call to the **production** API, where that app ID does not exist — signup comes back `Not Found` and nothing in the console names the real cause. Setting `VITE_BRIDGE_API_BASE_URL` in `.env` is not enough on its own; it only takes effect once you pass it as `apiBaseUrl`, as in the snippet below.
+
 | Variable | Pass it as | Default when not passed | Description |
 |----------|-----------|-------------------------|-------------|
 | `VITE_BRIDGE_APP_ID` | `appId` (required) | — | Your Bridge application ID |

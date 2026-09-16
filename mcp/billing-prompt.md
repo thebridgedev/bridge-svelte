@@ -188,7 +188,7 @@ Pick by what you need:
 | Gate a feature on/off by plan | `bridge.tenant.entitlements.can('key')` (`bridge` from `@nebulr-group/bridge-svelte`) | anywhere |
 | **Actually enforce a cap** | **Your server, not here** — see below | backend |
 
-> `@nebulr-group/bridge-svelte` does **not** export `useBridge`. The quota read is the one place you import from `@nebulr-group/bridge-auth-core` (already installed — it is bridge-svelte's peer dependency): `import { useBridge } from '@nebulr-group/bridge-auth-core';`. Import the `QuotaSnapshot` type from `@nebulr-group/bridge-svelte`.
+> `@nebulr-group/bridge-svelte` does **not** export `useBridge`, and the `bridge` singleton carries no quota accessor. `<BridgeQuotaBanner />` is the only quota surface bridge-svelte itself ships — prefer it. For raw numbers, the quota read is the one place you import from `@nebulr-group/bridge-auth-core`: `import { useBridge } from '@nebulr-group/bridge-auth-core';`. Add that package to your app's own dependencies (`{pm} add @nebulr-group/bridge-auth-core`) instead of relying on it being hoisted as bridge-svelte's peer dependency — an undeclared import resolves under npm/bun's flat `node_modules` but fails under pnpm and Yarn PnP. Import the `QuotaSnapshot` type from `@nebulr-group/bridge-svelte`.
 
 ### Do not proxy quota through your own API
 
@@ -215,7 +215,9 @@ Branch on `policy`, never on `remaining` alone.
 
 ## Step 4 — Billing portal
 
-To let users manage their payment method or cancel, add a button that calls `getBridgeAuth().getPortalUrl()` and redirects to the returned URL. Import `getBridgeAuth` from `@nebulr-group/bridge-svelte`.
+To let users manage their payment method or cancel, add a button that calls `getBridgeAuth().getBillingPortalUrl()` and redirects to the returned URL. Import `getBridgeAuth` from `@nebulr-group/bridge-svelte`.
+
+The method name is `getBillingPortalUrl()` — there is no `getPortalUrl()`. It returns a one-time Stripe portal URL built from the `apiBaseUrl` you configured, so it follows your app to stage or local dev; do not hand-roll a `fetch` against a hardcoded `https://api.thebridge.dev`. The session is short-lived, so call it at click time rather than caching the result.
 
 ## Reading subscription state
 

@@ -2,6 +2,19 @@
 
 You are integrating The Bridge into a SvelteKit application using the **redirect-based (hosted) auth flow**. Users are redirected to the Bridge hosted login page and returned to the app after authentication.
 
+## Decide first — which login surface?
+
+This decision shapes everything else. Make it before writing code; getting it wrong means rewriting the auth pages.
+
+| You want | Use | What you build |
+|---|---|---|
+| The fastest path; Bridge owns the login UI | **Hosted auth** (default) — **this guide** | Nothing — no login page |
+| Login inside your app, your styling | **SDK auth** | Your own routes rendering `LoginForm`, `SignupForm` etc. — `get_integration_guide` with `topic=sdk-auth` |
+
+**Setting `loginRoute` in `BridgeConfig` is the entire switch.** Without it you get hosted; with it the route guard sends unauthenticated users to your own page instead of the Bridge hosted login. If you are being redirected to a route you never built, that field is why.
+
+If the user has not said which they want, ask.
+
 ## Prerequisites
 
 - **appId** — your Bridge application ID. Get it from `bridge app get` or the Bridge dashboard.

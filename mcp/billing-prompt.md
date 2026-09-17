@@ -4,6 +4,30 @@ You are wiring **billing UI** into a SvelteKit application that uses The Bridge.
 
 > **STOP — do not install any packages.** The only dependency is `@nebulr-group/bridge-svelte`, which is already installed. Do NOT install `@stripe/stripe-js` — the SDK redirects to Stripe Checkout via a plain URL redirect, no Stripe client library needed. `@stripe/stripe-js` appears in the package peer dep list for legacy reasons and must not be installed.
 
+## Decide first — which billing surface?
+
+Read this table before writing anything. Every case below is already solved by the SDK, and each row is a different surface — picking the wrong one is how a paywall ends up hand-rolled in a page component.
+
+| What you are wiring | Use | Where |
+|---|---|---|
+| **A plan picker** — choose or change a plan | `<PlanSelector>` | a page, e.g. `/subscription` |
+| **A plan-less tenant must not reach the app** | `billing.paywallRoute` in `BridgeConfig` | `+layout.ts`, in the `bridgeBootstrap()` call |
+| …the same gate without a dedicated route | `<BridgePaywall>` wrapping `{@render children()}` | root `+layout.svelte` |
+| **Lifecycle messages** — payment failed, trial ending, cancelled | `<BridgeBillingNotice />` | root `+layout.svelte` |
+| **A usage counter** — "42 of 1000 decks" | `<BridgeQuotaBanner metric="…" />` | the component |
+| **The raw quota numbers**, for your own UI | `useBridge().quota(metric)` from `@nebulr-group/bridge-auth-core` | component or `.svelte.ts` |
+| **A feature on or off by plan** | `bridge.tenant.entitlements.can('key')` | anywhere |
+| **Current plan / subscription state** | `bridge.tenant.subscription`, or `subscriptionStore` | anywhere |
+| **Manage payment method, cancel** | `getBridgeAuth().getBillingPortalUrl()` | a button |
+| **Actually enforcing a cap** | **your server — not this guide** | your backend |
+
+Two rows have real blast radius, and both are easy to get wrong in the same direction:
+
+- **The plan-less gate belongs in config, not in a page.** `billing.paywallRoute` redirects before any page renders. Checking "does this tenant have a plan?" inside a component means the page has already loaded and its `load` has already run, so you are redirecting after the fact — the same mistake as gating a route from inside the route.
+- **A client-side quota check is display, not enforcement.** Anyone can call your API directly and skip it. Disabling a button is good UX and worth doing; the cap itself has to live in your backend, which reads the same quota through its own SDK and refuses the write.
+
+If the user has not said whether they want the redirect paywall or the overlay, the redirect (`billing.paywallRoute`) is the default — set it up that way.
+
 ## Configuring plans, prices and quotas
 
 These can be configured from the Bridge **MCP tools** or the **`bridge` CLI**. Same operations, same API:

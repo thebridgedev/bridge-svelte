@@ -498,6 +498,7 @@
             mode={ssoMode}
             onSuccess={onLogin}
             onError={onError}
+            {messages}
             class="bridge-btn bridge-btn-secondary bridge-sso-btn"
           >
             {#snippet icon()}

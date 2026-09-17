@@ -278,3 +278,86 @@ describe('LoginForm → TenantSelector fan-out (TBP-634)', () => {
     expect(tag![0]).toContain('{messages}');
   });
 });
+
+// ---------------------------------------------------------------------------
+// 5. Every fan-out, not just the two anybody remembered
+// ---------------------------------------------------------------------------
+
+// TBP-634 called the LoginForm → TenantSelector fan-out "the one that is easy
+// to forget", and named only that one — so <SsoButton> was rendered without
+// `{messages}` and nothing noticed. A test naming its children one by one has
+// the same blind spot as the ticket did: it can only catch the omissions
+// somebody already thought of.
+//
+// So derive the list instead. Any child LoginForm renders that DECLARES a
+// `messages` prop must be HANDED one; the set is read off the components
+// themselves, so a new translatable child is covered the day it is added.
+describe('LoginForm fans messages to every child that accepts it (TBP-634)', () => {
+  const loginForm = fs.readFileSync(path.join(ROOT, COMPONENT_DIR, 'LoginForm.svelte'), 'utf8');
+
+  /** Child components LoginForm imports from this directory. */
+  const imported = [...loginForm.matchAll(/import\s+(\w+)\s+from\s+'\.\/(\w+)\.svelte'/g)].map(
+    (m) => m[1],
+  );
+
+  /** Of those, the ones whose own source declares a `messages` prop. */
+  const translatable = imported.filter((name) => {
+    const file = path.join(ROOT, COMPONENT_DIR, `${name}.svelte`);
+    if (!fs.existsSync(file)) return false;
+    return /messages\?:\s*MessageOverrides/.test(fs.readFileSync(file, 'utf8'));
+  });
+
+  it('finds the translatable children to check (guards the derivation itself)', () => {
+    // If the regexes ever stop matching, every test below would vacuously pass
+    // on an empty list. Anchor on the two the ticket named by hand.
+    expect(translatable).toContain('TenantSelector');
+    expect(translatable).toContain('SsoButton');
+    expect(translatable.length).toBeGreaterThanOrEqual(4);
+  });
+
+  /**
+   * Every opening tag for `name`, self-closing or block.
+   *
+   * Scans to the closing `>` at brace depth 0 rather than regexing to the first
+   * `>`: an inline handler like `onSetupPasskey={() => { step = 'x'; }}`
+   * contains `>` and `{`, and a naive `[^>]*>` truncates the tag before the
+   * props that follow it — which reports a component that IS threaded as one
+   * that is not.
+   */
+  function openingTags(source: string, name: string): string[] {
+    const found: string[] = [];
+    const opener = new RegExp(`<${name}(?=[\\s/>])`, 'g');
+    let m: RegExpExecArray | null;
+    while ((m = opener.exec(source)) !== null) {
+      let depth = 0;
+      for (let i = m.index; i < source.length; i++) {
+        const c = source[i];
+        if (c === '{') depth++;
+        else if (c === '}') depth--;
+        else if (c === '>' && depth === 0) {
+          found.push(source.slice(m.index, i + 1));
+          break;
+        }
+      }
+    }
+    return found;
+  }
+
+  it('the tag scanner survives an inline arrow handler (guards the scanner)', () => {
+    // PasskeyLogin is threaded AND carries `onSetupPasskey={() => { ... }}`, so
+    // it is the case that breaks a naive scanner. If this ever reports a single
+    // short tag, the it.each below is checking truncated strings.
+    const tags = openingTags(loginForm, 'PasskeyLogin');
+    expect(tags.length).toBeGreaterThan(0);
+    expect(tags[0]).toContain('onSetupPasskey');
+    expect(tags[0]).toContain('{messages}');
+  });
+
+  it.each(translatable)('passes messages to <%s>', (name) => {
+    const tags = openingTags(loginForm, name);
+    expect(tags.length, `LoginForm no longer renders <${name}>`).toBeGreaterThan(0);
+    for (const tag of tags) {
+      expect(tag, `<${name}> is rendered without {messages}`).toMatch(/\{messages\}|messages=/);
+    }
+  });
+});

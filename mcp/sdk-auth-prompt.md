@@ -4,6 +4,43 @@ You are integrating The Bridge into a SvelteKit application using **in-app SDK a
 
 > **SDK version:** Specific behaviors called out below — `profileStore` being the store directly (not an object), `LoginForm` not navigating after sign-in (your `onLogin` does it), the SDK reading no environment variables — hold from `@nebulr-group/bridge-svelte` 0.3 onwards. `readReturnTo` (deep-link return after login) is exported from 0.7 onwards. If in doubt, check the published `.d.ts` files of the installed version.
 
+## Decide first — hosted or in-app?
+
+| You want | Mode | What you build | Config |
+|---|---|---|---|
+| Bridge owns the login UI | **Hosted** (default) | Nothing — no login page | No `loginRoute` |
+| Login inside your app, your styling | **SDK auth** — **this guide** | Your own routes rendering `LoginForm` | Set `loginRoute` |
+
+**One config field is the whole switch.** Adding `loginRoute` to `BridgeConfig` turns hosted mode off. If you are being redirected to a route you never built, that is why.
+
+If the user has not said which they want, ask. A wrong guess here means rewriting the auth pages.
+
+The rest of this guide covers **SDK auth**.
+
+## Then decide — which component for which screen
+
+Every screen below is already built. Reach for the component; do not hand-roll the form.
+
+| Need | Component |
+|---|---|
+| Sign in | `LoginForm` |
+| Sign up | `SignupForm` |
+| Forgot password, and redeeming a reset/verification token | `ForgotPassword` (also inline in `LoginForm`) |
+| Magic link request | `MagicLink` |
+| Passkey login | `PasskeyLogin` |
+| Passkey setup | `PasskeySetup`, `PasskeyRequestSetupLink` |
+| MFA challenge / setup | `MfaChallenge`, `MfaSetup` |
+| Workspace ("tenant") selection | `WorkspaceSelector`, `TenantSelector` |
+| SSO button | `SsoButton` |
+
+All of them import from `@nebulr-group/bridge-svelte`. There is no hosted-login entry component in this package — hosted mode needs no component at all.
+
+> **`LoginForm` is not just an email and password box.** It drives forgot-password, magic link, passkeys, MFA and tenant selection as inline steps, and it decides which methods to show from the app's own admin configuration — which the client cannot see. Rebuilding any of it means reimplementing a flow that already exists and then keeping it in sync with settings you have no visibility of.
+>
+> If you are about to write a password input, check whether `LoginForm` already covers the case.
+
+**The one route you cannot skip is `/auth/set-password/[token]`.** bridge-api hard-codes it as the signup verification URL, so a missing route breaks 100% of new signups — they land on a 404 with no recovery path. All seven required routes are listed under *Required auth routes* below; create them all, even for features currently switched off in admin.
+
 ## Prerequisites
 
 - **appId** — your Bridge application ID. Passed in from the master prompt (Step 3); confirm or retrieve via `bridge app get`.

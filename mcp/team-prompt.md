@@ -2,6 +2,19 @@
 
 You are adding team management to a SvelteKit application that uses The Bridge.
 
+## Decide first — the whole panel, or one piece?
+
+Read this table before writing anything. Both rows are drop-in components; there is no hook, service or form for you to build against.
+
+| What you want on the page | Use | Where |
+|---|---|---|
+| **Everything** — users, profile and workspace settings together | `<TeamManagementPanel>`, which renders the three as tabs | one route, e.g. `/settings/team` |
+| **One piece**, or your own layout around them | `<TeamUserList>`, `<TeamProfileForm>`, `<TeamWorkspaceForm>` | wherever you put them |
+
+Same components either way — the panel *is* those three assembled. Start with `<TeamManagementPanel>` unless the user asked for a specific piece or their own layout; splitting it apart later is moving one import.
+
+**Adding a user, changing a role and removing a user all live inside `<TeamUserList>`.** It ships its own add, edit and confirm-delete dialogs, which are not separately exported. Writing an invite form, a role dropdown or a delete confirmation is rebuilding something already on the page — and the hand-rolled version talks to the team API directly, so it misses the list's own refresh and error handling.
+
 ## Prerequisites check
 
 Before starting, verify that Bridge is set up in this project:

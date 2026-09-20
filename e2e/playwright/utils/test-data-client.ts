@@ -507,6 +507,38 @@ export class TestDataClient {
   }
 
   /**
+   * Mints a magic-link JWT for a test account without sending an email.
+   *
+   * This is the SAME token the `/auth/magic-link` endpoint would mint and put
+   * in the email — bridge-api's `jwtUtilService.createMagicLinkToken()` — but
+   * delivered straight to the test. It carries no `successUrl`; the caller
+   * decides where to present it.
+   *
+   * @param appId - App ID the token is minted for
+   * @param username - Email / username of the test account
+   * @returns { token, expiresIn }
+   */
+  async getMagicLinkToken(
+    appId: string,
+    username: string,
+  ): Promise<{ token: string; expiresIn: number }> {
+    const params = new URLSearchParams({ appId, username });
+    const response = await fetch(`${this.baseUrl}/auth/magic-link/test-token?${params}`, {
+      method: 'GET',
+      headers: {
+        'x-playwright-api-key': this.apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to get magic link token: ${response.status} ${error}`);
+    }
+
+    return response.json();
+  }
+
+  /**
    * Purges all Playwright test accounts for the app.
    * Removes all accounts matching pattern: iman+playwright-test-*@nebulr.group
    *

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
   import type { MessageOverrides } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
@@ -64,6 +65,37 @@
       loading = false;
     }
   }
+
+  // TBP-682: the emailed link returns to the page the request was made from,
+  // so this component must redeem it as well as send it. Without this branch a
+  // link requested here lands back here and does nothing — the token sits in
+  // the address bar and the user stays signed out. Mirrors LoginForm, which
+  // has always redeemed on mount.
+  onMount(async () => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const magicToken = params.get('bridge_magic_link_token');
+    if (!magicToken) return;
+
+    // Drop the token from the URL before redeeming, so a reload or a shared
+    // link cannot replay it.
+    params.delete('bridge_magic_link_token');
+    const newSearch = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''));
+
+    loading = true;
+    error = null;
+    try {
+      await getBridgeAuth().authenticateWithMagicLinkToken(magicToken);
+      // Auth state drives what the host app renders next, as with LoginForm.
+    } catch (err: any) {
+      error = authErrorMessage(err, t, 'magicLink.error.auth');
+      onError?.(err);
+    } finally {
+      loading = false;
+    }
+  });
 
   function formatExpiry(seconds: number): string {
     if (seconds >= 60) {

@@ -13,13 +13,14 @@
  *   - Three buttons call bridge.flag(key, default, { attributes: { plan } })
  *     for plan in {enterprise, pro, free} and render the result.
  *
- * Note on coverage gap (see SDK report):
- *   The Svelte wrappers (<FeatureFlag>, useFlag(), evaluateFlag()) do NOT
- *   accept per-call attributes today. The demo reaches for the raw instance
- *   via getBridgeFlagsInstance() because that's the only API surface that
- *   takes the attributes argument. This test is therefore really about the
- *   auth-core SDK plumbing wired into a Svelte app — it does not (yet)
- *   exercise a Svelte-specific wrapper.
+ * Scope:
+ *   This covers the raw `BridgeFlags.flag(key, default, { attributes })`
+ *   surface wired into a Svelte app. The Svelte wrappers now forward per-call
+ *   attributes too (<FeatureFlag context={{ attributes }}>), and /flag-demo +
+ *   feature-flags.spec.ts cover that path — but only as "one of the two
+ *   branches rendered", because their flag's rule lives server-side. The
+ *   locally-seeded flag here is what makes the per-plan return value, and the
+ *   no-leak-between-calls property, actually assertable.
  */
 
 import { expect, test } from '../../fixtures/auth';

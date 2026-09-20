@@ -9,18 +9,34 @@
  *   4. `bridge.tenant.entitlements.can(...)` answers synchronously.
  *   5. `bridge.app.plans` is lazy (null) before .load(); resolves after.
  *
- * Assumes the existing playwright auth fixture is mounted (matches the
- * pattern used by `bridge-init.spec.ts`).
+ * Every assertion here reads a slice of the AUTHENTICATED session snapshot —
+ * `bridge.tenant`, `bridge.user`, the entitlement map, and `bridge.app.plans`
+ * (whose `load()` calls `BridgeAuth.getPlans`, which throws `Not authenticated`
+ * without a session). So each test takes `authenticatedPage`, not `page`.
  *
- * NOT YET RUN — full milestone end e2e pass deferred to the close of the
- * Live Channel Unification milestone (deferred E2E coverage in TBP-310/311/317).
+ * TBP-607: the file was written with the plain `page` fixture and marked
+ * "NOT YET RUN". When the stage suite first ran it, all three tests failed on
+ * an anonymous page — `waitForFunction` never resolving, `app_active` false,
+ * and `getPlans` throwing `Not authenticated`. Authenticating fixes the third
+ * test outright, because `bridge.app.plans` is REST-backed.
+ *
+ * The other two stay red on a real defect, now TBP-686: the `session.snapshot`
+ * push never arrives on a FIRST connect (reproduced on local/Centrifugo and
+ * stage/AppSync alike), and the `GET /session/init` repair TBP-660 added is
+ * gated on `_connectedOnce`, so it only ever covers reconnects. `bridge.user`
+ * and `bridge.tenant.subscription` have JWT/REST fallbacks and look fine;
+ * `tenant.id`, `tenant.name`, `entitlements` and `app.branding` have none and
+ * stay null. These two tests are the regression coverage for that fix — they
+ * are deliberately left failing rather than weakened.
  */
 
 import { test, expect } from '../../fixtures/auth';
 import { MED_TIMEOUT } from '../../fixtures/timeouts';
 
 test.describe('Unified bridge surface — session.snapshot end-to-end', () => {
-  test('snapshot lands and populates bridge.tenant + bridge.user', async ({ page }) => {
+  test('snapshot lands and populates bridge.tenant + bridge.user', async ({
+    authenticatedPage: page,
+  }) => {
     await page.goto('/');
 
     // The demo exposes `window.bridge` for e2e access (see TBP-325 demo update).
@@ -59,7 +75,9 @@ test.describe('Unified bridge surface — session.snapshot end-to-end', () => {
     expect(value.user.tenantId).toBe(value.tenantId);
   });
 
-  test('entitlements.can() answers from the snapshot map', async ({ page }) => {
+  test('entitlements.can() answers from the snapshot map', async ({
+    authenticatedPage: page,
+  }) => {
     await page.goto('/');
 
     const canApp = await page.waitForFunction(
@@ -76,7 +94,9 @@ test.describe('Unified bridge surface — session.snapshot end-to-end', () => {
     expect(value).toEqual({ app_active: true });
   });
 
-  test('bridge.app.plans is lazy — null until .load(), populated after', async ({ page }) => {
+  test('bridge.app.plans is lazy — null until .load(), populated after', async ({
+    authenticatedPage: page,
+  }) => {
     await page.goto('/');
 
     // What the first evaluate needs is `window.bridge`, so wait for that — the

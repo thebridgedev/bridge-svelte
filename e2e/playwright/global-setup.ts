@@ -45,6 +45,7 @@ import {
   writeWorkerApps,
   type WorkerApp,
 } from './fixtures/worker-app';
+import { getCurrentEnvironment } from './config/environments';
 import { PAYWALL_PLAN } from './fixtures/plans';
 import { TestDataClient, createTestDataClientFromEnv } from './utils/test-data-client';
 
@@ -363,6 +364,34 @@ async function globalSetup(config: FullConfig) {
     }
 
     console.log(`[global-setup] Demo initialized with app id ${primary.appId}`);
+
+    // The demo has to be serving the SAME environment this run targets. It is
+    // not guaranteed to: `playwright.config.ts` reuses a Docker demo already
+    // answering on :3008 for any project, and that container is normally left
+    // running `--mode test.local`. The suite then drives the browser at the
+    // LOCAL bridge-api while the test-data client provisions apps on stage —
+    // a run that reports numbers for a backend nobody asked about. The app-id
+    // check above does not catch it, because the id is seeded through
+    // localStorage and is correct either way (TBP-607).
+    const expectedEnv = getCurrentEnvironment();
+    const envPill = page.locator('.env-pill');
+    const shownEnv = await envPill
+      .first()
+      .getAttribute('data-env')
+      .catch(() => null);
+
+    if (shownEnv !== expectedEnv) {
+      throw new Error(
+        `The demo at ${baseURL} is serving the "${shownEnv ?? 'unknown'}" environment, ` +
+          `but this run targets "${expectedEnv}".\n` +
+          `Vite picks the environment from its --mode flag, so the demo must run ` +
+          `\`vite dev --mode test.${expectedEnv}\` (which loads ${envFile}).\n` +
+          `If you are reusing the Docker demo on :3008, restart its vite process with that mode:\n` +
+          `  docker exec bridge-svelte pkill -f 'vite dev'\n` +
+          `  docker exec -d bridge-svelte bash -lc "cd /home/bridgeuser/app/demo && bunx vite dev --mode test.${expectedEnv}"`,
+      );
+    }
+    console.log(`[global-setup] Demo is serving the "${shownEnv}" environment`);
 
     // Refresh worker 0's storage state from the context Playwright just captured,
     // and keep `base-state.json` (the config-level default, used by anything that

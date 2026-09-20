@@ -285,6 +285,7 @@ export class TestDataClient {
     paymentsAutoRedirect?: boolean;
     stripeEnabled?: boolean;
     redirectUris?: string[];
+    allowedOrigins?: string[];
     defaultCallbackUri?: string;
     stripePublicKey?: string;
     stripeSecretKey?: string;
@@ -578,8 +579,13 @@ export class TestDataClient {
  * - Local: LOCAL_TEST_DATA_API_URL or http://localhost:3200
  * - Stage: STAGE_TEST_DATA_API_URL
  * - Prod: PROD_TEST_DATA_API_URL
+ *
+ * @param appDomain - Target a specific app domain instead of `APP_DOMAIN`.
+ *   global-setup uses this to talk to each worker's own app while provisioning
+ *   them — at which point `BRIDGE_TEST_APP_ID` does not exist yet, so
+ *   `getEnvironmentConfig()` cannot be used.
  */
-export function createTestDataClientFromEnv(): TestDataClient {
+export function createTestDataClientFromEnv(appDomain?: string): TestDataClient {
   const projectName = process.env.PLAYWRIGHT_PROJECT_NAME || '';
   let testDataApiUrl: string;
 
@@ -593,7 +599,8 @@ export function createTestDataClientFromEnv(): TestDataClient {
   }
 
   const testDataApiKey = process.env.PLAYWRIGHT_TEST_API_KEY;
-  const appDomain = process.env.APP_DOMAIN || 'BRIDGE_SVELTE_TEST_DASHBOARD';
+  const resolvedAppDomain =
+    appDomain || process.env.APP_DOMAIN || 'BRIDGE_SVELTE_TEST_DASHBOARD';
 
   if (!testDataApiKey) {
     throw new Error('PLAYWRIGHT_TEST_API_KEY environment variable is required');
@@ -605,7 +612,7 @@ export function createTestDataClientFromEnv(): TestDataClient {
     testDataApiUrl,
     testDataApiKey,
     appId: process.env.BRIDGE_TEST_APP_ID || '',
-    appDomain,
+    appDomain: resolvedAppDomain,
     isContainer: false,
   });
 }

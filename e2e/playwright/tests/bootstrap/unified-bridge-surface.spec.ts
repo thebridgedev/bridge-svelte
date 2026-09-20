@@ -16,7 +16,7 @@
  * Live Channel Unification milestone (deferred E2E coverage in TBP-310/311/317).
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../fixtures/auth';
 import { MED_TIMEOUT } from '../../fixtures/timeouts';
 
 test.describe('Unified bridge surface — session.snapshot end-to-end', () => {

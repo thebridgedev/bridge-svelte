@@ -17,6 +17,7 @@
  */
 
 import { test, expect, loginViaSdkAuth, readBridgeTokens } from '../../fixtures/auth';
+import { PAYWALL_PLAN } from '../../fixtures/plans';
 import { LONG_TIMEOUT, MED_TIMEOUT } from '../../fixtures/timeouts';
 
 const STRIPE_TEST_PK = process.env.STRIPE_TEST_PK || '';
@@ -48,7 +49,11 @@ test.describe('Welcome Paywall — first-time user flow', () => {
     // ONCE; every subsequent run reuses them with NO Stripe re-sync, so by
     // checkout time the price has been active+checkout-ready for ages. The plan is
     // intentionally NOT deleted in teardown — it persists for reuse.
-    const planKey = 'e2e-paywall-pro';
+    //
+    // TBP-604: global-setup now `ensurePlan`s this on every worker app before the
+    // run, so even a brand-new worker app arrives here with a synced price. The
+    // call below stays as the fallback for anyone running this spec in isolation.
+    const planKey = PAYWALL_PLAN.key;
 
     try {
       // ---- Arrange: configure the app for Stripe + paywall, and ensure the paid plan
@@ -57,20 +62,13 @@ test.describe('Welcome Paywall — first-time user flow', () => {
         stripeEnabled: true,
         stripePublicKey: STRIPE_TEST_PK,
         stripeSecretKey: STRIPE_TEST_SK,
-        currency: 'USD',
+        currency: PAYWALL_PLAN.currency,
       });
 
       // Create-if-absent: on the first ever run this creates the plan and syncs
       // its Stripe price once; on every later run it returns the existing plan
       // WITHOUT re-triggering the Stripe archive sweep (the flake source).
-      await testDataClient.ensurePlan({
-        key: planKey,
-        name: 'Paywall Pro',
-        description: 'Paid plan for welcome-paywall E2E (stable, reused across runs)',
-        trial: false,
-        trialDays: 0,
-        prices: [{ amount: 2900, currency: 'USD', recurrenceInterval: 'month' }],
-      });
+      await testDataClient.ensurePlan({ ...PAYWALL_PLAN.definition });
 
       // ---- 1a. Force the "no plan selected" state. createPlaywrightTestAccount
       //          auto-binds the new tenant to the app's hardcoded `TEAM` trial

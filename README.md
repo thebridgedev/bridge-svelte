@@ -319,12 +319,49 @@ bun run test:e2e:report
 Each command automatically:
 1. Creates/gets the test app via bridge-api (pre-setup)
 2. Starts the demo app with the correct environment config
-3. Resolves the app ID and seeds it into the browser's localStorage (global-setup)
+3. Provisions one Bridge app per Playwright worker and seeds each worker's app ID
+   into its browser storage state (global-setup)
 4. Runs the tests
 5. Stops the demo app
 
 No app ID has to be configured by hand for any environment — `demo/.env.test.stage`
 and `demo/.env.test.prod` deliberately leave `VITE_BRIDGE_APP_ID` unset.
+
+**Always run the suite through these scripts.** Calling `bunx playwright test`
+directly skips pre-setup and the per-worker app provisioning, and the run fails
+on a missing `.auth/worker-apps.json` rather than silently sharing one app.
+
+### Parallelism: one Bridge app per worker
+
+`paymentsAutoRedirect`, `stripeEnabled` and the SSO flags are **app-level**
+settings, not per-tenant. When every worker drove one shared app, a spec that
+wrote one of them wrote a value every other worker could read — the paywall spec
+set `paymentsAutoRedirect: true`, a sibling worker set it back to `false`, and the
+paywall spec failed reading back its own write.
+
+So the suite does not share the app any more. `global-setup.ts` provisions one
+Bridge app per worker and writes a storage state per worker carrying that app's
+id as `localStorage['bridge:appId']`; the fixtures in
+`e2e/playwright/fixtures/auth.ts` hand each worker its own app, test-data client
+and `envConfig`. App-level writes are visible only to the worker that made them,
+and tests inside a worker run serially, so nothing can be clobbered mid-test.
+
+- The pool is sized from the **resolved worker count**, so `--workers 8` provisions
+  eight apps with no other change. There is no "safe" worker count to remember and
+  no serial-only mode to opt into.
+- Apps are **idempotent by domain** (`BRIDGE_SVELTE_TEST_DASHBOARD`,
+  `…_W1`, `…_W2`, …) and are reused across runs, not recreated. Worker 0 keeps the
+  unsuffixed domain, so `--workers 1` targets exactly the app the suite always used.
+- `bun run test:e2e -- <file>` still works; a filtered run provisions the same pool.
+- **`VITE_BRIDGE_APP_ID` pins every worker to one app** and therefore puts the
+  shared-state race back. It stays as the escape hatch for pinning an app id by
+  hand, and global-setup says so in its output when you use it. Don't set it for a
+  parallel run.
+
+A spec that needs an app-level setting sets it itself and restores it in a
+`finally`; the `appConfigBaseline` fixture re-applies the baseline for the next
+test in that worker if a spec died before its `finally` ran. No spec should read
+an app-level setting it did not write.
 
 ### How it works
 

@@ -19,7 +19,6 @@ test.describe('SDK Set Password', () => {
       );
 
       await page.goto(`/auth/set-password/${token}`);
-      await page.waitForLoadState('networkidle');
 
       const passwordInput = page.locator('#newPassword');
       await passwordInput.waitFor({ state: 'visible', timeout: MED_TIMEOUT });
@@ -50,7 +49,6 @@ test.describe('SDK Set Password', () => {
       );
 
       await page.goto(`/auth/set-password/${token}`);
-      await page.waitForLoadState('networkidle');
 
       await page.locator('#newPassword').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
       await page.locator('#newPassword').fill('Password123!');

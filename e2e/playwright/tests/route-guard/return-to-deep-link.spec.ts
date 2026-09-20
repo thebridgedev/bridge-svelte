@@ -115,7 +115,6 @@ test.describe('Return-to deep links (TBP-629)', () => {
       const navigatedOrigins = recordNavigatedOrigins(page);
 
       await page.goto(`${LOGIN_ROUTE}?${RETURN_TO_PARAM}=${encodeURIComponent(crafted)}`);
-      await page.waitForLoadState('networkidle');
 
       await submitSdkLoginForm(page, testUser.email, testUser.password);
 
@@ -138,12 +137,15 @@ test.describe('Return-to deep links (TBP-629)', () => {
     // If it did, completing login would send the visitor back to the login form
     // they just completed.
     await page.goto(LOGIN_ROUTE);
-    await page.waitForLoadState('networkidle');
+    // The rendered form is the proof the guard ran and left us here; only then is
+    // the absence of a return target meaningful. (No networkidle wait — the demo
+    // holds a Centrifugo WebSocket, so the network never goes idle, TBP-605.)
+    await page.locator('#login-email').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
     expect(new URL(page.url()).searchParams.get(RETURN_TO_PARAM)).toBeNull();
 
     // Same for a sibling auth route, which is public for the same reason.
     await page.goto('/auth/signup');
-    await page.waitForLoadState('networkidle');
+    await page.locator('#signup-email').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
     expect(new URL(page.url()).searchParams.get(RETURN_TO_PARAM)).toBeNull();
 
     // And when the guard DOES emit one, it points at the protected route that
@@ -164,7 +166,9 @@ test.describe('Return-to deep links (TBP-629)', () => {
     // Regression guard for the other direction: the fix must not change what
     // happens for the ordinary "click login, go to the app" path.
     await page.goto(LOGIN_ROUTE);
-    await page.waitForLoadState('networkidle');
+    // Same as above: the form has to be on screen before "no return target" says
+    // anything. No networkidle wait — see TBP-605.
+    await page.locator('#login-email').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
     expect(new URL(page.url()).searchParams.get(RETURN_TO_PARAM)).toBeNull();
 
     await submitSdkLoginForm(page, testUser.email, testUser.password);

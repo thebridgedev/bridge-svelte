@@ -138,7 +138,6 @@ export async function loginViaBridgeAuth(
 
   // 1. Navigate to demo app home page
   await page.goto('/');
-  await page.waitForLoadState('networkidle');
   console.log(`[login] On home page: ${page.url()}`);
 
   // 2. Click the "Login with Bridge" button
@@ -209,7 +208,11 @@ export async function completeHostedPortalLogin(
     // May still be processing
   }
 
-  await page.waitForLoadState('networkidle');
+  // The next branch reads page.url(), so the document that redirect landed on
+  // has to be parsed first. domcontentloaded is the wait that says exactly
+  // that and always fires; the demo holds a persistent Centrifugo WebSocket, so
+  // waiting for network idle never would (TBP-605).
+  await page.waitForLoadState('domcontentloaded');
 
   // 7. Handle choose-user/workspace page if present
   const currentUrl = page.url();
@@ -291,7 +294,6 @@ export async function loginViaSdkAuth(
   console.log(`[sdk-login] Starting SDK login for ${email}`);
 
   await page.goto('/auth/login');
-  await page.waitForLoadState('networkidle');
 
   await submitSdkLoginForm(page, email, password);
 
@@ -418,7 +420,11 @@ async function waitForOAuthFlowCompletion(page: Page): Promise<void> {
       // Timeout — check state
     }
 
-    await page.waitForLoadState('networkidle');
+    // The loop's next pass reads page.url() to decide whether we are still on a
+    // transit page, so the landed document must be parsed. domcontentloaded
+    // states that and terminates; waiting for network idle cannot, because the
+    // demo keeps a Centrifugo WebSocket open (TBP-605).
+    await page.waitForLoadState('domcontentloaded');
     redirectCount++;
   }
 

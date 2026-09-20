@@ -18,7 +18,14 @@ test.describe('Feature Flag Route Guards', () => {
 
     // Navigate to /beta — requires 'test-global-admin-access' flag
     await page.goto('/beta');
-    await page.waitForLoadState('networkidle');
+
+    // What this test waits for is the guard settling on a destination — either it
+    // let us stay on /beta or it bounced us to '/'. Waiting for the network to go
+    // idle would never return; the demo holds a Centrifugo WebSocket (TBP-605).
+    await page.waitForURL(
+      (url) => url.pathname === '/beta' || url.pathname === '/',
+      { timeout: LONG_TIMEOUT },
+    );
 
     const currentUrl = page.url();
     const pathname = new URL(currentUrl).pathname;
@@ -46,8 +53,17 @@ test.describe('Feature Flag Route Guards', () => {
       await page.goto('/beta');
 
       // /beta is configured with public: true but has a feature flag requirement
-      // The route guard should check the flag and potentially redirect
-      await page.waitForLoadState('networkidle');
+      // The route guard should check the flag and potentially redirect.
+      // Wait for it to settle on one of those destinations rather than for the
+      // network to go idle, which the demo's Centrifugo WebSocket prevents
+      // (TBP-605).
+      await page.waitForURL(
+        (url) =>
+          url.pathname === '/beta' ||
+          url.pathname === '/' ||
+          url.pathname.startsWith('/auth/'),
+        { timeout: LONG_TIMEOUT },
+      );
 
       const currentUrl = page.url();
 

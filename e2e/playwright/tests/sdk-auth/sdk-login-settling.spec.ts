@@ -129,7 +129,6 @@ test.describe('LoginForm never shows the credentials form post-auth (TBP-635)', 
     testUser,
   }) => {
     await page.goto('/auth/login');
-    await page.waitForLoadState('networkidle');
 
     const emailInput = page.locator('#login-email');
     await emailInput.waitFor({ state: 'visible', timeout: MED_TIMEOUT });
@@ -182,7 +181,6 @@ test.describe('LoginForm never shows the credentials form post-auth (TBP-635)', 
     // of a password field would also pass for a blank card, which is a
     // different bug wearing the same test.
     await page.goto('/auth/login');
-    await page.waitForLoadState('networkidle');
 
     const emailInput = page.locator('#login-email');
     await emailInput.waitFor({ state: 'visible', timeout: MED_TIMEOUT });

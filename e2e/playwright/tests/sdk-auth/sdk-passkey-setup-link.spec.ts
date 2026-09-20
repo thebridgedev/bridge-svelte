@@ -70,7 +70,6 @@ test.describe('SDK Passkey Setup Link Request', () => {
 
     try {
       await page.goto('/auth/login');
-      await page.waitForLoadState('networkidle');
       await page.locator('#login-email').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
 
       // Real "Sign in with Passkeys" button (PasskeyLogin.svelte).

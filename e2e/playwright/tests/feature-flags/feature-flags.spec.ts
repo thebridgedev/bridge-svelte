@@ -23,7 +23,6 @@ test.describe('Feature Flags', () => {
     const page = authenticatedPage;
 
     await page.goto('/flag-demo');
-    await page.waitForLoadState('networkidle');
 
     // FeaturePage renders the title as the page <h1>.
     await expect(page.locator('h1:has-text("Feature Flags")')).toBeVisible({
@@ -40,7 +39,6 @@ test.describe('Feature Flags', () => {
     const page = authenticatedPage;
 
     await page.goto('/flag-demo');
-    await page.waitForLoadState('networkidle');
 
     const on = page.locator('[data-testid="simple-flag-on"]');
     const off = page.locator('[data-testid="simple-flag-off"]');
@@ -61,7 +59,6 @@ test.describe('Feature Flags', () => {
     const page = authenticatedPage;
 
     await page.goto('/flag-demo');
-    await page.waitForLoadState('networkidle');
 
     const on = page.locator('[data-testid="role-flag-on"]');
     const off = page.locator('[data-testid="role-flag-off"]');
@@ -80,7 +77,6 @@ test.describe('Feature Flags', () => {
     const page = authenticatedPage;
 
     await page.goto('/flag-demo');
-    await page.waitForLoadState('networkidle');
 
     // The plan-flag is evaluated with a client-supplied `plan` attribute,
     // controlled by the plan-select dropdown.
@@ -112,7 +108,13 @@ test.describe('Feature Flags', () => {
     });
 
     await page.goto('/flag-demo');
-    await page.waitForLoadState('networkidle');
+
+    // The evaluation this test counts is the one that renders a flag branch, so
+    // wait for that branch — not for the network to go idle, which never happens
+    // while the demo holds its Centrifugo WebSocket open (TBP-605).
+    const on = page.locator('[data-testid="simple-flag-on"]');
+    const off = page.locator('[data-testid="simple-flag-off"]');
+    await expect(on.or(off).first()).toBeVisible({ timeout: MED_TIMEOUT });
 
     // At least one flag evaluation request should have been issued.
     expect(flagApiCalls.length).toBeGreaterThanOrEqual(0);

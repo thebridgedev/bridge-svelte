@@ -17,7 +17,6 @@ test.describe('SDK Login', () => {
 
   test('shows error on wrong credentials', async ({ page, testUser }) => {
     await page.goto('/auth/login');
-    await page.waitForLoadState('networkidle');
 
     // Fill email and password on the single-step form
     const emailInput = page.locator('#login-email');
@@ -36,7 +35,6 @@ test.describe('SDK Login', () => {
 
   test('forgot password link shows reset step then back returns to login', async ({ page }) => {
     await page.goto('/auth/login');
-    await page.waitForLoadState('networkidle');
 
     // Credentials step should be visible
     await page.locator('#login-email').waitFor({ state: 'visible', timeout: MED_TIMEOUT });

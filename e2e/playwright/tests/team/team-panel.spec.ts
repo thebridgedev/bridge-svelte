@@ -27,7 +27,6 @@ function testEmail(): string {
 /** Navigate to /team-panel and wait for the panel to finish loading. */
 async function goToTeamPanel(page: import('@playwright/test').Page) {
   await page.goto('/team-panel');
-  await page.waitForLoadState('networkidle');
   await page.locator('[data-bridge-team-panel]').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
 }
 

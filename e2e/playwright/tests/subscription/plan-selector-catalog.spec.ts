@@ -178,7 +178,6 @@ async function mockPlanCatalog(page: Page, plans: FixturePlan[]): Promise<void> 
 /** Navigate to the demo's /subscription page and wait for the cards to settle. */
 async function openPlanSelector(page: Page): Promise<Locator> {
   await page.goto('/subscription');
-  await page.waitForLoadState('networkidle');
 
   const selector = page.locator('[data-bridge-plan-selector]');
   await expect(selector).toBeVisible({ timeout: MED_TIMEOUT });

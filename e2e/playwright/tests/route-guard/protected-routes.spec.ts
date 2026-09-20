@@ -42,7 +42,6 @@ test.describe('Protected Routes', () => {
     const page = authenticatedPage;
 
     await page.goto('/protected');
-    await page.waitForLoadState('networkidle');
 
     // Should show the Protected Page heading
     const heading = page.locator('h1:has-text("Protected Page")');
@@ -64,7 +63,6 @@ test.describe('Protected Routes', () => {
     const page = authenticatedPage;
 
     await page.goto('/protected');
-    await page.waitForLoadState('networkidle');
 
     // Profile is set asynchronously from the ID token; the email now appears in a
     // <dd> within the profile <dl> (was a <p> before the AppShell revamp).

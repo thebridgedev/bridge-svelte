@@ -1,6 +1,6 @@
 # Magic link
 
-Standalone magic link request form. When a user clicks a magic link from their email, the token is in the URL and Bridge processes it automatically during bootstrap.
+Standalone magic link request form. It also redeems the link: the emailed link returns to the page the request was made from, and this component reads the token out of the URL on mount.
 
 **Props:**
 
@@ -25,4 +25,6 @@ Standalone magic link request form. When a user clicks a magic link from their e
 />
 ```
 
-When the user clicks the link in their email, they are brought to your app. The token URL parameter is auto-handled by Bridge bootstrap.
+When the user clicks the link in their email, they land back on the route they requested it from — `/auth/magic-link` in the example above — with a `bridge_magic_link_token` query parameter. `MagicLink` redeems that token on mount, strips it from the URL and signs the user in; `LoginForm` does the same, so either component works as the landing page. Keep that route reachable to signed-out users.
+
+To point the email at a different page, pass `successUrl` to `sendMagicLink`; the URL must be one of your app's allowed origins. See [Magic link](/auth/sign-in/magic-link/#where-the-link-comes-back) in sign-in methods.

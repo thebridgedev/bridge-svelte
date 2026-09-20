@@ -151,6 +151,8 @@ You can also use individual components for custom flows:
 | `<PasskeyLogin />` | WebAuthn authentication | `onLogin`, `autofill` |
 | `<PasskeySetup />` | WebAuthn registration (from email link) | `token`, `onComplete` |
 
+Magic links come back to the page they were requested from, carrying a `bridge_magic_link_token` parameter that `<MagicLink />` and `<LoginForm />` redeem on mount — so keep that route reachable. Pass `sendMagicLink(email, { successUrl })` to send the user elsewhere; the URL must be one of your app's allowed origins. See [Magic link](learning/auth/sign-in/magic-link.md).
+
 ### CSS Theming
 
 All SDK auth components use CSS custom properties with sensible defaults. Override in your global CSS:

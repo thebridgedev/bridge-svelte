@@ -8,7 +8,6 @@ import { MED_TIMEOUT } from '../../fixtures/timeouts';
 test.describe('SDK Tenant Selection', () => {
   test('SDK auth login page renders', async ({ page }) => {
     await page.goto('/auth/login');
-    await page.waitForLoadState('networkidle');
 
     // Verify login form renders
     const emailInput = page.locator('#login-email');

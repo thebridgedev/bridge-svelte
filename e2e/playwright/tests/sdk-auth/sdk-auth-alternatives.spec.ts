@@ -15,7 +15,6 @@ import { MED_TIMEOUT, LONG_TIMEOUT } from '../../fixtures/timeouts';
 test.describe('SDK Auth Alternatives', () => {
   test('magic link button is visible on login page', async ({ page }) => {
     await page.goto('/auth/login');
-    await page.waitForLoadState('networkidle');
 
     // Wait for email step to be ready
     await page.locator('#login-email').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
@@ -27,7 +26,6 @@ test.describe('SDK Auth Alternatives', () => {
 
   test('passkeys button is visible on login page', async ({ page }) => {
     await page.goto('/auth/login');
-    await page.waitForLoadState('networkidle');
 
     await page.locator('#login-email').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
 
@@ -38,7 +36,6 @@ test.describe('SDK Auth Alternatives', () => {
 
   test('forgot password link is visible on login page', async ({ page }) => {
     await page.goto('/auth/login');
-    await page.waitForLoadState('networkidle');
 
     // Email and password are on the same single-step form — forgot password is visible immediately
     await page.locator('#login-email').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
@@ -56,7 +53,6 @@ test.describe('SDK Auth Alternatives', () => {
 
     try {
       await page.goto('/auth/login');
-      await page.waitForLoadState('networkidle');
 
       await page.locator('#login-email').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
 
@@ -71,7 +67,6 @@ test.describe('SDK Auth Alternatives', () => {
 
   test('magic link step shows email sent confirmation', async ({ page, testUser }) => {
     await page.goto('/auth/login');
-    await page.waitForLoadState('networkidle');
 
     await page.locator('#login-email').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
     await page.locator('#login-email').fill(testUser.email);
@@ -87,7 +82,6 @@ test.describe('SDK Auth Alternatives', () => {
 
   test('signup link navigates to /auth/signup', async ({ page }) => {
     await page.goto('/auth/login');
-    await page.waitForLoadState('networkidle');
 
     const signupLink = page.locator('a[href="/auth/signup"]');
     await expect(signupLink).toBeVisible({ timeout: MED_TIMEOUT });

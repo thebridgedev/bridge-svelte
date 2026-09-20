@@ -20,7 +20,11 @@ test.describe('Bridge Initialization', () => {
     });
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+
+    // What this test waits for is "the app finished booting", which the rendered
+    // heading states. It cannot wait for the network to go idle: the demo holds a
+    // persistent Centrifugo WebSocket, so idle never arrives (TBP-605).
+    await expect(page.locator('h1')).toBeVisible({ timeout: MED_TIMEOUT });
 
     // Filter out known non-critical errors (e.g., favicon 404)
     const criticalErrors = consoleErrors.filter(
@@ -35,7 +39,6 @@ test.describe('Bridge Initialization', () => {
 
   test('BridgeBootstrap component renders without errors', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     // The page should have the main content rendered (not a blank page)
     const heading = page.locator('h1');
@@ -44,7 +47,6 @@ test.describe('Bridge Initialization', () => {
 
   test('ConfigStatus component displays configuration state', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     // The ConfigStatus component should be visible on the home page
     // It displays bridge config status information

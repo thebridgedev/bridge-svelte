@@ -28,7 +28,6 @@ import { MED_TIMEOUT } from '../../fixtures/timeouts';
 test.describe('Feature flags — dev-supplied per-call attributes (TBP-178)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/flag-context-demo');
-    await page.waitForLoadState('networkidle');
 
     // Wait for the SDK cache to be seeded with the test flag.
     await expect(page.getByTestId('cache-ready')).toHaveText('ready', {

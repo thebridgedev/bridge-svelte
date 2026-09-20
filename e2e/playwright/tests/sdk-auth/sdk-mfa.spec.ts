@@ -11,7 +11,6 @@ test.describe('SDK MFA Challenge', () => {
     // Navigate to login page and trigger flow
     // Note: Full MFA testing needs a MFA-enabled test user
     await page.goto('/auth/login');
-    await page.waitForLoadState('networkidle');
 
     // Verify the login form renders
     const emailInput = page.locator('#login-email');

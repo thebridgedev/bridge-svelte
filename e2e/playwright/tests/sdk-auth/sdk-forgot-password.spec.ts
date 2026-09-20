@@ -4,7 +4,6 @@ import { MED_TIMEOUT } from '../../fixtures/timeouts';
 test.describe('SDK Forgot Password', () => {
   test('enter email → "Check your email" shown', async ({ page, testUser }) => {
     await page.goto('/auth/forgot-password');
-    await page.waitForLoadState('networkidle');
 
     const emailInput = page.locator('#reset-email');
     await emailInput.waitFor({ state: 'visible', timeout: MED_TIMEOUT });
@@ -21,7 +20,6 @@ test.describe('SDK Forgot Password', () => {
 
   test('has back to login link', async ({ page }) => {
     await page.goto('/auth/forgot-password');
-    await page.waitForLoadState('networkidle');
 
     const loginLink = page.locator('a[href="/auth/login"]:has-text("Back to login")');
     await loginLink.waitFor({ state: 'visible', timeout: MED_TIMEOUT });

@@ -1,0 +1,23 @@
+# Static guards over the Playwright suite. No backend, no browsers — just the
+# checks that must hold before anyone spends 60s per spec finding out.
+name: E2E guards
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  no-networkidle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # TBP-605: the demo holds a persistent Centrifugo WebSocket, so the network
+      # never goes idle and `waitForLoadState('networkidle')` can only ever time
+      # the test out. The local `test:e2e*` scripts run this too; here it also
+      # covers the person who never runs the suite before opening the PR.
+      - name: No networkidle waits
+        run: bash scripts/check-no-networkidle.sh

@@ -41,7 +41,6 @@ test.describe('Subscription Flows', () => {
 
       await page.goto('/subscription');
       await page.waitForURL('**/subscription**', { timeout: MED_TIMEOUT });
-      await page.waitForLoadState('networkidle');
 
       const planSelector = page.locator('[data-bridge-plan-selector]');
       await expect(planSelector).toBeVisible({ timeout: MED_TIMEOUT });
@@ -104,7 +103,6 @@ test.describe('Subscription Flows', () => {
 
       await page.goto('/subscription');
       await page.waitForURL('**/subscription**', { timeout: MED_TIMEOUT });
-      await page.waitForLoadState('networkidle');
 
       const planSelector = page.locator('[data-bridge-plan-selector]');
       await expect(planSelector).toBeVisible({ timeout: MED_TIMEOUT });
@@ -146,7 +144,6 @@ test.describe('Subscription Flows', () => {
 
     await page.goto('/subscription');
     await page.waitForURL('**/subscription**', { timeout: MED_TIMEOUT });
-    await page.waitForLoadState('networkidle');
 
     const planSelector = page.locator('[data-bridge-plan-selector]');
     await expect(planSelector).toBeVisible({ timeout: MED_TIMEOUT });
@@ -186,7 +183,6 @@ test.describe('Subscription Flows', () => {
 
       await page.goto('/subscription');
       await page.waitForURL('**/subscription**', { timeout: MED_TIMEOUT });
-      await page.waitForLoadState('networkidle');
 
       const planSelector = page.locator('[data-bridge-plan-selector]');
       await expect(planSelector).not.toHaveAttribute('data-loading', 'true', {
@@ -229,7 +225,6 @@ test.describe('Subscription Flows', () => {
 
       await page.goto('/subscription');
       await page.waitForURL('**/subscription**', { timeout: MED_TIMEOUT });
-      await page.waitForLoadState('networkidle');
 
       const planSelector = page.locator('[data-bridge-plan-selector]');
       await expect(planSelector).not.toHaveAttribute('data-loading', 'true', {

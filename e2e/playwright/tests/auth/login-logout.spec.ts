@@ -18,7 +18,6 @@ test.describe('Login & Logout Flow', () => {
 
     try {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
 
       // Unauthenticated nav shows a Login link
       const loginLink = page.locator('a.nav-link--login');
@@ -57,7 +56,6 @@ test.describe('Login & Logout Flow', () => {
     const page = authenticatedPage;
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     // Authenticated nav should show these links
     await expect(page.locator('a.nav-link:has-text("Home")')).toBeVisible({
@@ -80,7 +78,6 @@ test.describe('Login & Logout Flow', () => {
     const page = authenticatedPage;
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     await expect(page.locator('button:has-text("Logout")')).toBeVisible({
       timeout: MED_TIMEOUT,

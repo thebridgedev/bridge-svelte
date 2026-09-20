@@ -78,7 +78,6 @@ test.describe('SDK Passkey Ceremony (real WebAuthn)', () => {
 
     try {
       await page.goto(envConfig.baseUrl);
-      await page.waitForLoadState('networkidle');
 
       // 2. Mint a real, valid token for this user without going through email
       // delivery (see file header for why this is a forgotPasswordToken, not
@@ -170,7 +169,6 @@ test.describe('SDK Passkey Ceremony (real WebAuthn)', () => {
       // navigator.credentials.get() + authenticateWithPasskey() — the virtual
       // authenticator answers with the resident credential just registered.
       await page.goto('/auth/login');
-      await page.waitForLoadState('networkidle');
       await page.locator('#login-email').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
 
       const passkeyBtn = page.locator('[data-bridge-passkey-login]');

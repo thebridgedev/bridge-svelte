@@ -18,7 +18,6 @@ test.describe('Create User (Sign Up) Flow', () => {
 
     try {
       await page.goto('/auth/signup');
-      await page.waitForLoadState('networkidle');
 
       // Fill signup form
       await page.locator('#signup-email').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
@@ -42,7 +41,6 @@ test.describe('Create User (Sign Up) Flow', () => {
 
   test('signup page has login link', async ({ page }) => {
     await page.goto('/auth/signup');
-    await page.waitForLoadState('networkidle');
 
     const loginLink = page.locator('a[href="/auth/login"]').first();
     await expect(loginLink).toBeVisible({ timeout: MED_TIMEOUT });

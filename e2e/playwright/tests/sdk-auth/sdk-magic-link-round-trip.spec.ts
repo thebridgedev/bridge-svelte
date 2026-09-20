@@ -73,7 +73,6 @@ async function requestMagicLinkFromSignInPage(
   email: string,
 ): Promise<{ signInPageIdentity: string; successUrl: unknown; status: number }> {
   await page.goto('/auth/login');
-  await page.waitForLoadState('networkidle');
 
   const signInPageIdentity = pageIdentity(page.url());
 
@@ -183,7 +182,6 @@ test.describe('SDK Magic Link round trip', () => {
     // SDK's would. No UI can supply a foreign successUrl, so the SDK's request
     // shape is posted directly — the refusal under test is the API's.
     await page.goto('/auth/login');
-    await page.waitForLoadState('networkidle');
 
     const result = await page.evaluate(
       async ({ apiBaseUrl, username, appId }) => {

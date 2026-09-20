@@ -4,7 +4,6 @@ import { MED_TIMEOUT } from '../../fixtures/timeouts';
 test.describe('SDK Signup', () => {
   test('fill form → submit → "Check your email" shown', async ({ page }) => {
     await page.goto('/auth/signup');
-    await page.waitForLoadState('networkidle');
 
     const emailInput = page.locator('#signup-email');
     await emailInput.waitFor({ state: 'visible', timeout: MED_TIMEOUT });
@@ -24,7 +23,6 @@ test.describe('SDK Signup', () => {
 
   test('shows login link', async ({ page }) => {
     await page.goto('/auth/signup');
-    await page.waitForLoadState('networkidle');
 
     const loginLink = page.locator('a[href="/auth/login"]:has-text("Log in")');
     await loginLink.waitFor({ state: 'visible', timeout: MED_TIMEOUT });

@@ -53,6 +53,7 @@ Implement (or adapt) the following test files. Not every plugin has all features
 - Prefer **pathname** for “redirected to home” (e.g. `pathname === '/'`) so it works with any base URL/port.
 - For **dynamic content** (e.g. profile email), use a stable selector: `page.locator('p').filter({ hasText: testUser.email })` or equivalent. Avoid relying on `data-testid` if you cannot change the demo app markup.
 - Use **timeouts** from a shared fixture (e.g. `MED_TIMEOUT`, `LONG_TIMEOUT`) for network and async UI.
+- **Never wait for `networkidle`.** The demo holds a persistent Centrifugo WebSocket, so the network never goes idle — the wait cannot resolve, and the failure surfaces as `Test timeout of 60000ms exceeded` with the cause one frame away (TBP-605). Wait for what the test is actually waiting for: a visible locator, a `data-loading` / `data-state` attribute, `page.waitForURL(...)`, an explicit `waitForResponse`, or `waitForLoadState('domcontentloaded')` when only the document matters. `scripts/check-no-networkidle.sh` enforces this — it runs from every `test:e2e*` script and on every PR (`.github/workflows/e2e-guards.yml`).
 
 ### 1.6 Environment Variables
 

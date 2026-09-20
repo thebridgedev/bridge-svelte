@@ -22,14 +22,18 @@ test.describe('Subscription Plans', () => {
     // Wait until data-loading is false
     await expect(planSelector).not.toHaveAttribute('data-loading', 'true', { timeout: LONG_TIMEOUT });
 
-    // Should show at least one plan card (or empty state)
+    // Should show at least one plan card (or the empty state).
+    //
+    // Web-first, not a one-shot `count()`/`isVisible()` pair: `not.toHaveAttribute`
+    // above is also satisfied while the attribute is simply *absent*, which it is
+    // for a frame before PlanSelector sets `data-loading="true"`. Reading the counts
+    // once at that instant sees zero cards on a page that renders them a tick later
+    // — the failure then claims there are no plans when the captured snapshot plainly
+    // shows them.
     const planCards = page.locator('[data-bridge-plan-card]');
     const emptyState = page.locator('.bridge-plan-empty');
 
-    const cardCount = await planCards.count();
-    const hasEmpty = await emptyState.isVisible();
-
-    expect(cardCount > 0 || hasEmpty).toBeTruthy();
+    await expect(planCards.first().or(emptyState)).toBeVisible({ timeout: LONG_TIMEOUT });
   });
 
   test('/subscription page shows plan selector in correct state', async ({ authenticatedPage }) => {

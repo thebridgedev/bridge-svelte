@@ -7,14 +7,16 @@
  * Pattern borrowed from bridge-api/e2e/playwright/fixtures/clean-page.ts
  */
 
-import * as path from 'path';
 import { type Browser, type BrowserContext, type Page } from '@playwright/test';
-
-// Base state contains only the app ID in localStorage (no auth tokens).
-const BASE_STATE_PATH = path.resolve(__dirname, '../.auth/base-state.json');
+import { currentWorkerApp } from './worker-app';
 
 /**
  * Creates a fresh browser context with no auth state but with the E2E app ID.
+ *
+ * The app id is this WORKER's app (TBP-604), not a suite-wide one — a context
+ * built here has to boot the demo against the same app the rest of the worker's
+ * test is talking to, or the test would read one app's settings while the
+ * fixtures wrote another's.
  *
  * @param browser - Playwright Browser instance
  * @returns Object with clean context and page, plus a cleanup function
@@ -25,8 +27,8 @@ export async function createCleanContext(browser: Browser): Promise<{
   cleanup: () => Promise<void>;
 }> {
   const context = await browser.newContext({
-    // Include base state (app ID only) but no auth tokens
-    storageState: BASE_STATE_PATH,
+    // Include the worker's app-id state (app ID only) but no auth tokens
+    storageState: currentWorkerApp().storageStatePath,
   });
 
   const page = await context.newPage();

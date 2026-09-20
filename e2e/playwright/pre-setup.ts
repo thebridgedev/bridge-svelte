@@ -24,6 +24,7 @@ import {
   DEFAULT_PROD_API_BASE_URL,
   DEFAULT_STAGE_API_BASE_URL,
 } from './config/environments';
+import { workerAppOwnerEmail } from './fixtures/worker-app';
 
 // Load test env vars
 const rootDir = path.resolve(__dirname, '../..');
@@ -58,7 +59,10 @@ async function preSetup() {
   const apiKey = process.env.PLAYWRIGHT_TEST_API_KEY;
   const testAppDomain = process.env.TEST_APP_DOMAIN || 'BRIDGE_SVELTE_TEST_DASHBOARD';
   const testAppName = process.env.TEST_APP_NAME || 'Bridge Svelte Test Dashboard';
-  const ownerEmail = process.env.TEST_OWNER_EMAIL || 'iman+playwright-test-owner@nebulr.group';
+  // NOT `iman+playwright-test-…`: that is the exact pattern bridge-api's account
+  // purge matches, so an owner named that way is deleted by the suite's own
+  // purge every run and recreated on the next (TBP-604).
+  const ownerEmail = process.env.TEST_OWNER_EMAIL || workerAppOwnerEmail(0);
   const ownerPassword = process.env.TEST_OWNER_PASSWORD || 'helloworld';
 
   // Health check

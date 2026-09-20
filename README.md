@@ -317,16 +317,20 @@ bun run test:e2e:report
 ```
 
 Each command automatically:
-1. Creates/gets the test app and writes the app ID into the demo env file (pre-setup)
+1. Creates/gets the test app via bridge-api (pre-setup)
 2. Starts the demo app with the correct environment config
-3. Runs the tests
-4. Stops the demo app
+3. Resolves the app ID and seeds it into the browser's localStorage (global-setup)
+4. Runs the tests
+5. Stops the demo app
+
+No app ID has to be configured by hand for any environment — `demo/.env.test.stage`
+and `demo/.env.test.prod` deliberately leave `VITE_BRIDGE_APP_ID` unset.
 
 ### How it works
 
-- A **pre-setup script** (`e2e/playwright/pre-setup.ts`) creates the test app via bridge-api and writes `VITE_BRIDGE_APP_ID` into the demo env file before Playwright starts
+- A **pre-setup script** (`e2e/playwright/pre-setup.ts`) creates the test app via bridge-api and writes its id into `e2e/playwright/.auth/base-state.json` before Playwright starts
 - The demo app is started automatically via Playwright's `webServer` config with the correct Vite mode (`--mode test.local`, `--mode test.stage`, or `--mode test.prod`)
-- **Global setup** creates a persistent test app (`BRIDGE_SVELTE_TEST_DASHBOARD`) via bridge-api — completely separate from the Bridge admin app
+- **Global setup** re-resolves the persistent test app (`BRIDGE_SVELTE_TEST_DASHBOARD`) via bridge-api — completely separate from the Bridge admin app — and seeds its id into the browser as `localStorage['bridge:appId']`, which the demo prefers over `VITE_BRIDGE_APP_ID`. If the id cannot be resolved, setup fails naming `VITE_BRIDGE_APP_ID` and the demo env file rather than timing out on a page element
 - Each test suite creates its own **ephemeral test user** and cleans it up after
 - Stale test accounts are purged at the start of each run
 - See [bridge-api/docs/tests/PLAYWRIGHT_PATTERNS.md](../bridge-api/docs/tests/PLAYWRIGHT_PATTERNS.md) for testing guidelines

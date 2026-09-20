@@ -4,10 +4,14 @@
  * Runs BEFORE Playwright starts to:
  * 1. Create or get the persistent test app (idempotent)
  * 2. Configure allowedOrigins so SDK auth works from localhost
- * 3. Write the app ID into the demo env file so the demo app starts with it
+ * 3. Seed the app ID into the Playwright storage state the suite starts from
  *
- * This solves the chicken-and-egg problem: the demo app needs VITE_BRIDGE_APP_ID
- * at startup, but the app ID is only known after calling the test data API.
+ * This solves the chicken-and-egg problem: the demo app needs an app id at
+ * startup, but the id is only known after calling the test data API. The demo
+ * reads it from localStorage (`bridge:appId`), which is why it is written into
+ * a storage-state file rather than into `demo/.env.test.<mode>`. global-setup.ts
+ * re-resolves and re-seeds the same id, so the suite does not depend on this
+ * file being fresh.
  *
  * Usage: bun run e2e/playwright/pre-setup.ts [mode]
  *   mode: test.local (default), test.stage, test.prod
@@ -16,6 +20,10 @@
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  DEFAULT_PROD_API_BASE_URL,
+  DEFAULT_STAGE_API_BASE_URL,
+} from './config/environments';
 
 // Load test env vars
 const rootDir = path.resolve(__dirname, '../..');
@@ -40,11 +48,9 @@ async function preSetup() {
   // Determine test data API URL based on mode
   let testDataApiUrl: string;
   if (mode.includes('prod')) {
-    testDataApiUrl = process.env.PROD_TEST_DATA_API_URL || '';
-    if (!testDataApiUrl) throw new Error('PROD_TEST_DATA_API_URL is required for prod mode');
+    testDataApiUrl = process.env.PROD_TEST_DATA_API_URL || DEFAULT_PROD_API_BASE_URL;
   } else if (mode.includes('stage')) {
-    testDataApiUrl = process.env.STAGE_TEST_DATA_API_URL || '';
-    if (!testDataApiUrl) throw new Error('STAGE_TEST_DATA_API_URL is required for stage mode');
+    testDataApiUrl = process.env.STAGE_TEST_DATA_API_URL || DEFAULT_STAGE_API_BASE_URL;
   } else {
     testDataApiUrl = process.env.LOCAL_TEST_DATA_API_URL || 'http://localhost:3200';
   }

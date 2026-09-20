@@ -8,7 +8,11 @@
  * See bridge-api docs/tests/PLAYWRIGHT_PATTERNS.md for patterns and guidelines.
  */
 
-import { EnvironmentConfig } from '../config/environments';
+import {
+  DEFAULT_PROD_API_BASE_URL,
+  DEFAULT_STAGE_API_BASE_URL,
+  EnvironmentConfig,
+} from '../config/environments';
 
 /**
  * Playwright test account data returned from the API.
@@ -580,9 +584,9 @@ export function createTestDataClientFromEnv(): TestDataClient {
   let testDataApiUrl: string;
 
   if (projectName.includes('prod')) {
-    testDataApiUrl = process.env.PROD_TEST_DATA_API_URL || '';
+    testDataApiUrl = process.env.PROD_TEST_DATA_API_URL || DEFAULT_PROD_API_BASE_URL;
   } else if (projectName.includes('stage')) {
-    testDataApiUrl = process.env.STAGE_TEST_DATA_API_URL || '';
+    testDataApiUrl = process.env.STAGE_TEST_DATA_API_URL || DEFAULT_STAGE_API_BASE_URL;
   } else {
     testDataApiUrl =
       process.env.LOCAL_TEST_DATA_API_URL || 'http://localhost:3200';

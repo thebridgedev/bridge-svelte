@@ -179,9 +179,13 @@ test.describe('SDK Passkey Ceremony (real WebAuthn)', () => {
       // not just a 200 from verify-authentication.
       await page.waitForURL('**/protected', { timeout: LONG_TIMEOUT });
       await expect(page.getByText('You are currently authenticated')).toBeVisible({ timeout: MED_TIMEOUT });
-      // Both the Email and Username fields render this same address — scope to
-      // the Email row specifically so the locator doesn't match two elements.
-      await expect(page.getByText(`Email: ${testUser.email}`)).toBeVisible({ timeout: MED_TIMEOUT });
+      // /protected renders the profile as a <dl>: `<dt>Email</dt><dd>…</dd>`,
+      // so the address never appears in the same element as the label. The old
+      // `getByText('Email: <addr>')` matched the pre-0.4.0-beta.8 markup and has
+      // found nothing since that revamp (TBP-607). Assert the Email row's value.
+      await expect(page.locator('dt:text-is("Email") + dd')).toHaveText(testUser.email, {
+        timeout: MED_TIMEOUT,
+      });
     } finally {
       await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId }).catch(() => {});
     }

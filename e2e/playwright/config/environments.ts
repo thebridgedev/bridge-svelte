@@ -27,6 +27,15 @@ export interface EnvironmentConfig {
 }
 
 /**
+ * Public, fixed endpoints for the hosted environments. Defaults rather than
+ * required settings so a clean checkout can run the stage/prod suites without
+ * uncommenting anything (TBP-606). Override via STAGE_* / PROD_* when pointing
+ * the suite at a different backend.
+ */
+export const DEFAULT_STAGE_API_BASE_URL = 'https://api-stage.thebridge.dev';
+export const DEFAULT_PROD_API_BASE_URL = 'https://api.thebridge.dev';
+
+/**
  * Detect if running inside a Docker container.
  */
 function isRunningInContainer(): boolean {
@@ -114,8 +123,8 @@ export function getEnvironmentConfig(environment: 'local' | 'stage' | 'prod'): E
       return {
         name: 'stage',
         baseUrl,
-        apiBaseUrl: requireEnv('STAGE_API_BASE_URL'),
-        testDataApiUrl: requireEnv('STAGE_TEST_DATA_API_URL'),
+        apiBaseUrl: process.env.STAGE_API_BASE_URL || DEFAULT_STAGE_API_BASE_URL,
+        testDataApiUrl: process.env.STAGE_TEST_DATA_API_URL || DEFAULT_STAGE_API_BASE_URL,
         testDataApiKey,
         appId,
         appDomain,
@@ -129,7 +138,7 @@ export function getEnvironmentConfig(environment: 'local' | 'stage' | 'prod'): E
       return {
         name: 'prod',
         baseUrl,
-        testDataApiUrl: requireEnv('PROD_TEST_DATA_API_URL'),
+        testDataApiUrl: process.env.PROD_TEST_DATA_API_URL || DEFAULT_PROD_API_BASE_URL,
         testDataApiKey,
         appId,
         appDomain,

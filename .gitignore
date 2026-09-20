@@ -101,3 +101,10 @@ project_descriptions/*
 # Playwright
 e2e/playwright/.auth/
 test-reports/
+# Local install output. This repo tracks no lockfile, and an install here
+# routes @nebulr-group through the local registry — so the file it leaves
+# behind carries registry URLs and dev-only versions that must never be
+# committed. Ignored rather than left untracked, so it cannot be swept into a
+# commit by `git add -A`. If we ever decide to track a lockfile, remove this
+# line and commit a freshly generated one from a clean install.
+bun.lock

@@ -336,7 +336,16 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
     // TBP-660 — the TOKEN refresh above is skipped for a self-induced
     // reconnect; the STATE catch-up is not. Losing pushes is a property of
     // the socket swap, whoever caused it, and the catch-up cannot loop.
-    if (_connectedOnce) requestCatchUp();
+    //
+    // TBP-686 — and it runs on the FIRST connect too. It used to be gated on
+    // `_connectedOnce`, which read as "only repair a reconnect" — but the
+    // first connect is exactly where the snapshot goes missing: the server
+    // publishes it fire-and-forget during authorize, before the subscription
+    // is live, so it loses the race and there is nothing to replay. The result
+    // was a signed-in page with a null workspace id, name and branding for the
+    // whole session. `requestCatchUp` already returns early when signed out
+    // and coalesces concurrent calls, so this costs one request per session.
+    requestCatchUp();
     _connectedOnce = true;
     for (const fn of _onOpenSubs) {
       try { fn(); } catch { /* subscriber errors swallowed */ }

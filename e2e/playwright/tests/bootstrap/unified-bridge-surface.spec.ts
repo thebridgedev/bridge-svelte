@@ -80,10 +80,37 @@ test.describe('Unified bridge surface — session.snapshot end-to-end', () => {
   }) => {
     await page.goto('/');
 
+    // Gate on the entitlement MAP arriving, not merely on `window.bridge`
+    // existing.
+    //
+    // This used to return `{ app_active: can('app_active') }` unconditionally.
+    // That object is always truthy, so `waitForFunction` resolved on its very
+    // first tick — the moment `window.bridge` was defined, long before the
+    // session snapshot lands — and asserted the pre-snapshot `false`. It
+    // reported a product defect that a live probe disproved: on stage
+    // `can('app_active')` is true from the first moment the map exists
+    // (TBP-686).
+    //
+    // `entitlements.snapshot` is null until the snapshot arrives, so it is the
+    // honest gate: null means "not loaded", a map means we have a real answer.
+    // Sibling test `:37` already gates this way, which is why it passed.
     const canApp = await page.waitForFunction(
       () => {
-        const w = window as unknown as { bridge?: { tenant: { entitlements: { can: (k: string) => boolean } } } };
+        const w = window as unknown as {
+          bridge?: {
+            tenant: {
+              entitlements: {
+                can: (k: string) => boolean;
+                snapshot: { subscribe: (cb: (v: unknown) => void) => () => void };
+              };
+            };
+          };
+        };
         if (!w.bridge) return null;
+        let map: unknown = null;
+        const unsub = w.bridge.tenant.entitlements.snapshot.subscribe((v) => { map = v; });
+        unsub();
+        if (!map) return null;
         // app_active is the canonical "is the workspace allowed in" entitlement;
         // every active workspace should report true.
         return { app_active: w.bridge.tenant.entitlements.can('app_active') };

@@ -699,7 +699,7 @@ describe('plan, entitlements, user-state and token changes reach the route-guard
 // good — the reconnect our own reauthorize() caused skipped every catch-up.
 // Seen in 1 of 8 stage runs. Every reconnect must now re-read the session
 // snapshot, once, without re-arming the TBP-644 refresh loop.
-describe('every reconnect catches up on state the socket swap may have lost (TBP-660)', () => {
+describe('every connect catches up on state the socket swap may have lost (TBP-660, TBP-686)', () => {
   const SNAPSHOT = {
     app: { branding: { logo: '', name: 'App' } },
     tenant: {
@@ -750,29 +750,42 @@ describe('every reconnect catches up on state the socket swap may have lost (TBP
     const { applyCatchUpSnapshot } = await import('./snapshot-stores.js');
     signedInThenReauthorized();
     await vi.waitFor(() => expect(applyCatchUpSnapshot).toHaveBeenCalledWith(SNAPSHOT));
-    expect(fetchCalls).toHaveLength(1);
-    expect(fetchCalls[0].url).toBe('http://test/session/init');
-    expect(fetchCalls[0].headers.authorization).toBe(`Bearer ${tokenB}`);
-    expect(fetchCalls[0].headers['x-app-id']).toBe('app-1');
+    // Two now: the initial connect catches up as well (TBP-686). This test is
+    // about the reauthorize-induced one, so assert the most recent call.
+    expect(fetchCalls).toHaveLength(2);
+    const reauthCall = fetchCalls[fetchCalls.length - 1];
+    expect(reauthCall.url).toBe('http://test/session/init');
+    expect(reauthCall.headers.authorization).toBe(`Bearer ${tokenB}`);
+    expect(reauthCall.headers['x-app-id']).toBe('app-1');
     // …without re-arming the self-induced token refresh loop (TBP-644).
     expect(_refreshCalls).toBe(0);
   });
 
-  it('the initial connect does not fetch — bootstrap already loaded this state', async () => {
+  // TBP-686 — this used to assert the opposite: "the initial connect does not
+  // fetch — bootstrap already loaded this state". Bootstrap does not. The
+  // server publishes the session snapshot fire-and-forget during authorize,
+  // before the subscription is live, so on a first connect it loses the race
+  // and there is no replay. Measured on stage: 25s after load, tenant id, name,
+  // branding and entitlements were all still null and `/session/init` had never
+  // been requested. The gate meant the one repair we had was reserved for
+  // reconnects, which are exactly the case that did NOT need it.
+  it('the initial connect fetches too — the snapshot push loses the race on first connect', async () => {
     _tokenStore.set({ accessToken: tokenA });
     startBridgeRuntime();
     _onOpen?.();
     await flush();
-    expect(fetchCalls).toHaveLength(0);
+    expect(fetchCalls).toHaveLength(1);
+    expect(fetchCalls[0].url).toBe('http://test/session/init');
+    expect(fetchCalls[0].headers.authorization).toBe(`Bearer ${tokenA}`);
   });
 
   it('a genuine reconnect catches up too, alongside its token refresh', async () => {
     _tokenStore.set({ accessToken: tokenA });
     startBridgeRuntime();
-    _onOpen?.();
-    _onOpen?.();
+    _onOpen?.(); // initial connect — catches up (TBP-686)
+    _onOpen?.(); // a genuine reconnect — catches up and refreshes tokens
     await flush();
-    expect(fetchCalls).toHaveLength(1);
+    expect(fetchCalls).toHaveLength(2);
     expect(_refreshCalls).toBe(1);
   });
 
@@ -841,7 +854,8 @@ describe('every reconnect catches up on state the socket swap may have lost (TBP
     respond = async () => { throw new TypeError('network down'); };
     _onOpen?.();
     await flush();
-    expect(fetchCalls).toHaveLength(2);
+    // Three attempts: initial connect, the reauthorize reconnect, and this one.
+    expect(fetchCalls).toHaveLength(3);
     expect(applyCatchUpSnapshot).not.toHaveBeenCalled();
   });
 
@@ -865,10 +879,12 @@ describe('every reconnect catches up on state the socket swap may have lost (TBP
     await stopBridgeRuntime(); // e.g. <BridgeBootstrap> destroyed
     _tokenStore.set({ accessToken: tokenA });
     startBridgeRuntime(); // the next session on the same module state
-    _onOpen?.(); // its initial connect — no catch-up
+    _onOpen?.(); // its initial connect — one catch-up of its own (TBP-686)
     releaseOld();
     await flush();
     await new Promise((r) => setTimeout(r, 0));
-    expect(fetchCalls).toHaveLength(1);
+    // The old runtime's queued follow-up must NOT add a third: one for the
+    // stopped runtime's in-flight call, one for the new runtime's own connect.
+    expect(fetchCalls).toHaveLength(2);
   });
 });

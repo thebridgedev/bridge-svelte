@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# TBP-605 — static sweep for `networkidle` waits in the Playwright suite.
+# Static sweep for `networkidle` waits in the Playwright suite. (Origin: TBP-605.)
 #
 # Why it matters: the demo holds a persistent Centrifugo WebSocket, so the
 # network never goes idle. `waitForLoadState('networkidle')` therefore cannot
@@ -17,7 +17,7 @@
 #     await page.waitForResponse((r) => r.url().includes('/flags/'))
 #     await page.waitForLoadState('domcontentloaded')   // when only the document matters
 #
-# Escape hatch: append `TBP-605-ALLOW` as a trailing comment on the line, for
+# Escape hatch: append `ALLOW-NETWORKIDLE` as a trailing comment on the line, for
 # the rare page that genuinely holds no socket and where idleness is the thing
 # under test. A survivor must also carry a comment saying why.
 
@@ -40,7 +40,7 @@ EXCLUDES=(
 hits=""
 for root in "${SCAN_ROOTS[@]}"; do
   [ -d "$root" ] || continue
-  found=$(git grep --untracked -nIE "$PATTERN" -- "$root" "${EXCLUDES[@]}" 2>/dev/null | grep -v 'TBP-605-ALLOW' || true)
+  found=$(git grep --untracked -nIE "$PATTERN" -- "$root" "${EXCLUDES[@]}" 2>/dev/null | grep -v 'ALLOW-NETWORKIDLE' || true)
   [ -n "$found" ] && hits="${hits}${found}"$'\n'
 done
 
@@ -48,7 +48,7 @@ hits=$(printf '%s' "$hits" | sed '/^$/d')
 
 if [ -n "$hits" ]; then
   echo "" >&2
-  echo "✗ [TBP-605] networkidle wait(s) found:" >&2
+  echo "✗ networkidle wait(s) found:" >&2
   echo "" >&2
   printf '%s\n' "$hits" | sed 's/^/    /' >&2
   echo "" >&2
@@ -62,9 +62,9 @@ if [ -n "$hits" ]; then
   echo "      await page.waitForLoadState('domcontentloaded');" >&2
   echo "" >&2
   echo "  If idleness is genuinely the thing under test, append a trailing" >&2
-  echo "  'TBP-605-ALLOW' comment on that line and say why." >&2
+  echo "  'ALLOW-NETWORKIDLE' comment on that line and say why." >&2
   echo "" >&2
   exit 1
 fi
 
-echo "✓ [TBP-605] No networkidle waits under: ${SCAN_ROOTS[*]}"
+echo "✓ No networkidle waits under: ${SCAN_ROOTS[*]}"

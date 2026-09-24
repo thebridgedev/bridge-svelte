@@ -19,6 +19,4 @@ jobs:
     with:
       working-directory: bridge-svelte
       # Bun is the default toolchain, so no additional inputs are required
-    secrets:
-      docs-sync-key: ${{ secrets.DOCS_SYNC_KEY }}
 

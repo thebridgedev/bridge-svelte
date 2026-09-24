@@ -130,6 +130,11 @@ const INVERTED_CATALOG: FixturePlan[] = [
 const SELECT_PLAN_STATUS = {
   paymentsEnabled: false,
   shouldSelectPlan: true,
+  // Opt out of the paywall redirect. Without it BridgeBootstrap's reactive
+  // guard sends this plan-less user from /subscription to /welcome as soon as
+  // the status resolves — sometimes after a tab click, and the fresh
+  // selector there starts back on the default interval.
+  paymentsAutoRedirect: false,
   shouldSetupPayments: false,
   paymentFailed: false,
   trial: false,

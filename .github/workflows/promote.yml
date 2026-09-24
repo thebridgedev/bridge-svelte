@@ -1,0 +1,54 @@
+name: Promote to dist-tag
+run-name: Promote ${{ inputs.version }} to ${{ inputs.tag }}
+
+# TBP-694 — move a published version to a dist-tag (next → latest), so the
+# release dashboard can promote or roll back a package without holding the
+# npm token itself. Needs the NPM_TOKEN repository secret with publish rights;
+# the publish workflow itself uses trusted publishing and does not.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version already on the registry, e.g. 0.8.2
+        required: true
+        type: string
+      tag:
+        description: Dist-tag to point at it
+        required: true
+        default: latest
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: 🏷️ Move the dist-tag
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ inputs.version }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::error::NPM_TOKEN secret is not set on this repository; the dist-tag cannot be moved." >&2
+            exit 1
+          fi
+          PKG=$(node -p "require('./package.json').name")
+          if ! npm view "$PKG@$VERSION" version >/dev/null 2>&1; then
+            echo "::error::$PKG@$VERSION is not on the registry" >&2
+            exit 1
+          fi
+          npm dist-tag add "$PKG@$VERSION" "$TAG"
+          npm dist-tag ls "$PKG"

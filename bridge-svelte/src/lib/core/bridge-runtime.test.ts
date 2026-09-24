@@ -47,6 +47,8 @@ function resetSpies() {
   _refreshCalls = 0;
   _refreshImpl = undefined;
   _refreshThrows = false;
+  _quotaSnapshots.clear();
+  _quotaApplied.length = 0;
 }
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
@@ -74,6 +76,31 @@ vi.mock('../client/stores/config.store.js', () => ({
 let _billingHandlers: Record<string, (msg: unknown) => void> | undefined;
 // What the runtime handed auth-core's EntitlementsStore (TBP-660 catch-up).
 const _entitlementsApplied: unknown[] = [];
+
+// As much of auth-core's QuotaStore as the runtime touches (TBP-686). Two
+// details are load-bearing and mirror the real store:
+//   • `getAll()` hands back a FRESH Map every call, so the quota catch-up's
+//     "did a push win the race?" check can only compare snapshot identity.
+//   • every apply writes a NEW snapshot object, which is what makes that
+//     identity comparison mean "this metric changed", not "the map changed".
+type QuotaSnap = { metric: string; used: number; limit: number; remaining: number };
+const _quotaSnapshots = new Map<string, QuotaSnap>();
+// Every applyInitialSnapshot() the runtime performed, in order.
+const _quotaApplied: Array<{ metric: string; snapshot: unknown }> = [];
+const _quotaStore = {
+  configure: vi.fn(),
+  getAll: () => new Map(_quotaSnapshots),
+  applyInitialSnapshot: (metric: string, snapshot: QuotaSnap | null) => {
+    _quotaApplied.push({ metric, snapshot });
+    if (!snapshot) _quotaSnapshots.delete(metric);
+    else _quotaSnapshots.set(metric, { ...snapshot });
+  },
+  // The live `quota.updated` path — used by tests to race a push against an
+  // in-flight REST re-read.
+  applyQuotaUpdated: (msg: QuotaSnap) => {
+    _quotaSnapshots.set(msg.metric, { ...msg });
+  },
+};
 
 vi.mock('./snapshot-stores.js', () => ({
   applySessionSnapshot: vi.fn(),
@@ -108,7 +135,7 @@ vi.mock('@nebulr-group/bridge-auth-core', () => {
   return {
     RealtimeClient: FakeRealtimeClient,
     useBridge: () => ({
-      quotas: { configure: vi.fn() },
+      quotas: _quotaStore,
       attachToRealtimeClient: vi.fn(),
       entitlementsStore: {
         applyEntitlementsChanged: (snapshot: unknown) => { _entitlementsApplied.push(snapshot); },
@@ -716,7 +743,10 @@ describe('every connect catches up on state the socket swap may have lost (TBP-6
 
   let realFetch: typeof fetch;
   let fetchCalls: Array<{ url: string; headers: Record<string, string> }>;
-  let respond: () => Promise<Response>;
+  // Receives the requested URL so a test can answer `/session/init` and
+  // `/usage/quota/:metric` differently. Tests that only care about the session
+  // snapshot ignore the argument.
+  let respond: (url: string) => Promise<Response>;
 
   beforeEach(async () => {
     realFetch = globalThis.fetch;
@@ -724,7 +754,7 @@ describe('every connect catches up on state the socket swap may have lost (TBP-6
     _entitlementsApplied.length = 0;
     respond = async () => ok(SNAPSHOT);
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-      fetchCalls.push({ url: String(input), headers: Object.fromEntries(new Headers(init?.headers).entries()) });      return respond();
+      fetchCalls.push({ url: String(input), headers: Object.fromEntries(new Headers(init?.headers).entries()) });      return respond(String(input));
     }) as typeof fetch;
     const { applyCatchUpSnapshot } = await import('./snapshot-stores.js');
     vi.mocked(applyCatchUpSnapshot).mockReset();
@@ -886,5 +916,110 @@ describe('every connect catches up on state the socket swap may have lost (TBP-6
     // The old runtime's queued follow-up must NOT add a third: one for the
     // stopped runtime's in-flight call, one for the new runtime's own connect.
     expect(fetchCalls).toHaveLength(2);
+  });
+
+  // ── Quota catch-up (TBP-686) ─────────────────────────────────────────────
+  //
+  // Regression: a `quota.updated` push lost across a socket swap was never
+  // repaired. `/session/init` carries no quota slice, and auth-core's
+  // QuotaStore hydrates a metric exactly once (lazy `GET /usage/quota/:metric`
+  // on first read) and thereafter only moves on live pushes — so one dropped
+  // push freezes `used` for the rest of the session, silently. Seen on stage in
+  // `metered-display` / `metered-plan-switch`, where a token refresh
+  // reauthorized while the server was publishing.
+
+  const QUOTA_URL = 'http://test/usage/quota/';
+  const hydrated = (metric: string, used: number): QuotaSnap => ({
+    metric,
+    used,
+    limit: 100,
+    remaining: 100 - used,
+  });
+  // Answers the quota GET with `fresh` and the session GET with the snapshot.
+  const answerQuotaWith = (fresh: QuotaSnap) => {
+    respond = async (url) => (url.includes('/usage/quota/') ? ok(fresh) : ok(SNAPSHOT));
+  };
+
+  it('re-reads every hydrated quota metric on open and applies the answer to the store', async () => {
+    _quotaStore.applyInitialSnapshot('ai_completions', hydrated('ai_completions', 10));
+    _quotaApplied.length = 0; // that was the fixture's own hydration, not the runtime's
+    answerQuotaWith(hydrated('ai_completions', 42));
+
+    _tokenStore.set({ accessToken: tokenA });
+    startBridgeRuntime();
+    _onOpen?.();
+
+    await vi.waitFor(() => expect(_quotaApplied).toHaveLength(1));
+    // Alongside the session snapshot — not instead of it.
+    expect(fetchCalls.map((c) => c.url).sort()).toEqual([
+      'http://test/session/init',
+      `${QUOTA_URL}ai_completions`,
+    ]);
+    const quotaCall = fetchCalls.find((c) => c.url.startsWith(QUOTA_URL))!;
+    expect(quotaCall.headers.authorization).toBe(`Bearer ${tokenA}`);
+    expect(quotaCall.headers['x-app-id']).toBe('app-1');
+    // The REST answer reached auth-core's store: `used` is no longer frozen.
+    expect(_quotaApplied[0]).toEqual({
+      metric: 'ai_completions',
+      snapshot: hydrated('ai_completions', 42),
+    });
+    expect(_quotaStore.getAll().get('ai_completions')).toMatchObject({ used: 42 });
+  });
+
+  // The cost gate. Every neighbouring test above asserts an exact fetch count
+  // and `fetchCalls[0].url === 'http://test/session/init'`; an app that never
+  // read a quota must stay at exactly that.
+  it('an app that never read a quota issues no quota request at all', async () => {
+    expect(_quotaStore.getAll().size).toBe(0);
+    _tokenStore.set({ accessToken: tokenA });
+    startBridgeRuntime();
+    _onOpen?.();
+    await flush();
+    expect(fetchCalls).toHaveLength(1);
+    expect(fetchCalls[0].url).toBe('http://test/session/init');
+    expect(fetchCalls.some((c) => c.url.startsWith(QUOTA_URL))).toBe(false);
+    expect(_quotaApplied).toEqual([]);
+  });
+
+  it('a live push that lands mid-flight wins — the REST answer is discarded', async () => {
+    _quotaStore.applyInitialSnapshot('ai_completions', hydrated('ai_completions', 10));
+    _quotaApplied.length = 0;
+    let releaseQuota: (() => void) | undefined;
+    respond = (url) =>
+      url.includes('/usage/quota/')
+        ? new Promise<Response>((resolve) => {
+            releaseQuota = () => resolve(ok(hydrated('ai_completions', 42)));
+          })
+        : Promise.resolve(ok(SNAPSHOT));
+
+    _tokenStore.set({ accessToken: tokenA });
+    startBridgeRuntime();
+    _onOpen?.();
+    await vi.waitFor(() => expect(releaseQuota).toBeTypeOf('function'));
+
+    // A `quota.updated` push lands while the GET is still out. It is NEWER
+    // than the answer coming back, so the answer must not overwrite it.
+    _quotaStore.applyQuotaUpdated(hydrated('ai_completions', 77));
+    releaseQuota!();
+    await flush();
+
+    expect(_quotaApplied).toEqual([]);
+    expect(_quotaStore.getAll().get('ai_completions')).toMatchObject({ used: 77 });
+  });
+
+  it('URL-encodes the metric name in the path', async () => {
+    const metric = 'ai/completions v2';
+    _quotaStore.applyInitialSnapshot(metric, hydrated(metric, 10));
+    _quotaApplied.length = 0;
+    answerQuotaWith(hydrated(metric, 42));
+
+    _tokenStore.set({ accessToken: tokenA });
+    startBridgeRuntime();
+    _onOpen?.();
+
+    await vi.waitFor(() => expect(_quotaApplied).toHaveLength(1));
+    const quotaCall = fetchCalls.find((c) => c.url.startsWith(QUOTA_URL))!;
+    expect(quotaCall.url).toBe(`${QUOTA_URL}ai%2Fcompletions%20v2`);
+    expect(_quotaApplied[0].metric).toBe(metric);
   });
 });

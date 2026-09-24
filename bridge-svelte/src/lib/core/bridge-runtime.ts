@@ -44,6 +44,7 @@
 import {
   RealtimeClient,
   type FlagChange,
+  type QuotaSnapshot,
   type RealtimeClientConfig,
   type RealtimeStatus,
   type SessionSnapshotMessage,
@@ -296,6 +297,97 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
       // Best-effort: the next reconnect or push repairs it.
     }
   };
+  // `GET /usage/quota/:metric` — the same body auth-core's own lazy hydrate
+  // reads, and the same shape `applyInitialSnapshot` takes. `policy` and the
+  // TBP-275 overage fields are optional because an older bridge-api omits them.
+  type QuotaCatchUpBody =
+    | (Omit<QuotaSnapshot, 'percent_used' | 'policy' | 'label'> & {
+        policy?: 'hard' | 'metered';
+      })
+    | null;
+
+  // TBP-686 — the same repair, for the one live payload the session snapshot
+  // does not carry: `quota.updated`.
+  //
+  // `GET /session/init` has no quota slice (nothing in bridge-api's
+  // session-snapshot types mentions it), and auth-core's QuotaStore fills
+  // itself from exactly two places: a one-shot lazy `GET /usage/quota/:metric`
+  // on the FIRST read of a metric, and live `quota.updated` pushes. It never
+  // re-reads — `ensureHydrated()` returns the cached snapshot on every
+  // subsequent call. So a push lost across a socket swap leaves `used` frozen
+  // at whatever it was when the metric was first read, for the rest of the
+  // session, with no error anywhere: the ingest returns 201, the server
+  // computes correctly and AppSync accepts the publish.
+  //
+  // That is what `metered-display` and `metered-plan-switch` hit on stage: a
+  // token refresh reauthorized mid-test, and the server published `used`
+  // 5-160ms before the replacement subscription was acknowledged.
+  //
+  // The ordering guarantee is the one stated above for the session snapshot,
+  // and it is what makes this deterministic rather than lucky: setOnOpen fires
+  // from markOpen(), which AppSync's `subscribe_success` drives — so anything
+  // published before this point is already durable and the REST read sees it,
+  // and anything published after arrives on the live socket.
+  //
+  // Scope: only metrics the store has already hydrated. A page that never
+  // asked about a metric has nothing stale to repair, so this costs one GET
+  // per watched metric per open and nothing at all for apps that do not use
+  // quotas.
+  const catchUpQuotaSnapshots = async (): Promise<void> => {
+    if (_realtime !== rt) return;
+    const token = _currentAuthToken;
+    const doFetch = _originalFetch ?? globalThis.fetch;
+    if (!token || typeof doFetch !== 'function') return;
+
+    // One try over BOTH the lookup and the read: `requestCatchUp` fires this
+    // without a `.catch()`, so anything thrown out here becomes an unhandled
+    // rejection in the host app rather than a swallowed best-effort repair.
+    let quotas: ReturnType<typeof useBridge>['quotas'] | undefined;
+    let metrics: string[] = [];
+    try {
+      quotas = useBridge().quotas;
+      metrics = [...quotas.getAll().keys()];
+    } catch {
+      return; // useBridge() not constructed, or no quota surface — nothing to repair.
+    }
+    if (metrics.length === 0) return;
+
+    let appId = config.appId;
+    try {
+      appId = getBridgeAuth().getApiContext().appId ?? appId;
+    } catch {
+      // BridgeAuth not constructed — config.appId it is.
+    }
+    const base = (config.apiBaseUrl ?? 'https://api.thebridge.dev').replace(/\/+$/, '');
+
+    await Promise.all(
+      metrics.map(async (metric) => {
+        // The value this repair is replacing. If a live push lands while the
+        // GET is in flight, the push is NEWER than the answer coming back and
+        // must win — otherwise the repair itself would reintroduce a stale
+        // `used`, which is the very bug it exists to fix.
+        const before = quotas!.getAll().get(metric);
+        try {
+          const res = await doFetch(`${base}/usage/quota/${encodeURIComponent(metric)}`, {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${token}`, 'x-app-id': appId ?? '' },
+          });
+          if (!res.ok) return;
+          const data = (await res.json()) as QuotaCatchUpBody;
+          // Stopped, or the session changed while this was in flight: the
+          // answer describes a workspace we no longer have.
+          if (_realtime !== rt || _currentAuthToken !== token) return;
+          if (quotas!.getAll().get(metric) !== before) return; // a push won the race
+          // `null` is a real answer — "no quota configured for this metric" —
+          // and applyInitialSnapshot drops the cached entry for it.
+          quotas!.applyInitialSnapshot(metric, data ?? null);
+        } catch {
+          // Best-effort, per metric: one failure must not skip the others.
+        }
+      }),
+    );
+  };
+
   const requestCatchUp = (): void => {
     if (!_currentAuthToken) return; // signed out: no tenant or user scope to fetch
     if (_catchUpInFlight) {
@@ -303,7 +395,13 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
       return;
     }
     _catchUpInFlight = true;
-    void catchUpSessionSnapshot().finally(() => {
+    // Both repairs ride the one in-flight/queued gate, so an open storm still
+    // costs one round of requests, and neither can starve the other.
+    void Promise.all([catchUpSessionSnapshot(), catchUpQuotaSnapshots()]).catch(() => {
+      // Both halves are already best-effort internally; this is the backstop
+      // that keeps a repair failure from surfacing as an unhandled rejection
+      // in the consuming app. `.finally` below still drains the queue.
+    }).finally(() => {
       _catchUpInFlight = false;
       if (_catchUpQueued) {
         _catchUpQueued = false;

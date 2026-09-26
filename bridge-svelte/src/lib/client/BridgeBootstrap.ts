@@ -22,6 +22,7 @@ import {
 import { logger } from '../shared/logger.js';
 import type { BridgeConfig } from '../shared/types/config.js';
 import { bridgeConfig, getConfig, getRouteGuardConfig } from './stores/config.store.js';
+import { resolveBridgeConfig } from './resolve-config.js';
 
 // TBP-653 — `bridgeBootstrap` used to short-circuit on every call after the
 // first completed one, and the route guard lived below that return. SvelteKit
@@ -46,12 +47,94 @@ const _configuredPromise = new Promise<void>((resolve) => {
 // cover that ordering, not a missing bootstrap.
 const CONFIGURE_TIMEOUT_MS = 10_000;
 
-export async function bridgeBootstrap(
+/**
+ * Options for `bridgeBootstrap()`: any `BridgeConfig` field plus the route
+ * rules. Every field is optional.
+ *
+ * Precedence: an option you pass explicitly wins over the environment
+ * (`VITE_BRIDGE_APP_ID`, `VITE_BRIDGE_API_BASE_URL`, `VITE_BRIDGE_HOSTED_URL`,
+ * `VITE_BRIDGE_DEBUG`), and the environment wins over the built-in default.
+ */
+export type BridgeBootstrapOptions = Partial<BridgeConfig> & Partial<RouteGuardConfig>;
+
+/** What the `load` returned by `bridgeBootstrap()` hands to your layout. */
+export interface BridgeBootstrapData {
+  /** The effective config, after options, environment and defaults. */
+  config: BridgeConfig;
+  /** The route rules Bridge is enforcing. */
+  routeConfig: RouteGuardConfig;
+}
+
+/** The SvelteKit `load` function `bridgeBootstrap()` returns. */
+export type BridgeBootstrapLoad = (event: {
+  url: URL;
+  fetch: typeof globalThis.fetch;
+}) => Promise<BridgeBootstrapData>;
+
+/**
+ * Start Bridge from your root layout. Returns the layout's `load` function.
+ *
+ * The app id and addresses come from `VITE_BRIDGE_APP_ID` (and
+ * `VITE_BRIDGE_API_BASE_URL` for a stage or local app); anything passed here
+ * wins over the environment. With no app id anywhere it throws rather than
+ * guessing.
+ *
+ * @example
+ * // src/routes/+layout.ts
+ * import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
+ * export const ssr = false;
+ * export const load = bridgeBootstrap({ rules: [{ match: '/', public: true }] });
+ */
+export function bridgeBootstrap(options?: BridgeBootstrapOptions): BridgeBootstrapLoad;
+/**
+ * @deprecated Use `export const load = bridgeBootstrap({ rules })` — it reads
+ * the app id and addresses from the `VITE_BRIDGE_*` variables. This positional
+ * form keeps working unchanged and reads no environment.
+ */
+export function bridgeBootstrap(
+  url: URL,
+  config: BridgeConfig | string,
+  routeConfig?: RouteGuardConfig,
+  kitFetch?: typeof globalThis.fetch
+): Promise<{ flagsReady: Promise<void> }>;
+export function bridgeBootstrap(
+  urlOrOptions?: URL | BridgeBootstrapOptions,
+  config?: BridgeConfig | string,
+  routeConfig?: RouteGuardConfig,
+  kitFetch?: typeof globalThis.fetch
+): BridgeBootstrapLoad | Promise<{ flagsReady: Promise<void> }> {
+  if (urlOrOptions instanceof URL) {
+    if (config === undefined) {
+      throw new Error('[bridge] bridgeBootstrap(url, config) was called without a config.');
+    }
+    return runBootstrap(urlOrOptions, config, routeConfig, kitFetch);
+  }
+  return createBootstrapLoad(urlOrOptions ?? {});
+}
+
+function createBootstrapLoad(options: BridgeBootstrapOptions): BridgeBootstrapLoad {
+  const { rules, defaultAccess, returnTo, ...configOptions } = options;
+  const routeConfig: RouteGuardConfig = {
+    rules: rules ?? [],
+    defaultAccess: defaultAccess ?? 'protected',
+    ...(returnTo ? { returnTo } : {}),
+  };
+  // Resolved on the first call, not at import: a missing app id must surface
+  // as a load error the developer sees, and the environment is only final then.
+  let resolved: BridgeConfig | null = null;
+  return async ({ url, fetch }) => {
+    resolved ??= resolveBridgeConfig(configOptions);
+    await runBootstrap(url, resolved, routeConfig, fetch);
+    return { config: getConfig(), routeConfig };
+  };
+}
+
+async function runBootstrap(
   url: URL,
   config: BridgeConfig | string,
   routeConfig: RouteGuardConfig = { rules: [], defaultAccess: 'protected' },
   kitFetch?: typeof globalThis.fetch
-) {
+): Promise<{ flagsReady: Promise<void> }> {
   // Until one call has completed, a call may be the one that lands on a
   // callback URL or needs the no-flash paywall redirect. Afterwards those are
   // owned by <BridgeBootstrap> (reactive paywall) — same split as before.
@@ -143,7 +226,7 @@ async function waitForConfigured(): Promise<void> {
         reject(
           new Error(
             '[bridge] assertAuthorized() ran but bridgeBootstrap() never configured the SDK. ' +
-              'Call bridgeBootstrap(url, config, routeConfig) in your root +layout.ts load.'
+              'Add `export const load = bridgeBootstrap({ rules })` to your root +layout.ts.'
           )
         ),
       CONFIGURE_TIMEOUT_MS

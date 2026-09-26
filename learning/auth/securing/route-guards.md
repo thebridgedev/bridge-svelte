@@ -8,39 +8,25 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 # Route guards
 
-Pass `routeConfig` as the third argument to `bridgeBootstrap` in `+layout.ts`. The `BridgeBootstrap` component in `+layout.svelte` handles navigation guards automatically.
+Pass your route rules to `bridgeBootstrap` in `+layout.ts`. The `BridgeBootstrap` component in `+layout.svelte` handles navigation guards automatically and renders your app only once Bridge is ready.
 
 <Tabs>
 <TabItem label="+layout.ts">
 
 ```ts
-import type { LayoutLoad } from './$types';
-import type { BridgeConfig, RouteGuardConfig } from '@nebulr-group/bridge-svelte';
 import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
 
 export const ssr = false;
 
-export const load: LayoutLoad = async ({ url }) => {
-  const config: BridgeConfig = {
-    appId: import.meta.env.VITE_BRIDGE_APP_ID,
-    loginRoute: '/auth/login',
-    // The SDK reads no environment variables. Pass the API URL from your own
-    // env; without it every request goes to production (https://api.thebridge.dev).
-    apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
-  };
-
-  const routeConfig: RouteGuardConfig = {
-    rules: [
-      { match: '/', public: true },
-      { match: new RegExp('^/auth($|/)'), public: true },
-      { match: '/beta/*', featureFlag: 'beta_feature', redirectTo: '/' },
-    ],
-    defaultAccess: 'protected',
-  };
-
-  await bridgeBootstrap(url, config, routeConfig);
-  return {};
-};
+export const load = bridgeBootstrap({
+  loginRoute: '/auth/login',
+  rules: [
+    { match: '/', public: true },
+    { match: new RegExp('^/auth($|/)'), public: true },
+    { match: '/beta/*', featureFlag: 'beta_feature', redirectTo: '/' },
+  ],
+  defaultAccess: 'protected',
+});
 ```
 
 </TabItem>
@@ -50,20 +36,11 @@ export const load: LayoutLoad = async ({ url }) => {
 <script lang="ts">
   import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
   let { children } = $props();
-  let ready = $state(false);
-
-  function onBootstrapComplete() {
-    ready = false;
-    // The tick after BridgeBootstrap resolves, render children
-    ready = true;
-  }
 </script>
 
-<BridgeBootstrap {onBootstrapComplete} />
-
-{#if ready}
+<BridgeBootstrap>
   {@render children()}
-{/if}
+</BridgeBootstrap>
 ```
 
 </TabItem>
@@ -85,8 +62,8 @@ There are two guards, and they cover different moments:
 
 | Guard | Runs | Covers |
 |-------|------|--------|
-| `bridgeBootstrap(url, …)` in the root `+layout.ts` | In `load`, on **every** navigation (SvelteKit re-runs the root layout load whenever the URL changes) | The first page load, client-side navigations, and redirects thrown by your own `load` functions — for example a public `/` whose `+page.ts` redirects into the app |
-| `<BridgeBootstrap />` in the root `+layout.svelte` | Client-side, once the layout has mounted | Client-side navigations (a signed-out visitor is cancelled before the protected page loads), and re-checking the **current** page when a route flag, the plan, entitlements or the session change. It is **not** live during the first navigation of a page load — the load guard above covers that |
+| `load = bridgeBootstrap({ … })` in the root `+layout.ts` | In `load`, on **every** navigation (SvelteKit re-runs the root layout load whenever the URL changes) | The first page load, client-side navigations, and redirects thrown by your own `load` functions — for example a public `/` whose `+page.ts` redirects into the app |
+| `<BridgeBootstrap>` in the root `+layout.svelte` | Client-side, once the layout has mounted | Client-side navigations (a signed-out visitor is cancelled before the protected page loads), and re-checking the **current** page when a route flag, the plan, entitlements or the session change. It is **not** live during the first navigation of a page load — the load guard above covers that |
 
 Both fail closed: if a decision cannot be reached (a network error while evaluating a flag, broken route config), a protected route is denied rather than rendered. After a plan upgrade or sign-in, route verdicts are re-evaluated straight away rather than served from cache.
 
@@ -161,13 +138,13 @@ Your `loginRoute` is excluded automatically, so a bounce through the login page
 never comes back pointing at itself. Exclude the rest of your auth flow too:
 
 ```ts
-const routeConfig: RouteGuardConfig = {
+export const load = bridgeBootstrap({
   rules: [ /* … */ ],
   defaultAccess: 'protected',
   returnTo: {
     exclude: [new RegExp('^/auth($|/)')],
   },
-};
+});
 ```
 
 ### Turning it off

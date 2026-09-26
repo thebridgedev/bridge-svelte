@@ -149,7 +149,7 @@ const stop = onBridgeRealtimeStatus((status) => {
 });
 ```
 
-**Dev badge.** In development builds, `<BridgeBootstrap />` mounts a small "Live updates off — why?" badge in the corner whenever live updates are refused (`unauthorized`), connected but receiving nothing (`degraded`), or still retrying after 30 seconds. It shows the reason, whose side it is, a docs link and the support reference, and can be dismissed until a different problem appears. It never renders in production builds. Turn it off in development too with `devBadge: false` in the config you pass to `bridgeBootstrap`. If you render your own bootstrap instead of `<BridgeBootstrap />`, the badge is exported as `RealtimeDevBadge`.
+**Dev badge.** In development builds, `<BridgeBootstrap>` mounts a small "Live updates off — why?" badge in the corner whenever live updates are refused (`unauthorized`), connected but receiving nothing (`degraded`), or still retrying after 30 seconds. It shows the reason, whose side it is, a docs link and the support reference, and can be dismissed until a different problem appears. It never renders in production builds. Turn it off in development too with `devBadge: false` in the config you pass to `bridgeBootstrap`. If you render your own bootstrap instead of `<BridgeBootstrap>`, the badge is exported as `RealtimeDevBadge`.
 
 ### Relationship to the module-level stores
 

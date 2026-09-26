@@ -26,30 +26,45 @@ npm install @nebulr-group/bridge-svelte
 
 ## Configuration
 
-The Bridge SvelteKit SDK is configured by passing a `BridgeConfig` object to the `bridgeBootstrap` function in your root `+layout.ts` file.
+Start Bridge from your root layout with one call. It reads the app id and addresses from your `.env`:
 
-Here's an example:
+```env
+VITE_BRIDGE_APP_ID=your_app_id
+# Only for a stage or local app:
+# VITE_BRIDGE_API_BASE_URL=https://api-stage.thebridge.dev
+```
 
 ```typescript
-import { bridgeBootstrap, type BridgeConfig } from '@nebulr-group/bridge-svelte';
+// src/routes/+layout.ts
+import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
 
-export const load = async ({ url }) => {
-  const config: BridgeConfig = {
-    appId: 'your_app_id',
-    callbackUrl: 'http://localhost:5173/auth/oauth-callback',
-    defaultRedirectRoute: '/protected',
-    debug: true,
-  };
+export const ssr = false;
 
-  await bridgeBootstrap(url, config);
-};
+export const load = bridgeBootstrap({
+  rules: [{ match: '/', public: true }],
+  defaultAccess: 'protected',
+});
 ```
+
+```svelte
+<!-- src/routes/+layout.svelte -->
+<script lang="ts">
+  import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
+  let { children } = $props();
+</script>
+
+<BridgeBootstrap>
+  {@render children()}
+</BridgeBootstrap>
+```
+
+`<BridgeBootstrap>` renders its children only once Bridge is ready. An option passed to `bridgeBootstrap()` explicitly wins over the environment (`VITE_BRIDGE_APP_ID`, `VITE_BRIDGE_API_BASE_URL`, `VITE_BRIDGE_HOSTED_URL`, `VITE_BRIDGE_DEBUG`), which wins over the default. With no app id anywhere, Bridge refuses to start and names `VITE_BRIDGE_APP_ID`.
 
 ### Essential Configuration
 
 These are the primary options you will need to configure for your application.
 
-*   `appId` (**required** `string`): Your unique application identifier from the Bridge dashboard.
+*   `appId` (**required** `string`): Your unique application identifier from the Bridge dashboard. Read from `VITE_BRIDGE_APP_ID` unless passed.
 *   `callbackUrl` (`string`): The URL that Bridge will redirect to after a user successfully authenticates.
     *   **Default**: `window.location.origin + '/auth/oauth-callback'`
 *   `defaultRedirectRoute` (`string`): The route to redirect users to after a successful login.
@@ -61,7 +76,7 @@ These are the primary options you will need to configure for your application.
 
 These options are typically only needed for development or advanced use cases. In most production scenarios, you can rely on their default values.
 
-*   `apiBaseUrl` (`string`): The root URL of the Bridge API. All service URLs are derived from this.
+*   `apiBaseUrl` (`string`): The root URL of the Bridge API. All service URLs are derived from this. Read from `VITE_BRIDGE_API_BASE_URL` unless passed.
     *   **Default**: `'https://api.thebridge.dev'`
 *   `loginRoute` (`string`): The route within your application that serves as the login page. The SDK will redirect users here if they attempt to access a protected route without being authenticated.
     *   **Default**: `'/login'`

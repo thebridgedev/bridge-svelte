@@ -418,3 +418,73 @@ describe('the Stripe callback only follows same-origin redirects (TBP-659)', () 
     expect(await landing('stripe_cancel=1')).toBe(DEFAULT);
   });
 });
+
+// TBP-695 — `bridgeBootstrap(options?)` returns the root layout's `load`, reads
+// the VITE_BRIDGE_* variables, and the positional form keeps working.
+describe('bridgeBootstrap(options) returns the layout load (TBP-695)', () => {
+  const event = (path: string) => ({ url: at(path), fetch: globalThis.fetch });
+
+  it('with no arguments, starts from the environment and hands back the effective config', async () => {
+    vi.stubEnv('VITE_BRIDGE_APP_ID', 'env-app');
+    vi.stubEnv('VITE_BRIDGE_API_BASE_URL', 'https://api-stage.thebridge.dev');
+    try {
+      const { bridgeBootstrap } = await load();
+      const layoutLoad = bridgeBootstrap();
+      expect(typeof layoutLoad).toBe('function');
+      h.s.authenticated = true;
+      const data = await layoutLoad(event('/anything'));
+      expect(data.config.appId).toBe('env-app');
+      expect(data.config.apiBaseUrl).toBe('https://api-stage.thebridge.dev');
+      expect(data.routeConfig).toEqual({ rules: [], defaultAccess: 'protected' });
+      expect(h.s.calls.initBridge).toBe(1);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('an explicit option wins over the environment', async () => {
+    vi.stubEnv('VITE_BRIDGE_APP_ID', 'env-app');
+    vi.stubEnv('VITE_BRIDGE_API_BASE_URL', 'https://api-stage.thebridge.dev');
+    try {
+      const { bridgeBootstrap } = await load();
+      h.s.authenticated = true;
+      const data = await bridgeBootstrap({ appId: 'explicit-app', rules: ROUTES.rules })(event('/'));
+      expect(data.config.appId).toBe('explicit-app');
+      expect(data.config.apiBaseUrl).toBe('https://api-stage.thebridge.dev');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('enforces the rules it was given on every navigation', async () => {
+    const { bridgeBootstrap } = await load();
+    const layoutLoad = bridgeBootstrap({ ...SDK_CONFIG, ...ROUTES });
+    await layoutLoad(event('/'));
+    await expectLogin(layoutLoad(event('/admin?tab=1')), '/admin?tab=1');
+  });
+
+  it('refuses to start without an app id and says which variable is missing', async () => {
+    vi.stubEnv('VITE_BRIDGE_APP_ID', '');
+    try {
+      const { bridgeBootstrap } = await load();
+      await expect(bridgeBootstrap({ rules: [] })(event('/'))).rejects.toThrow(/VITE_BRIDGE_APP_ID/);
+      expect(h.s.calls.initBridge).toBe(0);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('the deprecated positional form still works and still returns flagsReady', async () => {
+    const { bridgeBootstrap } = await load();
+    h.s.authenticated = true;
+    const result = await bridgeBootstrap(at('/'), SDK_CONFIG, ROUTES);
+    expect(result.flagsReady).toBeInstanceOf(Promise);
+    await expectLogin(
+      (async () => {
+        h.s.authenticated = false;
+        await bridgeBootstrap(at('/admin'), SDK_CONFIG, ROUTES);
+      })(),
+      '/admin',
+    );
+  });
+});

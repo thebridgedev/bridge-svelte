@@ -10,35 +10,21 @@ npm i @nebulr-group/bridge-svelte
 
 ## 2. Configuration (`+layout.ts`)
 
-Initialize Bridge in your root layout load function. For hosted auth, you only need `appId` and a `routeConfig`. No `loginRoute` is needed because Bridge redirects unauthenticated users to the hosted login page automatically.
+Start Bridge from your root layout with one call. The app id comes from `VITE_BRIDGE_APP_ID` in your `.env` (see step 6); for hosted auth you only add route rules. No `loginRoute` is needed because Bridge redirects unauthenticated users to the hosted login page automatically.
 
 ```ts
 // src/routes/+layout.ts
-import type { LayoutLoad } from './$types';
-import type { BridgeConfig, RouteGuardConfig } from '@nebulr-group/bridge-svelte';
 import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
 
 export const ssr = false;
 
-export const load: LayoutLoad = async ({ url }) => {
-  const config: BridgeConfig = {
-    appId: import.meta.env.VITE_BRIDGE_APP_ID,
-    // The SDK reads no environment variables. Pass the API URL from your own
-    // env; without it every request goes to production (https://api.thebridge.dev).
-    apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
-  };
-
-  const routeConfig: RouteGuardConfig = {
-    rules: [
-      { match: '/', public: true },
-      { match: new RegExp('^/auth($|/)'), public: true },
-    ],
-    defaultAccess: 'protected',
-  };
-
-  await bridgeBootstrap(url, config, routeConfig);
-  return {};
-};
+export const load = bridgeBootstrap({
+  rules: [
+    { match: '/', public: true },
+    { match: new RegExp('^/auth($|/)'), public: true },
+  ],
+  defaultAccess: 'protected',
+});
 ```
 
 Key points:
@@ -48,7 +34,7 @@ Key points:
 
 ## 3. Bootstrap component (`+layout.svelte`)
 
-Add the `BridgeBootstrap` component to your root layout. Use the `onBootstrapComplete` callback to hide content until auth state is resolved.
+Wrap your app in the `BridgeBootstrap` component. It renders its children only once Bridge is ready, so you write no loading logic yourself.
 
 ```svelte
 <!-- src/routes/+layout.svelte -->
@@ -57,18 +43,11 @@ Add the `BridgeBootstrap` component to your root layout. Use the `onBootstrapCom
   import '@nebulr-group/bridge-svelte/styles';
 
   let { children } = $props();
-  let ready = $state(false);
-
-  function onBootstrapComplete() {
-    ready = true;
-  }
 </script>
 
-<BridgeBootstrap {onBootstrapComplete} />
-
-{#if ready}
+<BridgeBootstrap>
   {@render children()}
-{/if}
+</BridgeBootstrap>
 ```
 
 ## 4. Add the callback route
@@ -89,37 +68,32 @@ You do not need to create any login or signup pages.
 
 ## 6. Configuration
 
-The `config` object you pass to `bridgeBootstrap` is a `BridgeConfig`. The most common fields:
+The options you pass to `bridgeBootstrap` are `BridgeConfig` fields plus your route rules. The most common fields:
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `appId` | **(required)** | Your Bridge app ID |
+| `appId` | `VITE_BRIDGE_APP_ID` **(required)** | Your Bridge app ID |
 | `callbackUrl` | `<origin>/auth/oauth-callback` | Where the hosted login page redirects back to |
 | `loginRoute` | (unset) | In-app login route; leave unset for hosted auth (that's what triggers the hosted page) |
-| `apiBaseUrl` | `https://api.thebridge.dev` | Root URL for the Bridge API — required for any non-production app (stage, local, self-hosted) |
-| `hostedUrl` | `https://auth.thebridge.dev` | Bridge hosted UI URL (dev override) |
-| `debug` | `false` | Enable debug logging |
+| `apiBaseUrl` | `VITE_BRIDGE_API_BASE_URL`, else `https://api.thebridge.dev` | Root URL for the Bridge API — set it for any non-production app (stage, local, self-hosted) |
+| `hostedUrl` | `VITE_BRIDGE_HOSTED_URL`, else derived from the API address on Bridge's own domains, else `https://auth.thebridge.dev` | Bridge hosted UI URL (local or self-hosted override) |
+| `debug` | `VITE_BRIDGE_DEBUG === 'true'`, else `false` | Enable debug logging |
 
 See the [Configuration reference](/auth/config/) for the full list (token storage, signup route, billing routes).
 
 After the hosted login the user returns to the page they were heading to, or `/` when there was none.
 
-Rather than hardcoding environment-specific values, keep them in a `.env` file and read them with Vite's `import.meta.env` when you build the config (the `VITE_` prefix is required for values to reach the browser). The SDK itself reads no environment variables — a variable you don't pass into the config does nothing:
+Bridge reads its settings from these variables in your `.env` file (the `VITE_` prefix is required for values to reach the browser). Anything you pass to `bridgeBootstrap()` explicitly wins over the environment, and the environment wins over the default:
 
 ```env
 VITE_BRIDGE_APP_ID=your-app-id-here
 # Only for a non-production app (stage, local, self-hosted):
 # VITE_BRIDGE_API_BASE_URL=https://api-stage.thebridge.dev
-# VITE_BRIDGE_HOSTED_URL=https://auth-stage.thebridge.dev
+# Only for a local or self-hosted Bridge (stage's hosted pages follow the API address):
+# VITE_BRIDGE_HOSTED_URL=http://localhost:3091
 ```
 
-```ts
-const config: BridgeConfig = {
-  appId: import.meta.env.VITE_BRIDGE_APP_ID,
-  apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
-  hostedUrl: import.meta.env.VITE_BRIDGE_HOSTED_URL || undefined,
-};
-```
+With no app id anywhere, Bridge refuses to start and names `VITE_BRIDGE_APP_ID`. A production app sets only the app id; in a development build Bridge warns once in the console when it is using production because `VITE_BRIDGE_API_BASE_URL` is unset.
 
 ## Next steps
 

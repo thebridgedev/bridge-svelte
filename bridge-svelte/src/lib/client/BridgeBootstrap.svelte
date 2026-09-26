@@ -1,11 +1,12 @@
 <script lang="ts">
   import { beforeNavigate, goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, type Snippet } from 'svelte';
   import { createRouteGuard, routeRulesReferenceFlag } from '../auth/route-guard.js';
   import { stashReturnTo, withReturnTo } from '@nebulr-group/bridge-auth-core';
   import {
     getBridgeAuth,
+    bridgeReadyStore,
     isAuthenticated,
     subscriptionStore,
     loadSubscription,
@@ -37,13 +38,23 @@
   // Props: optional `runtime` overrides for advanced/debug use (websocketFactory,
   // reconnect overrides, etc.); `onBootstrapComplete` callback fires after the
   // runtime + any auto-detected capabilities (flags) have attached.
+  //
+  // TBP-695 — the shell owns readiness. Wrap the app in <BridgeBootstrap> and
+  // `children` render only once Bridge is ready: the root `load`
+  // (bridgeBootstrap) has finished AND the runtime + capabilities attached
+  // below. The developer writes no ready flag. Self-closing use (no children)
+  // still works for apps that gate on `onBootstrapComplete` themselves.
   let {
     runtime,
     onBootstrapComplete,
+    children,
   }: {
     runtime?: StartBridgeRuntimeOptions;
     onBootstrapComplete?: () => void;
+    children?: Snippet;
   } = $props();
+
+  let runtimeAttached = $state(false);
 
   // Phase 4 (TBP-288/320) — expose the unified bridge surface via Svelte
   // context so descendants can call `useBridge()`.
@@ -210,6 +221,7 @@
     }
 
     // Auth-core manages auto-refresh internally — no startAutoRefresh() needed
+    runtimeAttached = true;
     if (onBootstrapComplete) onBootstrapComplete();
   });
 
@@ -238,3 +250,7 @@
 </script>
 
 <RealtimeDevBadge enabled={devBadgeEnabled} />
+
+{#if runtimeAttached && $bridgeReadyStore}
+  {@render children?.()}
+{/if}

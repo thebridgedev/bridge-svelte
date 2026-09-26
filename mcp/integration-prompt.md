@@ -32,7 +32,7 @@ Before starting, check if the project has existing auth:
 | `<NblocksBootStrap>` component | `<BridgeBootstrap>` component |
 | `PUBLIC_ROUTES` array of strings/regexps | `RouteGuardConfig` with `rules` array and `defaultAccess` |
 | `VITE_NBLOCKS_APP_ID` env var | `VITE_BRIDGE_APP_ID` env var |
-| `onBootstrapComplete` callback | `onBootstrapComplete` callback (same pattern) |
+| `onBootstrapComplete` callback + your own `ready` flag | `<BridgeBootstrap>` wraps your app and renders it once ready — no callback needed |
 | `featureFlagProtections` prop | `RouteGuardConfig` rules with `featureFlag` field |
 
 **Migration steps:**
@@ -60,38 +60,25 @@ No peer dependencies are required for the redirect auth flow.
 Create or update `src/routes/+layout.ts`:
 
 ```ts
-import type { LayoutLoad } from './$types';
-import type { BridgeConfig, RouteGuardConfig } from '@nebulr-group/bridge-svelte';
 import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
 
 export const ssr = false;
 
-export const load: LayoutLoad = async ({ url }) => {
-  const config: BridgeConfig = {
-    appId: import.meta.env.VITE_BRIDGE_APP_ID,
-    // The SDK reads no environment variables itself. Pass the API URL from
-    // your own env, or it defaults to production (https://api.thebridge.dev).
-    apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
-  };
-
-  const routeConfig: RouteGuardConfig = {
-    rules: [
-      { match: new RegExp('^/auth($|/)'), public: true },
-    ],
-    defaultAccess: 'protected',
-  };
-
-  await bridgeBootstrap(url, config, routeConfig);
-  return {};
-};
+export const load = bridgeBootstrap({
+  rules: [
+    { match: new RegExp('^/auth($|/)'), public: true },
+  ],
+  defaultAccess: 'protected',
+});
 ```
 
 **Key points:**
+- That one call is the whole wiring. Bridge reads the app id from `VITE_BRIDGE_APP_ID` and, for a stage or local app, the API address from `VITE_BRIDGE_API_BASE_URL` (see Environment variables).
+- Anything you pass explicitly wins over the environment, and the environment wins over the built-in default — e.g. `bridgeBootstrap({ appId: 'other-app', rules })`.
+- With no app id anywhere, Bridge refuses to start and names the missing `VITE_BRIDGE_APP_ID` instead of guessing.
 - `ssr = false` is required — Bridge auth is client-side only.
-- **`apiBaseUrl` must be passed explicitly for any non-production app** (stage, local, self-hosted). The SDK never reads `import.meta.env`; without `apiBaseUrl` every request goes to the production API, and a stage or local app ID fails there with "Not Found".
 - `defaultAccess: 'protected'` means all routes require login unless marked `public`.
 - `/auth/*` must be public so the OAuth callback route is accessible.
-- The `appId` comes from the `VITE_BRIDGE_APP_ID` environment variable.
 
 ## Wire the root layout component
 
@@ -103,23 +90,17 @@ Create or update `src/routes/+layout.svelte`:
   import '@nebulr-group/bridge-svelte/styles';
 
   let { children } = $props();
-  let ready = $state(false);
-
-  function onBootstrapComplete() {
-    ready = true;
-  }
 </script>
 
-<BridgeBootstrap {onBootstrapComplete} />
-
-{#if ready}
+<BridgeBootstrap>
   {@render children()}
-{/if}
+</BridgeBootstrap>
 ```
 
 **Key points:**
+- `BridgeBootstrap` renders its children only once Bridge is ready, so protected content never flashes. Write no ready-state logic of your own.
 - `BridgeBootstrap` handles the OAuth callback automatically (detects `?code=` on the callback URL).
-- Content is hidden until `onBootstrapComplete` fires, preventing flash of protected content.
+- Put your navigation and page shell inside it too (e.g. `<Nav />`, `<BridgeBillingNotice />`, `<main>`), so everything that reads Bridge state renders after Bridge is ready.
 - **You must import `@nebulr-group/bridge-svelte/styles`** — this provides required structural CSS and visual defaults for Bridge components (login forms, alerts, buttons). Without it, Bridge UI elements will render unstyled and broken. If the project uses its own design system (e.g., Tailwind), you can override the visual defaults via CSS variables but the import must still be present.
 
 ## Create the OAuth callback route
@@ -187,12 +168,12 @@ Add buttons to your navigation or header component:
 
 ## Route protection
 
-Routes are protected via the `RouteGuardConfig` passed to `bridgeBootstrap()`.
+Routes are protected via the `rules` and `defaultAccess` passed to `bridgeBootstrap()` in `+layout.ts`.
 
 **Config structure:**
 
 ```ts
-const routeConfig: RouteGuardConfig = {
+export const load = bridgeBootstrap({
   rules: [
     // Required — auth callback must be accessible
     { match: new RegExp('^/auth($|/)'), public: true },
@@ -205,7 +186,7 @@ const routeConfig: RouteGuardConfig = {
     // { match: '/beta*', featureFlag: 'beta-access', redirectTo: '/' },
   ],
   defaultAccess: 'protected',  // everything requires login unless listed above
-};
+});
 ```
 
 **Rule matching:**
@@ -233,28 +214,20 @@ Add to your `.env` file (or `.env.local` for local dev):
 VITE_BRIDGE_APP_ID=your-app-id-here
 # Only for a non-production app (stage, local, self-hosted):
 # VITE_BRIDGE_API_BASE_URL=https://api-stage.thebridge.dev
-# VITE_BRIDGE_HOSTED_URL=https://auth-stage.thebridge.dev
+# Only for a local or self-hosted Bridge (stage's hosted pages follow the API address):
+# VITE_BRIDGE_HOSTED_URL=http://localhost:3091
 ```
 
-**The SDK does not read environment variables.** These names are a convention for your own `+layout.ts`: read each one with `import.meta.env` and pass it into `BridgeConfig` yourself. Setting a variable without passing it does nothing.
+Bridge reads these variables itself — you do not pass them anywhere. Anything you pass to `bridgeBootstrap()` explicitly wins over the environment, and the environment wins over the default.
 
-**This fails silently and badly.** `apiBaseUrl` defaults to production. A stage or local app ID that never reaches `BridgeConfig` sends every call to the **production** API, where that app ID does not exist — signup comes back `Not Found` and nothing in the console names the real cause. Setting `VITE_BRIDGE_API_BASE_URL` in `.env` is not enough on its own; it only takes effect once you pass it as `apiBaseUrl`, as in the snippet below.
+| Variable | Config field | Default when unset | Description |
+|----------|-------------|--------------------|-------------|
+| `VITE_BRIDGE_APP_ID` | `appId` (required) | — Bridge refuses to start and names this variable | Your Bridge application ID |
+| `VITE_BRIDGE_API_BASE_URL` | `apiBaseUrl` | `https://api.thebridge.dev` (production) | Bridge API base URL — set it for any non-production app |
+| `VITE_BRIDGE_HOSTED_URL` | `hostedUrl` | follows the API address on Bridge's own domains (`api-stage` → `auth-stage`), else `https://auth.thebridge.dev` | Bridge hosted UI URL (login page) — set it only for a local or self-hosted Bridge |
+| `VITE_BRIDGE_DEBUG` | `debug` | `false` | `true` enables debug logging in the console |
 
-| Variable | Pass it as | Default when not passed | Description |
-|----------|-----------|-------------------------|-------------|
-| `VITE_BRIDGE_APP_ID` | `appId` (required) | — | Your Bridge application ID |
-| `VITE_BRIDGE_API_BASE_URL` | `apiBaseUrl` | `https://api.thebridge.dev` (production) | Bridge API base URL — required for any non-production app |
-| `VITE_BRIDGE_HOSTED_URL` | `hostedUrl` | `https://auth.thebridge.dev` (production) | Bridge hosted UI URL (login page) |
-| `VITE_BRIDGE_DEBUG` | `debug` | `false` | Enable debug logging in the console |
-
-```ts
-const config: BridgeConfig = {
-  appId: import.meta.env.VITE_BRIDGE_APP_ID,
-  apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
-  hostedUrl: import.meta.env.VITE_BRIDGE_HOSTED_URL || undefined,
-  debug: import.meta.env.VITE_BRIDGE_DEBUG === 'true',
-};
-```
+A production app sets only `VITE_BRIDGE_APP_ID`. In a development build, an app id with no `VITE_BRIDGE_API_BASE_URL` logs one console warning saying production is in use — if you see it for a stage or local app, set the variable.
 
 ## Accessing user context
 
@@ -341,17 +314,16 @@ Before verifying, confirm every item was applied. Do not skip any:
 
 - [ ] Old auth package removed (`@nebulr/nblocks-svelte` or equivalent) and any local tarballs deleted
 - [ ] `@nebulr-group/bridge-svelte` installed using the project's package manager
-- [ ] `src/routes/+layout.ts` — calls `bridgeBootstrap()` with `BridgeConfig` and `RouteGuardConfig`
+- [ ] `src/routes/+layout.ts` — `export const load = bridgeBootstrap({ rules, defaultAccess })`
 - [ ] `src/routes/+layout.ts` — exports `ssr = false`
 - [ ] `src/routes/+layout.ts` — `defaultAccess` is `'protected'`, only `/auth/*` is public
-- [ ] `src/routes/+layout.svelte` — imports and renders `<BridgeBootstrap>`
+- [ ] `src/routes/+layout.svelte` — wraps the app in `<BridgeBootstrap>…</BridgeBootstrap>` (no `ready` flag of your own)
 - [ ] `src/routes/+layout.svelte` — imports `@nebulr-group/bridge-svelte/styles`
-- [ ] `src/routes/+layout.svelte` — content wrapped in `{#if ready}` gate using `onBootstrapComplete`
 - [ ] `src/routes/auth/oauth-callback/+page.svelte` — file exists (even if minimal)
 - [ ] Bridge app configured: `redirect-uris` includes the callback URL, `allowed-origins` includes the frontend origin
 - [ ] Login/logout buttons added to nav using `auth.login()` and `auth.logout()`
 - [ ] User display using `isAuthenticated` store and `profileStore`
-- [ ] `VITE_BRIDGE_APP_ID` set in the `.env` file
+- [ ] `VITE_BRIDGE_APP_ID` set in the `.env` file (plus `VITE_BRIDGE_API_BASE_URL` for a stage or local app)
 - [ ] Auth headers added to API calls that hit protected backend endpoints (using `tokenStore`)
 - [ ] Old env vars removed (`VITE_NBLOCKS_APP_ID`, etc.)
 - [ ] Old auth imports and route config removed (e.g., `PUBLIC_ROUTES` array)
@@ -417,7 +389,7 @@ bridge.user                      // Readable<UserSnapshot | null>  // { id, emai
 
 ### Using in components
 
-Import the `bridge` singleton from `@nebulr-group/bridge-svelte` wherever you need it — components, `.svelte.ts` modules or plain `.ts` files. Its scopes are Svelte stores, so use `$` in templates (for example `const subscription = bridge.tenant.subscription;` then `$subscription?.plan?.slug`). No provider or context wiring is needed beyond the `<BridgeBootstrap />` already in your root layout.
+Import the `bridge` singleton from `@nebulr-group/bridge-svelte` wherever you need it — components, `.svelte.ts` modules or plain `.ts` files. Its scopes are Svelte stores, so use `$` in templates (for example `const subscription = bridge.tenant.subscription;` then `$subscription?.plan?.slug`). No provider or context wiring is needed beyond the `<BridgeBootstrap>` already in your root layout.
 
 > `@nebulr-group/bridge-svelte` does **not** export a `useBridge()` hook. Do not import one from it — use the `bridge` singleton above.
 

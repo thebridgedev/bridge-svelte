@@ -1,61 +1,46 @@
 ---
 title: Configurations
-description: The BridgeConfig options you pass to bridgeBootstrap, and the app settings managed in Control Center.
+description: The options you pass to bridgeBootstrap, the environment variables it reads, and the app settings managed in Control Center.
 sidebar:
   label: Svelte
 ---
-import { Tabs, TabItem } from '@astrojs/starlight/components';
-
 # Configurations
 
-The config object you pass to `bridgeBootstrap` controls how Bridge wires up auth, routing, and billing in your app. See [all config options](#all-config-options) for the full list.
+The options you pass to `bridgeBootstrap` — and the `VITE_BRIDGE_*` variables it reads — control how Bridge wires up auth, routing, and billing in your app. See [all config options](#all-config-options) for the full list.
 
 ## Passing configs to Bridge
 
-Call `bridgeBootstrap()` from your root `+layout.ts` load function, passing it a `BridgeConfig` object. The app ID comes from Control Center (your admin dashboard at app.thebridge.dev): open your app's settings and copy its ID into your `.env`.
+Export `load = bridgeBootstrap({ … })` from your root `+layout.ts`. The app ID comes from Control Center (your admin dashboard at app.thebridge.dev): open your app's settings and copy its ID into your `.env` as `VITE_BRIDGE_APP_ID` — Bridge reads it from there (see [Environment variables](#environment-variables)).
 
 ```typescript
 // src/routes/+layout.ts
-import type { LayoutLoad } from './$types';
-import type { BridgeConfig, RouteGuardConfig } from '@nebulr-group/bridge-svelte';
 import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
 
 export const ssr = false;
 
-export const load: LayoutLoad = async ({ url, fetch }) => {
-  const config: BridgeConfig = {
-    appId: import.meta.env.VITE_BRIDGE_APP_ID,
-    loginRoute: '/auth/login',
-    // The SDK reads no environment variables. Pass the API URL from your own
-    // env; without it every request goes to production (https://api.thebridge.dev).
-    apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
-  };
-
-  const routeConfig: RouteGuardConfig = {
-    rules: [
-      { match: '/', public: true },
-      { match: new RegExp('^/auth($|/)'), public: true },
-    ],
-    defaultAccess: 'protected',
-  };
-
-  await bridgeBootstrap(url, config, routeConfig, fetch);
-  return {};
-};
+export const load = bridgeBootstrap({
+  loginRoute: '/auth/login',
+  rules: [
+    { match: '/', public: true },
+    { match: new RegExp('^/auth($|/)'), public: true },
+  ],
+  defaultAccess: 'protected',
+});
 ```
 
 Signature:
 
 ```typescript
 bridgeBootstrap(
-  url: URL,                       // the current URL from the load function
-  config: BridgeConfig | string,  // config object, or just the appId as a string
-  routeConfig?: RouteGuardConfig, // default: { rules: [], defaultAccess: 'protected' }
-  kitFetch?: typeof fetch         // pass SvelteKit's fetch for SSR-safe requests
-)
+  options?: Partial<BridgeConfig> & Partial<RouteGuardConfig>
+): (event: { url: URL; fetch: typeof fetch }) => Promise<{ config: BridgeConfig; routeConfig: RouteGuardConfig }>
 ```
 
-SvelteKit re-runs the root layout load on every navigation, so `bridgeBootstrap` is called many times per page load. The one-time setup (applying the config, patching `fetch`, refreshing the token, loading billing state and warming the flag cache) runs once per page load, on the first call; a config passed on later calls is ignored. The route guard runs on **every** call, so each navigation is checked. See [Route guards](/auth/securing/route-guards/#what-each-guard-covers).
+Every option is optional. **Precedence: an option you pass explicitly wins over the environment, and the environment wins over the built-in default.** The returned function is your layout's `load`; the data it returns (`config`, `routeConfig`) is available to every page as `page.data`.
+
+The older positional form, `await bridgeBootstrap(url, config, routeConfig, fetch)` inside a hand-written `load`, still works but is deprecated and reads no environment variables.
+
+SvelteKit re-runs the root layout load on every navigation, so `bridgeBootstrap`'s `load` is called many times per page load. The one-time setup (applying the config, patching `fetch`, refreshing the token, loading billing state and warming the flag cache) runs once per page load, on the first call. The route guard runs on **every** call, so each navigation is checked. See [Route guards](/auth/securing/route-guards/#what-each-guard-covers).
 
 ## Reading the resolved config
 
@@ -85,15 +70,15 @@ Passing a specific `callbackUrl` lets you send different parts of your app throu
 Whatever you pass here, and the default above, must be registered as an allowed redirect URI in Control Center (see [Configs managed in Control Center](#configs-managed-in-control-center)); Bridge only redirects to callback URLs it's been told about. The app's *Default callback URL* setting there is only used by the Bridge server when a login request carries no callback URL at all, which the SDK never does.
 
 ```typescript
-const config: BridgeConfig = {
-  appId: import.meta.env.VITE_BRIDGE_APP_ID,
+export const load = bridgeBootstrap({
   callbackUrl: `${window.location.origin}/admin/oauth-callback`,
-};
+  rules: [ /* … */ ],
+});
 ```
 
 ## Base URLs
 
-Two options point the SDK at Bridge itself. Both default to production, so a production app on the standard cloud can leave them out. **Any other app must pass them**: a stage, local or self-hosted app ID doesn't exist on the production API, and requests fail with "Not Found". The SDK reads no environment variables, so pass them from your own env as in the example above.
+Two options point the SDK at Bridge itself. Both default to production, so a production app on the standard cloud can leave them out. **Any other app must set the API address**, as `VITE_BRIDGE_API_BASE_URL` in `.env`: a stage, local or self-hosted app ID doesn't exist on the production API, and requests fail with "Not Found". The hosted address follows the API address on Bridge's own domains (`api-stage.thebridge.dev` → `auth-stage.thebridge.dev`), so only a local or self-hosted Bridge also sets `VITE_BRIDGE_HOSTED_URL`; a development build warns when it cannot be derived. In a development build Bridge warns once in the console when it falls back to production because `VITE_BRIDGE_API_BASE_URL` is unset.
 
 - **`apiBaseUrl`** (default `https://api.thebridge.dev`): the base URL for the Bridge API. Every API endpoint the SDK calls is derived from it.
 - **`hostedUrl`** (default `https://auth.thebridge.dev`): the base URL for Bridge's hosted UI, such as the hosted login page and plan selection. Only needed with hosted auth.
@@ -108,9 +93,9 @@ If you leave `loginRoute` unset, Bridge uses hosted auth instead: unauthenticate
 
 | Option | Type | Default | Description |
 |--------|------|---------|--------------|
-| `appId` | `string` | (required) | Your Bridge app ID, found in your app's settings in Control Center |
-| `apiBaseUrl` | `string` | `'https://api.thebridge.dev'` | Base URL for the Bridge API; all endpoints are derived from it. Required for any non-production app. See [Base URLs](#base-urls) |
-| `hostedUrl` | `string` | `'https://auth.thebridge.dev'` | Base URL for Bridge's hosted UI (login page, plan selection). See [Base URLs](#base-urls) |
+| `appId` | `string` | `VITE_BRIDGE_APP_ID` (required) | Your Bridge app ID, found in your app's settings in Control Center. With none anywhere, Bridge refuses to start and names the variable |
+| `apiBaseUrl` | `string` | `VITE_BRIDGE_API_BASE_URL`, else `'https://api.thebridge.dev'` | Base URL for the Bridge API; all endpoints are derived from it. Required for any non-production app. See [Base URLs](#base-urls) |
+| `hostedUrl` | `string` | `VITE_BRIDGE_HOSTED_URL`, else derived from `apiBaseUrl` on Bridge's own domains, else `'https://auth.thebridge.dev'` | Base URL for Bridge's hosted UI (login page, plan selection). See [Base URLs](#base-urls) |
 | `callbackUrl` | `string` | `${origin}/auth/oauth-callback` | Where hosted/SSO login and Stripe checkout return to. See [Callback URL](#callback-url) |
 | `defaultRedirectRoute` | `string` | `'/'` | Accepted, but bridge-svelte does not currently read it: after hosted login the user returns to the page they asked for, or `/`; in SDK mode your `LoginForm`'s `onLogin` decides |
 | `loginRoute` | `string` | (unset) | In-app route of your login page. Leave unset for hosted auth: without it, unauthenticated users go to Bridge's hosted login page. See [Login route](#login-route) |
@@ -122,11 +107,11 @@ If you leave `loginRoute` unset, Bridge uses hosted auth instead: unauthenticate
 | `billing.paymentErrorRoute` | `string` | `'/payment-error'` | Route to redirect to when a Stripe checkout confirmation fails |
 | `billing.manageRoute` | `string` | `'/billing'` | Your plan/billing page; where the Upgrade/Manage buttons in `<BridgeQuotaBanner>` and `<BridgeBillingNotice>` point |
 | `storage` | `TokenStorage` | `localStorage` (browser) / memory (SSR) | Token storage adapter; implement `get`/`set`/`remove` to bring your own |
-| `debug` | `boolean` | `false` | Enable debug logging |
+| `debug` | `boolean` | `VITE_BRIDGE_DEBUG === 'true'`, else `false` | Enable debug logging |
 
 ## Route guard config
 
-The third argument to `bridgeBootstrap` declares which routes are public, protected, flag-gated, or billing-gated:
+The `rules`, `defaultAccess` and `returnTo` options of `bridgeBootstrap` declare which routes are public, protected, flag-gated, or billing-gated:
 
 ```typescript
 interface RouteGuardConfig {
@@ -170,12 +155,16 @@ interface RouteRule {
 
 See [Route guards](/auth/securing/route-guards/) for a walkthrough, including [returning to the attempted page](/auth/securing/route-guards/#returning-to-the-page-they-asked-for).
 
-## Passing values via .env
+## Environment variables
 
-> **Tip:** this is just a best practice, not a requirement. Keep environment-specific values in a `.env` file instead of hardcoding them, and read them with Vite's `import.meta.env` when you build the config. The `VITE_` prefix is required for values to reach the browser; the SDK does not read environment variables automatically.
+Bridge reads these from your `.env` (the `VITE_` prefix is required for values to reach the browser). You do not pass them anywhere; an option passed to `bridgeBootstrap()` explicitly still wins over them.
 
-<Tabs>
-<TabItem label=".env">
+| Variable | Option |
+|----------|--------|
+| `VITE_BRIDGE_APP_ID` | `appId` |
+| `VITE_BRIDGE_API_BASE_URL` | `apiBaseUrl` |
+| `VITE_BRIDGE_HOSTED_URL` | `hostedUrl` |
+| `VITE_BRIDGE_DEBUG` | `debug` (`'true'` turns it on) |
 
 ```env
 VITE_BRIDGE_APP_ID=your-app-id-here
@@ -183,20 +172,7 @@ VITE_BRIDGE_APP_ID=your-app-id-here
 VITE_BRIDGE_API_BASE_URL=https://api-stage.thebridge.dev
 ```
 
-</TabItem>
-<TabItem label="+layout.ts">
-
-```typescript
-const config: BridgeConfig = {
-  appId: import.meta.env.VITE_BRIDGE_APP_ID,
-  loginRoute: '/auth/login',
-  apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
-  debug: import.meta.env.DEV,
-};
-```
-
-</TabItem>
-</Tabs>
+An empty value counts as unset.
 
 ## Configs managed in Control Center
 

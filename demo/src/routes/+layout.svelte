@@ -92,6 +92,12 @@
     (window as any).bridge = bridge;
   });
 
+  // DEBUG-only (TBP-695): timestamp the moment Bridge reports ready, so
+  // Playwright can prove the app content renders after it and never before.
+  function markBootstrapComplete() {
+    (window as any).__bridgeBootstrapCompleteAt = performance.now();
+  }
+
   // Apply the persisted theme as soon as the shell mounts (SSR is off, so this
   // runs client-side and avoids a flash).
   $effect(() => {
@@ -135,11 +141,12 @@
   });
 </script>
 
-<BridgeBootstrap runtime={runtimeOverrides} />
-
-<AppShell>
-  {@render children()}
-</AppShell>
+<!-- TBP-695 — the shell owns readiness: the app renders once Bridge is ready. -->
+<BridgeBootstrap runtime={runtimeOverrides} onBootstrapComplete={DEBUG ? markBootstrapComplete : undefined}>
+  <AppShell>
+    {@render children()}
+  </AppShell>
+</BridgeBootstrap>
 
 {#if DEBUG}
   <!--

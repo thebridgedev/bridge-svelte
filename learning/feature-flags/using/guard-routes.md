@@ -1,35 +1,22 @@
 # Guard routes
 
-Gate entire routes behind flags with `routeConfig` rules. `RouteGuardConfig`
-is imported from `@nebulr-group/bridge-svelte`, and the config is passed as
-the third argument to the `bridgeBootstrap(url, config, routeConfig)` call in
-your root `+layout.ts`:
+Gate entire routes behind flags with route rules, passed to the
+`bridgeBootstrap({ … })` call in your root `+layout.ts`:
 
 ```ts
 // src/routes/+layout.ts
-import { bridgeBootstrap, type RouteGuardConfig } from '@nebulr-group/bridge-svelte';
+import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
 
-const routeConfig: RouteGuardConfig = {
+export const ssr = false;
+
+export const load = bridgeBootstrap({
   rules: [
     { match: '/', public: true },
     { match: '/premium/*', featureFlag: 'premium-feature', redirectTo: '/upgrade' },
     { match: '/beta/*', featureFlag: { any: ['beta-feature', 'internal'] }, redirectTo: '/' },
   ],
   defaultAccess: 'protected',
-};
-
-export const load = async ({ url }) => {
-  await bridgeBootstrap(
-    url,
-    {
-      appId: import.meta.env.VITE_BRIDGE_APP_ID,
-      // The SDK reads no environment variables. Pass the API URL from your own
-      // env; without it every request goes to production (https://api.thebridge.dev).
-      apiBaseUrl: import.meta.env.VITE_BRIDGE_API_BASE_URL || undefined,
-    },
-    routeConfig,
-  );
-};
+});
 ```
 
 `defaultAccess: 'protected'` means any route no rule matches requires a
@@ -59,7 +46,7 @@ context they can see*:
 **Freshness.** The route guard keeps its verdicts in a cache, and the SDK drops
 that cache the moment something that can change a verdict arrives on the live
 channel: a flag change, a plan change, an entitlements change, a user state
-change, or a new access token. `<BridgeBootstrap />` then re-checks the page
+change, or a new access token. `<BridgeBootstrap>` then re-checks the page
 the user is **currently** on (not just the next navigation), so turning a route's
 flag off, or downgrading a plan, moves the user off a page they no longer
 qualify for within about a second. The current page is re-checked on a flag

@@ -47,27 +47,24 @@ What the user sees: a workspace with no plan lands on a full-screen modal with t
 
 Prefer this when you want the plan picker to be a **real routed page** rather than a modal overlay, for example a dedicated `/plans` onboarding step with its own layout, copy, and URL you can link to.
 
-Set `billing.paywallRoute` in the `BridgeConfig` you pass to `bridgeBootstrap` in `+layout.ts`:
+Set `billing.paywallRoute` in the `bridgeBootstrap({ … })` call in `+layout.ts`:
 
 ```ts
 // src/routes/+layout.ts
-import type { LayoutLoad } from './$types';
-import type { BridgeConfig } from '@nebulr-group/bridge-svelte';
 import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
 
 export const ssr = false;
 
-export const load: LayoutLoad = async ({ url }) => {
-  const config: BridgeConfig = {
-    appId: import.meta.env.VITE_BRIDGE_APP_ID,
-    billing: {
-      paywallRoute: '/plans',
-    },
-  };
-
-  await bridgeBootstrap(url, config);
-  return {};
-};
+export const load = bridgeBootstrap({
+  billing: {
+    paywallRoute: '/plans',
+  },
+  rules: [
+    { match: new RegExp('^/auth($|/)'), public: true },
+    { match: '/plans', public: true },
+  ],
+  defaultAccess: 'protected',
+});
 ```
 
 Then render a `<PlanSelector>` at that route:
@@ -81,7 +78,7 @@ Then render a `<PlanSelector>` at that route:
 <PlanSelector successRedirect="/welcome" cancelRedirect="/plans" />
 ```
 
-`<BridgeBootstrap />` handles the gate for you: before any page renders it checks the subscription status, and if the authenticated workspace still needs to pick a plan it issues a redirect to `paywallRoute`. It only redirects when all of the following hold, so there's no redirect loop and no gate on exempt workspaces:
+`<BridgeBootstrap>` handles the gate for you: before any page renders it checks the subscription status, and if the authenticated workspace still needs to pick a plan it issues a redirect to `paywallRoute`. It only redirects when all of the following hold, so there's no redirect loop and no gate on exempt workspaces:
 
 - `billing.paywallRoute` is configured
 - the current path isn't already the paywall route
@@ -95,7 +92,7 @@ Then render a `<PlanSelector>` at that route:
 Both methods drive the same underlying flow:
 
 1. A user signs in to a workspace that has **no active plan** → `shouldSelectPlan` is `true`.
-2. The **gate** engages: the `<BridgePaywall>` modal appears, or `<BridgeBootstrap />` redirects to your `paywallRoute` page.
+2. The **gate** engages: the `<BridgePaywall>` modal appears, or `<BridgeBootstrap>` redirects to your `paywallRoute` page.
 3. The user picks a plan from the `<PlanSelector>`:
    - **Free plan** → activated instantly, no payment. `onSelect` fires and the store refreshes.
    - **Paid plan** → the user is sent to **Stripe Checkout** to capture a payment method.
@@ -104,7 +101,7 @@ Both methods drive the same underlying flow:
 
 ## Opting out: `paymentsAutoRedirect: false`
 
-`paymentsAutoRedirect` is a flag on the subscription status. When it's `false`, the workspace **has opted out of the platform's native plan-selection gate**; such workspaces are exempt from the automatic block. Both methods above respect it: `<BridgePaywall>` renders its children instead of the modal, and `<BridgeBootstrap />` skips the paywall redirect entirely.
+`paymentsAutoRedirect` is a flag on the subscription status. When it's `false`, the workspace **has opted out of the platform's native plan-selection gate**; such workspaces are exempt from the automatic block. Both methods above respect it: `<BridgePaywall>` renders its children instead of the modal, and `<BridgeBootstrap>` skips the paywall redirect entirely.
 
 This exists so certain workspaces can bypass the forced plan choice, for example accounts provisioned or billed out-of-band, where forcing a plan selection in the app would be wrong. Those workspaces still reach your app normally; you're free to render your own `<PlanSelector>` where it makes sense, but the platform won't block them for you.
 

@@ -36,7 +36,7 @@ read [How flags work](/feature-flags/how-it-works/).
 ## Get started
 
 [Get started](/feature-flags/get-started/) walks the whole loop in a few
-minutes: wire up `<BridgeBootstrap />`, create a flag in Control Center, read
+minutes: wire up `<BridgeBootstrap>`, create a flag in Control Center, read
 it with `useFlag`, then flip it and watch your app change live.
 
 ## Using flags

@@ -49,7 +49,7 @@ Every flow has a ready-made component, imported from `@nebulr-group/bridge-svelt
 
 ## Protecting routes
 
-Pass a `RouteGuardConfig` as the third argument to `bridgeBootstrap` to mark routes public, protected, or gated behind feature flags or billing. Unauthenticated users are redirected to your `loginRoute` if you set one, or to Bridge's hosted login page if you don't. See [Route guards](/auth/securing/route-guards/) and the [config reference](/auth/config/).
+Pass `rules` to `bridgeBootstrap` in your root `+layout.ts` to mark routes public, protected, or gated behind feature flags or billing. Unauthenticated users are redirected to your `loginRoute` if you set one, or to Bridge's hosted login page if you don't. See [Route guards](/auth/securing/route-guards/) and the [config reference](/auth/config/).
 
 ## Identity, roles, and workspaces
 

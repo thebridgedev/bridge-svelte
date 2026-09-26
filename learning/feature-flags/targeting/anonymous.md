@@ -42,7 +42,7 @@ behavior, the advanced `createBridgeFlags` API accepts an `identity` option:
 - `storage`: your own `IdentityStorage` implementation (e.g. cookie-backed)
 - `storageKey`: a different storage key than `bridge.anon_id`
 
-Most apps never touch this; the default `<BridgeBootstrap />` wiring uses
+Most apps never touch this; the default `<BridgeBootstrap>` wiring uses
 persistent tracking.
 
 ## Example: roll out to 20% of visitors

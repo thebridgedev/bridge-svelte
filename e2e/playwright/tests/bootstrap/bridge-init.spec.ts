@@ -53,4 +53,31 @@ test.describe('Bridge Initialization', () => {
     const configStatus = page.locator('text=Bridge');
     await expect(configStatus.first()).toBeVisible({ timeout: MED_TIMEOUT });
   });
+
+  // TBP-695 — <BridgeBootstrap> owns readiness: the app inside it renders only
+  // once Bridge is ready, with no ready flag in the app. The demo's DEBUG
+  // `onBootstrapComplete` stamps when Bridge reported ready; a MutationObserver
+  // stamps when page content first entered the DOM. Content first → the gate
+  // is gone and the app renders before Bridge is ready.
+  test('the app renders only once Bridge is ready (TBP-695)', async ({ page }) => {
+    await page.addInitScript(() => {
+      const w = window as unknown as { __firstContentAt?: number };
+      new MutationObserver(() => {
+        if (w.__firstContentAt === undefined && document.querySelector('h1')) {
+          w.__firstContentAt = performance.now();
+        }
+      }).observe(document, { childList: true, subtree: true });
+    });
+
+    await page.goto('/');
+    await expect(page.locator('h1')).toBeVisible({ timeout: MED_TIMEOUT });
+
+    const stamps = await page.evaluate(() => {
+      const w = window as unknown as { __firstContentAt?: number; __bridgeBootstrapCompleteAt?: number };
+      return { content: w.__firstContentAt, ready: w.__bridgeBootstrapCompleteAt };
+    });
+    expect(stamps.ready, 'onBootstrapComplete never fired').toEqual(expect.any(Number));
+    expect(stamps.content, 'content never observed').toEqual(expect.any(Number));
+    expect(stamps.content!).toBeGreaterThanOrEqual(stamps.ready!);
+  });
 });

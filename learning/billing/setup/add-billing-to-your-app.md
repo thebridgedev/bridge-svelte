@@ -10,13 +10,13 @@ out where we go deeper.
 ## Prerequisite: auth + bootstrap
 
 Billing rides on the same setup as auth. Before anything here works you need
-Bridge auth configured and `<BridgeBootstrap />` mounted in your root layout.
+Bridge auth configured and your app wrapped in `<BridgeBootstrap>` in your root layout.
 See [Authentication](/auth/) if you haven't done that yet, and
 [How billing works](/billing/how-it-works/) for the model.
 
 ## Billing state is already live, with no init call
 
-Once `bridgeBootstrap()` runs in your `+layout.ts` and `<BridgeBootstrap />`
+Once `bridgeBootstrap()` runs in your `+layout.ts` and `<BridgeBootstrap>`
 mounts in your `+layout.svelte`, billing is **already live**. Bootstrap fetches
 the subscription for the current workspace (called a *tenant* in the API),
 auto-mounts the billing notice/gate, and honors your configured billing routes.
@@ -40,30 +40,27 @@ State lands on the unified `bridge` object and updates over the live channel
 
 ## Configure your billing routes
 
-Add a `billing` block to the `BridgeConfig` you already pass to `bridgeBootstrap`
+Add a `billing` block to the `bridgeBootstrap({ … })` call you already have
 in `+layout.ts`:
 
 ```ts
 // src/routes/+layout.ts
-import type { LayoutLoad } from './$types';
-import type { BridgeConfig } from '@nebulr-group/bridge-svelte';
 import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
 
 export const ssr = false;
 
-export const load: LayoutLoad = async ({ url }) => {
-  const config: BridgeConfig = {
-    appId: import.meta.env.VITE_BRIDGE_APP_ID,
-    loginRoute: '/auth/login',
-    billing: {
-      paywallRoute: '/subscription',       // send plan-less workspaces here
-      paymentErrorRoute: '/payment-error', // land here if a checkout confirmation fails
-    },
-  };
-
-  await bridgeBootstrap(url, config);
-  return {};
-};
+export const load = bridgeBootstrap({
+  loginRoute: '/auth/login',
+  billing: {
+    paywallRoute: '/subscription',       // send plan-less workspaces here
+    paymentErrorRoute: '/payment-error', // land here if a checkout confirmation fails
+  },
+  rules: [
+    { match: new RegExp('^/auth($|/)'), public: true },
+    { match: '/subscription', public: true },
+  ],
+  defaultAccess: 'protected',
+});
 ```
 
 - **`paywallRoute`**: when set, bootstrap redirects an authenticated workspace

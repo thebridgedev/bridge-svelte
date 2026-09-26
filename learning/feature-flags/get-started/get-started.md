@@ -1,7 +1,7 @@
 # Get started
 
 Flags come with the SDK you already have: as long as your app imports the flags
-module somewhere, `<BridgeBootstrap />` wires everything up for you (the rule
+module somewhere, `<BridgeBootstrap>` wires everything up for you (the rule
 cache, live updates, and telemetry). There is no separate flags client to
 create and no flag-specific init call.
 
@@ -13,20 +13,21 @@ Add the import to your root layout so the flags module is always loaded:
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
   import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
-  // This import is what activates flags: <BridgeBootstrap /> detects the
+  // This import is what activates flags: <BridgeBootstrap> detects the
   // module and attaches the rule cache, live updates, and telemetry.
   import '@nebulr-group/bridge-svelte/flags';
 
   let { children } = $props();
 </script>
 
-<BridgeBootstrap />
-{@render children()}
+<BridgeBootstrap>
+  {@render children()}
+</BridgeBootstrap>
 ```
 
-Configuration comes from the same `bridgeBootstrap(url, config, routeConfig)`
-call you already make in `+layout.ts`. Only `appId` is required for flags-only
-apps.
+Configuration comes from the same `export const load = bridgeBootstrap({ … })`
+in your `+layout.ts`. Only the app id is required for flags-only apps, and
+Bridge reads it from `VITE_BRIDGE_APP_ID`.
 
 ## 2. Create a flag in Control Center
 

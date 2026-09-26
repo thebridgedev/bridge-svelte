@@ -1,77 +1,47 @@
+import { bridgeBootstrap } from '@bridge-svelte/lib/client/BridgeBootstrap';
+
+// TBP-695 — the whole Bridge wiring is this one call. The app id and API/hosted
+// addresses come from VITE_BRIDGE_APP_ID / VITE_BRIDGE_API_BASE_URL /
+// VITE_BRIDGE_HOSTED_URL (see .env.example); anything passed here wins over them.
 export const ssr = false;
 
-import { redirect } from '@sveltejs/kit';
-import type { RouteGuardConfig } from '@bridge-svelte/lib/auth/route-guard';
-import { bridgeBootstrap } from '@bridge-svelte/lib/client/BridgeBootstrap';
-import type { BridgeConfig } from '@bridge-svelte/lib/shared/types/config';
-import type { LayoutLoad } from './$types';
+// Demo-only overrides — a real app leaves these out.
+//
+// `bridge:appId` — Playwright's global-setup seeds the stage/prod test app id
+// into localStorage (the tracked .env.test.stage/.env.test.prod leave
+// VITE_BRIDGE_APP_ID empty on purpose). An explicit option beats the
+// environment, so this wins when set and falls through to the env when not.
+//
+// `bridge:hostedMode` — TBP-629: SDK mode and hosted mode differ by exactly one
+// thing, whether `loginRoute` is set. The hosted branch is otherwise
+// unreachable from this demo, so a toggle lets one server serve both.
+//
+// Guarded: the server imports this module to read `ssr`, and has no localStorage.
+const stored = (key: string) =>
+	typeof localStorage === 'undefined' ? null : localStorage.getItem(key);
+const storedAppId = stored('bridge:appId') || undefined;
+const hostedMode = stored('bridge:hostedMode') === 'true';
 
-export const load: LayoutLoad = async ({ url, fetch }) => {
-
-
-  const isProd =
-    import.meta.env.VITE_ENVIRONMENT === 'prod' ||
-    import.meta.env.ENVIRONMENT === 'prod' ||
-    import.meta.env.VITE_ENV === 'prod';
-  console.log('isProd', isProd);
-
-  // TBP-629 — SDK mode and hosted mode are distinguished by exactly one thing:
-  // whether the consumer set `loginRoute`. The demo normally runs SDK mode, but
-  // the hosted branch (target stashed in sessionStorage, consumed at the OAuth
-  // callback) is otherwise unreachable from here and would go untested. This
-  // toggle lets a single demo server serve both, which is a demo concern — a
-  // real app picks one and hard-codes it.
-  const hostedMode = localStorage.getItem('bridge:hostedMode') === 'true';
-
-  const baseConfig: BridgeConfig = {
-    appId: localStorage.getItem('bridge:appId') || import.meta.env.VITE_BRIDGE_APP_ID || '',
-    callbackUrl: import.meta.env.VITE_BRIDGE_CALLBACK_URL,
-    ...(hostedMode ? {} : { loginRoute: '/auth/login' }),
-    debug: true,
-    billing: { paywallRoute: '/welcome', paymentErrorRoute: '/payment-error' },
-  };
-
-  let config: BridgeConfig;
-  if (!isProd) {
-    const extras: Partial<BridgeConfig> = {};
-    const apiBaseUrl = import.meta.env.VITE_BRIDGE_API_BASE_URL;
-    if (apiBaseUrl) extras.apiBaseUrl = apiBaseUrl;
-    const hostedUrl = import.meta.env.VITE_BRIDGE_HOSTED_URL;
-    if (hostedUrl) extras.hostedUrl = hostedUrl;
-    config = { ...baseConfig, ...extras } as BridgeConfig;
-  } else {
-    config = baseConfig;
-  }
-
-  
-
-  const routeConfig: RouteGuardConfig = {
-    rules: [
-      { match: '/', public: true },
-      { match: new RegExp('^/auth($|/)'), public: true },
-      { match: '/welcome', public: true },
-    //   { match: new RegExp('^/.well-known*'), public: true },
-      { match: new RegExp('^/docs($|/)'), public: true },
-      { match: '/beta*', featureFlag: 'test-global-admin-access', redirectTo: '/',public: true },
-      // /flag-context-demo — TBP-178 E2E sandbox; FF 2.0 works without auth
-      { match: '/flag-context-demo', public: true },
-      // /discovery-probe — TBP-241 Phase 1.5 release-validation probe;
-      // exercises SDK discover-flow against an arbitrary ?key=, no auth needed.
-      { match: '/discovery-probe', public: true },
-      // /attr-probe — TBP-241 Phase 2 rule-coverage probe; reads ?key= +
-      // ?attrs= JSON and forwards as per-call attributes to useFlag.
-      // Public so #9 / #13 / #15 don't need to log in.
-      { match: '/attr-probe', public: true },
-      // { match: '/*', featureFlag:'global-feature', redirectTo: '/login'}
-    ],
-    defaultAccess: 'protected'
-  };
-
-  await bridgeBootstrap(url, config, routeConfig, fetch);
-
-  // Return any data your layout components need
-  return {
-    config,
-    routeConfig
-  };
-}
+export const load = bridgeBootstrap({
+	...(storedAppId ? { appId: storedAppId } : {}),
+	...(hostedMode ? {} : { loginRoute: '/auth/login' }),
+	debug: true,
+	billing: { paywallRoute: '/welcome', paymentErrorRoute: '/payment-error' },
+	rules: [
+		{ match: '/', public: true },
+		{ match: new RegExp('^/auth($|/)'), public: true },
+		{ match: '/welcome', public: true },
+		{ match: new RegExp('^/docs($|/)'), public: true },
+		{ match: '/beta*', featureFlag: 'test-global-admin-access', redirectTo: '/', public: true },
+		// /flag-context-demo — TBP-178 E2E sandbox; FF 2.0 works without auth
+		{ match: '/flag-context-demo', public: true },
+		// /discovery-probe — TBP-241 Phase 1.5 release-validation probe;
+		// exercises SDK discover-flow against an arbitrary ?key=, no auth needed.
+		{ match: '/discovery-probe', public: true },
+		// /attr-probe — TBP-241 Phase 2 rule-coverage probe; reads ?key= +
+		// ?attrs= JSON and forwards as per-call attributes to useFlag.
+		// Public so #9 / #13 / #15 don't need to log in.
+		{ match: '/attr-probe', public: true }
+	],
+	defaultAccess: 'protected'
+});

@@ -78,7 +78,7 @@ export const load = bridgeBootstrap({
 
 ## Base URLs
 
-Two options point the SDK at Bridge itself. Both default to production, so a production app on the standard cloud can leave them out. **Any other app must set them**, normally as `VITE_BRIDGE_API_BASE_URL` / `VITE_BRIDGE_HOSTED_URL` in `.env`: a stage, local or self-hosted app ID doesn't exist on the production API, and requests fail with "Not Found". In a development build Bridge warns once in the console when it falls back to production because `VITE_BRIDGE_API_BASE_URL` is unset.
+Two options point the SDK at Bridge itself. Both default to production, so a production app on the standard cloud can leave them out. **Any other app must set the API address**, as `VITE_BRIDGE_API_BASE_URL` in `.env`: a stage, local or self-hosted app ID doesn't exist on the production API, and requests fail with "Not Found". The hosted address follows the API address on Bridge's own domains (`api-stage.thebridge.dev` → `auth-stage.thebridge.dev`), so only a local or self-hosted Bridge also sets `VITE_BRIDGE_HOSTED_URL`; a development build warns when it cannot be derived. In a development build Bridge warns once in the console when it falls back to production because `VITE_BRIDGE_API_BASE_URL` is unset.
 
 - **`apiBaseUrl`** (default `https://api.thebridge.dev`): the base URL for the Bridge API. Every API endpoint the SDK calls is derived from it.
 - **`hostedUrl`** (default `https://auth.thebridge.dev`): the base URL for Bridge's hosted UI, such as the hosted login page and plan selection. Only needed with hosted auth.
@@ -95,7 +95,7 @@ If you leave `loginRoute` unset, Bridge uses hosted auth instead: unauthenticate
 |--------|------|---------|--------------|
 | `appId` | `string` | `VITE_BRIDGE_APP_ID` (required) | Your Bridge app ID, found in your app's settings in Control Center. With none anywhere, Bridge refuses to start and names the variable |
 | `apiBaseUrl` | `string` | `VITE_BRIDGE_API_BASE_URL`, else `'https://api.thebridge.dev'` | Base URL for the Bridge API; all endpoints are derived from it. Required for any non-production app. See [Base URLs](#base-urls) |
-| `hostedUrl` | `string` | `VITE_BRIDGE_HOSTED_URL`, else `'https://auth.thebridge.dev'` | Base URL for Bridge's hosted UI (login page, plan selection). See [Base URLs](#base-urls) |
+| `hostedUrl` | `string` | `VITE_BRIDGE_HOSTED_URL`, else derived from `apiBaseUrl` on Bridge's own domains, else `'https://auth.thebridge.dev'` | Base URL for Bridge's hosted UI (login page, plan selection). See [Base URLs](#base-urls) |
 | `callbackUrl` | `string` | `${origin}/auth/oauth-callback` | Where hosted/SSO login and Stripe checkout return to. See [Callback URL](#callback-url) |
 | `defaultRedirectRoute` | `string` | `'/'` | Accepted, but bridge-svelte does not currently read it: after hosted login the user returns to the page they asked for, or `/`; in SDK mode your `LoginForm`'s `onLogin` decides |
 | `loginRoute` | `string` | (unset) | In-app route of your login page. Leave unset for hosted auth: without it, unauthenticated users go to Bridge's hosted login page. See [Login route](#login-route) |

@@ -42,6 +42,25 @@ export function readBridgeEnv(): BridgeEnv {
   }
 }
 
+/**
+ * The hosted pages for an API address on Bridge's own domains: `api` becomes
+ * `auth`, so `api-stage.thebridge.dev` pairs with `auth-stage.thebridge.dev`.
+ *
+ * Without this, a stage app that sets only its API address (the documented
+ * shape) still sent sign-in to production's hosted pages, where its app id does
+ * not exist — the same wrong-environment failure as the API address, one hop
+ * later. Any other host (localhost, self-hosted) cannot be derived.
+ */
+export function hostedUrlFor(apiBaseUrl: string): string | undefined {
+  try {
+    const url = new URL(apiBaseUrl);
+    const match = /^api(-[a-z0-9-]+)?\.thebridge\.dev$/.exec(url.hostname);
+    return match ? `https://auth${match[1] ?? ''}.thebridge.dev` : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function isDevBuild(): boolean {
   try {
     return import.meta.env.DEV === true;
@@ -62,6 +81,9 @@ function present(value: string | undefined | null): string | undefined {
 /**
  * Build the effective config: an option passed explicitly wins over the
  * environment, and the environment wins over the built-in default.
+ *
+ * The hosted-pages address follows the API address on Bridge's own domains
+ * (see `hostedUrlFor`), so one variable is enough for stage.
  *
  * Refuses to guess: with no app id anywhere it throws, naming the variable to
  * set. An app id with no API address runs against production — that is the
@@ -84,13 +106,20 @@ export function resolveBridgeConfig(
   }
 
   const apiBaseUrl = present(options.apiBaseUrl) ?? present(env.apiBaseUrl);
-  const hostedUrl = present(options.hostedUrl) ?? present(env.hostedUrl);
+  const hostedUrl =
+    present(options.hostedUrl) ?? present(env.hostedUrl) ?? (apiBaseUrl ? hostedUrlFor(apiBaseUrl) : undefined);
   const debug = options.debug ?? (present(env.debug) === undefined ? undefined : env.debug === 'true');
 
   if (!apiBaseUrl && dev) {
     logger.warn(
       `[bridge] VITE_BRIDGE_API_BASE_URL is not set, so app ${appId} is using production ` +
         `(${PRODUCTION_API_BASE_URL}). Set it if this is a stage or local app.`
+    );
+  }
+  if (apiBaseUrl && !hostedUrl && dev) {
+    logger.warn(
+      `[bridge] VITE_BRIDGE_HOSTED_URL is not set and cannot be derived from ${apiBaseUrl}, ` +
+        `so sign-in pages will open on production. Set it to this environment's hosted pages.`
     );
   }
 

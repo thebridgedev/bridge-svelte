@@ -76,7 +76,7 @@ The options you pass to `bridgeBootstrap` are `BridgeConfig` fields plus your ro
 | `callbackUrl` | `<origin>/auth/oauth-callback` | Where the hosted login page redirects back to |
 | `loginRoute` | (unset) | In-app login route; leave unset for hosted auth (that's what triggers the hosted page) |
 | `apiBaseUrl` | `VITE_BRIDGE_API_BASE_URL`, else `https://api.thebridge.dev` | Root URL for the Bridge API — set it for any non-production app (stage, local, self-hosted) |
-| `hostedUrl` | `VITE_BRIDGE_HOSTED_URL`, else `https://auth.thebridge.dev` | Bridge hosted UI URL (dev override) |
+| `hostedUrl` | `VITE_BRIDGE_HOSTED_URL`, else derived from the API address on Bridge's own domains, else `https://auth.thebridge.dev` | Bridge hosted UI URL (local or self-hosted override) |
 | `debug` | `VITE_BRIDGE_DEBUG === 'true'`, else `false` | Enable debug logging |
 
 See the [Configuration reference](/auth/config/) for the full list (token storage, signup route, billing routes).
@@ -89,7 +89,8 @@ Bridge reads its settings from these variables in your `.env` file (the `VITE_` 
 VITE_BRIDGE_APP_ID=your-app-id-here
 # Only for a non-production app (stage, local, self-hosted):
 # VITE_BRIDGE_API_BASE_URL=https://api-stage.thebridge.dev
-# VITE_BRIDGE_HOSTED_URL=https://auth-stage.thebridge.dev
+# Only for a local or self-hosted Bridge (stage's hosted pages follow the API address):
+# VITE_BRIDGE_HOSTED_URL=http://localhost:3091
 ```
 
 With no app id anywhere, Bridge refuses to start and names `VITE_BRIDGE_APP_ID`. A production app sets only the app id; in a development build Bridge warns once in the console when it is using production because `VITE_BRIDGE_API_BASE_URL` is unset.

@@ -3,7 +3,7 @@
 // no app id anywhere Bridge refuses to start instead of guessing production.
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { readBridgeEnv, resolveBridgeConfig, PRODUCTION_API_BASE_URL } from './resolve-config.js';
+import { readBridgeEnv, resolveBridgeConfig, hostedUrlFor, PRODUCTION_API_BASE_URL } from './resolve-config.js';
 
 const STAGE_API = 'https://api-stage.thebridge.dev';
 const STAGE_HOSTED = 'https://auth-stage.thebridge.dev';
@@ -122,5 +122,36 @@ describe('reads the real Vite variables', () => {
     expect(config.appId).toBe('stage-app');
     expect(config.apiBaseUrl).toBe(STAGE_API);
     expect(config.apiBaseUrl).not.toBe(PRODUCTION_API_BASE_URL);
+  });
+});
+
+describe('the hosted pages follow the API address', () => {
+  it('a stage API address alone sends sign-in to stage, not production', () => {
+    const config = resolveBridgeConfig({}, { appId: 'stage-app', apiBaseUrl: STAGE_API }, false);
+    expect(config.hostedUrl).toBe(STAGE_HOSTED);
+  });
+
+  it('an explicit or environment hosted address still wins', () => {
+    expect(resolveBridgeConfig({}, { appId: 'a', apiBaseUrl: STAGE_API, hostedUrl: 'https://login.example.com' }, false).hostedUrl).toBe(
+      'https://login.example.com'
+    );
+    expect(resolveBridgeConfig({ hostedUrl: 'https://mine.example.com' }, { appId: 'a', apiBaseUrl: STAGE_API }, false).hostedUrl).toBe(
+      'https://mine.example.com'
+    );
+  });
+
+  it('maps only Bridge API hosts', () => {
+    expect(hostedUrlFor('https://api.thebridge.dev')).toBe('https://auth.thebridge.dev');
+    expect(hostedUrlFor('https://api-stage.thebridge.dev/')).toBe(STAGE_HOSTED);
+    expect(hostedUrlFor('http://localhost:3200')).toBeUndefined();
+    expect(hostedUrlFor('https://api.example.com')).toBeUndefined();
+    expect(hostedUrlFor('not a url')).toBeUndefined();
+  });
+
+  it('in a development build, names VITE_BRIDGE_HOSTED_URL when it cannot be derived', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    resolveBridgeConfig({}, { appId: 'local-app', apiBaseUrl: 'http://localhost:3200' }, true);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0][0])).toContain('VITE_BRIDGE_HOSTED_URL');
   });
 });

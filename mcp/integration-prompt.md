@@ -214,7 +214,8 @@ Add to your `.env` file (or `.env.local` for local dev):
 VITE_BRIDGE_APP_ID=your-app-id-here
 # Only for a non-production app (stage, local, self-hosted):
 # VITE_BRIDGE_API_BASE_URL=https://api-stage.thebridge.dev
-# VITE_BRIDGE_HOSTED_URL=https://auth-stage.thebridge.dev
+# Only for a local or self-hosted Bridge (stage's hosted pages follow the API address):
+# VITE_BRIDGE_HOSTED_URL=http://localhost:3091
 ```
 
 Bridge reads these variables itself — you do not pass them anywhere. Anything you pass to `bridgeBootstrap()` explicitly wins over the environment, and the environment wins over the default.
@@ -223,7 +224,7 @@ Bridge reads these variables itself — you do not pass them anywhere. Anything 
 |----------|-------------|--------------------|-------------|
 | `VITE_BRIDGE_APP_ID` | `appId` (required) | — Bridge refuses to start and names this variable | Your Bridge application ID |
 | `VITE_BRIDGE_API_BASE_URL` | `apiBaseUrl` | `https://api.thebridge.dev` (production) | Bridge API base URL — set it for any non-production app |
-| `VITE_BRIDGE_HOSTED_URL` | `hostedUrl` | `https://auth.thebridge.dev` (production) | Bridge hosted UI URL (login page) |
+| `VITE_BRIDGE_HOSTED_URL` | `hostedUrl` | follows the API address on Bridge's own domains (`api-stage` → `auth-stage`), else `https://auth.thebridge.dev` | Bridge hosted UI URL (login page) — set it only for a local or self-hosted Bridge |
 | `VITE_BRIDGE_DEBUG` | `debug` | `false` | `true` enables debug logging in the console |
 
 A production app sets only `VITE_BRIDGE_APP_ID`. In a development build, an app id with no `VITE_BRIDGE_API_BASE_URL` logs one console warning saying production is in use — if you see it for a stage or local app, set the variable.

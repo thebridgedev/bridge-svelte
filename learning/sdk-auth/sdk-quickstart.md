@@ -147,7 +147,7 @@ The options you pass to `bridgeBootstrap` are `BridgeConfig` fields plus your ro
 | `loginRoute` | (unset) | In-app route of your login page; unauthenticated users are redirected here |
 | `signupRoute` | `'/auth/signup'` | In-app route of your signup page; `LoginForm`'s signup link points here |
 | `apiBaseUrl` | `VITE_BRIDGE_API_BASE_URL`, else `https://api.thebridge.dev` | Root URL for the Bridge API — set it for any non-production app (stage, local, self-hosted) |
-| `hostedUrl` | `VITE_BRIDGE_HOSTED_URL`, else `https://auth.thebridge.dev` | Bridge hosted UI URL (non-production override) |
+| `hostedUrl` | `VITE_BRIDGE_HOSTED_URL`, else derived from the API address on Bridge's own domains, else `https://auth.thebridge.dev` | Bridge hosted UI URL (local or self-hosted override) |
 | `debug` | `VITE_BRIDGE_DEBUG === 'true'`, else `false` | Enable debug logging |
 
 Where a user lands after sign-in is decided by your `onLogin` (above), not by a config field.

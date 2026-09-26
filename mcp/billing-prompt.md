@@ -78,9 +78,9 @@ Verify before starting:
 
 - Bridge Auth must be set up in this project:
   - `@nebulr-group/bridge-svelte` in `package.json`
-  - `src/routes/+layout.ts` calls `bridgeBootstrap()`
-  - `src/routes/+layout.svelte` renders `<BridgeBootstrap />`
-  - `VITE_BRIDGE_APP_ID` set in `.env`
+  - `src/routes/+layout.ts` has `export const load = bridgeBootstrap({ rules, … })`
+  - `src/routes/+layout.svelte` wraps the app in `<BridgeBootstrap>…</BridgeBootstrap>`
+  - `VITE_BRIDGE_APP_ID` set in `.env` (plus `VITE_BRIDGE_API_BASE_URL` for a stage or local app)
 
 ## Step 1 — Subscription page
 
@@ -113,12 +113,13 @@ Create `src/routes/subscription/+page.svelte`:
 
 ## Step 2 — Billing notice banner
 
-Add `<BridgeBillingNotice />` to the root layout. It renders nothing when billing is healthy and automatically shows the right message for payment failures, trial endings, and cancellations:
+Add `<BridgeBillingNotice />` to the root layout, inside `<BridgeBootstrap>`. It renders nothing when billing is healthy and automatically shows the right message for payment failures, trial endings, and cancellations:
 
 ```svelte
-<BridgeBootstrap />
-<BridgeBillingNotice />
-{@render children()}
+<BridgeBootstrap>
+  <BridgeBillingNotice />
+  {@render children()}
+</BridgeBootstrap>
 ```
 
 Import from `@nebulr-group/bridge-svelte`.
@@ -142,25 +143,20 @@ have a plan pass straight through. Two parts:
 ```
 
 **2. Register it as the paywall route** in `src/routes/+layout.ts`, where you already call
-`bridgeBootstrap()`. Add `billing.paywallRoute` to the config and mark `/welcome` public in
-the route guard (the user is authenticated but planless — `public` keeps the guard from
+`bridgeBootstrap()`. Add `billing.paywallRoute` to that call and mark `/welcome` public in
+the rules (the user is authenticated but planless — `public` keeps the guard from
 fighting the paywall redirect):
 
 ```ts
-const config: BridgeConfig = {
-  // …existing appId, callbackUrl, loginRoute…
+export const load = bridgeBootstrap({
+  // …existing options, e.g. loginRoute…
   billing: { paywallRoute: '/welcome' },
-};
-
-const routeConfig: RouteGuardConfig = {
   rules: [
     // …existing rules…
     { match: '/welcome', public: true },
   ],
   defaultAccess: 'protected',
-};
-
-await bridgeBootstrap(url, config, routeConfig, fetch);
+});
 ```
 
 `BridgeBootstrap` reads `shouldSelectPlan` from the session and redirects planless users to
@@ -178,11 +174,12 @@ There is no MCP tool for this app-level setting — `get_app` reads it, nothing 
 wrap the app in `<BridgePaywall>` instead of creating `/welcome`:
 
 ```svelte
-<BridgeBootstrap />
-<BridgeBillingNotice />
-<BridgePaywall successRedirect="/">
-  {@render children()}
-</BridgePaywall>
+<BridgeBootstrap>
+  <BridgeBillingNotice />
+  <BridgePaywall successRedirect="/">
+    {@render children()}
+  </BridgePaywall>
+</BridgeBootstrap>
 ```
 
 `<BridgePaywall>` renders a fullscreen plan-selector overlay when `shouldSelectPlan` is true,

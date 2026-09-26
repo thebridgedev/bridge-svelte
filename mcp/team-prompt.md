@@ -19,9 +19,9 @@ Same components either way — the panel *is* those three assembled. Start with 
 
 Before starting, verify that Bridge is set up in this project:
 1. `@nebulr-group/bridge-svelte` is in package.json dependencies
-2. `src/routes/+layout.ts` calls `bridgeBootstrap()` with a `BridgeConfig` and `RouteGuardConfig`
-3. `src/routes/+layout.svelte` renders `<BridgeBootstrap>`
-4. `VITE_BRIDGE_APP_ID` is set in `.env`
+2. `src/routes/+layout.ts` has `export const load = bridgeBootstrap({ rules, … })`
+3. `src/routes/+layout.svelte` wraps the app in `<BridgeBootstrap>…</BridgeBootstrap>`
+4. `VITE_BRIDGE_APP_ID` is set in `.env` (plus `VITE_BRIDGE_API_BASE_URL` for a stage or local app)
 
 If any are missing, run `bridge guide svelte` first to complete the initial setup.
 

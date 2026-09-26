@@ -1,0 +1,17 @@
+name: PR gate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    uses: thebridgedev/auth-core/.github/workflows/merge-gate.yml@main
+    with:
+      # bun, no tracked lockfile: prove every pinned version resolves.
+      working-directory: bridge-svelte
+      install-command: bun install --ignore-scripts
+      setup-bun: true

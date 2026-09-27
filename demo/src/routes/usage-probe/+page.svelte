@@ -1,5 +1,4 @@
 <script lang="ts">
-  import PlanSelector from '@bridge-svelte/lib/client/components/subscription/PlanSelector.svelte';
   import BridgeQuotaBanner from '@bridge-svelte/lib/client/components/subscription/BridgeQuotaBanner.svelte';
   import { loadSubscription, subscriptionStore, getBridgeAuth } from '@bridge-svelte/lib/core/bridge-instance.js';
   import { useBridge } from '@nebulr-group/bridge-auth-core';
@@ -98,11 +97,16 @@
   });
 </script>
 
+<!--
+  Usage + quota probe (US-10 / US-11 / US-12). This used to be the demo's
+  /subscription page; TBP-702 moved the subscription page itself to
+  <BridgeBillingRoutes /> (routes/subscription/[...bridge]), and the probes here.
+-->
 <div class="subscription-page">
-  <h1>Subscription Plans</h1>
+  <h1>Usage &amp; quota probe</h1>
   <p class="subtitle">
-    Demonstrates <code>PlanSelector</code>, <code>subscriptionStore</code>, and
-    <code>loadSubscription()</code> from <code>@nebulr-group/bridge-svelte</code>.
+    Reads <code>subscriptionStore</code> and <code>loadSubscription()</code>, reports usage and
+    watches quota. The plan picker lives at <code>/subscription</code>.
   </p>
 
   <!-- ── Live store state panel ───────────────────────────────────────────── -->
@@ -237,8 +241,6 @@
     </details>
   </section>
 
-  <!-- ── PlanSelector component ────────────────────────────────────────────── -->
-  <PlanSelector />
 </div>
 
 <style>

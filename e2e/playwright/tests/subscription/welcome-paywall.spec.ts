@@ -174,19 +174,19 @@ test.describe('Welcome Paywall — first-time user flow', () => {
       // ---- 6. Stripe processes payment and redirects back to the demo's callback,
       //         which bootstrap recognises (stripe_success=1 + session_id) and
       //         resolves by POSTing /v1/account/stripe/confirm-checkout, refreshing
-      //         tokens, and 303-ing to the success redirect (PlanSelector default:
-      //         /subscription). Wait until we're back on the demo origin.
+      //         tokens, and 303-ing to the success redirect (<BridgePaywallPage>
+      //         default: /subscription/success, served by <BridgeBillingRoutes>,
+      //         TBP-702). Wait until we're back on the demo origin.
       await page.waitForURL(
         (url) => !url.hostname.includes('stripe.com'),
         { timeout: 60_000 } // Stripe processing can take a while
       );
-      // Wait for the post-checkout subscription page to finish rendering its
-      // active-billing state. networkidle is unreliable here because the demo
-      // keeps a persistent Centrifugo WebSocket open — the network never goes
-      // idle.
-      await expect(page.locator('text=Billing active')).toBeVisible({
-        timeout: LONG_TIMEOUT,
-      });
+      // Wait for the success page to show the plan just bought. networkidle is
+      // unreliable here because the demo keeps a persistent Centrifugo
+      // WebSocket open — the network never goes idle.
+      const success = page.locator('[data-bridge-billing-route="success"]');
+      await expect(success).toBeVisible({ timeout: LONG_TIMEOUT });
+      await expect(success.locator('.bss-plan')).toHaveText('Paywall Pro', { timeout: LONG_TIMEOUT });
 
       const postCheckoutUrl = page.url();
       const postCheckoutPath = new URL(postCheckoutUrl).pathname;

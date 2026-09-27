@@ -48,6 +48,7 @@
       group: 'Billing',
       items: [
         { href: '/subscription', label: 'Subscription' },
+        { href: '/usage-probe', label: 'Usage probe' },
         { href: '/billing-lifecycle', label: 'Billing Lifecycle' },
         { href: '/paywall', label: 'Paywall' },
       ],

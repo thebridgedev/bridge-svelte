@@ -10,13 +10,7 @@ Get up and running with The Bridge Svelte plugin using in-app SDK auth component
 npm i @nebulr-group/bridge-svelte
 ```
 
-Optional peer dependencies (install only if you need the feature):
-
-| Package | When needed |
-|---------|-------------|
-| `@stripe/stripe-js` | Paid subscription plans (Stripe Checkout) |
-
-Passkey (WebAuthn) support (`@simplewebauthn/browser`) is bundled with the plugin — no extra install.
+Nothing else to install: passkey (WebAuthn) support ships with the plugin, and checkout is a plain redirect to Stripe, so `@stripe/stripe-js` is not needed.
 
 Before wiring the routes, enable the auth methods you want on your Bridge app (password, magic link, passkeys, SSO providers) — components only render a method's UI when the app has it enabled:
 

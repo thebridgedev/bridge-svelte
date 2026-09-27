@@ -17,9 +17,11 @@ The stylesheet provides two layers:
 - **Structural CSS**: layout, spacing, and sizing that components need to render correctly.
 - **Visual defaults**: a minimal but complete out-of-the-box appearance so forms look reasonable with no extra work. These include a visible input border/focus ring, an indigo primary button, and colored error/success alert banners.
 
-## CSS variables reference
+## CSS variables reference — the token contract
 
-All visual defaults are driven by CSS custom properties defined on `:root`. Override any of them in your own CSS to theme the components:
+The `--bridge-*` variables below are the supported way to restyle Bridge's components: they are the contract, kept stable across releases. Tokens are the first of four customisation levels; the others (the `frame` / `heading` snippets on the sign-in and subscription pages, taking over one page, headless) are in [How Bridge works](/mechanisms/).
+
+The main visual defaults are defined on `:root`. Override any of them in your own CSS to theme the components:
 
 ```css
 /* app.css or +layout.svelte <style> */
@@ -41,18 +43,24 @@ All visual defaults are driven by CSS custom properties defined on `:root`. Over
 }
 ```
 
-### Additional internal variables
+### Component and page variables
 
-These variables are used by specific components and can also be overridden:
+These have no `:root` value; each component falls back to the default shown. Set them the same way:
 
 | Variable | Default | Used by |
 |----------|---------|---------|
 | `--bridge-muted` | `#6b7280` | Password toggle, MFA help text, token table headings, workspace user text |
 | `--bridge-foreground` | `#374151` | Password toggle hover, workspace name text |
+| `--bridge-bg` | `#ffffff` | Plan-change confirmation panel |
 | `--bridge-bg-muted` | `#f5f5f5` | MFA backup code background |
-| `--bridge-muted-bg` | `#f3f4f6` | Workspace item hover background |
+| `--bridge-muted-bg` | `#f3f4f6` | Workspace item hover, plan interval tabs |
 | `--bridge-primary-light` | `#eff6ff` | Active workspace item background |
 | `--bridge-primary-foreground` | `#ffffff` | Workspace avatar text color |
+| `--bridge-auth-page-padding` | `3rem 1rem` | The default container of the sign-in pages (`<BridgeAuthRoutes>`) |
+| `--bridge-billing-page-width` | `60rem` | The subscription pages (`<BridgeBillingRoutes>`, `<BridgePaywallPage>`) |
+| `--bridge-billing-page-padding` | `3rem 1rem` | The subscription pages |
+| `--bridge-paywall-bg` | `rgba(15, 23, 42, 0.72)` | Backdrop of the `<BridgePaywall>` overlay |
+| `--bridge-paywall-panel-bg` | `#ffffff` | Panel of the `<BridgePaywall>` overlay |
 
 ## Zero specificity
 

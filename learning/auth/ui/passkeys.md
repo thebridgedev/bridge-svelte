@@ -43,14 +43,16 @@ Registers a new passkey using a setup token (emailed to the user).
 | `onBack` | `() => void` | (none) | Called when user clicks back |
 | `onExpired` | `() => void` | (none) | Called when the token has expired |
 
+> `<BridgeAuthRoutes>` already serves this page at `/auth/setup-passkey/[token]` (see the [in-app quickstart](/sdk-auth/sdk-quickstart/)). The example below is for taking the page over; a file at that address wins over the catch-all.
+
 ```svelte
-<!-- src/routes/auth/passkey-setup/+page.svelte -->
+<!-- src/routes/auth/setup-passkey/[token]/+page.svelte -->
 <script lang="ts">
   import { page } from '$app/stores';
   import { PasskeySetup } from '@nebulr-group/bridge-svelte';
   import { goto } from '$app/navigation';
 
-  const token = $derived($page.url.searchParams.get('token') ?? '');
+  const token = $derived($page.params.token ?? '');
 </script>
 
 <PasskeySetup

@@ -83,11 +83,9 @@ test.describe('SDK Auth Alternatives', () => {
   test('signup link navigates to /auth/signup', async ({ page }) => {
     await page.goto('/auth/login');
 
-    // Two links to /auth/signup exist on this page and both are meant to:
-    // the AppShell sidebar indexes every demo route (including the signup
-    // page), and LoginForm's own `showSignupLink` footer is the SDK affordance
-    // this test is about. Scope to the form — an unscoped locator matches both
-    // and dies on strict mode (TBP-607).
+    // LoginForm's own `showSignupLink` footer is the SDK affordance this test
+    // is about. Scope to the form so a signup link anywhere else in the app's
+    // shell can never satisfy it (TBP-607).
     const signupLink = page.locator('[data-bridge-auth-form] a[href="/auth/signup"]');
     await expect(signupLink).toBeVisible({ timeout: MED_TIMEOUT });
     await signupLink.click();

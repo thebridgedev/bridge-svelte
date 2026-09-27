@@ -35,7 +35,7 @@ test.describe('Return-to deep links — hosted mode (TBP-629)', () => {
     const demoOrigin = new URL(envConfig.baseUrl).origin;
 
     // Flip the demo into hosted mode (no `loginRoute`) for this browser context
-    // only — see the toggle in demo/src/routes/+layout.ts.
+    // only — see `bridge:hostedMode` in demo/src/lib/test-fixtures/bootstrap.ts.
     await page.goto('/');
     await page.evaluate(() => localStorage.setItem('bridge:hostedMode', 'true'));
 

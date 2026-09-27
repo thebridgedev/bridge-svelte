@@ -17,13 +17,14 @@ test.describe('Public Routes', () => {
     await expect(heading).toBeVisible({ timeout: MED_TIMEOUT });
   });
 
-  test('home page displays feature overview sections', async ({ page }) => {
+  test('home page renders the app’s own nav without signing in', async ({ page }) => {
     await page.goto('/');
 
-    // Verify feature overview sections are rendered
-    await expect(page.locator('text=Feature Flags').first()).toBeVisible();
-    await expect(page.locator('text=Team Management').first()).toBeVisible();
-    await expect(page.locator('text=authentication').first()).toBeVisible();
+    for (const label of ['Home', 'Tickets', 'Team', 'Subscription']) {
+      await expect(page.locator(`a.nav-link:has-text("${label}")`).first(), label).toBeVisible({
+        timeout: MED_TIMEOUT,
+      });
+    }
   });
 
   test('home page shows Login button when not authenticated', async ({ page }) => {

@@ -1,4 +1,43 @@
 import { getBridgeAuth } from './bridge-instance.js';
+import { observeQuotaRefusal, watchesQuotaOrigin } from './quota-refusal.js';
+import { getConfig } from '../client/stores/config.store.js';
+
+function requestUrl(input: RequestInfo | URL): string {
+  return typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url;
+}
+
+function pageHref(): string | undefined {
+  const href = (globalThis as { location?: { href?: unknown } }).location?.href;
+  return typeof href === 'string' ? href : undefined;
+}
+
+/** `url` made absolute against the page, so a relative `/api/x` has an origin. */
+function absoluteUrl(url: string): string {
+  try {
+    return new URL(url, pageHref()).href;
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * TBP-703 — hand a 402 from a watched origin to the upgrade-dialog check.
+ * Watched: the page's own origin, Bridge's API, and `billing.apiOrigins`.
+ */
+function observeIfWatched(response: Response, url: string, apiBaseUrl: string): void {
+  if (response.status !== 402) return;
+  let apiOrigins: readonly string[] | undefined;
+  try {
+    apiOrigins = getConfig().billing?.apiOrigins;
+  } catch {
+    apiOrigins = undefined;
+  }
+  const href = pageHref();
+  const pageOrigin = href ? new URL(href).origin : undefined;
+  if (watchesQuotaOrigin(url, { pageOrigin, apiBaseUrl, apiOrigins })) {
+    void observeQuotaRefusal(response, absoluteUrl(url));
+  }
+}
 
 /**
  * Wraps a fetch function with Bridge auth concerns for requests to `apiBaseUrl`.
@@ -19,15 +58,17 @@ import { getBridgeAuth } from './bridge-instance.js';
  */
 export function wrapFetchWithBridgeAuth(baseFetch: typeof fetch, apiBaseUrl: string): typeof fetch {
   return async function bridgeAuthFetch(input, init) {
-    const url =
-      typeof input === 'string'
-        ? input
-        : input instanceof URL
-          ? input.href
-          : (input as Request).url;
+    const url = requestUrl(input);
 
-    // Only act on requests to the bridge API — everything else passes through.
-    if (!url.startsWith(apiBaseUrl)) return baseFetch(input, init);
+    // Only act on requests to the bridge API — everything else passes through
+    // untouched. TBP-703: a 402 from the app's own backend is still LOOKED at
+    // (never changed or delayed) so a plan-limit refusal opens the upgrade
+    // dialog with no code on the page.
+    if (!url.startsWith(apiBaseUrl)) {
+      const passthrough = await baseFetch(input, init);
+      observeIfWatched(passthrough, url, apiBaseUrl);
+      return passthrough;
+    }
 
     // 1. Inject current access token.
     const token = getBridgeAuth().getTokens()?.accessToken;
@@ -37,7 +78,10 @@ export function wrapFetchWithBridgeAuth(baseFetch: typeof fetch, apiBaseUrl: str
     const response = await baseFetch(input, { ...init, headers });
 
     // Non-200s are returned as-is; httpFetch handles REST auth errors separately.
-    if (!response.ok) return response;
+    if (!response.ok) {
+      observeIfWatched(response, url, apiBaseUrl);
+      return response;
+    }
 
     // 2. Inspect body for TOKEN_VERSION_STALE without consuming the original
     //    response (URQL / callers need to read it themselves).
@@ -81,8 +125,19 @@ export function wrapFetchWithBridgeAuth(baseFetch: typeof fetch, apiBaseUrl: str
  *
  * It sends the user's token to whatever URL you give it, so call it for your
  * backend only — never for a third-party URL.
+ *
+ * TBP-703 — a `402 { code: 'QUOTA_EXCEEDED', … }` answer (what bridge-nestjs's
+ * `@RequireQuota` sends at the plan's cap) opens the upgrade dialog that
+ * `<BridgeBootstrap>` mounts, whatever origin your backend is on. The response
+ * is still returned to you unchanged.
  */
 export async function bridgeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const response = await fetchWithToken(input, init);
+  void observeQuotaRefusal(response, absoluteUrl(requestUrl(input)));
+  return response;
+}
+
+async function fetchWithToken(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   let auth: ReturnType<typeof getBridgeAuth>;
   try {
     auth = getBridgeAuth();

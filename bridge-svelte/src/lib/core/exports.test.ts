@@ -49,6 +49,14 @@ describe('package root exports (TBP-697)', () => {
     expect(typeof pkg.BillingPortalButton).toBe('function');
   });
 
+  it('exports the plan-limit UI (TBP-703): QuotaGate, Entitled, BridgeUpgradeDialog, onBridgeQuotaExceeded', () => {
+    expect(typeof pkg.QuotaGate).toBe('function');
+    expect(typeof pkg.Entitled).toBe('function');
+    expect(typeof pkg.BridgeUpgradeDialog).toBe('function');
+    expect(typeof pkg.onBridgeQuotaExceeded).toBe('function');
+    expect(pkg.parseQuotaRefusal({ code: 'QUOTA_EXCEEDED', metric: 'tickets' })?.metric).toBe('tickets');
+  });
+
   it('BridgeProvider is kept, deprecated, as the same component as BridgeBootstrap', () => {
     expect(pkg.BridgeProvider).toBe(pkg.BridgeBootstrap);
   });

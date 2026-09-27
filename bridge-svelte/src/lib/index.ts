@@ -148,6 +148,19 @@ export { default as BridgePaywall } from './client/components/subscription/Bridg
 // Billing 2.0 (Phase C / US-11) — live quota counter banner.
 export { default as BridgeQuotaBanner } from './client/components/subscription/BridgeQuotaBanner.svelte';
 
+// TBP-703 — plan limits in the UI, three levels:
+//   0  nothing: a 402 QUOTA_EXCEEDED from your backend opens the upgrade dialog
+//      <BridgeBootstrap> mounts (billing.upgradeDialog: false | Component)
+//   1  <QuotaGate metric> disables its children at the cap;
+//      <Entitled to> shows them only when the plan grants the key
+//   2  useQuota(metric) / $entitlements for your own UI
+// All decoration: the backend's @RequireQuota / @RequireEntitlement enforce.
+export { default as QuotaGate } from './client/components/subscription/QuotaGate.svelte';
+export { default as Entitled } from './client/components/subscription/Entitled.svelte';
+export { default as BridgeUpgradeDialog } from './client/components/subscription/BridgeUpgradeDialog.svelte';
+export { onBridgeQuotaExceeded, parseQuotaRefusal } from './core/quota-refusal.js';
+export type { BridgeQuotaRefusal } from './core/quota-refusal.js';
+
 // Auth route guards
 export * from './auth/route-guard.js';
 

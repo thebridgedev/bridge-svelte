@@ -156,7 +156,7 @@ Pick the lowest level that does the job. Each is optional; level 0 is on without
 
 | Level | What the page writes | What the user sees |
 |---|---|---|
-| **0 — nothing** | a plain button calling your API | Your backend refuses at the cap (`402`), and `<BridgeBootstrap>` opens an **upgrade dialog** naming the metric, linking to the subscription page. A workspace member who cannot manage billing is told to ask the owner instead |
+| **0 — nothing** | a button calling your API with `bridgeFetch()`, as every authenticated call does | Your backend refuses at the cap (`402`), and `<BridgeBootstrap>` opens an **upgrade dialog** naming the metric, linking to the subscription page. A workspace member who cannot manage billing is told to ask the owner instead |
 | **1 — one component** | `<QuotaGate metric="tickets">…</QuotaGate>` around the button; `<Entitled to="analytics">…</Entitled>` around a paid feature | The button is disabled at a known hard cap with an upgrade line beside it; the paid feature shows only on a plan that grants it |
 | **2 — your own UI** | `useQuota('tickets')` and `$entitlements.can('analytics')` | Whatever you build from the live numbers |
 
@@ -187,7 +187,7 @@ Pick the lowest level that does the job. Each is optional; level 0 is on without
 ```
 
 - "Not loaded yet" is never "zero" and never "not allowed": `useQuota` numbers stay `null` while `loading`, `<QuotaGate>` stays enabled while loading, and `<Entitled>` renders nothing (or its `loading` snippet) until `$entitlements.ready`.
-- The dialog catches a `402 QUOTA_EXCEEDED` from the page's own origin, from Bridge, and from any call made with `bridgeFetch()`; a backend on another origin is listed in `billing.apiOrigins`. `billing: { upgradeDialog: false }` turns it off, `billing: { upgradeDialog: MyDialog }` replaces it.
+- Your app authenticates its own API calls with `bridgeFetch` anyway: a plain `fetch` sends no user token, so a protected backend answers `401`, never `402`. The limit handling still needs no code — the dialog opens from any `402 QUOTA_EXCEEDED` the wrapper sees. The dialog also catches a refusal from Bridge's own API; a backend on another origin called with plain `fetch` is listed in `billing.apiOrigins`. `billing: { upgradeDialog: false }` turns it off, `billing: { upgradeDialog: MyDialog }` replaces it.
 - Do not write a quota `if`, a "limit reached" toast or a `/quota` endpoint of your own: level 0 already covers the refusal, and the frontend reads quota directly from Bridge.
 
 ## 5. Usage reported from the browser trusts the client
@@ -233,36 +233,33 @@ The same ladder holds for the sign-in pages (`<BridgeAuthRoutes>`) and the subsc
 
 `heading` replaces only each page's main step (the login credentials step, the signup form, the set-password form); sub-steps such as "Reset your password" keep their own, so two headings never stack. There are no per-page snippets: to change more than frame and heading, take over the page (rung 3). A sign-in page you own navigates itself after sign-in: `<LoginForm onLogin={() => goto(readReturnTo($page.url) ?? '/')} />`.
 
-**The token contract (rung 1).** These `--bridge-*` variables are the supported way to restyle the components; each has a built-in default. Set them on `:root` or on any wrapper.
+**The token contract (rung 1).** These `--bridge-*` variables are the supported way to restyle every Bridge page and component. Set them in your own stylesheet on `:root`, or on a wrapper to theme one area. The plugin declares its defaults on `:where(:root)`, which has zero specificity, so your `:root` wins whichever stylesheet loads first.
 
 | Token | Default | Styles |
 |---|---|---|
-| `--bridge-primary` | `#4f46e5` | Primary buttons, selected plan interval, active workspace border |
-| `--bridge-primary-hover` | `#4338ca` | Primary button hover |
-| `--bridge-primary-fg` | `#ffffff` | Text on primary buttons |
-| `--bridge-primary-foreground` | `#ffffff` | Workspace avatar text; plan picker fallback when `--bridge-primary-fg` is unset |
-| `--bridge-primary-light` | `#eff6ff` | Active workspace background |
-| `--bridge-border` | `#d1d5db` | Input and secondary button borders |
-| `--bridge-border-radius` | `6px` | Corners of inputs, buttons, alerts, cards |
-| `--bridge-input-focus` | `#4f46e5` | Input focus ring |
-| `--bridge-foreground` | `#374151` | Password-toggle hover, workspace names |
+| `--bridge-primary` | `#4f46e5` | Primary buttons, the selected tab and plan interval, the active workspace |
+| `--bridge-primary-hover` | primary, 15% darker | Primary button hover |
+| `--bridge-primary-fg` | `#ffffff` | Text on primary surfaces |
+| `--bridge-primary-light` | primary at 10% | Tint behind the active workspace |
+| `--bridge-input-focus` | primary | Input focus ring |
+| `--bridge-bg` | `#ffffff` | Dialogs, menus, panels |
+| `--bridge-foreground` | `#111827` | Text on those surfaces, workspace names |
 | `--bridge-muted` | `#6b7280` | Secondary text, hints, table headings |
-| `--bridge-bg` | `#ffffff` | Plan-change confirmation panel |
-| `--bridge-bg-muted` | `#f5f5f5` | MFA backup code |
-| `--bridge-muted-bg` | `#f3f4f6` | Workspace list hover, plan interval tabs (which fall back to `--bridge-bg-muted`) |
-| `--bridge-alert-error-bg` | `#fef2f2` | Error alert background |
-| `--bridge-alert-error-fg` | `#991b1b` | Error alert text |
-| `--bridge-alert-error-border` | `#fca5a5` | Error alert border |
-| `--bridge-alert-success-bg` | `#f0fdf4` | Success alert background |
-| `--bridge-alert-success-fg` | `#166534` | Success alert text |
-| `--bridge-alert-success-border` | `#86efac` | Success alert border |
+| `--bridge-muted-bg` | `#f3f4f6` | Subtle fills: tab tracks, hovers, the MFA backup code |
+| `--bridge-border` | `#d1d5db` | Input, table, card and secondary button borders |
+| `--bridge-border-radius` | `6px` | Corners of inputs, buttons, alerts, cards and dialogs |
+| `--bridge-overlay` | `rgba(15, 23, 42, 0.45)` | Backdrop behind dialogs |
+| `--bridge-alert-error-{bg,fg,border}` | `#fef2f2` / `#991b1b` / `#fca5a5` | Errors, critical billing notices, cancelled plan badge |
+| `--bridge-alert-success-{bg,fg,border}` | `#f0fdf4` / `#166534` / `#86efac` | Confirmations, active plan badge |
+| `--bridge-alert-info-{bg,fg,border}` | `#eff6ff` / `#1e40af` / `#bfdbfe` | Info notices, trial badge |
+| `--bridge-alert-warning-{bg,fg,border}` | `#fffbeb` / `#92400e` / `#fcd34d` | Warnings, a quota nearing its limit, past-due badge |
 | `--bridge-auth-page-padding` | `3rem 1rem` | Padding of the default sign-in page container |
 | `--bridge-billing-page-width` | `60rem` | Width of the subscription pages and `<BridgePaywallPage>` |
 | `--bridge-billing-page-padding` | `3rem 1rem` | Padding of the subscription pages and `<BridgePaywallPage>` |
-| `--bridge-paywall-bg` | `rgba(15, 23, 42, 0.72)` | Backdrop of the `<BridgePaywall>` overlay |
-| `--bridge-paywall-panel-bg` | `#ffffff` | Panel of the `<BridgePaywall>` overlay |
+| `--bridge-paywall-bg` | `rgba(15, 23, 42, 0.72)` | Backdrop of the `<BridgePaywall>` overlay and the billing lockscreen |
+| `--bridge-paywall-panel-bg` | `--bridge-bg` | Panel of the `<BridgePaywall>` overlay |
 
-All default rules use `:where()`, so any selector of yours wins without `!important`. Leaving out `import '@nebulr-group/bridge-svelte/styles'` makes the components headless: plain HTML for you to style.
+The derived tokens (hover, light, focus) follow `--bridge-primary` wherever you set it, unless you set them too. Two older names still work as deprecated aliases: `--bridge-primary-foreground` for `--bridge-primary-fg`, and `--bridge-bg-muted` for `--bridge-muted-bg`. Fonts and body text colour are not tokens: Bridge pages render inside your layout and inherit them. With Tailwind, point the tokens at your theme (see [theming](/theming/)). Leaving out `import '@nebulr-group/bridge-svelte/styles'` makes the components headless: plain HTML for you to style.
 
 ## 7. Pages Bridge serves, and the one it only offers
 

@@ -1,7 +1,7 @@
 /**
  * Team Panel Tests
  *
- * Verifies the TeamManagementPanel component on /team-panel:
+ * Verifies the TeamManagementPanel component on /settings/team (the demo's one-line page):
  * - Route protection (auth required)
  * - Tab navigation (Users, Profile, Workspace)
  * - Users tab: list, add member, actions menu
@@ -24,9 +24,9 @@ function testEmail(): string {
   return `iman+playwright-test-team-${Date.now()}@nebulr.group`;
 }
 
-/** Navigate to /team-panel and wait for the panel to finish loading. */
+/** Navigate to /settings/team and wait for the panel to finish loading. */
 async function goToTeamPanel(page: import('@playwright/test').Page) {
-  await page.goto('/team-panel');
+  await page.goto('/settings/team');
   await page.locator('[data-bridge-team-panel]').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
 }
 
@@ -37,11 +37,11 @@ async function waitForLoaded(page: import('@playwright/test').Page) {
 
 // ── Page Access ──────────────────────────────────────────────────────────────
 
-test('/team-panel redirects to login when not authenticated', async ({ browser }) => {
+test('/settings/team redirects to login when not authenticated', async ({ browser }) => {
   const { page, cleanup } = await createCleanContext(browser);
 
   try {
-    await page.goto('/team-panel');
+    await page.goto('/settings/team');
     await page.waitForURL(
       (url) => url.toString().includes('/auth/') || url.toString().includes('/login'),
       { timeout: LONG_TIMEOUT },
@@ -62,9 +62,9 @@ test.describe('Tab Navigation', () => {
     const page = authenticatedPage;
     await goToTeamPanel(page);
 
-    await expect(page.locator('button.my-tab:has-text("Users")')).toBeVisible({ timeout: MED_TIMEOUT });
-    await expect(page.locator('button.my-tab:has-text("Profile")')).toBeVisible({ timeout: MED_TIMEOUT });
-    await expect(page.locator('button.my-tab:has-text("Workspace")')).toBeVisible({ timeout: MED_TIMEOUT });
+    await expect(page.locator('button.bridge-team-tab:has-text("Users")')).toBeVisible({ timeout: MED_TIMEOUT });
+    await expect(page.locator('button.bridge-team-tab:has-text("Profile")')).toBeVisible({ timeout: MED_TIMEOUT });
+    await expect(page.locator('button.bridge-team-tab:has-text("Workspace")')).toBeVisible({ timeout: MED_TIMEOUT });
   });
 
   test('clicking tabs switches the visible content section', async ({ authenticatedPage }) => {
@@ -75,17 +75,17 @@ test.describe('Tab Navigation', () => {
     await expect(page.locator('[data-bridge-team-users]')).toBeVisible({ timeout: MED_TIMEOUT });
 
     // Switch to Profile
-    await page.locator('button.my-tab:has-text("Profile")').click();
+    await page.locator('button.bridge-team-tab:has-text("Profile")').click();
     await expect(page.locator('[data-bridge-team-profile]')).toBeVisible({ timeout: MED_TIMEOUT });
     await expect(page.locator('[data-bridge-team-users]')).not.toBeVisible();
 
     // Switch to Workspace
-    await page.locator('button.my-tab:has-text("Workspace")').click();
+    await page.locator('button.bridge-team-tab:has-text("Workspace")').click();
     await expect(page.locator('[data-bridge-team-workspace]')).toBeVisible({ timeout: MED_TIMEOUT });
     await expect(page.locator('[data-bridge-team-profile]')).not.toBeVisible();
 
     // Switch back to Users
-    await page.locator('button.my-tab:has-text("Users")').click();
+    await page.locator('button.bridge-team-tab:has-text("Users")').click();
     await expect(page.locator('[data-bridge-team-users]')).toBeVisible({ timeout: MED_TIMEOUT });
   });
 });
@@ -277,7 +277,7 @@ test.describe('Profile Tab', () => {
     const page = authenticatedPage;
     await goToTeamPanel(page);
 
-    await page.locator('button.my-tab:has-text("Profile")').click();
+    await page.locator('button.bridge-team-tab:has-text("Profile")').click();
     await page.locator('[data-bridge-team-profile]').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
     await waitForLoaded(page);
 
@@ -301,7 +301,7 @@ test.describe('Profile Tab', () => {
     const page = authenticatedPage;
     await goToTeamPanel(page);
 
-    await page.locator('button.my-tab:has-text("Profile")').click();
+    await page.locator('button.bridge-team-tab:has-text("Profile")').click();
     await page.locator('[data-bridge-team-profile]').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
     await waitForLoaded(page);
 
@@ -324,7 +324,7 @@ test.describe('Workspace Tab', () => {
     const page = authenticatedPage;
     await goToTeamPanel(page);
 
-    await page.locator('button.my-tab:has-text("Workspace")').click();
+    await page.locator('button.bridge-team-tab:has-text("Workspace")').click();
     await page.locator('[data-bridge-team-workspace]').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
     await waitForLoaded(page);
 
@@ -341,7 +341,7 @@ test.describe('Workspace Tab', () => {
     const page = authenticatedPage;
     await goToTeamPanel(page);
 
-    await page.locator('button.my-tab:has-text("Workspace")').click();
+    await page.locator('button.bridge-team-tab:has-text("Workspace")').click();
     await page.locator('[data-bridge-team-workspace]').waitFor({ state: 'visible', timeout: MED_TIMEOUT });
     await waitForLoaded(page);
 

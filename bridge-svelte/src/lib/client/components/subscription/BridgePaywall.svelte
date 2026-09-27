@@ -81,7 +81,7 @@
     overflow-y: auto;
     padding: 2rem;
     border-radius: 0.75rem;
-    background: var(--bridge-paywall-panel-bg, #ffffff);
+    background: var(--bridge-paywall-panel-bg, var(--bridge-bg, #ffffff));
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   }
 

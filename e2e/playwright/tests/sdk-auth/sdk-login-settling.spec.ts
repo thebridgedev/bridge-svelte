@@ -187,12 +187,23 @@ test.describe('LoginForm never shows the credentials form post-auth (TBP-635)', 
     await emailInput.fill(testUser.email);
     await page.locator('#login-password').fill(testUser.password);
 
-    const settling = page.locator('[data-bridge-auth-settling]');
+    // The window is short and ends when the consumer navigates — on a fast
+    // machine it can close between two of Playwright's polls. Record the
+    // settling branch's text from inside the page the moment it is drawn.
+    await page.evaluate(() => {
+      const w = window as unknown as { __settlingText?: string };
+      const look = () => {
+        const el = document.querySelector('[data-bridge-auth-settling]');
+        if (el && w.__settlingText === undefined) w.__settlingText = el.textContent ?? '';
+      };
+      new MutationObserver(look).observe(document.body, { childList: true, subtree: true });
+    });
     await page.locator('button[type="submit"]:has-text("Sign in")').click();
 
-    // The window is short and ends when the consumer navigates, so take the
-    // first frame it exists rather than waiting for a stable state.
-    await settling.waitFor({ state: 'attached', timeout: LONG_TIMEOUT });
-    await expect(settling).toContainText(/signing in/i);
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __settlingText?: string }).__settlingText), {
+        timeout: LONG_TIMEOUT,
+      })
+      .toMatch(/signing in/i);
   });
 });

@@ -1,5 +1,7 @@
 # Demo Revamp — Implementation Plan
 
+> **Superseded (TBP-698, 2026-09).** The feature-showcase demo this describes was replaced by the reference integration: `src/routes` now holds only what the guides tell an app to write, and the old showcase pages live on as e2e fixtures under `src/routes/(test-fixtures)`. See the repo README, "Demo Application". Kept for history.
+
 > The build plan for the docs-driven interactive demo. Reads alongside
 > `DEMO-REVAMP.md` (UX/design spec) and `INTEGRATION.md` (architecture).
 > Architecture in one line: `learning/*.md` is the single source of truth; the demo

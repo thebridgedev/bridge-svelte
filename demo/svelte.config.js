@@ -13,6 +13,13 @@ const config = {
 		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
 		adapter: adapter(),
 		alias: {
+			// The demo imports the plugin by its published name, exactly as an app
+			// does, but from source: no build step between an edit and the page.
+			// `/styles` first — it points at a file, the bare name at the folder
+			// (index.ts, and flags/index.ts for `/flags`).
+			'@nebulr-group/bridge-svelte/styles': '../bridge-svelte/src/lib/styles.css',
+			'@nebulr-group/bridge-svelte': '../bridge-svelte/src/lib',
+			// Deep imports into the plugin, used by the test fixtures only.
 			'@bridge-svelte': '../bridge-svelte/src',
 			// Single source of truth for doc content — same `/learning` tree the
 			// public Astro docs hub renders via the sync-docs action.

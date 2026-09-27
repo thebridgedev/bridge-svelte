@@ -79,38 +79,38 @@
     font-size: 0.75rem;
     font-weight: 500;
     text-transform: lowercase;
-    background: #e5e7eb;
-    color: #374151;
+    background: var(--bridge-muted-bg, var(--bridge-bg-muted, #f3f4f6));
+    color: var(--bridge-foreground, #111827);
   }
 
   .bss-badge-active {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--bridge-alert-success-bg, #f0fdf4);
+    color: var(--bridge-alert-success-fg, #166534);
   }
 
   .bss-badge-trial {
-    background: #dbeafe;
-    color: #1e40af;
+    background: var(--bridge-alert-info-bg, #eff6ff);
+    color: var(--bridge-alert-info-fg, #1e40af);
   }
 
   .bss-badge-past_due,
   .bss-badge-cancel_at_period_end {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--bridge-alert-warning-bg, #fffbeb);
+    color: var(--bridge-alert-warning-fg, #92400e);
   }
 
   .bss-badge-canceled {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--bridge-alert-error-bg, #fef2f2);
+    color: var(--bridge-alert-error-fg, #991b1b);
   }
 
   .bss-loading,
   .bss-empty {
-    color: #6b7280;
+    color: var(--bridge-muted, #6b7280);
     font-style: italic;
   }
 
   .bss-error {
-    color: #b91c1c;
+    color: var(--bridge-alert-error-fg, #991b1b);
   }
 </style>

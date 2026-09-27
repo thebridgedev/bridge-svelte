@@ -87,7 +87,7 @@ Plan limits are enforced by your backend (with NestJS, one `@RequireQuota` decor
 
 | Level | You write | The user sees |
 |---|---|---|
-| 0 | nothing | An upgrade dialog when the backend refuses at the limit |
+| 0 | nothing beyond calling your API with `bridgeFetch()` | An upgrade dialog when the backend refuses at the limit |
 | 1 | `<QuotaGate metric>`, `<Entitled to>` | A button disabled at the cap; a feature shown only on plans that include it |
 | 2 | `useQuota(metric)`, `$entitlements.can(key)` | Your own UI from live numbers |
 
@@ -111,7 +111,7 @@ The same guides agents read are in [`mcp/`](mcp/) and are served by `bridge guid
 
 ## Demo Application
 
-The demo app in `demo/` exercises every feature against a real Bridge app:
+The demo app in `demo/` is the reference integration: its `src/routes` holds exactly what the guides tell an app to write, and nothing more.
 
 ```bash
 # From the bridge-svelte repo root
@@ -119,7 +119,17 @@ bun install
 bun run dev
 ```
 
-It serves the sign-in pages from `src/routes/auth/[...bridge]` (with its own `auth/login` page to prove a page can be taken over), the subscription pages from `src/routes/subscription/[...bridge]`, an opted-in `/welcome` onboarding page, and one page per feature: plan limits, usage, flags, teams, branding, API tokens, SSO, MFA and workspaces.
+| File | What it is |
+|---|---|
+| `+layout.ts` | `bridgeBootstrap({ loginRoute, billing: { paywallRoute: '/welcome' }, rules })` |
+| `+layout.svelte` | The styles import, `<BridgeBootstrap>` around the app's nav, `<BridgeBillingNotice>` and `<main>` |
+| `auth/[...bridge]/+page.svelte` | `<BridgeAuthRoutes />`: every sign-in page |
+| `subscription/[...bridge]/+page.svelte` | `<BridgeBillingRoutes />`: the subscription page, paywall and checkout returns |
+| `welcome/+page.svelte` | The optional onboarding page, `<BridgePaywallPage>` |
+| `tickets/+page.svelte` | Plan limits: a `bridgeFetch` call the stand-in backend refuses at the cap, and `<QuotaGate>` |
+| `settings/team/+page.svelte` | `<TeamManagementPanel>` |
+
+`src/app.css` themes Bridge with a few `--bridge-*` tokens. `src/routes/api/demo-backend` stands in for the app's own backend. Everything under `src/routes/(test-fixtures)` and `src/lib/test-fixtures` exists for the e2e suite (probes, harnesses, and the pages that prove each customisation level) and is not part of the integration.
 
 ## E2E Tests (Playwright)
 

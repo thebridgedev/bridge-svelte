@@ -61,13 +61,10 @@ test.describe('Login & Logout Flow', () => {
     await expect(page.locator('a.nav-link:has-text("Home")')).toBeVisible({
       timeout: MED_TIMEOUT,
     });
-    await expect(page.locator('a.nav-link:has-text("Team Management")')).toBeVisible();
-    await expect(page.locator('a.nav-link:has-text("Protected Page")')).toBeVisible();
+    await expect(page.locator('a.nav-link:has-text("Tickets")')).toBeVisible();
+    await expect(page.locator('a.nav-link:has-text("Team")')).toBeVisible();
 
-    // Logout button visible, topbar Login CTA gone.
-    // NOTE: the sidebar now renders the /auth/login link ALWAYS (un-gated), so
-    // assert on the auth-gated topbar login CTA (a.nav-link--login) instead of a
-    // bare nav[href] match.
+    // Logout button visible, the signed-out Login link gone.
     await expect(page.locator('button:has-text("Logout")')).toBeVisible();
     await expect(page.locator('a.nav-link--login')).not.toBeVisible();
   });

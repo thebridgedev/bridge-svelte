@@ -1,5 +1,7 @@
 # Demo ⇄ Docs Integration Spec
 
+> **Superseded (TBP-698, 2026-09).** The feature-showcase demo this describes was replaced by the reference integration: `src/routes` now holds only what the guides tell an app to write, and the old showcase pages live on as e2e fixtures under `src/routes/(test-fixtures)`. See the repo README, "Demo Application". Kept for history.
+
 > How the revamped demo, the doc source, and the public docs hub fit together.
 > Companion to `DEMO-REVAMP.md` (the design brief). This doc is the **engineering
 > architecture** we agreed on. Read `DEMO-REVAMP.md` for the visual/UX spec.

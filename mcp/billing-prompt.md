@@ -216,7 +216,7 @@ Import `BridgePaywallPage` / `BridgePaywall` from `@nebulr-group/bridge-svelte`.
 
 | Level | What the page writes | What the user sees |
 |---|---|---|
-| **0 — nothing** (default) | `<button onclick={createTicket}>New ticket</button>` — no Bridge code | The click is refused by the backend (`402 QUOTA_EXCEEDED`) and the **upgrade dialog** opens, naming the metric and linking to the subscription page |
+| **0 — nothing** (default) | `<button onclick={createTicket}>New ticket</button>`, where `createTicket` calls the API with `bridgeFetch('/api/tickets', { method: 'POST' })` — no limit code | The click is refused by the backend (`402 QUOTA_EXCEEDED`) and the **upgrade dialog** opens, naming the metric and linking to the subscription page |
 | **1 — one component** | `<QuotaGate metric="tickets">…</QuotaGate>`, `<Entitled to="analytics">…</Entitled>` | The button is disabled at the cap with an upgrade line beside it; a paid feature shows only on a plan that grants it |
 | **2 — your own UI** | `useQuota(metric)`, `$entitlements.can(key)` | Whatever you build from the numbers |
 
@@ -224,7 +224,7 @@ Import `BridgePaywallPage` / `BridgePaywall` from `@nebulr-group/bridge-svelte`.
 
 `<BridgeBootstrap>` mounts `<BridgeUpgradeDialog>`, on by default. When a request to **your own backend** answers `402` with `{ code: 'QUOTA_EXCEEDED', metric, used, limit, fix }` — exactly what `@RequireQuota` sends — the dialog opens: "This workspace has used 3 of 3 tickets on its current plan", with **Upgrade plan** linking to `fix` (a same-app path such as `/subscription`) or else `billing.manageRoute` (default `/subscription`).
 
-- Plain `fetch` is covered for the page's own origin (a SvelteKit endpoint or `/api` proxy) and Bridge's API. A backend on **another origin**: call it with `bridgeFetch()` (which also sends the user's token), or list it in `billing.apiOrigins: ['https://api.example.com']`.
+- Your app authenticates its own API calls with `bridgeFetch` anyway: a plain `fetch` sends no user token, so a protected backend answers `401`, never `402`. The limit handling still needs no code — the dialog opens from any `402 QUOTA_EXCEEDED` the wrapper sees. A backend on **another origin** works the same through `bridgeFetch()`; list it in `billing.apiOrigins: ['https://api.example.com']` only if some calls to it use plain `fetch`.
 - Your code still receives the `402` response unchanged — handle it as you would any failed write (e.g. do not add the item to the list).
 - `billing: { upgradeDialog: false }` in `bridgeBootstrap({...})` turns it off; `billing: { upgradeDialog: MyDialog }` replaces it (props: `refusal`, `upgradeHref`, `onclose`). With it off, `onBridgeQuotaExceeded((refusal) => …)` hands you the same refusal.
 

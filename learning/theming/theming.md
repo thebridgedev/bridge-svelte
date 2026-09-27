@@ -17,54 +17,111 @@ The stylesheet provides two layers:
 - **Structural CSS**: layout, spacing, and sizing that components need to render correctly.
 - **Visual defaults**: a minimal but complete out-of-the-box appearance so forms look reasonable with no extra work. These include a visible input border/focus ring, an indigo primary button, and colored error/success alert banners.
 
-## CSS variables reference — the token contract
+## The token contract
 
-The `--bridge-*` variables below are the supported way to restyle Bridge's components: they are the contract, kept stable across releases. Tokens are the first of four customisation levels; the others (the `frame` / `heading` snippets on the sign-in and subscription pages, taking over one page, headless) are in [How Bridge works](/mechanisms/).
-
-The main visual defaults are defined on `:root`. Override any of them in your own CSS to theme the components:
+The `--bridge-*` variables below are the supported way to restyle every Bridge page and component, kept stable across releases. Set them once in your app's stylesheet:
 
 ```css
-/* app.css or +layout.svelte <style> */
+/* src/app.css */
 :root {
-  --bridge-primary: #4f46e5;          /* button + focus ring color */
-  --bridge-primary-hover: #4338ca;    /* button hover state */
-  --bridge-primary-fg: #ffffff;       /* text on primary button */
-  --bridge-border: #d1d5db;           /* input + secondary button border */
-  --bridge-border-radius: 6px;        /* corners for inputs, buttons, alerts */
-  --bridge-input-focus: #4f46e5;      /* input focus-ring color */
-
-  /* alert colors */
-  --bridge-alert-error-bg: #fef2f2;
-  --bridge-alert-error-fg: #991b1b;
-  --bridge-alert-error-border: #fca5a5;
-  --bridge-alert-success-bg: #f0fdf4;
-  --bridge-alert-success-fg: #166534;
-  --bridge-alert-success-border: #86efac;
+  --bridge-primary: #0f766e;
+  --bridge-primary-fg: #ffffff;
+  --bridge-border: #e2e8f0;
+  --bridge-border-radius: 10px;
 }
 ```
 
-### Component and page variables
+The plugin declares its defaults on `:where(:root)`, which has zero specificity, so your `:root` wins whatever order the two stylesheets load in. Set a token on a wrapper instead of `:root` to theme one area (`<div style="--bridge-primary: #7c3aed">`). Tokens are rung 1 of the customisation rungs in [How Bridge works](/mechanisms/): rung 0 is your layout around every Bridge page, then the `frame` / `heading` snippets (2), taking over one page (3) and headless (4).
 
-These have no `:root` value; each component falls back to the default shown. Set them the same way:
+### Colour
 
-| Variable | Default | Used by |
-|----------|---------|---------|
-| `--bridge-muted` | `#6b7280` | Password toggle, MFA help text, token table headings, workspace user text |
-| `--bridge-foreground` | `#374151` | Password toggle hover, workspace name text |
-| `--bridge-bg` | `#ffffff` | Plan-change confirmation panel |
-| `--bridge-bg-muted` | `#f5f5f5` | MFA backup code background |
-| `--bridge-muted-bg` | `#f3f4f6` | Workspace item hover, plan interval tabs |
-| `--bridge-primary-light` | `#eff6ff` | Active workspace item background |
-| `--bridge-primary-foreground` | `#ffffff` | Workspace avatar text color |
+| Token | Default | Styles |
+|---|---|---|
+| `--bridge-primary` | `#4f46e5` | Primary buttons, the selected tab and plan interval, the active workspace |
+| `--bridge-primary-hover` | primary, 15% darker | Primary button hover |
+| `--bridge-primary-fg` | `#ffffff` | Text on primary surfaces |
+| `--bridge-primary-light` | primary at 10% | Tint behind the active workspace |
+| `--bridge-input-focus` | primary | Input focus ring |
+| `--bridge-bg` | `#ffffff` | Dialogs, menus, panels |
+| `--bridge-foreground` | `#111827` | Text on those surfaces, workspace names |
+| `--bridge-muted` | `#6b7280` | Secondary text, hints, table headings |
+| `--bridge-muted-bg` | `#f3f4f6` | Subtle fills: tab tracks, hovers, the MFA backup code |
+| `--bridge-border` | `#d1d5db` | Input, table, card and secondary button borders |
+| `--bridge-border-radius` | `6px` | Corners of inputs, buttons, alerts, cards and dialogs |
+| `--bridge-overlay` | `rgba(15, 23, 42, 0.45)` | Backdrop behind dialogs |
+| `--bridge-alert-error-bg` / `-fg` / `-border` | `#fef2f2` / `#991b1b` / `#fca5a5` | Errors, critical billing notices, cancelled plan badge |
+| `--bridge-alert-success-bg` / `-fg` / `-border` | `#f0fdf4` / `#166534` / `#86efac` | Confirmations, active plan badge |
+| `--bridge-alert-info-bg` / `-fg` / `-border` | `#eff6ff` / `#1e40af` / `#bfdbfe` | Info notices, trial badge |
+| `--bridge-alert-warning-bg` / `-fg` / `-border` | `#fffbeb` / `#92400e` / `#fcd34d` | Warnings, a quota nearing its limit, past-due badge |
+
+The three derived tokens (`-hover`, `-light`, `--bridge-input-focus`) follow `--bridge-primary` wherever you set it, unless you set them too.
+
+### Layout
+
+| Token | Default | Styles |
+|---|---|---|
 | `--bridge-auth-page-padding` | `3rem 1rem` | The default container of the sign-in pages (`<BridgeAuthRoutes>`) |
 | `--bridge-billing-page-width` | `60rem` | The subscription pages (`<BridgeBillingRoutes>`, `<BridgePaywallPage>`) |
 | `--bridge-billing-page-padding` | `3rem 1rem` | The subscription pages |
-| `--bridge-paywall-bg` | `rgba(15, 23, 42, 0.72)` | Backdrop of the `<BridgePaywall>` overlay |
-| `--bridge-paywall-panel-bg` | `#ffffff` | Panel of the `<BridgePaywall>` overlay |
+| `--bridge-paywall-bg` | `rgba(15, 23, 42, 0.72)` | Backdrop of the `<BridgePaywall>` overlay and the billing lockscreen |
+| `--bridge-paywall-panel-bg` | `--bridge-bg` | Panel of the `<BridgePaywall>` overlay |
+
+### Not tokens
+
+Fonts and body text colour. Bridge pages render inside your `+layout.svelte`, so they inherit your font, text colour and background like any other page.
+
+### Deprecated names
+
+Two tokens had two names. The old ones keep working, and will be removed in a later major version:
+
+| Deprecated | Use |
+|---|---|
+| `--bridge-primary-foreground` | `--bridge-primary-fg` |
+| `--bridge-bg-muted` | `--bridge-muted-bg` |
+
+## Tailwind
+
+Keep the styles import and point the tokens at your Tailwind theme, so Bridge follows it. Tailwind v4 exposes the theme as CSS variables:
+
+```css
+/* src/app.css */
+@import 'tailwindcss';
+
+@theme {
+  --color-brand-600: #0f766e;
+  --color-brand-700: #115e59;
+}
+
+:root {
+  --bridge-primary: var(--color-brand-600);
+  --bridge-primary-hover: var(--color-brand-700);
+  --bridge-primary-fg: var(--color-white);
+  --bridge-foreground: var(--color-slate-900);
+  --bridge-muted: var(--color-slate-500);
+  --bridge-muted-bg: var(--color-slate-100);
+  --bridge-border: var(--color-slate-200);
+  --bridge-border-radius: var(--radius-lg);
+}
+```
+
+If a Tailwind variable resolves to nothing, your Tailwind version emits only the theme variables it sees used; declare the block with `@theme static` to keep them all.
+
+On Tailwind v3, the same with `theme()`:
+
+```css
+:root {
+  --bridge-primary: theme('colors.teal.700');
+  --bridge-primary-hover: theme('colors.teal.800');
+  --bridge-border: theme('colors.slate.200');
+  --bridge-border-radius: theme('borderRadius.lg');
+}
+```
+
+Utility classes still work on anything that takes a `class` prop, and on your own markup inside the `frame` snippet.
 
 ## Zero specificity
 
-All visual-default rules use the `:where()` pseudo-class, which has zero specificity. This means any class or element selector in your own CSS wins automatically, no `!important` needed.
+All visual-default rules, and the token defaults on `:where(:root)`, use the `:where()` pseudo-class, which has zero specificity. Any class or element selector in your own CSS wins automatically, no `!important` needed.
 
 For example, the default primary button is styled as:
 
@@ -134,7 +191,7 @@ Example: style the active workspace differently.
 
 ## Headless usage
 
-If you manage all styling yourself (e.g. you use Tailwind), skip the import entirely:
+If you would rather style every component from scratch, skip the import entirely:
 
 ```diff
   // +layout.svelte

@@ -377,6 +377,8 @@ bridge.user                      // Readable<UserSnapshot | null>  // { id, emai
 
 `$entitlements.can(key)` is fail-closed and live: it follows the latest snapshot and every `entitlements.changed` push. `$entitlements.ready` is `false` until Bridge has answered — check it before treating a `false` as "this plan cannot". Outside a component, `bridge.tenant.entitlements.can(key)` is the same answer, read once. For quota numbers use `useQuota(metric)` (see the billing guide).
 
+In markup, `<Entitled to="ai_completions">…{#snippet fallback()}…{/snippet}</Entitled>` is the same check with the `ready` handling built in. Plan limits need no code at all: when your backend refuses a request at a cap (`402 QUOTA_EXCEEDED` from bridge-nestjs's `@RequireQuota`), `<BridgeBootstrap>` opens an upgrade dialog; `<QuotaGate metric>` disables an action before the click. All of it is decoration — the backend enforces. See the billing guide, Step 3.
+
 ### Using in components
 
 Import the `bridge` singleton from `@nebulr-group/bridge-svelte` wherever you need it — components, `.svelte.ts` modules or plain `.ts` files. Its scopes are Svelte stores, so use `$` in templates (for example `const subscription = bridge.tenant.subscription;` then `$subscription?.plan?.slug`). No provider or context wiring is needed beyond the `<BridgeBootstrap>` already in your root layout.

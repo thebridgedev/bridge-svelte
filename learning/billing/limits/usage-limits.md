@@ -24,7 +24,64 @@ It updates live on `quota.updated` pushes.
 | `class` | `string` | `''` | Class applied to the root element |
 | `onActionClick` | `(snap) => void` | (none) | Override the default Upgrade CTA handler (hard caps only) |
 
-## Reading quota state yourself
+## When a workspace reaches its limit
+
+**Your server decides; the UI explains.** The limit is enforced by your backend: with the NestJS SDK that is one decorator on the handler that creates the thing (`@RequireQuota('tickets')`), which refuses the request at the cap. Nothing in the browser can enforce a limit, because anyone can call your API directly. What the Svelte SDK does is make that refusal understandable, at three levels of effort.
+
+### Level 0: no code
+
+A page that calls your backend needs nothing from Bridge:
+
+```svelte
+<script lang="ts">
+  async function createTicket() {
+    await fetch('/api/tickets', { method: 'POST' });
+  }
+</script>
+
+<button onclick={createTicket}>New ticket</button>
+```
+
+When the backend refuses at the cap it answers `402` with `{ code: 'QUOTA_EXCEEDED', metric, used, limit, fix }`. `<BridgeBootstrap>` sees that answer and opens an **upgrade dialog**: *"This workspace has used 3 of 3 tickets on its current plan"*, with an **Upgrade plan** button that goes to `fix` (a path in your app) or else your subscription page. Your code still gets the `402` response, unchanged, to handle like any failed write.
+
+Plain `fetch` is covered for your app's own origin and for Bridge's API. If your backend lives on another origin, call it with [`bridgeFetch`](/billing/limits/report-usage/) (which also sends the user's token) or list it in `billing.apiOrigins`.
+
+| Config (`billing` in `bridgeBootstrap({...})`) | Default | Description |
+|------|---------|-------------|
+| `upgradeDialog` | `true` | `false` turns the dialog off; a component replaces it (it receives `refusal`, `upgradeHref`, `onclose`) |
+| `apiOrigins` | `[]` | Other origins your backend answers from, e.g. `['https://api.example.com']` |
+| `manageRoute` | `'/subscription'` | Where **Upgrade plan** goes when the refusal names no `fix` |
+
+With the dialog off, `onBridgeQuotaExceeded((refusal) => …)` hands you the same refusal to show your own way.
+
+### Level 1: one component
+
+When the button should react *before* the click, wrap it in `<QuotaGate>`:
+
+```svelte
+<script lang="ts">
+  import { QuotaGate } from '@nebulr-group/bridge-svelte';
+</script>
+
+<QuotaGate metric="tickets">
+  <button onclick={createTicket}>New ticket</button>
+  {#snippet atLimit(quota)}
+    {quota.used} of {quota.limit} tickets used. <a href="/subscription">Upgrade</a>
+  {/snippet}
+</QuotaGate>
+```
+
+At a hard cap every button and input inside is disabled, and the `atLimit` snippet (or a default "You've used all … Upgrade" line) shows beside them. It **never** disables on a guess: while the quota is loading, when the plan sets no limit on the metric, and for `metered` quotas (which bill overage rather than block), the children stay enabled.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `metric` | `string` | required | Metric key to gate on |
+| `atLimit` | `Snippet<[QuotaState]>` | "You've used all … Upgrade" | Shown beside the disabled children at the cap; receives the live quota |
+| `class` | `string` | `''` | Class on the wrapper |
+
+For a plan *feature* rather than a counted thing, use [`<Entitled>`](/billing/limits/lock-features/). Bridge turns every hard quota into an entitlement of the same name that is `false` at the cap, so don't wrap `<Entitled to="tickets">` around `<QuotaGate metric="tickets">`: at the cap it would hide the button and the upgrade line together.
+
+### Level 2: your own UI
 
 For a fully custom quota UI, `useQuota(metric)` gives you the numbers, live:
 
@@ -64,4 +121,4 @@ If deleting it frees room, it's a gauge and your app counts it. If it happened, 
 
 Set the kind on the plan's quota (`bridge plan quota set <plan> --metric projects --limit 10 --policy hard --kind gauge`).
 
-> Showing a quota is display, not enforcement. The cap has to be checked where the write happens: your backend, which reads the same quota and refuses the request.
+> Showing a quota is display, not enforcement. The cap has to be checked where the write happens: your backend, which refuses the request (see [Check plans on your backend](/billing/advanced/backend-checks/)). The dialog, `<QuotaGate>` and `useQuota` only explain or anticipate that refusal.

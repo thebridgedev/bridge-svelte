@@ -22,6 +22,31 @@ if (!hasEntitlement(req, 'ai_completions')) {
 // ...run the paid feature
 ```
 
+## The server decides; the frontend explains
+
+The backend is authoritative and the frontend is decorative. With the NestJS SDK
+each check is one decorator on the handler:
+
+```ts
+@Post()
+@RequireQuota('tickets', { current: (t, self: TicketsController) => self.tickets.countFor(t.id) })
+create() { /* ... */ }
+
+@Get('analytics')
+@RequireEntitlement('analytics')
+analytics() { /* ... */ }
+```
+
+At the cap `@RequireQuota` answers `402` with
+`{ code: 'QUOTA_EXCEEDED', metric, used, limit, fix }`. The Svelte SDK
+recognises that answer and shows the upgrade dialog, so the page that made
+the request needs no code for it (see
+[Show usage limits in your app](/billing/limits/usage-limits/)). A backend on
+another framework gets the same dialog by answering with the same body.
+
+`<QuotaGate>`, `<Entitled>` and the dialog never replace this check: they only
+save the user a click that would have been refused.
+
 ## Where the source of truth lives
 
 - **Entitlements & quotas** describe what the plan grants. They are the same

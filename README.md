@@ -1,48 +1,38 @@
-# Bridge Svelte Demo & Library Documentation
+# Bridge for SvelteKit
 
 [![MadeWithSvelte.com shield](https://madewithsvelte.com/storage/repo-shields/5996-shield.svg)](https://madewithsvelte.com/p/the-bridge/shield-link)
 
-This repository contains both Bridge Svelte library and a demo application showcasing its features.
+`@nebulr-group/bridge-svelte` adds Bridge sign-in, workspaces and roles, feature flags, subscriptions and plan limits to a SvelteKit 2 + Svelte 5 app. This repository holds the library (`bridge-svelte/`), a demo app (`demo/`) and the learning docs (`learning/`).
 
-## Quick Links
-- [Quickstart Guide](learning/quickstart/quickstart.md) - Get started quickly with Bridge in your Svelte application
-- [Examples](learning/examples/examples.md) - Detailed examples of Bridge features
+- [How Bridge works](learning/mechanisms.md): the mechanisms and levels every guide builds on
+- [Hosted sign-in quickstart](learning/quickstart/hosted-quickstart.md) · [In-app sign-in quickstart](learning/sdk-auth/sdk-quickstart.md)
+- [All learning docs](learning/README.md)
 
-## Table of Contents
-
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Authentication](#Authentication)
-- [Feature Flags](#feature-flags)
-- [Payments & Subscriptions](#payments--subscriptions)
-- [Demo Application](#demo-application)
-- [E2E Tests](#e2e-tests-playwright)
-
-## Installation
+## Install
 
 ```bash
-npm install @nebulr-group/bridge-svelte
+npm i @nebulr-group/bridge-svelte
 ```
 
-## Configuration
+## The whole integration
 
-Start Bridge from your root layout with one call. It reads the app id and addresses from your `.env`:
+One line of `.env` and three files:
 
 ```env
-VITE_BRIDGE_APP_ID=your_app_id
-# Only for a stage or local app:
+# .env
+VITE_BRIDGE_APP_ID=your-app-id
+# Only for a stage, local or self-hosted app:
 # VITE_BRIDGE_API_BASE_URL=https://api-stage.thebridge.dev
 ```
 
-```typescript
+```ts
 // src/routes/+layout.ts
 import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
 
 export const ssr = false;
 
 export const load = bridgeBootstrap({
-  rules: [{ match: '/', public: true }],
-  defaultAccess: 'protected',
+  rules: [{ match: new RegExp('^/auth($|/)'), public: true }],
 });
 ```
 
@@ -50,6 +40,8 @@ export const load = bridgeBootstrap({
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
   import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
+  import '@nebulr-group/bridge-svelte/styles';
+
   let { children } = $props();
 </script>
 
@@ -58,6 +50,7 @@ export const load = bridgeBootstrap({
 </BridgeBootstrap>
 ```
 
+<<<<<<< HEAD
 `<BridgeBootstrap>` renders its children only once Bridge is ready. An option passed to `bridgeBootstrap()` explicitly wins over the environment (`VITE_BRIDGE_APP_ID`, `VITE_BRIDGE_API_BASE_URL`, `VITE_BRIDGE_HOSTED_URL`, `VITE_BRIDGE_DEBUG`), which wins over the default. With no app id anywhere, Bridge refuses to start and names `VITE_BRIDGE_APP_ID`.
 
 ### Essential Configuration
@@ -263,26 +256,78 @@ The library provides:
 - `loadSubscription()` — fetches status + plans in parallel and populates the store
 - `planService` methods for custom UIs: `getPlans`, `getSubscriptionStatus`, `selectFreePlan`, `startCheckout`, `changePlan`, `getPortalUrl`
 - Stripe Checkout integration via lazy-loaded `@stripe/stripe-js` (install separately, only needed for paid plans)
+=======
+```svelte
+<!-- src/routes/auth/[...bridge]/+page.svelte -->
+<script lang="ts">
+  import { BridgeAuthRoutes } from '@nebulr-group/bridge-svelte';
+</script>
+
+<BridgeAuthRoutes />
+```
+
+- **Settings are read for you.** `VITE_BRIDGE_APP_ID`, `VITE_BRIDGE_API_BASE_URL`, `VITE_BRIDGE_HOSTED_URL` and `VITE_BRIDGE_DEBUG` are read by the plugin. An option passed to `bridgeBootstrap()` wins over the environment, which wins over the default. With no app id Bridge refuses to start and names the variable. Without an API address it uses production; the hosted login address follows the API address on Bridge's own domains, so only a local or self-hosted Bridge sets `VITE_BRIDGE_HOSTED_URL`.
+- **Everything is protected by default**; only `/auth/*` must be public.
+- **`<BridgeBootstrap>`** renders the app once Bridge is ready, finishes sign-in callbacks, starts feature flags and live updates, and opens an upgrade dialog when your backend refuses a request at a plan limit.
+- **The `[...bridge]` file** serves every sign-in page: login, signup, the OAuth callback, set password (where signup-verification and reset emails land), forgot password, magic link, passkey setup and workspace selection. Any other address under `/auth` gets the app's 404.
+
+### Hosted or in-app sign-in
+
+Without `loginRoute`, sign-in happens on Bridge's hosted page and the `[...bridge]` file only finishes the callback. Add `loginRoute: '/auth/login'` to `bridgeBootstrap()` and the same file renders the sign-in pages inside your app. That one field is the whole switch.
+
+Customise in-app pages by climbing only as far as you need: `--bridge-*` CSS tokens; the `frame(page, children)` and `heading(page)` snippets on `<BridgeAuthRoutes>`; take over one page by creating its route file (`src/routes/auth/login/+page.svelte` wins over the catch-all); or go headless with `getBridgeAuth()`. See [How Bridge works](learning/mechanisms.md) for the rungs and the full token list.
+
+## Subscriptions and plan limits
+
+With plans, one more file serves the subscription page, the paywall and both checkout return pages (`/subscription`, `/subscription/plan`, `/subscription/success`, `/subscription/error`):
+
+```svelte
+<!-- src/routes/subscription/[...bridge]/+page.svelte -->
+<script lang="ts">
+  import { BridgeBillingRoutes } from '@nebulr-group/bridge-svelte';
+</script>
+
+<BridgeBillingRoutes />
+```
+
+Plan limits are enforced by your backend (with NestJS, one `@RequireQuota` decorator per handler). The frontend has three levels, all optional:
+
+| Level | You write | The user sees |
+|---|---|---|
+| 0 | nothing | An upgrade dialog when the backend refuses at the limit |
+| 1 | `<QuotaGate metric>`, `<Entitled to>` | A button disabled at the cap; a feature shown only on plans that include it |
+| 2 | `useQuota(metric)`, `$entitlements.can(key)` | Your own UI from live numbers |
+
+`bridgeFetch()` calls your own backend with the user's token. See [How Bridge works](learning/mechanisms.md) for counter vs gauge, and why browser-reported usage cannot enforce a limit.
+
+## What the package exports
+
+| Area | Components and functions |
+|---|---|
+| Setup | `bridgeBootstrap`, `BridgeBootstrap`, `bridgeFetch` |
+| Sign-in | `BridgeAuthRoutes`, `LoginForm`, `SignupForm`, `ForgotPassword`, `MagicLink`, `PasskeyLogin`, `PasskeySetup`, `PasskeyRequestSetupLink`, `MfaChallenge`, `MfaSetup`, `SsoButton`, `WorkspaceSelector`, `TenantSelector`, `readReturnTo` |
+| State | `auth`, `getBridgeAuth`, `isAuthenticated`, `profileStore`, `tokenStore`, `bridge` (app, tenant, user, usage), `entitlements`, `useQuota` |
+| Billing | `BridgeBillingRoutes`, `BridgePaywallPage`, `BridgePaywall`, `PlanSelector`, `BillingPortalButton`, `BridgeBillingNotice`, `BridgeSubscriptionStatus`, `BridgeQuotaBanner`, `QuotaGate`, `Entitled`, `BridgeUpgradeDialog`, `onBridgeQuotaExceeded` |
+| Teams | `TeamManagementPanel`, `TeamUserList`, `TeamProfileForm`, `TeamWorkspaceForm`, `TeamAddUserDialog`, `TeamEditUserDialog`, `TeamConfirmDialog`, `TeamUserActionsMenu` |
+| Developer | `ApiTokenManagement` (a workspace's API tokens), `RealtimeDevBadge`, `realtimeStatus` |
+| Flags (`@nebulr-group/bridge-svelte/flags`) | `useFlag`, `FeatureFlag` |
+
+## Guides for coding agents
+
+The same guides agents read are in [`mcp/`](mcp/) and are served by `bridge guide svelte [feature]` and the Bridge MCP server. `bridge guide mechanisms` prints the model they share.
+>>>>>>> origin/feature/mcp-journey
 
 ## Demo Application
 
-The demo application in this repository contains runnable examples of Bridge usage patterns found in the [examples](learning/examples/examples.md) documentation.
-
-To run bridge demo:
+The demo app in `demo/` exercises every feature against a real Bridge app:
 
 ```bash
-# From bridge project root
+# From the bridge-svelte repo root
 bun install
 bun run dev
 ```
 
-The demo showcases:
-- **OAuth Redirect auth** — "Login with Bridge" button in the nav (redirects to hosted page)
-- **SDK Auth** — `/sdk-auth/*` pages with embedded `<LoginForm />`, `<SignupForm />`, etc. (no redirects)
-- Feature flag implementation
-- Team management features
-- Payment and subscription management
-
+It serves the sign-in pages from `src/routes/auth/[...bridge]` (with its own `auth/login` page to prove a page can be taken over), the subscription pages from `src/routes/subscription/[...bridge]`, an opted-in `/welcome` onboarding page, and one page per feature: plan limits, usage, flags, teams, branding, API tokens, SSO, MFA and workspaces.
 
 ## E2E Tests (Playwright)
 

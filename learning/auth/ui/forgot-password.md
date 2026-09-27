@@ -29,14 +29,18 @@ Dual-mode component:
 
 **Reset page (with token from URL):**
 
+> `<BridgeAuthRoutes>` already serves this page at `/auth/set-password/[token]` (see the [in-app quickstart](/sdk-auth/sdk-quickstart/)). The example below is for taking the page over; a file at that address wins over the catch-all.
+
+Signup verification and password-reset emails both link there.
+
 ```svelte
-<!-- src/routes/auth/reset-password/+page.svelte -->
+<!-- src/routes/auth/set-password/[token]/+page.svelte -->
 <script lang="ts">
   import { page } from '$app/stores';
   import { ForgotPassword } from '@nebulr-group/bridge-svelte';
   import { goto } from '$app/navigation';
 
-  const token = $derived($page.url.searchParams.get('token') ?? '');
+  const token = $derived($page.params.token ?? '');
 </script>
 
 <ForgotPassword

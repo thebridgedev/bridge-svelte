@@ -20,11 +20,17 @@ export const ssr = false;
 // suite can prove where the paywall goes when an app configures nothing.
 //
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> origin/feature/mcp-journey
 // `bridge:upgradeDialog` — TBP-703: 'false' turns the upgrade dialog off, so
 // the suite can prove the config switch works. A real app writes
 // `billing: { upgradeDialog: false }` — or leaves it out (on by default).
 //
+<<<<<<< HEAD
+>>>>>>> origin/feature/mcp-journey
+=======
 >>>>>>> origin/feature/mcp-journey
 // Guarded: the server imports this module to read `ssr`, and has no localStorage.
 const stored = (key: string) =>
@@ -33,6 +39,10 @@ const storedAppId = stored('bridge:appId') || undefined;
 const hostedMode = stored('bridge:hostedMode') === 'true';
 const defaultPaywall = stored('bridge:defaultPaywall') === 'true';
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+const upgradeDialogOff = stored('bridge:upgradeDialog') === 'false';
+>>>>>>> origin/feature/mcp-journey
 =======
 const upgradeDialogOff = stored('bridge:upgradeDialog') === 'false';
 >>>>>>> origin/feature/mcp-journey
@@ -45,12 +55,18 @@ export const load = bridgeBootstrap({
 	// workspaces go to /subscription/plan, which routes/subscription/[...bridge]
 	// serves along with the subscription page and the checkout return pages.
 <<<<<<< HEAD
+<<<<<<< HEAD
 	...(defaultPaywall ? {} : { billing: { paywallRoute: '/welcome' } }),
 =======
+=======
+>>>>>>> origin/feature/mcp-journey
 	billing: {
 		...(defaultPaywall ? {} : { paywallRoute: '/welcome' }),
 		...(upgradeDialogOff ? { upgradeDialog: false } : {})
 	},
+<<<<<<< HEAD
+>>>>>>> origin/feature/mcp-journey
+=======
 >>>>>>> origin/feature/mcp-journey
 	rules: [
 		{ match: '/', public: true },

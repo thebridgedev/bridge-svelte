@@ -26,28 +26,12 @@ Read this table before writing anything. Every case below is already solved by t
 | **Usage from an app with no backend** (local-first, mobile) | `bridge.usage.report(metric)` / `bridge.usage.set(metric, n)` — self-reported, see Step 3 | anywhere |
 | **Current plan / subscription state** | `bridge.tenant.subscription`, or `subscriptionStore` | anywhere |
 | **Manage payment method, cancel** | `<BillingPortalButton />` (already on `/subscription`) | anywhere else you want the button |
-<<<<<<< HEAD
-<<<<<<< HEAD
-| **Actually enforcing a cap** | **your server — not this guide** | your backend |
-=======
 | **Actually enforcing a cap** | **your server** — `@RequireQuota` / `@RequireEntitlement` in bridge-nestjs | your backend |
->>>>>>> origin/feature/mcp-journey
-=======
-| **Actually enforcing a cap** | **your server** — `@RequireQuota` / `@RequireEntitlement` in bridge-nestjs | your backend |
->>>>>>> origin/feature/mcp-journey
 
 Two rows have real blast radius, and both are easy to get wrong in the same direction:
 
 - **The plan-less gate belongs to `bridgeBootstrap()`, not to a page.** It redirects before any page renders, to `/subscription/plan` unless `billing.paywallRoute` says otherwise. Checking "does this tenant have a plan?" inside a component means the page has already loaded and its `load` has already run, so you are redirecting after the fact — the same mistake as gating a route from inside the route.
-<<<<<<< HEAD
-<<<<<<< HEAD
-- **A client-side quota check is display, not enforcement.** Anyone can call your API directly and skip it. Disabling a button is good UX and worth doing; the cap itself has to live in your backend, which reads the same quota through its own SDK and refuses the write.
-=======
 - **A client-side quota check is display, not enforcement.** Anyone can call your API directly and skip it. The server is authoritative, the client is decorative: the backend's decorator refuses the write; the upgrade dialog, `<QuotaGate>` and `<Entitled>` only explain or anticipate that refusal. Do not write a quota `if` on a page — the dialog already covers the refusal with zero code.
->>>>>>> origin/feature/mcp-journey
-=======
-- **A client-side quota check is display, not enforcement.** Anyone can call your API directly and skip it. The server is authoritative, the client is decorative: the backend's decorator refuses the write; the upgrade dialog, `<QuotaGate>` and `<Entitled>` only explain or anticipate that refusal. Do not write a quota `if` on a page — the dialog already covers the refusal with zero code.
->>>>>>> origin/feature/mcp-journey
 
 If the user has not said whether they want the redirect paywall or the overlay, the redirect is the default — and it is already on once Step 1's file exists. Do not hand-write a paywall page, a `/billing` page or a `/payment-error` page: `<BridgeBillingRoutes />` serves every page Bridge redirects to.
 
@@ -228,11 +212,7 @@ Import `BridgePaywallPage` / `BridgePaywall` from `@nebulr-group/bridge-svelte`.
 
 > Quotas are configured with `set_plan_quota` (MCP) or `bridge plan quota set` (CLI) — `hard` / `--policy hard` for blocking caps, `metered` + `priceAmount` / `--policy metered --price-amount <n>` for per-unit billing; see *Configuring plans, prices and quotas* above. Entitlements are derived from `hard` quotas automatically — there is no entitlement tool or `plan entitlement set` command.
 
-<<<<<<< HEAD
-**The enforcement model: the server is authoritative, the client is decorative.** Your backend refuses a request at the cap — with bridge-nestjs that is one decorator on the handler that creates the thing (`@RequireQuota('tickets')`, `@RequireEntitlement('analytics')`; see the **bridge-nestjs billing guide**, `get_integration_guide` with `topic=billing`, `framework=nestjs`). Everything in this step only *shows* that decision. Pick the lowest level that does the job — everything is imported from `@nebulr-group/bridge-svelte`:
-=======
 **The enforcement model: the server is authoritative, the client is decorative.** Your backend refuses a request at the cap — with bridge-nestjs that is one decorator on the handler that creates the thing (`@RequireQuota('tickets')`, `@RequireEntitlement('analytics')`; `bridge guide nestjs billing`). Everything in this step only *shows* that decision. Pick the lowest level that does the job — everything is imported from `@nebulr-group/bridge-svelte`:
->>>>>>> origin/feature/mcp-journey
 
 | Level | What the page writes | What the user sees |
 |---|---|---|
@@ -306,11 +286,6 @@ A `/quota` route on your own API, a hand-written `type MyQuota = { used, limit, 
 
 The cap belongs on the backend handler that creates the thing — with NestJS one decorator: `@RequireQuota('tickets', { current })` for something that exists and can be deleted (a gauge), `@RequireQuota('exports')` for something that happened (a counter), `@RequireEntitlement('analytics')` for a plan feature. A POST increments the limit; there is nothing else to wire. It refuses with the `402 QUOTA_EXCEEDED` body that opens the level-0 dialog — `bridge guide nestjs billing`.
 
-<<<<<<< HEAD
-The cap itself belongs in your backend. With NestJS it is one decorator on the handler that creates the thing — `@RequireQuota('tickets', { current })` for something that exists and can be deleted (a gauge), `@RequireQuota('exports')` for something that happened (a counter), `@RequireEntitlement('analytics')` for a plan feature. It checks before the handler runs, records usage after it succeeds, and refuses with the `402 QUOTA_EXCEEDED` body that opens the level-0 dialog — see the **bridge-nestjs billing guide** (`get_integration_guide` with `topic=billing`, `framework=nestjs`). The two halves are independent: the client shows, the server decides.
-
-=======
->>>>>>> origin/feature/mcp-journey
 ### Reporting usage from the browser — self-reported
 
 An app with no backend that sees the action — a local-first or mobile app whose data lives on the device — reports usage from the client:
@@ -335,11 +310,7 @@ If deleting it frees room, it's a gauge and your app counts it (`set`, after eve
 
 ### Entitlements in script
 
-<<<<<<< HEAD
-`<Entitled to="key">` is the markup form. In script:
-=======
 `<Entitled to="key">` is the markup form. A plan feature is a `hard` quota nothing counts (`bridge plan quota set pro --metric analytics --limit 1 --policy hard`); `app_active` is true while the subscription is active. In script:
->>>>>>> origin/feature/mcp-journey
 
 ```svelte
 <script lang="ts">
@@ -365,11 +336,7 @@ For a fully custom button, the method is `getBridgeAuth().getBillingPortalUrl()`
 
 ## Reading subscription state
 
-<<<<<<< HEAD
-The subscription state is available via `bridge.tenant.subscription` (a store on the `bridge` singleton), or the `subscriptionStore` store. Both update reactively when the plan changes — no polling needed. Import `bridge` / `subscriptionStore` from `@nebulr-group/bridge-svelte`. Inside a component, `useBridge()` returns the same `bridge` object.
-=======
 The subscription state is available via `bridge.tenant.subscription` (a store on the `bridge` singleton), or the `subscriptionStore` store. Both update reactively when the plan changes — no polling needed. Import `bridge` / `subscriptionStore` from `@nebulr-group/bridge-svelte`. `useBridge()` returns the same object (a test can override it with `setBridgeContext`).
->>>>>>> origin/feature/mcp-journey
 
 ## Billing checklist
 
@@ -379,17 +346,8 @@ Before verifying, confirm every item was applied:
 - [ ] `src/routes/subscription/[...bridge]/+page.svelte` created with `<BridgeBillingRoutes />` — and no hand-written `/billing`, `/payment-error`, success or paywall pages
 - [ ] `<BridgeBillingNotice />` added to root layout
 - [ ] Paywall: nothing to add (default `/subscription/plan`). `/welcome` + `billing.paywallRoute: '/welcome'` ONLY if the user asked for it — OR `<BridgePaywall>` + `billing.paywallRoute: false` for the overlay alternative
-<<<<<<< HEAD
-<<<<<<< HEAD
-- [ ] Quota/entitlement UI added if plans have limits
-=======
 - [ ] Plan limits: the backend enforces them (`@RequireQuota` / `@RequireEntitlement`); the frontend relies on the level-0 dialog, adding `<QuotaGate>` / `<Entitled>` only where the UI should react before the click — no hand-written quota checks, toasts or `/quota` endpoints
 - [ ] No `<Entitled>` wrapped around a `<QuotaGate>` on the same key
->>>>>>> origin/feature/mcp-journey
-=======
-- [ ] Plan limits: the backend enforces them (`@RequireQuota` / `@RequireEntitlement`); the frontend relies on the level-0 dialog, adding `<QuotaGate>` / `<Entitled>` only where the UI should react before the click — no hand-written quota checks, toasts or `/quota` endpoints
-- [ ] No `<Entitled>` wrapped around a `<QuotaGate>` on the same key
->>>>>>> origin/feature/mcp-journey
 - [ ] No extra packages installed (`@stripe/stripe-js` must NOT be in package.json)
 
 ## Verify
@@ -401,17 +359,8 @@ Before verifying, confirm every item was applied:
 5. Cancel payment — back on `/subscription`.
 6. Paywall: sign in as a new tenant with no plan — you're redirected to `/subscription/plan` (or `/welcome`, if the user opted in) and can't reach the app until a plan is chosen.
 7. `/subscription/nope` shows the app's own 404.
-<<<<<<< HEAD
-<<<<<<< HEAD
-8. Run the project's build command — no TypeScript or import errors.
-=======
 8. Plan limits: with a workspace at a hard cap, the action behind `@RequireQuota` answers `402` and the upgrade dialog opens naming the metric; **Upgrade plan** reaches `/subscription`. A `<QuotaGate>` around that action shows it disabled at the cap and enabled while the page loads.
 9. Run the project's build command — no TypeScript or import errors.
->>>>>>> origin/feature/mcp-journey
-=======
-8. Plan limits: with a workspace at a hard cap, the action behind `@RequireQuota` answers `402` and the upgrade dialog opens naming the metric; **Upgrade plan** reaches `/subscription`. A `<QuotaGate>` around that action shows it disabled at the cap and enabled while the page loads.
-9. Run the project's build command — no TypeScript or import errors.
->>>>>>> origin/feature/mcp-journey
 
 ---
 

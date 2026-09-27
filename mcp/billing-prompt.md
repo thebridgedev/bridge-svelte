@@ -1,8 +1,10 @@
 # Bridge SvelteKit — Billing
 
-You are wiring **billing UI** into a SvelteKit application that uses The Bridge. Plans and Stripe are already configured — this guide covers the frontend only: the subscription page, lifecycle notices, quota counters, and the billing portal.
+You are wiring **billing UI** into a SvelteKit application that uses The Bridge. Plans and Stripe are already configured — this guide covers the frontend only: the subscription pages, lifecycle notices, plan limits in the UI, and the billing portal.
 
-> **STOP — do not install any packages.** The only dependency is `@nebulr-group/bridge-svelte`, which is already installed. Do NOT install `@stripe/stripe-js` — the SDK redirects to Stripe Checkout via a plain URL redirect, no Stripe client library needed. `@stripe/stripe-js` appears in the package peer dep list for legacy reasons and must not be installed.
+`bridge guide mechanisms` is the one-page model this guide builds on: the server decides and the client decorates, a POST increments the limit, counter vs gauge, and the three UI levels.
+
+> **Do not install any packages.** The only dependency is `@nebulr-group/bridge-svelte`, already installed. Checkout is a plain redirect to Stripe, so `@stripe/stripe-js` is not needed, even though it appears in the package's optional peer dependencies.
 
 ## Decide first — which billing surface?
 
@@ -64,13 +66,7 @@ The common two-tier shape — a free plan with a hard cap, a premium plan that m
 
 `limit: 0` with `policy: "metered"` bills from the first unit. `policy: "hard"` must **not** carry `priceAmount`. `priceCurrency` defaults to the plan's price currency when the plan has exactly one — pass it explicitly otherwise. On the CLI these are `--policy hard` and `--policy metered --price-amount 0.002`.
 
-### Operations that are not plain MCP writes
-
-Two of these used to be listed as "no MCP tool exists". `connect_stripe`,
-`setup_payments` and `get_stripe_status` shipped in TBP-577, and the stale text
-actively told agents not to look for them — costing at least one real session a
-wrong answer to the user. If you find yourself writing "there is no tool for
-this", check first.
+### Stripe and the paywall setting
 
 - **Connecting Stripe.** `connect_stripe` over MCP (or `setup_payments`, which runs the whole payment setup), `bridge stripe connect --secret-key … --publishable-key …` on the CLI, or the dashboard. It needs a live Stripe secret key: ask the user for it. Never invent one and never reuse a key you found in a file.
 - **Reading Stripe connection status**: `get_stripe_status` over MCP, `bridge stripe status` on the CLI. `get_app` also reports the app-level billing setup.
@@ -216,7 +212,7 @@ Import `BridgePaywallPage` / `BridgePaywall` from `@nebulr-group/bridge-svelte`.
 
 > Quotas are configured with `set_plan_quota` (MCP) or `bridge plan quota set` (CLI) — `hard` / `--policy hard` for blocking caps, `metered` + `priceAmount` / `--policy metered --price-amount <n>` for per-unit billing; see *Configuring plans, prices and quotas* above. Entitlements are derived from `hard` quotas automatically — there is no entitlement tool or `plan entitlement set` command.
 
-**The enforcement model: the server is authoritative, the client is decorative.** Your backend refuses a request at the cap — with bridge-nestjs that is one decorator on the handler that creates the thing (`@RequireQuota('tickets')`, `@RequireEntitlement('analytics')`; see the **bridge-nestjs billing guide**, `get_integration_guide` with `topic=billing`, `framework=nestjs`). Everything in this step only *shows* that decision. Pick the lowest level that does the job — everything is imported from `@nebulr-group/bridge-svelte`:
+**The enforcement model: the server is authoritative, the client is decorative.** Your backend refuses a request at the cap — with bridge-nestjs that is one decorator on the handler that creates the thing (`@RequireQuota('tickets')`, `@RequireEntitlement('analytics')`; `bridge guide nestjs billing`). Everything in this step only *shows* that decision. Pick the lowest level that does the job — everything is imported from `@nebulr-group/bridge-svelte`:
 
 | Level | What the page writes | What the user sees |
 |---|---|---|
@@ -286,11 +282,9 @@ The client reads quota **directly from Bridge**. You do not need an endpoint on 
 
 A `/quota` route on your own API, a hand-written `type MyQuota = { used, limit, remaining, … }`, and bespoke fetch-and-poll counter code are three symptoms of the same wrong turn.
 
-### Enforcement is server-side. Always.
+### Enforcement is the backend's
 
-A client-side check is **display, not enforcement** — anyone can call your API directly and skip it. Disabling a button is good UX and worth doing; it is not a cap.
-
-The cap itself belongs in your backend. With NestJS it is one decorator on the handler that creates the thing — `@RequireQuota('tickets', { current })` for something that exists and can be deleted (a gauge), `@RequireQuota('exports')` for something that happened (a counter), `@RequireEntitlement('analytics')` for a plan feature. It checks before the handler runs, records usage after it succeeds, and refuses with the `402 QUOTA_EXCEEDED` body that opens the level-0 dialog — see the **bridge-nestjs billing guide** (`get_integration_guide` with `topic=billing`, `framework=nestjs`). The two halves are independent: the client shows, the server decides.
+The cap belongs on the backend handler that creates the thing — with NestJS one decorator: `@RequireQuota('tickets', { current })` for something that exists and can be deleted (a gauge), `@RequireQuota('exports')` for something that happened (a counter), `@RequireEntitlement('analytics')` for a plan feature. A POST increments the limit; there is nothing else to wire. It refuses with the `402 QUOTA_EXCEEDED` body that opens the level-0 dialog — `bridge guide nestjs billing`.
 
 ### Reporting usage from the browser — self-reported
 
@@ -316,7 +310,7 @@ If deleting it frees room, it's a gauge and your app counts it (`set`, after eve
 
 ### Entitlements in script
 
-`<Entitled to="key">` is the markup form. In script:
+`<Entitled to="key">` is the markup form. A plan feature is a `hard` quota nothing counts (`bridge plan quota set pro --metric analytics --limit 1 --policy hard`); `app_active` is true while the subscription is active. In script:
 
 ```svelte
 <script lang="ts">
@@ -342,7 +336,7 @@ For a fully custom button, the method is `getBridgeAuth().getBillingPortalUrl()`
 
 ## Reading subscription state
 
-The subscription state is available via `bridge.tenant.subscription` (a store on the `bridge` singleton), or the `subscriptionStore` store. Both update reactively when the plan changes — no polling needed. Import `bridge` / `subscriptionStore` from `@nebulr-group/bridge-svelte`. Inside a component, `useBridge()` returns the same `bridge` object.
+The subscription state is available via `bridge.tenant.subscription` (a store on the `bridge` singleton), or the `subscriptionStore` store. Both update reactively when the plan changes — no polling needed. Import `bridge` / `subscriptionStore` from `@nebulr-group/bridge-svelte`. `useBridge()` returns the same object (a test can override it with `setBridgeContext`).
 
 ## Billing checklist
 

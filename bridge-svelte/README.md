@@ -14,7 +14,43 @@ npm i @nebulr-group/bridge-svelte
 
 ### Usage
 
-See the `demo/` app in the monorepo for end-to-end wiring.
+The whole integration is one `.env` line and three files:
+
+```env
+# .env
+VITE_BRIDGE_APP_ID=your-app-id
+```
+
+```ts
+// src/routes/+layout.ts
+import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
+export const ssr = false;
+export const load = bridgeBootstrap({ rules: [{ match: new RegExp('^/auth($|/)'), public: true }] });
+```
+
+```svelte
+<!-- src/routes/+layout.svelte -->
+<script lang="ts">
+  import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
+  import '@nebulr-group/bridge-svelte/styles';
+  let { children } = $props();
+</script>
+<BridgeBootstrap>
+  {@render children()}
+</BridgeBootstrap>
+```
+
+```svelte
+<!-- src/routes/auth/[...bridge]/+page.svelte — every sign-in page -->
+<script lang="ts">
+  import { BridgeAuthRoutes } from '@nebulr-group/bridge-svelte';
+</script>
+<BridgeAuthRoutes />
+```
+
+A stage or local app also sets `VITE_BRIDGE_API_BASE_URL`. Add `loginRoute: '/auth/login'` for sign-in inside the app, and `src/routes/subscription/[...bridge]/+page.svelte` rendering `<BridgeBillingRoutes />` for subscriptions.
+
+[How Bridge works](https://github.com/thebridgedev/bridge-svelte/blob/main/learning/mechanisms.md) explains plan limits, the three UI levels and the four customisation levels; the [learning docs](https://github.com/thebridgedev/bridge-svelte/tree/main/learning) cover everything else. Coding agents: `npx @nebulr-group/bridge-cli guide svelte`.
 
 ### Build
 

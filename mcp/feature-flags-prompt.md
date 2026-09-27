@@ -55,89 +55,28 @@ The route guard's verdict cache is dropped whenever a flag change, plan change, 
 
 > Route guards ride the full Bridge bootstrap (`bridgeBootstrap` from the package root). An app running flags-only — the auth-free `/flags` subpath, no `bridgeBootstrap` — does not have them; gate with `<FeatureFlag>` instead.
 
-## Prerequisites check
+## Prerequisites
 
+Bridge is set up in this project (`bridge guide svelte`): `src/routes/+layout.ts` exports `load = bridgeBootstrap({ rules })` and `src/routes/+layout.svelte` wraps the app in `<BridgeBootstrap>`. That is all flags need: `<BridgeBootstrap>` starts them for every visitor, signed in or not. There is nothing to install, no flags bootstrap and no side-effect import. `@nebulr-group/bridge-svelte/flags` is where `useFlag` and `FeatureFlag` are imported from; it is part of the same package.
 
-Before starting, verify that Bridge is set up in this project:
+If flags never leave their default, the app id or API address is wrong — see *Troubleshooting*.
 
-1. `@nebulr-group/bridge-svelte` is in `package.json` dependencies
-2. `src/routes/+layout.ts` has `export const load = bridgeBootstrap({ rules, … })`
-3. `src/routes/+layout.svelte` wraps the app in `<BridgeBootstrap>…</BridgeBootstrap>`
-4. `VITE_BRIDGE_APP_ID` is set in `.env` (plus `VITE_BRIDGE_API_BASE_URL` for a stage or local app)
-
-If any are missing, run `bridge guide svelte` first.
-
-## Step 1 — Activate the flags layer
-
-`@nebulr-group/bridge-svelte/flags` is a subpath export — no new package to install. Importing anything from it puts the flag runtime on the dependency graph. `<BridgeBootstrap>` then initializes the flag layer on mount: local eval cache, hydration from the workspace, and realtime updates.
-
-Add one import from `/flags` in your root layout to activate it:
+## Gate markup
 
 ```svelte
-<!-- src/routes/+layout.svelte -->
-<script lang="ts">
-  import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
-  import { FeatureFlag } from '@nebulr-group/bridge-svelte/flags';
-
-  let { children } = $props();
-</script>
-
-<BridgeBootstrap>
-  <main>{@render children()}</main>
-</BridgeBootstrap>
-```
-
-Flags start evaluating for all visitors as soon as `<BridgeBootstrap>` mounts — login is not required.
-
-## Step 2 — Create the demo page
-
-Create `src/routes/flags-demo/+page.svelte` with the content below. This page uses `FeatureFlag` to gate a visible box: grey with a striped border when the flag is off, solid green when it is on. The flag is auto-created in Bridge as off the first time the page loads.
-
-```svelte
-<!-- src/routes/flags-demo/+page.svelte -->
 <script lang="ts">
   import { FeatureFlag } from '@nebulr-group/bridge-svelte/flags';
 </script>
 
-<div class="demo-page">
-  <h1>Feature Flag Demo</h1>
-  <p>Toggle <strong>demo-flag</strong> in the Bridge dashboard and watch this box change — no refresh needed.</p>
-
-  <FeatureFlag key="demo-flag" defaultValue={false}>
-    {#snippet children()}
-      <div class="flag-box flag-on">
-        <div class="flag-icon">✓</div>
-        <p class="flag-label"><strong>demo-flag</strong> is <strong>enabled</strong></p>
-        <p class="flag-hint">Go to Feature Control in the Bridge dashboard to toggle it off again.</p>
-      </div>
-    {/snippet}
-    {#snippet fallback()}
-      <div class="flag-box flag-off">
-        <div class="flag-icon">⚑</div>
-        <p class="flag-label">This box will turn green once you enable <strong>demo-flag</strong></p>
-        <p class="flag-hint">Go to Feature Control in the Bridge dashboard and flip it on.</p>
-      </div>
-    {/snippet}
-  </FeatureFlag>
-</div>
-
-<style>
-  .demo-page { max-width: 480px; margin: 4rem auto; font-family: sans-serif; text-align: center; }
-  .flag-box { margin: 2rem auto; padding: 2.5rem 2rem; border-radius: 10px; transition: background 0.4s ease; }
-  .flag-off {
-    background: linear-gradient(#f0f0f0, #f0f0f0) padding-box,
-      repeating-linear-gradient(45deg, #aaa 0, #aaa 8px, transparent 8px, transparent 18px) border-box;
-    border: 8px solid transparent; color: #555;
-  }
-  .flag-on { background: #d4edda; border: 4px solid #28a745; color: #155724; }
-  .flag-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
-  .flag-hint { font-size: 0.8rem; opacity: 0.65; margin-top: 0.5rem; }
-</style>
+<FeatureFlag key="new-dashboard" defaultValue={false}>
+  <NewDashboard />
+  {#snippet fallback()}
+    <OldDashboard />
+  {/snippet}
+</FeatureFlag>
 ```
 
-**After creating the file, tell the user:**
-
-> I've created a feature flag demo page at `/flags-demo`. Open it in your browser, then go to **Feature Control** in the Bridge dashboard and toggle **demo-flag** on — the box will turn green without a page refresh.
+The flag is created in Bridge, switched off, the first time it is evaluated; switch it on and the page changes without a reload. To show the developer it works, use a flag in a page they already have rather than creating a demo page.
 
 ## How `FeatureFlag` works
 
@@ -220,16 +159,9 @@ MCP — `create_feature_flag`, same rule as structured arguments:
 | | Read current state | Flip on/off without touching the rule |
 |---|---|---|
 | **MCP** | `list_feature_flags` | `toggle_feature_flag` — `key`, `enabled` |
-| **CLI** | `bridge flag list` / `bridge flag get <key>` | `bridge flag get <key>` for the id, then `bridge flag toggle --id <id> --enabled true` |
+| **CLI** | `bridge flag list` / `bridge flag get <key>` | `bridge flag toggle --key <key> --enabled true` |
 
-The CLI addresses a flag **by id, not by key**: both `bridge flag update` and `bridge flag toggle` require `--id`, so they need a `bridge flag get <key>` lookup first.
-
-```bash
-bridge flag get <key>                        # id is in the output
-bridge flag toggle --id <id> --enabled true  # or --enabled false
-```
-
-`toggle_feature_flag` takes the **key** and resolves the id internally — one call instead of two. Use `update_feature_flag` (which does take an `id`, from `list_feature_flags`) only when changing the rule, values or value type.
+Both take the **key**. Use `update_feature_flag` (MCP, which takes the `id` from `list_feature_flags`) or `bridge flag update --key <key>` only when changing the rule, values or value type.
 
 ### Dry-running a rule — CLI only
 
@@ -280,7 +212,7 @@ Per-call context wins on key collision. **With Bridge Auth**, the signed-in user
 ```svelte
 <script lang="ts">
   import { useFlag } from '@nebulr-group/bridge-svelte/flags';
-  const limit = useFlag('upload-limit', 5);   // reactive { value, passed }
+  const limit = useFlag('upload-limit', 5);   // reactive: limit.value, limit.passed
 </script>
 ```
 
@@ -293,7 +225,6 @@ For anything this prompt doesn't cover — classic stores, non-runes contexts �
 Flag not appearing in the dashboard within ~30s, or a read returns the default forever:
 
 - **`<BridgeBootstrap>` is mounted and the app id is set.** The flag layer initializes on its mount; without it every read returns the default. Confirm `VITE_BRIDGE_APP_ID` is set — and, for a stage or local app, `VITE_BRIDGE_API_BASE_URL` too. Without it the app talks to production, where a stage app id doesn't exist; a development build warns about exactly this in the console.
-- **Something is imported from `/flags`.** That subpath import is what puts the flag runtime on the dependency graph.
 - **A flag registers only once it has been evaluated** — load a page that actually reads the key.
 - **Rule never matches?** Read the stored rule back — `list_feature_flags` over MCP, `bridge flag get <key>` on the CLI — and confirm the app sends exactly those attribute paths. To see the verdict without the app in the way, `bridge flag eval <key> --identity … --attribute k=v` (CLI only — no MCP equivalent).
 - **`rolloutPct < 100` with no identity** returns the safe value by design.
@@ -304,7 +235,8 @@ Flag not appearing in the dashboard within ~30s, or a read returns the default f
 
 ## Verify
 
-1. Navigate to `/flags-demo` in the browser. The grey striped box should appear — Bridge auto-creates `demo-flag` as off.
-2. Toggle `demo-flag` on — `toggle_feature_flag` with `key: "demo-flag"`, `enabled: true` over MCP, or `bridge flag get demo-flag` for the id then `bridge flag toggle --id <id> --enabled true` on the CLI. With neither surface available, flip it under **Feature Control** in the Bridge dashboard.
-3. The box turns green **without a page refresh** — realtime updates are on by default.
-4. Toggle it off again to confirm it reverts.
+1. Open the page that reads the flag. The fallback shows, and the flag now exists, switched off: `bridge flag get <key>`.
+2. Switch it on — `toggle_feature_flag` with the key over MCP, or `bridge flag toggle --key <key> --enabled true`. With neither, flip it under **Feature Control** in the Bridge dashboard.
+3. The page changes **without a reload** — live updates are on by default.
+4. Switch it off again; it reverts.
+5. A route rule: signed in, the gated route redirects to its `redirectTo` while the flag is off.

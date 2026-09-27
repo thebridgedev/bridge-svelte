@@ -1,3 +1,13 @@
+<!--
+  TBP-696 — this file takes over ONE page. Every other auth page is served by
+  `auth/[...bridge]/+page.svelte` (<BridgeAuthRoutes />); SvelteKit prefers this
+  specific route over the catch-all, so /auth/login renders what is below.
+
+  The demo owns login to force every sign-in method on regardless of the app's
+  admin config (the e2e suite drives magic link and passkeys through it) and to
+  land on /protected. `data-demo-login-override` lets the suite tell this page
+  from the catch-all's.
+-->
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
@@ -22,7 +32,7 @@
   }
 </script>
 
-<div class="page-container">
+<div class="page-container" data-demo-login-override>
   <LoginForm
     class="my-login-form"
     showSignupLink

@@ -402,44 +402,25 @@ For feature flags, read them via the Feature Flags 2.0 surface — `useFlag(() =
 
 Once your backend is protected with Bridge auth guards, your frontend needs to send the user's access token on API requests. Bridge handles its own API calls internally — this is only for calls to **your own backend**.
 
-The token is available via `tokenStore`. Read it and attach it as a `Bearer` header using whatever HTTP client the project uses.
-
-**With `fetch`:**
+Use `bridgeFetch` — `fetch` with the user's access token attached, and one refresh-and-retry when your backend answers `401`. Same signature as `fetch`; do not write your own `fetchWithAuth`.
 
 ```ts
-import { get } from 'svelte/store';
-import { tokenStore } from '@nebulr-group/bridge-svelte';
+import { bridgeFetch } from '@nebulr-group/bridge-svelte';
 
-async function fetchWithAuth(url: string, options: RequestInit = {}) {
-  const tokens = get(tokenStore);
-  const headers = new Headers(options.headers);
-  if (tokens?.accessToken) {
-    headers.set('Authorization', `Bearer ${tokens.accessToken}`);
-  }
-  return fetch(url, { ...options, headers });
-}
+const res = await bridgeFetch('/api/projects', { method: 'POST', body: JSON.stringify(input) });
 ```
 
-**With `urql` (GraphQL):**
+**With `urql` (GraphQL):** hand it to the client as its `fetch`.
 
 ```ts
-import { get } from 'svelte/store';
-import { tokenStore } from '@nebulr-group/bridge-svelte';
+import { bridgeFetch } from '@nebulr-group/bridge-svelte';
 
-const client = createClient({
-  url: '/graphql',
-  fetchOptions: () => {
-    const tokens = get(tokenStore);
-    return {
-      headers: tokens?.accessToken
-        ? { Authorization: `Bearer ${tokens.accessToken}` }
-        : {},
-    };
-  },
-});
+const client = createClient({ url: '/graphql', fetch: bridgeFetch });
 ```
 
-Adapt the pattern to whatever HTTP client the project uses. The key is: read `tokenStore`, add the `Authorization: Bearer` header to requests that hit protected endpoints. Public endpoints (e.g., card search) don't need the header.
+It sends the user's token to the URL you give it, so use it for **your** backend only — never for a third-party URL.
+
+For an HTTP client that takes no `fetch` option (axios and similar), read the token from `tokenStore` at request time and set the `Authorization: Bearer` header yourself. Public endpoints (e.g., card search) don't need the header.
 
 ## Integration checklist
 
@@ -461,7 +442,7 @@ Before verifying, confirm every item was applied. Do not skip any:
 - [ ] Login/logout controls added to navigation (`<a href="/auth/login">` for login; logout calls `getBridgeAuth().logout({ redirectTo: '/auth/login' })`)
 - [ ] User display uses `$isAuthenticated` and `$profileStore` directly — NOT the `const { profile } = profileStore` destructure pattern (that pattern is invalid in 0.3.x and triggers `store_invalid_shape` in Svelte 5)
 - [ ] `VITE_BRIDGE_APP_ID` set in the `.env` file (plus `VITE_BRIDGE_API_BASE_URL` for a stage or local app)
-- [ ] Auth headers added to API calls that hit protected backend endpoints (using `tokenStore`)
+- [ ] Calls to protected backend endpoints go through `bridgeFetch` (no hand-written auth fetch helper)
 - [ ] Old env vars removed (`VITE_NBLOCKS_APP_ID`, etc.)
 - [ ] Old auth imports and route config removed (e.g., `PUBLIC_ROUTES` array)
 - [ ] No manual `auth.login()` calls remain (replaced by navigation to login route or handled by route guard)

@@ -24,6 +24,10 @@
     type StartBridgeRuntimeOptions,
   } from '../core/bridge-runtime.js';
   import RealtimeDevBadge from './components/developer/RealtimeDevBadge.svelte';
+  import BridgeUpgradeDialog from './components/subscription/BridgeUpgradeDialog.svelte';
+  import { dismissQuotaRefusal, quotaRefusal } from '../core/quota-refusal.js';
+  import { resolveUpgradeDialog, upgradeHrefFor } from './upgrade-dialog.js';
+  import { isBillingAdmin } from './billing-role.js';
 
   // TBP-644 — the "Live updates off — why?" badge is mounted here so every app
   // gets it without code changes. It renders in development builds only;
@@ -35,6 +39,24 @@
       return true;
     }
   })();
+
+  // TBP-703 — the upgrade dialog is mounted here so a page needs no Bridge code:
+  // when the app's backend refuses a request at a plan limit (402
+  // QUOTA_EXCEEDED), the fetch wrapper / bridgeFetch report it and this opens.
+  // On by default; `billing.upgradeDialog: false` turns it off, a component
+  // replaces it.
+  const billingConfig = (() => {
+    try {
+      return getConfig().billing;
+    } catch {
+      return undefined;
+    }
+  })();
+  const upgradeDialog = resolveUpgradeDialog(billingConfig);
+  const UpgradeDialog = upgradeDialog === 'default' ? BridgeUpgradeDialog : upgradeDialog;
+  const upgradeHref = $derived(upgradeHrefFor($quotaRefusal, billingConfig));
+  // Re-read for every refusal: the same owner rule as <BridgeQuotaBanner>.
+  const canUpgrade = $derived($quotaRefusal ? isBillingAdmin() : false);
 
   // Props: optional `runtime` overrides for advanced/debug use (websocketFactory,
   // reconnect overrides, etc.); `onBootstrapComplete` callback fires after the
@@ -259,6 +281,10 @@
 </script>
 
 <RealtimeDevBadge enabled={devBadgeEnabled} />
+
+{#if UpgradeDialog}
+  <UpgradeDialog refusal={$quotaRefusal} {upgradeHref} {canUpgrade} onclose={dismissQuotaRefusal} />
+{/if}
 
 {#if runtimeAttached && $bridgeReadyStore}
   {@render children?.()}

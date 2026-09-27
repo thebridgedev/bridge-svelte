@@ -40,26 +40,57 @@ You get the best of both: the **entitlement** supplies plan eligibility (and sta
 
 Not using Bridge feature flags? Gate directly on the entitlement. It's simpler; you just lose the operational control (rollout %, kill switch, experiments) a flag would add on top.
 
-Read the reactive snapshot in your markup:
+In markup, wrap the feature in `<Entitled>`:
 
 ```svelte
 <script lang="ts">
-  import { bridge } from '@nebulr-group/bridge-svelte';
-
-  const entitlements = bridge.tenant.entitlements.snapshot;
+  import { Entitled } from '@nebulr-group/bridge-svelte';
 </script>
 
-{#if $entitlements?.ai_completions}
+<Entitled to="ai_completions">
   <AiPanel />
+  {#snippet fallback()}
+    <UpgradePrompt />
+  {/snippet}
+</Entitled>
+```
+
+It renders the children when the plan grants the entitlement and `fallback` when it doesn't. Until Bridge has answered it renders neither (pass a `loading` snippet to show something meanwhile), so a cold start never flashes the upgrade prompt at a paying workspace, or the paid feature at a free one.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `to` | `string` | required | Entitlement key |
+| `fallback` | `Snippet` | nothing | Shown when the plan doesn't grant `to` |
+| `loading` | `Snippet` | nothing | Shown until Bridge has answered |
+
+> Bridge turns every hard [quota](/billing/limits/usage-limits/) into an entitlement of the same name, `false` once the cap is reached. Use `<Entitled>` for plan features (`sso`, `analytics`) and `<QuotaGate>` for counted things (`tickets`, `projects`), and don't wrap one around the other on the same key.
+
+In script, read the reactive store:
+
+```svelte
+<script lang="ts">
+  import { entitlements } from '@nebulr-group/bridge-svelte';
+</script>
+
+{#if !$entitlements.ready}
+  <Spinner />
+{:else if $entitlements.can('ai_completions')}
+  <AiPanel />
+{:else}
+  <UpgradePrompt />
 {/if}
 ```
 
-Or check imperatively (synchronous, fail-closed: `false` until the snapshot lands):
+`can()` is fail-closed: `false` until Bridge has answered. `ready` tells "not loaded yet" apart from "this plan doesn't include it", so check it first and a cold start shows a spinner instead of an upgrade prompt.
+
+Or check imperatively, outside a component (synchronous, fail-closed):
 
 ```ts
 if (bridge.tenant.entitlements.can('ai_completions')) { /* ... */ }
 ```
 
 Either way it's live: when the workspace upgrades, `entitlements.changed` replaces the snapshot and your gate re-evaluates on its own.
+
+> Like every check in the browser, this only decides what to *show*. Your backend refuses the request itself (`@RequireEntitlement('ai_completions')` in the NestJS SDK); see [Check plans on your backend](/billing/advanced/backend-checks/).
 
 > Entitlements are **billing-derived** (what the plan grants the workspace). They are not roles: use Bridge's role/privilege system for who-may-do-what inside a workspace.

@@ -13,7 +13,9 @@ Read this table before writing anything. Both rows are drop-in components; there
 
 Same components either way — the panel *is* those three assembled. Start with `<TeamManagementPanel>` unless the user asked for a specific piece or their own layout; splitting it apart later is moving one import.
 
-**Adding a user, changing a role and removing a user all live inside `<TeamUserList>`.** It ships its own add, edit and confirm-delete dialogs, which are not separately exported. Writing an invite form, a role dropdown or a delete confirmation is rebuilding something already on the page — and the hand-rolled version talks to the team API directly, so it misses the list's own refresh and error handling.
+**Adding a user, changing a role and removing a user all live inside `<TeamUserList>`.** It ships its own add, edit and confirm-delete dialogs. Writing an invite form, a role dropdown or a delete confirmation is rebuilding something already on the page — and the hand-rolled version talks to the team API directly, so it misses the list's own refresh and error handling.
+
+Only when the user wants their own team layout — an "Invite" button in a page header, say — place the dialogs themselves; they are exported too: `<TeamAddUserDialog open onclose onadded>`, `<TeamEditUserDialog open user roles onclose onupdated>`, `<TeamConfirmDialog open title message onconfirm oncancel>` and the row menu `<TeamUserActionsMenu onedit onresetpassword ondelete>`. Each calls the team API itself; you only hold `open` state and refresh your own list in `onadded` / `onupdated`.
 
 ## Prerequisites check
 

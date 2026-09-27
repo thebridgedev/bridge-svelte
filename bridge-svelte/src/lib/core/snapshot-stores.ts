@@ -134,6 +134,13 @@ export function applyEntitlementsChanged(msg: { entitlements?: unknown } | null 
 export function applyCatchUpSnapshot(data: SessionSnapshotData): {
   planChanged: boolean;
   entitlementsChanged: boolean;
+  /**
+   * TBP-700 — the tenant stores were empty: this filled them for the first
+   * time rather than changing anything the page had already seen. The
+   * `*Changed` flags still say whether the values moved, so a caller can seed
+   * other copies; a first fill is not a recovered change.
+   */
+  initial: boolean;
 } {
   const subBefore = get(_tenantSubscription);
   const entBefore = get(_tenantEntitlements);
@@ -141,6 +148,7 @@ export function applyCatchUpSnapshot(data: SessionSnapshotData): {
   const subAfter = get(_tenantSubscription);
   const entAfter = get(_tenantEntitlements);
   return {
+    initial: subBefore === null && entBefore === null,
     planChanged:
       (subBefore?.plan?.slug ?? null) !== (subAfter?.plan?.slug ?? null) ||
       (subBefore?.status ?? null) !== (subAfter?.status ?? null),

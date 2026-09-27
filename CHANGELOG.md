@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Billing destinations default to pages `<BridgeBillingRoutes>` serves:** `billing.manageRoute` `/billing` → `/subscription`; `billing.paymentErrorRoute` `/payment-error` → `/subscription/error`; `billing.paywallRoute` unset → `/subscription/plan`. The Upgrade/Manage buttons in `<BridgeQuotaBanner>` and `<BridgeBillingNotice>` follow `manageRoute`.
 - **The default paywall redirect applies only to an app that uses billing** (it has at least one plan) and whose `paymentsAutoRedirect` is on. An explicit `billing.paywallRoute` applies as before; `paywallRoute: false` turns the redirect off. The redirect never leaves the payment-error page.
 
+### Fixed
+
+- **A role or permission change reaches a signed-in user live, even when it happens while live updates are reconnecting** (TBP-700). Since 0.8.2 a change made in the first moments after a page loaded — or during any reconnect — could be missed until the next reload. Every connect and reconnect now checks the user's current role and permissions with the server and picks up anything it missed. For the full fix, use `@nebulr-group/bridge-auth-core` from the same release.
+
 ### Migration
 
 - **Apps with billing (plans) must add `src/routes/subscription/[...bridge]/+page.svelte` rendering `<BridgeBillingRoutes />` before upgrading** — or set `billing: { paywallRoute: false }` (e.g. apps gating with the `<BridgePaywall>` overlay). Otherwise a workspace without a plan is redirected to `/subscription/plan`, and a failed checkout to `/subscription/error`, which the app does not have.

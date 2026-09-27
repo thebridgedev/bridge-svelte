@@ -25,6 +25,7 @@ const h = vi.hoisted(() => {
     loadFlagsImpl: (): Promise<Record<string, boolean>> => Promise.resolve({}),
     refreshImpl: (): Promise<unknown> => Promise.resolve(null),
     paywall: false,
+    confirmImpl: (): Promise<void> => Promise.resolve(),
     calls: {
       refresh: 0,
       loadFlags: 0,
@@ -87,7 +88,7 @@ const h = vi.hoisted(() => {
     shouldRedirectToPaywall: async () => s.paywall,
     createLoginUrl: () => 'https://hosted.example/login',
     createRouteGuard,
-    confirmStripeCheckout: () => Promise.resolve(),
+    confirmStripeCheckout: () => s.confirmImpl(),
   };
 
   return { s, auth, ready: undefined as undefined | { set(v: boolean): void } };
@@ -181,6 +182,7 @@ beforeEach(() => {
   h.s.loadFlagsImpl = () => Promise.resolve({});
   h.s.refreshImpl = () => Promise.resolve(null);
   h.s.paywall = false;
+  h.s.confirmImpl = () => Promise.resolve();
   h.s.calls = { refresh: 0, loadFlags: 0, mount: 0, initBridge: 0, installFetch: 0, invalidate: 0, stash: [] };
 });
 
@@ -344,6 +346,53 @@ describe('the paywall still fires on the first load', () => {
     h.s.paywall = true;
     const config = { ...SDK_CONFIG, billing: { paywallRoute: '/welcome' } };
     expect((await redirectOf(bridgeBootstrap(at('/admin'), config, ROUTES))).location).toBe('/welcome');
+  });
+});
+
+// TBP-702 — every billing destination has a default that <BridgeBillingRoutes>
+// serves, so an app that configures nothing never redirects to a 404.
+describe('billing destinations default to the pages <BridgeBillingRoutes> serves (TBP-702)', () => {
+  it('a plan-less workspace goes to /subscription/plan with no paywallRoute configured', async () => {
+    const { bridgeBootstrap } = await load();
+    h.s.authenticated = true;
+    h.s.paywall = true;
+    expect((await redirectOf(bridgeBootstrap(at('/admin'), SDK_CONFIG, ROUTES))).location).toBe('/subscription/plan');
+  });
+
+  it('paywallRoute: false turns the redirect off', async () => {
+    const { bridgeBootstrap } = await load();
+    h.s.authenticated = true;
+    h.s.paywall = true;
+    const config = { ...SDK_CONFIG, billing: { paywallRoute: false as const } };
+    await expect(bridgeBootstrap(at('/admin'), config, ROUTES)).resolves.toBeDefined();
+  });
+
+  it('leaves the payment-error page readable for a plan-less workspace', async () => {
+    const { bridgeBootstrap } = await load();
+    h.s.authenticated = true;
+    h.s.paywall = true;
+    await expect(bridgeBootstrap(at('/subscription/error'), SDK_CONFIG, ROUTES)).resolves.toBeDefined();
+  });
+
+  it('a failed checkout confirmation lands on /subscription/error', async () => {
+    const { bridgeBootstrap } = await load();
+    h.s.confirmImpl = () => Promise.reject(new Error('confirm failed'));
+    const url = at('/auth/oauth-callback?stripe_success=1&session_id=cs_test_1&redirect=%2Fsubscription%2Fsuccess');
+    expect((await redirectOf(bridgeBootstrap(url, SDK_CONFIG, ROUTES))).location).toBe('/subscription/error');
+  });
+
+  it('a configured paymentErrorRoute still wins', async () => {
+    const { bridgeBootstrap } = await load();
+    h.s.confirmImpl = () => Promise.reject(new Error('confirm failed'));
+    const config = { ...SDK_CONFIG, billing: { paymentErrorRoute: '/oops' } };
+    const url = at('/auth/oauth-callback?stripe_success=1&session_id=cs_test_1');
+    expect((await redirectOf(bridgeBootstrap(url, config, ROUTES))).location).toBe('/oops');
+  });
+
+  it('a confirmed checkout lands where PlanSelector asked', async () => {
+    const { bridgeBootstrap } = await load();
+    const url = at('/auth/oauth-callback?stripe_success=1&session_id=cs_test_1&redirect=%2Fsubscription%2Fsuccess');
+    expect((await redirectOf(bridgeBootstrap(url, SDK_CONFIG, ROUTES))).location).toBe('/subscription/success');
   });
 });
 
@@ -551,5 +600,56 @@ describe('the auth catch-all 404s an unknown page (TBP-696)', () => {
     expect(
       await statusOf(bootLoad({ url, fetch: kitFetch, params: { rest: 'anything' }, route: { id: '/auth/[...rest]' } })),
     ).toBe('resolved');
+  });
+});
+
+// TBP-702 — the billing catch-all uses the same `[...bridge]` param. The load
+// tells the two apart by where the catch-all lives: under manageRoute it is the
+// billing one, under loginRoute's directory the auth one, anywhere else either.
+describe('the billing catch-all 404s an unknown page (TBP-702)', () => {
+  const kitFetch = (() => Promise.reject(new Error('no network'))) as typeof fetch;
+
+  async function statusOf(p: Promise<unknown>): Promise<number | 'resolved'> {
+    try {
+      await p;
+      return 'resolved';
+    } catch (err: any) {
+      if (typeof err?.status === 'number' && !isRedirect(err)) return err.status;
+      throw err;
+    }
+  }
+
+  async function served(routeId: string, prefix: string, rest: string, options: Record<string, unknown> = {}) {
+    const { bridgeBootstrap } = await load();
+    h.s.authenticated = true;
+    const bootLoad = bridgeBootstrap({ ...SDK_CONFIG, apiBaseUrl: 'http://api', ...ROUTES, ...options });
+    const url = at(`${prefix}/${rest}`);
+    return statusOf(bootLoad({ url, fetch: kitFetch, params: { bridge: rest }, route: { id: routeId } }));
+  }
+
+  it.each([[''], ['plan'], ['success'], ['error']])('/subscription/%s is served', async (rest) => {
+    expect(await served('/subscription/[...bridge]', '/subscription', rest)).toBe('resolved');
+  });
+
+  it.each([['login'], ['nope'], ['plan/extra'], ['success/x']])('/subscription/%s → 404', async (rest) => {
+    expect(await served('/subscription/[...bridge]', '/subscription', rest)).toBe(404);
+  });
+
+  it('an auth page name under the billing catch-all is not served, and vice versa', async () => {
+    expect(await served('/subscription/[...bridge]', '/subscription', 'signup')).toBe(404);
+    expect(await served('/auth/[...bridge]', '/auth', 'plan')).toBe(404);
+    expect(await served('/auth/[...bridge]', '/auth', '')).toBe(404);
+  });
+
+  it('follows a moved manageRoute, and ignores route groups', async () => {
+    const options = { billing: { manageRoute: '/billing' } };
+    expect(await served('/(app)/billing/[...bridge]', '/billing', 'plan', options)).toBe('resolved');
+    expect(await served('/(app)/billing/[...bridge]', '/billing', 'login', options)).toBe(404);
+  });
+
+  it('a catch-all anywhere else serves a page of either kind', async () => {
+    expect(await served('/account/[...bridge]', '/account', 'plan')).toBe('resolved');
+    expect(await served('/account/[...bridge]', '/account', 'login')).toBe('resolved');
+    expect(await served('/account/[...bridge]', '/account', 'nope')).toBe(404);
   });
 });

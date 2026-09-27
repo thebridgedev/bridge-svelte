@@ -95,6 +95,15 @@ export type { BridgeAuthPage, BridgeAuthRoute } from './client/auth-routes.js';
 // Subscription components
 export { default as PlanSelector } from './client/components/subscription/PlanSelector.svelte';
 
+// TBP-702 — the subscription page, the paywall and the checkout return pages
+// from one file:
+//   src/routes/subscription/[...bridge]/+page.svelte  →  <BridgeBillingRoutes />
+export { default as BridgeBillingRoutes } from './client/components/subscription/BridgeBillingRoutes.svelte';
+export { default as BridgePaywallPage } from './client/components/subscription/BridgePaywallPage.svelte';
+export { default as BillingPortalButton } from './client/components/subscription/BillingPortalButton.svelte';
+export { BRIDGE_BILLING_PAGES, BRIDGE_BILLING_DEFAULTS, parseBridgeBillingRoute } from './client/billing-routes.js';
+export type { BridgeBillingPage, BridgeBillingRoute } from './client/billing-routes.js';
+
 // Billing 2.0 (Phase A / US-2) — canonical-model drop-in.
 // Parallel to PlanSelector (which consumes the Stripe-direct path); these
 // coexist until REF-1 (post-feature) consolidates them.

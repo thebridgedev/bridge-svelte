@@ -24,6 +24,7 @@ import type { BridgeConfig } from '../shared/types/config.js';
 import { bridgeConfig, getConfig, getRouteGuardConfig } from './stores/config.store.js';
 import { resolveBridgeConfig } from './resolve-config.js';
 import { BRIDGE_AUTH_ROUTE_PARAM, isBridgeAuthRouteId, parseBridgeAuthRoute } from './auth-routes.js';
+import { billingRoutes, isPaywallExempt, parseBridgeBillingRoute, resolveBillingRoutes } from './billing-routes.js';
 
 // TBP-653 — `bridgeBootstrap` used to short-circuit on every call after the
 // first completed one, and the route guard lived below that return. SvelteKit
@@ -70,7 +71,7 @@ export interface BridgeBootstrapData {
 export type BridgeBootstrapLoad = (event: {
   url: URL;
   fetch: typeof globalThis.fetch;
-  /** Route params — read to 404 an unknown `[...bridge]` auth page (TBP-696). */
+  /** Route params — read to 404 an unknown `[...bridge]` page (TBP-696, TBP-702). */
   params?: Record<string, string>;
   /** The matched route — only its id is read. */
   route?: { id: string | null };
@@ -128,8 +129,8 @@ function createBootstrapLoad(options: BridgeBootstrapOptions): BridgeBootstrapLo
   // as a load error the developer sees, and the environment is only final then.
   let resolved: BridgeConfig | null = null;
   return async ({ url, fetch, params, route }) => {
-    rejectUnknownAuthPage(route?.id, params);
     resolved ??= resolveBridgeConfig(configOptions);
+    rejectUnknownBridgePage(route?.id, params, resolved);
     await runBootstrap(url, resolved, routeConfig, fetch);
     return { config: getConfig(), routeConfig };
   };
@@ -147,15 +148,51 @@ function createBootstrapLoad(options: BridgeBootstrapOptions): BridgeBootstrapLo
  * app's own catch-all is never touched. SvelteKit re-runs this load with empty
  * params to render its error page; `params.bridge` is then absent and the
  * check stands aside.
+ *
+ * TBP-702 — the billing catch-all (`src/routes/subscription/[...bridge]`) uses
+ * the same param, and the load cannot see which component a page renders. It
+ * tells them apart by where the catch-all lives: under `manageRoute`
+ * (`/subscription` by default) it is the billing one; under the directory of
+ * `loginRoute` (`/auth` for `/auth/login`) it is the auth one. A catch-all
+ * anywhere else accepts a page of either kind.
  */
-function rejectUnknownAuthPage(
+function rejectUnknownBridgePage(
   routeId: string | null | undefined,
   params: Record<string, string> | undefined,
+  config: BridgeConfig,
 ): void {
   if (!isBridgeAuthRouteId(routeId)) return;
   const rest = params?.[BRIDGE_AUTH_ROUTE_PARAM];
   if (rest === undefined) return;
-  if (!parseBridgeAuthRoute(rest)) error(404, 'Not Found');
+
+  const kind = catchAllKind(routeId as string, config);
+  const known =
+    kind === 'billing'
+      ? parseBridgeBillingRoute(rest)
+      : kind === 'auth'
+        ? parseBridgeAuthRoute(rest)
+        : parseBridgeAuthRoute(rest) ?? parseBridgeBillingRoute(rest);
+  if (!known) error(404, 'Not Found');
+}
+
+/** Which Bridge catch-all a `…/[...bridge]` route id is, from where it lives. */
+function catchAllKind(routeId: string, config: BridgeConfig): 'auth' | 'billing' | 'either' {
+  // The address the catch-all serves: drop the rest param and any `(group)`
+  // segments, which never appear in a URL.
+  const base = routeId
+    .split('/')
+    .filter((s) => s !== '' && !/^\(.*\)$/.test(s))
+    .slice(0, -1)
+    .join('/');
+  const at = `/${base}`;
+  const trim = (p: string) => (p.length > 1 ? p.replace(/\/+$/, '') : p);
+
+  if (at === trim(resolveBillingRoutes(config.billing).manageRoute)) return 'billing';
+  if (config.loginRoute) {
+    const loginDir = trim(config.loginRoute).replace(/\/[^/]*$/, '') || '/';
+    if (at === loginDir) return 'auth';
+  }
+  return 'either';
 }
 
 async function runBootstrap(
@@ -324,7 +361,6 @@ function ensureInitialised(): Promise<{ flagsReady: Promise<void> }> {
   return _initialisation;
 }
 
-const STRIPE_DEFAULT_RETURN = '/subscription';
 
 // Where a Stripe success/cancel return lands (TBP-659).
 //
@@ -347,8 +383,10 @@ const STRIPE_DEFAULT_RETURN = '/subscription';
 // Validation runs on the stripped string because that is the one we navigate to.
 function stripeReturnTarget(url: URL): string {
   const raw = url.searchParams.get('redirect');
-  if (raw === null) return STRIPE_DEFAULT_RETURN;
-  return sanitizeReturnTo(raw.split('?')[0]) ?? STRIPE_DEFAULT_RETURN;
+  // The subscription page (TBP-702: `billing.manageRoute`, `/subscription` by default).
+  const fallback = billingRoutes().manageRoute;
+  if (raw === null) return fallback;
+  return sanitizeReturnTo(raw.split('?')[0]) ?? fallback;
 }
 
 // Unified callback handler — detects what is calling back and routes accordingly
@@ -415,7 +453,8 @@ async function handleCallbackRoute(url: URL, kitFetch?: typeof globalThis.fetch)
         } catch (err) {
           if (isRedirect(err)) throw err;
           logger.warn('[bridgeBootstrap] confirm-checkout error', err);
-          redirect(303, getConfig().billing?.paymentErrorRoute ?? '/payment-error');
+          // TBP-702 — `/subscription/error` by default, served by <BridgeBillingRoutes>.
+          redirect(303, billingRoutes().paymentErrorRoute);
         }
       } else if (stripeCancel) {
         // Stripe payment cancelled
@@ -435,12 +474,15 @@ async function handleCallbackRoute(url: URL, kitFetch?: typeof globalThis.fetch)
 // decision (authenticated + shouldSelectPlan + not opted out via
 // paymentsAutoRedirect) lives in auth-core's shouldRedirectToPaywall()
 // (TBP-369). We only own the route/config guards here:
-//   - billing.paywallRoute is configured
-//   - the current path is not already the paywall route (no redirect loop)
+//   - billing.paywallRoute is not turned off (TBP-702: it defaults to
+//     `/subscription/plan`, served by <BridgeBillingRoutes>)
+//   - the current path is not the paywall (no redirect loop) or the
+//     payment-error page (a failed checkout must be readable)
 async function enforcePaywall(url: URL): Promise<void> {
   try {
-    const paywallRoute = getConfig().billing?.paywallRoute;
-    if (paywallRoute && url.pathname !== paywallRoute) {
+    const routes = billingRoutes();
+    const paywallRoute = routes.paywallRoute;
+    if (paywallRoute && !isPaywallExempt(url.pathname, routes)) {
       const bridge = getBridgeAuth();
       if (await bridge.shouldRedirectToPaywall()) {
         logger.debug('[bridgeBootstrap] paywall redirect', paywallRoute);

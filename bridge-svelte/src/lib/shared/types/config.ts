@@ -24,18 +24,24 @@ export interface BridgeConfig extends BridgeAuthConfig {
    *  @default true */
   devBadge?: boolean;
 
-  /** Billing paywall configuration. When set, Bridge redirects unauthenticated
-   *  or plan-less users to `paywallRoute` before the page renders. */
+  /** Billing destinations. Every one has a default served by
+   *  `<BridgeBillingRoutes />` at `src/routes/subscription/[...bridge]/+page.svelte`
+   *  (TBP-702), so an app that configures nothing redirects only to pages that
+   *  exist. Set one to move it — e.g. `paywallRoute: '/welcome'` for an
+   *  onboarding page rendering `<BridgePaywallPage />`. */
   billing?: {
-    /** Route to redirect to when the tenant has no plan selected.
-     *  e.g. '/onboarding/plan' or '/subscription' */
-    paywallRoute?: string;
-    /** Route to redirect to when a Stripe checkout confirmation fails.
-     *  Defaults to '/payment-error'. */
+    /** Where a signed-in workspace with no plan is redirected, before any page
+     *  renders. `false` turns the redirect off — for an app that gates with the
+     *  `<BridgePaywall>` overlay instead, or not at all.
+     *  @default '/subscription/plan' */
+    paywallRoute?: string | false;
+    /** Where a failed Stripe checkout confirmation lands.
+     *  @default '/subscription/error' */
     paymentErrorRoute?: string;
-    /** Route where your plan/billing management page lives — the default
-     *  destination of the Upgrade/Manage CTA in <BridgeQuotaBanner> and
-     *  <BridgeBillingNotice>. Defaults to '/billing'. */
+    /** The subscription page — the default destination of the Upgrade/Manage
+     *  CTA in <BridgeQuotaBanner> and <BridgeBillingNotice>. A completed
+     *  checkout lands on `<manageRoute>/success` by default.
+     *  @default '/subscription' */
     manageRoute?: string;
   };
 }

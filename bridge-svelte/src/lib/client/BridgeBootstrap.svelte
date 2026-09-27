@@ -15,6 +15,7 @@
   import { bridge as bridgeSurface } from '../core/bridge.js';
   import { setBridgeContext } from '../core/use-bridge.js';
   import { getConfig, getRouteGuardConfig } from './stores/config.store.js';
+  import { billingRoutes, isPaywallExempt } from './billing-routes.js';
   import {
     onBridgeAuthorizationChange,
     onBridgeFlagChange,
@@ -72,8 +73,12 @@
   // `shouldSelectPlan` resolves true. Same data source as <BridgePaywall>, so the
   // overlay and the redirect agree. The load() redirect remains a no-flash
   // fast-path for direct loads/refreshes only.
+  //
+  // TBP-702 — the paywall defaults to `/subscription/plan` (served by
+  // <BridgeBillingRoutes>); `billing.paywallRoute: false` turns it off.
   $effect(() => {
-    const paywallRoute = getConfig().billing?.paywallRoute;
+    const routes = billingRoutes();
+    const paywallRoute = routes.paywallRoute;
     if (!paywallRoute || !$isAuthenticated) return;
 
     const { status, loading, error } = $subscriptionStore;
@@ -88,11 +93,12 @@
 
     // Status known → enforce. `$page.url.pathname` makes this re-run on
     // navigation too, so manual nav to a protected page while plan-less is
-    // also caught. Path guard prevents a redirect loop on the paywall itself.
+    // also caught. Path guard prevents a redirect loop on the paywall itself,
+    // and leaves the payment-error page readable.
     if (
       status?.shouldSelectPlan === true &&
       status?.paymentsAutoRedirect !== false &&
-      $page.url.pathname !== paywallRoute
+      !isPaywallExempt($page.url.pathname, routes)
     ) {
       goto(paywallRoute);
     }

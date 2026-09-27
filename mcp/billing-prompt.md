@@ -10,23 +10,25 @@ Read this table before writing anything. Every case below is already solved by t
 
 | What you are wiring | Use | Where |
 |---|---|---|
-| **A plan picker** — choose or change a plan | `<PlanSelector>` | a page, e.g. `/subscription` |
-| **A plan-less tenant must not reach the app** | `billing.paywallRoute` in `BridgeConfig` | `+layout.ts`, in the `bridgeBootstrap()` call |
-| …the same gate without a dedicated route | `<BridgePaywall>` wrapping `{@render children()}` | root `+layout.svelte` |
+| **The subscription page, the paywall, the checkout success/error pages** | `<BridgeBillingRoutes />` — one file serves all four | `src/routes/subscription/[...bridge]/+page.svelte` |
+| **A plan-less tenant must not reach the app** | nothing to add — `bridgeBootstrap()` redirects to `/subscription/plan` by default | (the file above) |
+| …an onboarding page at another address, e.g. `/welcome` | `<BridgePaywallPage>` + `billing.paywallRoute` — **only if the user asks for it**, see Step 2b | `src/routes/welcome/+page.svelte` + `+layout.ts` |
+| …the same gate as an overlay instead of a redirect | `<BridgePaywall>` wrapping `{@render children()}`, plus `billing: { paywallRoute: false }` | root `+layout.svelte` + `+layout.ts` |
+| **A plan picker somewhere else** | `<PlanSelector>` | any component |
 | **Lifecycle messages** — payment failed, trial ending, cancelled | `<BridgeBillingNotice />` | root `+layout.svelte` |
 | **A usage counter** — "42 of 1000 decks" | `<BridgeQuotaBanner metric="…" />` | the component |
 | **The raw quota numbers**, for your own UI | `useBridge().quota(metric)` from `@nebulr-group/bridge-auth-core` | component or `.svelte.ts` |
 | **A feature on or off by plan** | `bridge.tenant.entitlements.can('key')` | anywhere |
 | **Current plan / subscription state** | `bridge.tenant.subscription`, or `subscriptionStore` | anywhere |
-| **Manage payment method, cancel** | `getBridgeAuth().getBillingPortalUrl()` | a button |
+| **Manage payment method, cancel** | `<BillingPortalButton />` (already on `/subscription`) | anywhere else you want the button |
 | **Actually enforcing a cap** | **your server — not this guide** | your backend |
 
 Two rows have real blast radius, and both are easy to get wrong in the same direction:
 
-- **The plan-less gate belongs in config, not in a page.** `billing.paywallRoute` redirects before any page renders. Checking "does this tenant have a plan?" inside a component means the page has already loaded and its `load` has already run, so you are redirecting after the fact — the same mistake as gating a route from inside the route.
+- **The plan-less gate belongs to `bridgeBootstrap()`, not to a page.** It redirects before any page renders, to `/subscription/plan` unless `billing.paywallRoute` says otherwise. Checking "does this tenant have a plan?" inside a component means the page has already loaded and its `load` has already run, so you are redirecting after the fact — the same mistake as gating a route from inside the route.
 - **A client-side quota check is display, not enforcement.** Anyone can call your API directly and skip it. Disabling a button is good UX and worth doing; the cap itself has to live in your backend, which reads the same quota through its own SDK and refuses the write.
 
-If the user has not said whether they want the redirect paywall or the overlay, the redirect (`billing.paywallRoute`) is the default — set it up that way.
+If the user has not said whether they want the redirect paywall or the overlay, the redirect is the default — and it is already on once Step 1's file exists. Do not hand-write a paywall page, a `/billing` page or a `/payment-error` page: `<BridgeBillingRoutes />` serves every page Bridge redirects to.
 
 ## Configuring plans, prices and quotas
 
@@ -82,25 +84,34 @@ Verify before starting:
   - `src/routes/+layout.svelte` wraps the app in `<BridgeBootstrap>…</BridgeBootstrap>`
   - `VITE_BRIDGE_APP_ID` set in `.env` (plus `VITE_BRIDGE_API_BASE_URL` for a stage or local app)
 
-## Step 1 — Subscription page
+## Step 1 — The billing pages: one file
 
-Create `src/routes/subscription/+page.svelte`:
+Create `src/routes/subscription/[...bridge]/+page.svelte`:
 
 ```svelte
 <script lang="ts">
-  import { PlanSelector } from '@nebulr-group/bridge-svelte';
+  import { BridgeBillingRoutes } from '@nebulr-group/bridge-svelte';
 </script>
 
-<h1>Choose a plan</h1>
-
-<PlanSelector />
+<BridgeBillingRoutes />
 ```
 
-`<PlanSelector>` handles everything: loads plans, shows the current plan, routes free plan selection directly, and launches Stripe Checkout for paid plans.
+That one file serves every billing page, and Bridge's defaults point at them — no config needed:
 
-**Where Stripe returns.** Stripe sends the user back to your app's `callbackUrl` — the same route as the OAuth callback, which defaults to `<your origin>/auth/oauth-callback` — with `?stripe_success=1&session_id=…` or `?stripe_cancel=1`, plus the destination as `redirect`. `bridgeBootstrap()` in your root `+layout.ts` recognises it there: on success it confirms the checkout with Bridge, refreshes the token so the new plan is in it, and redirects to `successRedirect`; on cancel it redirects to `cancelRedirect`. If confirmation fails it redirects to `billing.paymentErrorRoute` (default `/payment-error`). So the callback route file must exist (the SDK auth and hosted auth guides already create it) and must be public; no other pages or URL configuration are needed. Only same-origin paths are followed as a destination; anything else falls back to `/subscription`.
+| Address | What it shows | Default of |
+|---|---|---|
+| `/subscription` | Current plan, `<PlanSelector>` to upgrade/downgrade, "Manage billing" (Stripe portal) | `billing.manageRoute` — where the Upgrade/Manage buttons in `<BridgeBillingNotice>` and `<BridgeQuotaBanner>` go |
+| `/subscription/plan` | The paywall: plan picker for a workspace with no plan | `billing.paywallRoute` |
+| `/subscription/success` | Where a completed checkout lands; re-reads the subscription | — |
+| `/subscription/error` | Where a checkout that could not be confirmed lands | `billing.paymentErrorRoute` |
 
-**`<PlanSelector>` props:**
+An unknown address under `/subscription` gets the app's own 404. `/subscription` is protected by the default route rules — do not mark it public; a signed-out visitor has no plan to show.
+
+**Customising, cheapest first:** `--bridge-*` CSS tokens; a `frame(page, content)` snippet replacing everything around each page and a `heading(page)` snippet replacing each heading; or take over one page by creating it (`src/routes/subscription/+page.svelte` wins over the catch-all, the other pages keep working). Do not recreate the whole set by hand.
+
+**Where Stripe returns.** Stripe sends the user back to your app's `callbackUrl` — the same route as the OAuth callback, which defaults to `<your origin>/auth/oauth-callback` — with `?stripe_success=1&session_id=…` or `?stripe_cancel=1`, plus the destination as `redirect`. `bridgeBootstrap()` in your root `+layout.ts` recognises it there: on success it confirms the checkout with Bridge, refreshes the token so the new plan is in it, and redirects to the success page; on cancel back to the page the checkout started from. If confirmation fails it redirects to `/subscription/error`. So the callback route must exist (the SDK auth and hosted auth guides already provide it) and must be public; no other pages or URL configuration are needed. Only same-origin paths are followed as a destination; anything else falls back to `/subscription`.
+
+**`<PlanSelector>`** is the picker these pages render. Use it directly only for a plan picker somewhere else in the app:
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
@@ -108,8 +119,6 @@ Create `src/routes/subscription/+page.svelte`:
 | `cancelRedirect` | `string` | `/subscription` | Where to send the user after a cancelled payment |
 | `onSelect` | `() => void` | — | Called after free plan selection or plan change |
 | `planCard` | `Snippet` | — | Override the default plan card layout |
-
-**Paywall (post-signup):** To redirect straight to the app after first payment instead of staying on the subscription page, set `successRedirect="/"`. The subscription syncs automatically on whichever page the user lands on — no extra wiring needed.
 
 ## Step 2 — Billing notice banner
 
@@ -126,43 +135,9 @@ Import from `@nebulr-group/bridge-svelte`.
 
 ## Step 2b — Plan-selection paywall (default)
 
-Set this up by default: a signed-in tenant with no plan is redirected to a dedicated
-**welcome page** and can't use the app until they pick one. Returning users who already
-have a plan pass straight through. Two parts:
+Already on. A signed-in tenant with no plan is redirected to `/subscription/plan` **before any page renders** and can't use the app until they pick one; returning users who already have a plan pass straight through. Step 1's file serves that page — there is nothing else to create and nothing to configure.
 
-**1. Create the welcome route** — `src/routes/welcome/+page.svelte`:
-
-```svelte
-<script lang="ts">
-  import { PlanSelector } from '@nebulr-group/bridge-svelte';
-</script>
-
-<h1>Welcome — pick your plan</h1>
-
-<PlanSelector />
-```
-
-**2. Register it as the paywall route** in `src/routes/+layout.ts`, where you already call
-`bridgeBootstrap()`. Add `billing.paywallRoute` to that call and mark `/welcome` public in
-the rules (the user is authenticated but planless — `public` keeps the guard from
-fighting the paywall redirect):
-
-```ts
-export const load = bridgeBootstrap({
-  // …existing options, e.g. loginRoute…
-  billing: { paywallRoute: '/welcome' },
-  rules: [
-    // …existing rules…
-    { match: '/welcome', public: true },
-  ],
-  defaultAccess: 'protected',
-});
-```
-
-`BridgeBootstrap` reads `shouldSelectPlan` from the session and redirects planless users to
-`paywallRoute` **before any page renders** — no per-page wiring needed. The redirect is gated
-by the app-level `paymentsAutoRedirect` flag (**`true` by default**). To turn the whole paywall
-off so users reach the app without choosing a plan:
+The redirect is gated by the app-level `paymentsAutoRedirect` flag (**`true` by default**). To turn the whole paywall off so users reach the app without choosing a plan:
 
 ```bash
 bridge app update --payments-auto-redirect false
@@ -170,8 +145,37 @@ bridge app update --payments-auto-redirect false
 
 There is no MCP tool for this app-level setting — `get_app` reads it, nothing over MCP writes it. Use the CLI or the dashboard.
 
-**Alternative — in-layout overlay.** If you'd rather gate in place than redirect to a route,
-wrap the app in `<BridgePaywall>` instead of creating `/welcome`:
+### The welcome page: offer it, never create it unasked
+
+Some products want the plan choice to be an onboarding step at its own address, e.g. `/welcome`, with its own copy. That is a **product decision for the user, not a default**:
+
+- **Never create `/welcome` (or any other onboarding/paywall page) unless the user asked for one.** The paywall already works without it.
+- **Offer it as a question** when the integration is onboarding-shaped — the user is setting up signup, a first-run experience, or asks what a new user sees — for example: *"New workspaces without a plan currently land on `/subscription/plan`. Do you want a dedicated onboarding page for that instead, e.g. `/welcome` with your own heading?"* Ask once; if they decline or don't answer, leave the default.
+
+Only if they say yes, create `src/routes/welcome/+page.svelte`:
+
+```svelte
+<script lang="ts">
+  import { BridgePaywallPage } from '@nebulr-group/bridge-svelte';
+</script>
+
+<BridgePaywallPage heading="Pick a plan to get started" />
+```
+
+and point the paywall at it in the `bridgeBootstrap()` call in `src/routes/+layout.ts`:
+
+```ts
+export const load = bridgeBootstrap({
+  // …existing options…
+  billing: { paywallRoute: '/welcome' },
+});
+```
+
+The config line is required: the redirect runs in the root `load` before any page renders — including before `/welcome` has ever been visited — so it must know the address up front. Do not mark `/welcome` public. `<BridgePaywallPage>` takes `heading`, optional `children` (content above the plans), `successRedirect` (default `/subscription/success`) and `cancelRedirect` (default: the page itself).
+
+### Alternative — in-layout overlay
+
+If the user would rather gate in place than redirect to a route, wrap the app in `<BridgePaywall>` and turn the redirect off:
 
 ```svelte
 <BridgeBootstrap>
@@ -180,6 +184,13 @@ wrap the app in `<BridgePaywall>` instead of creating `/welcome`:
     {@render children()}
   </BridgePaywall>
 </BridgeBootstrap>
+```
+
+```ts
+export const load = bridgeBootstrap({
+  // …existing options…
+  billing: { paywallRoute: false },
+});
 ```
 
 `<BridgePaywall>` renders a fullscreen plan-selector overlay when `shouldSelectPlan` is true,
@@ -192,7 +203,7 @@ then disappears once a plan is chosen. Props:
 | `onSelect` | `(detail) => void` | — | Side-effect hook after free-plan or direct plan change (analytics, pixel events) |
 | `heading` | `Snippet` | — | Override the default "Choose a plan" heading |
 
-Import `PlanSelector` / `BridgePaywall` from `@nebulr-group/bridge-svelte`.
+Import `BridgePaywallPage` / `BridgePaywall` from `@nebulr-group/bridge-svelte`.
 
 ## Step 3 — Reading quota: client and server
 
@@ -236,9 +247,9 @@ Branch on `policy`, never on `remaining` alone.
 
 ## Step 4 — Billing portal
 
-To let users manage their payment method or cancel, add a button that calls `getBridgeAuth().getBillingPortalUrl()` and redirects to the returned URL. Import `getBridgeAuth` from `@nebulr-group/bridge-svelte`.
+The "Manage billing" button (payment method, invoices, cancel) is already on `/subscription`. To put it anywhere else, render `<BillingPortalButton />` from `@nebulr-group/bridge-svelte`: it shows only for the workspace owner on an app with payments on whose workspace has a plan, and fetches a one-time portal URL at click time.
 
-The method name is `getBillingPortalUrl()` — there is no `getPortalUrl()`. It returns a one-time Stripe portal URL built from the `apiBaseUrl` you configured, so it follows your app to stage or local dev; do not hand-roll a `fetch` against a hardcoded `https://api.thebridge.dev`. The session is short-lived, so call it at click time rather than caching the result.
+For a fully custom button, the method is `getBridgeAuth().getBillingPortalUrl()` — there is no `getPortalUrl()`. It returns a one-time Stripe portal URL built from the `apiBaseUrl` you configured, so it follows your app to stage or local dev; do not hand-roll a `fetch` against a hardcoded `https://api.thebridge.dev`. The session is short-lived, so call it at click time rather than caching the result.
 
 ## Reading subscription state
 
@@ -249,9 +260,9 @@ The subscription state is available via `bridge.tenant.subscription` (a store on
 Before verifying, confirm every item was applied:
 
 - [ ] At least one plan exists (`list_plans` over MCP, `bridge plan list` on the CLI)
-- [ ] `src/routes/subscription/+page.svelte` created with `<PlanSelector>` (no props needed for standard plan-change flow)
+- [ ] `src/routes/subscription/[...bridge]/+page.svelte` created with `<BridgeBillingRoutes />` — and no hand-written `/billing`, `/payment-error`, success or paywall pages
 - [ ] `<BridgeBillingNotice />` added to root layout
-- [ ] Paywall (default): `src/routes/welcome/+page.svelte` created with `<PlanSelector>`, `billing.paywallRoute: '/welcome'` set in `+layout.ts`, and `/welcome` marked public in the route guard — OR `<BridgePaywall>` wrapping `{@render children()}` for the overlay alternative
+- [ ] Paywall: nothing to add (default `/subscription/plan`). `/welcome` + `billing.paywallRoute: '/welcome'` ONLY if the user asked for it — OR `<BridgePaywall>` + `billing.paywallRoute: false` for the overlay alternative
 - [ ] Quota/entitlement UI added if plans have limits
 - [ ] No extra packages installed (`@stripe/stripe-js` must NOT be in package.json)
 
@@ -260,10 +271,11 @@ Before verifying, confirm every item was applied:
 1. Navigate to `/subscription` — plan cards render with correct prices; a tier with monthly + yearly pricing shows both intervals.
 2. Select a free plan — subscription updates immediately, no redirect.
 3. Select a paid plan — Stripe Checkout launches.
-4. Complete payment — redirected to `/subscription` with the updated plan showing.
-5. Cancel payment — redirected to `/subscription`.
-6. Paywall: sign in as a new tenant with no plan — you're redirected to `/welcome` and can't reach the app until a plan is chosen.
-7. Run the project's build command — no TypeScript or import errors.
+4. Complete payment — redirected to `/subscription/success` with the new plan showing.
+5. Cancel payment — back on `/subscription`.
+6. Paywall: sign in as a new tenant with no plan — you're redirected to `/subscription/plan` (or `/welcome`, if the user opted in) and can't reach the app until a plan is chosen.
+7. `/subscription/nope` shows the app's own 404.
+8. Run the project's build command — no TypeScript or import errors.
 
 ---
 

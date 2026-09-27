@@ -19,7 +19,7 @@ See [Authentication](/auth/) if you haven't done that yet, and
 Once `bridgeBootstrap()` runs in your `+layout.ts` and `<BridgeBootstrap>`
 mounts in your `+layout.svelte`, billing is **already live**. Bootstrap fetches
 the subscription for the current workspace (called a *tenant* in the API),
-auto-mounts the billing notice/gate, and honors your configured billing routes.
+auto-mounts the billing notice/gate, and redirects to the billing pages below.
 There is **no separate billing init call**.
 
 State lands on the unified `bridge` object and updates over the live channel
@@ -38,74 +38,85 @@ State lands on the unified `bridge` object and updates over the live channel
 {/if}
 ```
 
-## Configure your billing routes
+## Add the billing pages: one file
 
-Add a `billing` block to the `bridgeBootstrap({ … })` call you already have
-in `+layout.ts`:
+Every billing page your app needs comes from one file:
 
-```ts
-// src/routes/+layout.ts
-import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
+```svelte
+<!-- src/routes/subscription/[...bridge]/+page.svelte -->
+<script lang="ts">
+  import { BridgeBillingRoutes } from '@nebulr-group/bridge-svelte';
+</script>
 
-export const ssr = false;
-
-export const load = bridgeBootstrap({
-  loginRoute: '/auth/login',
-  billing: {
-    paywallRoute: '/subscription',       // send plan-less workspaces here
-    paymentErrorRoute: '/payment-error', // land here if a checkout confirmation fails
-  },
-  rules: [
-    { match: new RegExp('^/auth($|/)'), public: true },
-    { match: '/subscription', public: true },
-  ],
-  defaultAccess: 'protected',
-});
+<BridgeBillingRoutes />
 ```
 
-- **`paywallRoute`**: when set, bootstrap redirects an authenticated workspace
-  that hasn't selected a plan here **before the page renders**. Point it at
-  wherever your `<PlanSelector>` lives. (Workspaces that opt out via
-  `paymentsAutoRedirect: false` are exempt.)
-- **`paymentErrorRoute`**: where Bridge sends the user if a Stripe checkout
-  confirmation fails on the return trip. Defaults to `/payment-error`.
+| Address | What it shows |
+|---|---|
+| `/subscription` | The current plan, the plan picker to upgrade or downgrade, and "Manage billing" (the Stripe portal) |
+| `/subscription/plan` | The paywall: where a workspace with no plan is sent |
+| `/subscription/success` | Where a completed checkout lands |
+| `/subscription/error` | Where a checkout that could not be confirmed lands |
 
-Both are optional. Leave `paywallRoute` unset if you'd rather gate the app with
-`<BridgePaywall>` (below) than redirect.
+Those are the defaults of the three billing routes, so there is nothing to
+configure and nothing Bridge redirects to is a 404:
+
+| Config | Default | Used for |
+|---|---|---|
+| `billing.manageRoute` | `/subscription` | The Upgrade/Manage buttons in `<BridgeBillingNotice>` and `<BridgeQuotaBanner>` |
+| `billing.paywallRoute` | `/subscription/plan` | Where a signed-in workspace (called a *tenant* in the API) with no plan is sent, **before any page renders** |
+| `billing.paymentErrorRoute` | `/subscription/error` | Where a failed checkout confirmation lands |
+
+Workspaces that opt out via `paymentsAutoRedirect: false` are never redirected.
+An unknown address under `/subscription` gets your app's own 404. The file can
+live under another folder; links between its pages follow it.
+
+**Customising**, in rungs: restyle with the `--bridge-*` CSS tokens; replace
+the frame around every page with a `frame(page, content)` snippet and each
+heading with `heading(page)`; or take over one page by creating it
+(`src/routes/subscription/plan/+page.svelte` wins over the catch-all, and the
+others keep working).
 
 ## Adding billing to your UI
 
 Here are three use cases for billing in your UI:
 
-**1. Letting users select a plan after first signup**: wrap your root layout in
-`<BridgePaywall>`; it blocks the app and shows a plan picker until the workspace
-has an active plan, so a brand-new user picks a plan before they get in:
+**1. Letting users select a plan after first signup**: already done. A
+brand-new workspace with no plan is sent to `/subscription/plan` before any page
+renders, and gets into the app once it picks one.
 
-```svelte
-<!-- src/routes/+layout.svelte -->
-<script lang="ts">
-  import { BridgePaywall } from '@nebulr-group/bridge-svelte';
-  let { children } = $props();
-</script>
+Two optional variations:
 
-<BridgePaywall successRedirect="/welcome" cancelRedirect="/subscription">
-  {@render children()}
-</BridgePaywall>
-```
+- **An onboarding page at an address of your choosing**, e.g. `/welcome`. Render
+  `<BridgePaywallPage>` there and point the paywall at it:
+
+  ```svelte
+  <!-- src/routes/welcome/+page.svelte -->
+  <script lang="ts">
+    import { BridgePaywallPage } from '@nebulr-group/bridge-svelte';
+  </script>
+
+  <BridgePaywallPage heading="Pick a plan to get started" />
+  ```
+
+  ```ts
+  // src/routes/+layout.ts
+  export const load = bridgeBootstrap({
+    // …your existing options…
+    billing: { paywallRoute: '/welcome' },
+  });
+  ```
+
+  The config line is needed because the redirect happens before any page
+  renders, including before `/welcome` has ever been visited.
+
+- **A modal instead of a redirect**: wrap your root layout in `<BridgePaywall>`
+  and turn the redirect off with `billing: { paywallRoute: false }`.
 
 → [Require a plan to use the app](/billing/onboarding/require-plan/)
 
-**2. A self-service subscription page**: drop `<PlanSelector />` onto a route. It
-loads all the plans so your users can upgrade or downgrade directly from your app:
-
-```svelte
-<!-- src/routes/subscription/+page.svelte -->
-<script lang="ts">
-  import { PlanSelector } from '@nebulr-group/bridge-svelte';
-</script>
-
-<PlanSelector successRedirect="/subscription/success" cancelRedirect="/subscription" />
-```
+**2. A self-service subscription page**: also done. `/subscription` shows the
+current plan and the plan picker, so users upgrade or downgrade from your app.
 
 → [Choose & switch plans](/billing/onboarding/choose-switch-plans/)
 

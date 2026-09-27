@@ -63,7 +63,7 @@ Read the active config at runtime via the `readonlyConfig` store:
 
 `callbackUrl` is the URL Bridge calls back to once a hosted or SSO login completes. If you omit it, the SDK uses `${window.location.origin}/auth/oauth-callback`, so that route file must exist (it can be empty; `bridgeBootstrap` handles the callback in your root layout load before the page renders) and must be public.
 
-The same URL is where **Stripe returns** after checkout. `<PlanSelector>` sends Stripe `callbackUrl` with `?stripe_success=1&session_id=…` (or `?stripe_cancel=1`) plus the destination, and `bridgeBootstrap` confirms the payment, refreshes the token and redirects to the selector's `successRedirect` / `cancelRedirect` (default `/subscription`), or to `billing.paymentErrorRoute` if confirmation fails.
+The same URL is where **Stripe returns** after checkout. `<PlanSelector>` sends Stripe `callbackUrl` with `?stripe_success=1&session_id=…` (or `?stripe_cancel=1`) plus the destination, and `bridgeBootstrap` confirms the payment, refreshes the token and redirects to the selector's `successRedirect` / `cancelRedirect` (default `/subscription`), or to `billing.paymentErrorRoute` (default `/subscription/error`) if confirmation fails.
 
 Passing a specific `callbackUrl` lets you send different parts of your app through different post-login destinations, for example an admin section and a regular user section of the same app, or entirely separate apps sharing one Bridge project.
 
@@ -103,9 +103,11 @@ If you leave `loginRoute` unset, Bridge uses hosted auth instead: unauthenticate
 | `locale` | `string` | `'en'` | UI language of the SDK auth components, e.g. `'sv'`. Unknown locales fall back to English |
 | `messages` | `MessageOverrides` | (none) | Per-key copy overrides on top of the locale |
 | `devBadge` | `boolean` | `true` | Show the "Live updates off — why?" badge in development builds. Never shown in production builds. See [Live updates](/live-updates/#when-live-updates-are-off) |
-| `billing.paywallRoute` | `string` | (none) | Route to redirect to when the workspace (called a *tenant* in the API) has no plan selected |
-| `billing.paymentErrorRoute` | `string` | `'/payment-error'` | Route to redirect to when a Stripe checkout confirmation fails |
-| `billing.manageRoute` | `string` | `'/billing'` | Your plan/billing page; where the Upgrade/Manage buttons in `<BridgeQuotaBanner>` and `<BridgeBillingNotice>` point |
+| `billing.paywallRoute` | `string \| false` | `'/subscription/plan'` | Where a signed-in workspace (called a *tenant* in the API) with no plan is redirected, before any page renders. `false` turns the redirect off |
+| `billing.paymentErrorRoute` | `string` | `'/subscription/error'` | Where a failed Stripe checkout confirmation lands |
+| `billing.manageRoute` | `string` | `'/subscription'` | The subscription page; where the Upgrade/Manage buttons in `<BridgeQuotaBanner>` and `<BridgeBillingNotice>` point |
+
+The three billing defaults are pages `<BridgeBillingRoutes />` serves from `src/routes/subscription/[...bridge]/+page.svelte`; see [Add billing to your app](/billing/setup/add-billing-to-your-app/).
 | `storage` | `TokenStorage` | `localStorage` (browser) / memory (SSR) | Token storage adapter; implement `get`/`set`/`remove` to bring your own |
 | `debug` | `boolean` | `VITE_BRIDGE_DEBUG === 'true'`, else `false` | Enable debug logging |
 

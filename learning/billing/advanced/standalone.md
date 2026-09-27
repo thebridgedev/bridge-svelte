@@ -90,7 +90,7 @@ const monthly = pro.prices.find((pr) => pr.recurrenceInterval === 'month')!;
 
 const session = await getBridgeAuth().startCheckout('pro', monthly, {
   successUrl: 'https://yourapp.com/subscription/success',
-  cancelUrl: 'https://yourapp.com/subscription/cancel',
+  cancelUrl: 'https://yourapp.com/subscription',
 });
 
 if (session.sessionId === null) {

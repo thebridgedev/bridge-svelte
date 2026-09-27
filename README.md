@@ -244,22 +244,20 @@ The library supports:
 For full examples and API reference, see:
 - [Payments & Subscriptions — examples guide](learning/examples/examples.md#payments--subscriptions)
 
-**Quick start:**
+**Quick start:** one file serves the subscription page, the paywall for workspaces without a plan, and the pages a checkout returns to (`/subscription`, `/subscription/plan`, `/subscription/success`, `/subscription/error`). Bridge's billing redirects and Manage buttons point there by default.
 
 ```svelte
+<!-- src/routes/subscription/[...bridge]/+page.svelte -->
 <script lang="ts">
-  import { PlanSelector, loadSubscription } from '@nebulr-group/bridge-svelte';
-  import { onMount } from 'svelte';
-  onMount(() => loadSubscription());
+  import { BridgeBillingRoutes } from '@nebulr-group/bridge-svelte';
 </script>
 
-<PlanSelector
-  successUrl="https://yourapp.com/subscription/success"
-  cancelUrl="https://yourapp.com/subscription/cancel"
-/>
+<BridgeBillingRoutes />
 ```
 
 The library provides:
+- `<BridgeBillingRoutes>` — every billing page from one file; `<BridgePaywallPage>` for an onboarding paywall at your own address (e.g. `/welcome`, with `billing.paywallRoute: '/welcome'`)
+- `<BillingPortalButton>` — "Manage billing", opens the Stripe billing portal
 - `<PlanSelector>` — drop-in headless component that renders plan cards and drives the full checkout flow
 - `subscriptionStore` — reactive Svelte store with `status`, `plans`, `loading`, `error`
 - `loadSubscription()` — fetches status + plans in parallel and populates the store

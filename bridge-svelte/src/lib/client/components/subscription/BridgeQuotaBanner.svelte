@@ -26,15 +26,7 @@
     useBridge,
     type QuotaSnapshot,
   } from '@nebulr-group/bridge-auth-core';
-<<<<<<< HEAD
-<<<<<<< HEAD
-  import { getBridgeAuth } from '../../../core/bridge-instance.js';
-=======
   import { isBillingAdmin as canManageBilling, quotaMemberBody } from '../../billing-role.js';
->>>>>>> origin/feature/mcp-journey
-=======
-  import { isBillingAdmin as canManageBilling, quotaMemberBody } from '../../billing-role.js';
->>>>>>> origin/feature/mcp-journey
   import { billingRoutes } from '../../billing-routes.js';
 
   type Chassis = 'rail';

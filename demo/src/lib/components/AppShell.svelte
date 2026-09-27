@@ -48,16 +48,8 @@
       group: 'Billing',
       items: [
         { href: '/subscription', label: 'Subscription' },
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
         { href: '/usage-quota', label: 'Usage & quotas' },
         { href: '/plan-limits', label: 'Plan limits' },
->>>>>>> origin/feature/mcp-journey
-=======
-        { href: '/usage-quota', label: 'Usage & quotas' },
-        { href: '/plan-limits', label: 'Plan limits' },
->>>>>>> origin/feature/mcp-journey
         { href: '/usage-probe', label: 'Usage probe' },
         { href: '/billing-lifecycle', label: 'Billing Lifecycle' },
         { href: '/paywall', label: 'Paywall' },

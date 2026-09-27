@@ -30,12 +30,14 @@ It updates live on `quota.updated` pushes.
 
 ### Level 0: no code
 
-A page that calls your backend needs nothing from Bridge:
+A page that calls your backend needs nothing for the limit:
 
 ```svelte
 <script lang="ts">
+  import { bridgeFetch } from '@nebulr-group/bridge-svelte';
+
   async function createTicket() {
-    await fetch('/api/tickets', { method: 'POST' });
+    await bridgeFetch('/api/tickets', { method: 'POST' });
   }
 </script>
 
@@ -44,7 +46,7 @@ A page that calls your backend needs nothing from Bridge:
 
 When the backend refuses at the cap it answers `402` with `{ code: 'QUOTA_EXCEEDED', metric, used, limit, fix }`. `<BridgeBootstrap>` sees that answer and opens an **upgrade dialog**: *"This workspace has used 3 of 3 tickets on its current plan"*, with an **Upgrade plan** button that goes to `fix` (a path in your app) or else your subscription page. Your code still gets the `402` response, unchanged, to handle like any failed write.
 
-Plain `fetch` is covered for your app's own origin and for Bridge's API. If your backend lives on another origin, call it with [`bridgeFetch`](/billing/limits/report-usage/) (which also sends the user's token) or list it in `billing.apiOrigins`.
+Your app authenticates its own API calls with [`bridgeFetch`](/billing/limits/report-usage/) anyway: a plain `fetch` sends no user token, so a protected backend answers `401`, never `402`. The limit handling still needs no code — the dialog opens from any `402 QUOTA_EXCEEDED` the wrapper sees. A backend on another origin works the same way; list it in `billing.apiOrigins` if some calls to it go through plain `fetch`.
 
 | Config (`billing` in `bridgeBootstrap({...})`) | Default | Description |
 |------|---------|-------------|

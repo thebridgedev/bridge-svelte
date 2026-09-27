@@ -87,7 +87,7 @@ Plan limits are enforced by your backend (with NestJS, one `@RequireQuota` decor
 
 | Level | You write | The user sees |
 |---|---|---|
-| 0 | nothing | An upgrade dialog when the backend refuses at the limit |
+| 0 | nothing beyond calling your API with `bridgeFetch()` | An upgrade dialog when the backend refuses at the limit |
 | 1 | `<QuotaGate metric>`, `<Entitled to>` | A button disabled at the cap; a feature shown only on plans that include it |
 | 2 | `useQuota(metric)`, `$entitlements.can(key)` | Your own UI from live numbers |
 

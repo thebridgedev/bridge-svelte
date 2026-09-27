@@ -156,7 +156,7 @@ Pick the lowest level that does the job. Each is optional; level 0 is on without
 
 | Level | What the page writes | What the user sees |
 |---|---|---|
-| **0 — nothing** | a plain button calling your API | Your backend refuses at the cap (`402`), and `<BridgeBootstrap>` opens an **upgrade dialog** naming the metric, linking to the subscription page. A workspace member who cannot manage billing is told to ask the owner instead |
+| **0 — nothing** | a button calling your API with `bridgeFetch()`, as every authenticated call does | Your backend refuses at the cap (`402`), and `<BridgeBootstrap>` opens an **upgrade dialog** naming the metric, linking to the subscription page. A workspace member who cannot manage billing is told to ask the owner instead |
 | **1 — one component** | `<QuotaGate metric="tickets">…</QuotaGate>` around the button; `<Entitled to="analytics">…</Entitled>` around a paid feature | The button is disabled at a known hard cap with an upgrade line beside it; the paid feature shows only on a plan that grants it |
 | **2 — your own UI** | `useQuota('tickets')` and `$entitlements.can('analytics')` | Whatever you build from the live numbers |
 
@@ -187,7 +187,7 @@ Pick the lowest level that does the job. Each is optional; level 0 is on without
 ```
 
 - "Not loaded yet" is never "zero" and never "not allowed": `useQuota` numbers stay `null` while `loading`, `<QuotaGate>` stays enabled while loading, and `<Entitled>` renders nothing (or its `loading` snippet) until `$entitlements.ready`.
-- The dialog catches a `402 QUOTA_EXCEEDED` from the page's own origin, from Bridge, and from any call made with `bridgeFetch()`; a backend on another origin is listed in `billing.apiOrigins`. `billing: { upgradeDialog: false }` turns it off, `billing: { upgradeDialog: MyDialog }` replaces it.
+- Your app authenticates its own API calls with `bridgeFetch` anyway: a plain `fetch` sends no user token, so a protected backend answers `401`, never `402`. The limit handling still needs no code — the dialog opens from any `402 QUOTA_EXCEEDED` the wrapper sees. The dialog also catches a refusal from Bridge's own API; a backend on another origin called with plain `fetch` is listed in `billing.apiOrigins`. `billing: { upgradeDialog: false }` turns it off, `billing: { upgradeDialog: MyDialog }` replaces it.
 - Do not write a quota `if`, a "limit reached" toast or a `/quota` endpoint of your own: level 0 already covers the refusal, and the frontend reads quota directly from Bridge.
 
 ## 5. Usage reported from the browser trusts the client

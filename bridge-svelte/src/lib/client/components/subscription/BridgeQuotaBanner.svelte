@@ -26,7 +26,11 @@
     useBridge,
     type QuotaSnapshot,
   } from '@nebulr-group/bridge-auth-core';
+<<<<<<< HEAD
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
+=======
+  import { isBillingAdmin as canManageBilling, quotaMemberBody } from '../../billing-role.js';
+>>>>>>> origin/feature/mcp-journey
   import { billingRoutes } from '../../billing-routes.js';
 
   type Chassis = 'rail';
@@ -81,11 +85,8 @@
     // Re-trigger hydration in case the prop changed since `$state` init.
     snapshot = useBridge().quota(metric);
 
-    try {
-      isBillingAdmin = getBridgeAuth().canManageBilling();
-    } catch {
-      // No BridgeAuth instance — render the member variant.
-    }
+    // Shared with <BridgeUpgradeDialog> (TBP-703): billing-role.ts.
+    isBillingAdmin = canManageBilling();
   });
 
   onDestroy(() => unsubscribe?.());
@@ -187,7 +188,7 @@
           }
         : {
             title: `${displayLabel} over cap`,
-            body: `Your workspace is over its ${displayLabel} cap. Contact your workspace owner.`,
+            body: quotaMemberBody(displayLabel, 'over'),
           };
     }
     if (warningLevel === 'critical') {
@@ -199,7 +200,7 @@
           }
         : {
             title: `${displayLabel} near cap`,
-            body: `Your workspace is approaching its ${displayLabel} cap. Contact your workspace owner.`,
+            body: quotaMemberBody(displayLabel, 'critical'),
           };
     }
     // approaching
@@ -211,7 +212,7 @@
         }
       : {
           title: `${displayLabel} approaching cap`,
-          body: `Your workspace is approaching its ${displayLabel} cap.`,
+          body: quotaMemberBody(displayLabel, 'approaching'),
         };
   }
 

@@ -4,19 +4,35 @@ A **metered quota** bills a workspace (called a *tenant* in the API) for what it
 
 ## Report a usage event
 
-Call `report(metric, value)` on the usage reporter whenever the metered action happens. It is fire-and-forget: the call returns immediately and never throws into your code path, so you can drop it straight into a handler.
+Call `bridge.usage.report(metric, value)` whenever the metered action happens. It is fire-and-forget: the call returns immediately and never throws into your code path, so you can drop it straight into a handler.
 
 ```ts
-import { getBridgeAuth } from '@nebulr-group/bridge-svelte';
+import { bridge } from '@nebulr-group/bridge-svelte';
 
 // One unit (value defaults to 1)
-getBridgeAuth().usage.report('ai_completions');
+bridge.usage.report('ai_completions');
 
 // Report N units at once
-getBridgeAuth().usage.report('tokens', 1375);
+bridge.usage.report('tokens', 1375);
 ```
 
 The `metric` string must match the metric key of a quota on the plan (the `--metric` you passed to `bridge plan quota set`). Reporting a metric with no matching quota is harmless; it is simply counted and available for later.
+
+## Set a gauge
+
+`report` is for **counters**: something happened, and Bridge adds it up. For a **gauge**, a count of things that exist right now (projects, documents), tell Bridge the current total after every create and delete:
+
+```ts
+await bridge.usage.set('projects', projects.length);
+```
+
+If deleting it frees room, it's a gauge and your app counts it (`set`). If it happened, it's a counter and Bridge counts it (`report`). `set` sends the absolute value (never added up), resolves once Bridge has stored it, and rejects if Bridge refused it. See [Show usage limits](/billing/limits/usage-limits/#counter-or-gauge) for choosing the kind on the plan.
+
+## Reporting from the browser is self-reported
+
+These calls run in your frontend, so the numbers are **trusted-client**: anything running in the user's browser can send any value. A frontend-only app can show quotas and report usage, but it **cannot enforce** a limit, because only a backend can refuse a write.
+
+Report from the browser when there is no backend that sees the action: a local-first or mobile app whose data lives on the device. When your app has a backend, report and enforce there instead (for NestJS, `@RequireQuota` and `usage.report` in the bridge-nestjs SDK).
 
 ## What happens to a reported event
 
@@ -30,7 +46,7 @@ You do not have to manage batching, retries, or network failures. The reporter h
 Because of the idempotency key, you can pass your own when a single logical action might fire `report` more than once (a component re-render, a retried request) and want the server to dedupe them:
 
 ```ts
-getBridgeAuth().usage.report('report_generated', 1, `report:${reportId}`);
+bridge.usage.report('report_generated', 1, `report:${reportId}`);
 ```
 
 ## Check the queue while developing
@@ -38,7 +54,7 @@ getBridgeAuth().usage.report('report_generated', 1, `report:${reportId}`);
 To confirm events are flowing, or to surface reporter health in an internal dashboard, read the queue status:
 
 ```ts
-const status = await getBridgeAuth().usage.getQueueStatus();
+const status = await bridge.usage.getQueueStatus();
 // { queueDepth, retryCount, lastFlushTimestamp, lastFlushError }
 ```
 

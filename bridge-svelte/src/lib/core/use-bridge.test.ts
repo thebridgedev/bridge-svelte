@@ -6,8 +6,8 @@
 //   2. setBridgeContext outside a component scope throws (Svelte contract);
 //      useBridge() catches and falls back to the singleton.
 //   3. Provided override via Svelte context wins over the singleton —
-//      covered by integration in BridgeProvider.test.ts where a real
-//      component mount sets context.
+//      covered in exports.test.ts, where a parent component calls
+//      setBridgeContext() and a child reads useBridge().
 
 import { describe, expect, it } from 'vitest';
 import { useBridge } from './use-bridge.js';

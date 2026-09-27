@@ -1,4 +1,6 @@
 import type { BridgeAuthConfig, MessageOverrides } from '@nebulr-group/bridge-auth-core';
+import type { Component } from 'svelte';
+import type { BridgeQuotaRefusal } from '../../core/quota-refusal.js';
 
 export type { TokenSet } from '@nebulr-group/bridge-auth-core';
 
@@ -46,5 +48,35 @@ export interface BridgeConfig extends BridgeAuthConfig {
      *  checkout lands on `<manageRoute>/success` by default.
      *  @default '/subscription' */
     manageRoute?: string;
+    /** The dialog `<BridgeBootstrap />` opens when your backend refuses a
+     *  request because a plan limit is reached — a `402` whose JSON body has
+     *  `code: 'QUOTA_EXCEEDED'`, which bridge-nestjs's `@RequireQuota` sends
+     *  (TBP-703). It names the metric and links to the body's `fix` path, else
+     *  to `manageRoute`. `false` turns it off (listen with
+     *  `onBridgeQuotaExceeded()` instead); a component replaces it and receives
+     *  `BridgeUpgradeDialogProps`.
+     *  @default true */
+    upgradeDialog?: boolean | Component<BridgeUpgradeDialogProps>;
+    /** Origins of your own backend when it is not on the page's origin, e.g.
+     *  `['https://api.example.com']`. A `402 QUOTA_EXCEEDED` from the page's
+     *  origin, from Bridge's API, or from a call made with `bridgeFetch()` is
+     *  always recognised; one from any other origin only when it is listed
+     *  here. */
+    apiOrigins?: string[];
   };
+}
+
+/** Props the upgrade dialog receives — the default one, or yours via
+ *  `billing.upgradeDialog: MyDialog`. */
+export interface BridgeUpgradeDialogProps {
+  /** The refusal to explain, or `null` while nothing has been refused. */
+  refusal: BridgeQuotaRefusal | null;
+  /** Where the upgrade button goes: the refusal's `fix` path, else `billing.manageRoute`. */
+  upgradeHref: string;
+  /** Whether this user may manage billing (the same rule as `<BridgeQuotaBanner>`'s
+   *  Upgrade button). `false`: a member — tell them to contact the workspace
+   *  owner instead of linking to a page they cannot act on. */
+  canUpgrade: boolean;
+  /** Close the dialog. */
+  onclose: () => void;
 }

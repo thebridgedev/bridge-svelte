@@ -284,7 +284,7 @@
 
   .bbn-cta:hover {
     background: currentColor;
-    color: white;
+    color: var(--bridge-bg, #ffffff);
   }
 
   /* Chassis variants */
@@ -300,28 +300,29 @@
 
   .bbn-chassis-card {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--bridge-border, #d1d5db);
   }
 
   /* Severity tokens */
   .bbn-severity-info {
-    background: #dbeafe;
-    color: #1e40af;
+    background: var(--bridge-alert-info-bg, #eff6ff);
+    color: var(--bridge-alert-info-fg, #1e40af);
   }
 
   .bbn-severity-warn {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--bridge-alert-warning-bg, #fffbeb);
+    color: var(--bridge-alert-warning-fg, #92400e);
   }
 
   .bbn-severity-critical {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--bridge-alert-error-bg, #fef2f2);
+    color: var(--bridge-alert-error-fg, #991b1b);
   }
 
+  /* Locked inverts the surface: foreground as background, and vice versa. */
   .bbn-severity-locked {
-    background: #1f2937;
-    color: #f9fafb;
+    background: var(--bridge-foreground, #111827);
+    color: var(--bridge-bg, #ffffff);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -339,7 +340,7 @@
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background: rgba(15, 23, 42, 0.72);
+    background: var(--bridge-paywall-bg, rgba(15, 23, 42, 0.72));
     backdrop-filter: blur(2px);
   }
 
@@ -351,8 +352,8 @@
     width: 100%;
     padding: 1.5rem;
     border-radius: 0.75rem;
-    background: #1f2937;
-    color: #f9fafb;
+    background: var(--bridge-foreground, #111827);
+    color: var(--bridge-bg, #ffffff);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
     text-align: center;
   }
@@ -381,7 +382,7 @@
   }
 
   .bbl-cta:hover {
-    background: #f9fafb;
-    color: #1f2937;
+    background: var(--bridge-bg, #ffffff);
+    color: var(--bridge-foreground, #111827);
   }
 </style>

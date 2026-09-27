@@ -1,12 +1,54 @@
 /*
- * bridge-svelte default styles — plain baseline
+ * bridge-svelte default styles
  *
- * Import this file to get the default appearance for all bridge-svelte components:
  *   import '@nebulr-group/bridge-svelte/styles';
  *
- * Without this file, components render as plain unstyled HTML — the headless contract.
- * This file provides structural CSS only. Visual design (colors, shadows, radii) is
- * intentionally left to the consumer or a future design-system layer.
+ * Without this file, components render as plain unstyled HTML — the headless
+ * contract. With it, they get their structure plus a small default look driven
+ * entirely by the `--bridge-*` tokens below.
+ *
+ * ── THE TOKEN CONTRACT ────────────────────────────────────────────────────
+ *
+ * The `--bridge-*` custom properties are the supported way to restyle every
+ * Bridge page and component. Set them in your own stylesheet:
+ *
+ *   :root { --bridge-primary: #0f766e; --bridge-border-radius: 10px; }
+ *
+ * The defaults are declared on `:where(:root)`, which has zero specificity, so
+ * YOUR `:root` wins whatever order the two stylesheets load in. Set a token on
+ * a wrapper instead of `:root` to theme one area.
+ *
+ * Colour
+ *   --bridge-primary          primary buttons, selected tab, active workspace
+ *   --bridge-primary-hover    primary button hover (derived from primary)
+ *   --bridge-primary-fg       text on primary surfaces
+ *   --bridge-primary-light    tint behind the active workspace (derived)
+ *   --bridge-input-focus      input focus ring (defaults to primary)
+ *   --bridge-bg               dialogs, menus, panels
+ *   --bridge-foreground       text on those surfaces, emphasised names
+ *   --bridge-muted            secondary text: hints, table headings
+ *   --bridge-muted-bg         subtle fills: tab tracks, hovers, code boxes
+ *   --bridge-border           input, table, card and secondary button borders
+ *   --bridge-border-radius    corners of inputs, buttons, alerts, cards, dialogs
+ *   --bridge-overlay          backdrop behind dialogs
+ *   --bridge-alert-error-{bg,fg,border}     errors, critical billing notices
+ *   --bridge-alert-success-{bg,fg,border}   confirmations, active plan badge
+ *   --bridge-alert-info-{bg,fg,border}      info notices, trial badge
+ *   --bridge-alert-warning-{bg,fg,border}   warnings, quota nearing its limit
+ *
+ * Layout
+ *   --bridge-auth-page-padding     default container of the sign-in pages
+ *   --bridge-billing-page-width    subscription pages, <BridgePaywallPage>
+ *   --bridge-billing-page-padding  subscription pages, <BridgePaywallPage>
+ *   --bridge-paywall-bg            backdrop of <BridgePaywall> / the lockscreen
+ *   --bridge-paywall-panel-bg      panel of <BridgePaywall>
+ *
+ * Deprecated aliases — still honoured when set on :root, removed in a later
+ * major:  --bridge-primary-foreground → --bridge-primary-fg
+ *         --bridge-bg-muted           → --bridge-muted-bg
+ *
+ * Fonts and body text colour are not tokens: Bridge pages render inside your
+ * layout and inherit them.
  *
  * State selectors:
  *   [data-active="true"]    — active tab
@@ -19,21 +61,37 @@
  *   [data-variant="danger"] — danger variant
  */
 
-/* ─── CSS variable defaults (consumer can override at any scope) ─────────── */
+/* ─── Token defaults — zero specificity, so the app's :root always wins ──── */
 
-:root {
+:where(:root) {
+  /* Derived tokens (primary-hover, primary-fg, primary-light, input-focus,
+     muted-bg, paywall-panel-bg) have no value here on purpose: each falls back
+     to its source where it is used, so setting --bridge-primary on a wrapper
+     re-derives them for that wrapper too. */
   --bridge-primary: #4f46e5;
-  --bridge-primary-hover: #4338ca;
-  --bridge-primary-fg: #ffffff;
+  --bridge-bg: #ffffff;
+  --bridge-foreground: #111827;
+  --bridge-muted: #6b7280;
   --bridge-border: #d1d5db;
   --bridge-border-radius: 6px;
-  --bridge-input-focus: #4f46e5;
+  --bridge-overlay: rgba(15, 23, 42, 0.45);
   --bridge-alert-error-bg: #fef2f2;
   --bridge-alert-error-fg: #991b1b;
   --bridge-alert-error-border: #fca5a5;
   --bridge-alert-success-bg: #f0fdf4;
   --bridge-alert-success-fg: #166534;
   --bridge-alert-success-border: #86efac;
+  --bridge-alert-info-bg: #eff6ff;
+  --bridge-alert-info-fg: #1e40af;
+  --bridge-alert-info-border: #bfdbfe;
+  --bridge-alert-warning-bg: #fffbeb;
+  --bridge-alert-warning-fg: #92400e;
+  --bridge-alert-warning-border: #fcd34d;
+
+  --bridge-auth-page-padding: 3rem 1rem;
+  --bridge-billing-page-width: 60rem;
+  --bridge-billing-page-padding: 3rem 1rem;
+  --bridge-paywall-bg: rgba(15, 23, 42, 0.72);
 }
 
 /* ─── Input visual defaults ──────────────────────────────────────────────── */
@@ -47,8 +105,8 @@
 :where(input[type="text"]:focus, input[type="email"]:focus,
        input[type="password"]:focus, input[type="tel"]:focus,
        .bridge-input:focus) {
-  border-color: var(--bridge-input-focus);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bridge-input-focus) 20%, transparent);
+  border-color: var(--bridge-input-focus, var(--bridge-primary));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bridge-input-focus, var(--bridge-primary)) 20%, transparent);
 }
 
 /* ─── Buttons ────────────────────────────────────────────────────────────── */
@@ -92,13 +150,13 @@
 
 :where(.bridge-btn-primary) {
   background-color: var(--bridge-primary);
-  color: var(--bridge-primary-fg);
+  color: var(--bridge-primary-fg, var(--bridge-primary-foreground, #ffffff));
   border: 1px solid var(--bridge-primary);
   border-radius: var(--bridge-border-radius);
 }
 :where(.bridge-btn-primary:hover:not(:disabled)) {
-  background-color: var(--bridge-primary-hover);
-  border-color: var(--bridge-primary-hover);
+  background-color: var(--bridge-primary-hover, color-mix(in srgb, var(--bridge-primary) 85%, #000000));
+  border-color: var(--bridge-primary-hover, color-mix(in srgb, var(--bridge-primary) 85%, #000000));
 }
 :where(.bridge-btn-secondary, .bridge-btn-outline) {
   background-color: transparent;
@@ -275,12 +333,12 @@
   border: none;
   cursor: pointer;
   padding: 0.25rem;
-  color: var(--bridge-muted, #6b7280);
+  color: var(--bridge-muted);
   line-height: 1;
 }
 
 .bridge-password-toggle:hover {
-  color: var(--bridge-foreground, #374151);
+  color: var(--bridge-foreground);
 }
 
 /* ─── Auth form helpers ───────────────────────────────────────────────────── */
@@ -318,13 +376,13 @@
   /* Roughly the height of the credentials form it replaces, so the card does
      not collapse and then re-expand under the cursor. */
   min-height: 8rem;
-  color: var(--bridge-muted, #6b7280);
+  color: var(--bridge-muted);
   font-size: 0.875rem;
 }
 
 .bridge-mfa-help {
   font-size: 0.8125rem;
-  color: var(--bridge-muted, #6b7280);
+  color: var(--bridge-muted);
   margin: 0.75rem 0 0.25rem;
   text-align: center;
 }
@@ -358,7 +416,7 @@
   gap: 0.75rem;
   margin-bottom: 1rem;
   padding: 0.75rem;
-  background: var(--bridge-bg-muted, #f5f5f5);
+  background: var(--bridge-muted-bg, var(--bridge-bg-muted, #f3f4f6));
   border-radius: 0.5rem;
 }
 
@@ -444,6 +502,19 @@
   font-size: 0.875rem;
   cursor: pointer;
   font-family: inherit;
+}
+
+:where(.bridge-team-tabs) {
+  border-bottom: 1px solid var(--bridge-border);
+}
+
+:where(.bridge-team-tab) {
+  color: var(--bridge-muted);
+}
+
+:where(.bridge-team-tab[data-active="true"]) {
+  color: var(--bridge-primary);
+  box-shadow: inset 0 -2px 0 var(--bridge-primary);
 }
 
 /* ─── TeamUserList ───────────────────────────────────────────────────────── */
@@ -633,6 +704,22 @@
   min-width: 160px;
 }
 
+:where(.bridge-team-actions-menu) {
+  background: var(--bridge-bg);
+  color: var(--bridge-foreground);
+  border: 1px solid var(--bridge-border);
+  border-radius: var(--bridge-border-radius);
+}
+
+:where(.bridge-team-table th) {
+  color: var(--bridge-muted);
+  border-bottom: 1px solid var(--bridge-border);
+}
+
+:where(.bridge-team-table td) {
+  border-bottom: 1px solid var(--bridge-border);
+}
+
 .bridge-team-actions-item {
   display: block;
   width: 100%;
@@ -647,15 +734,24 @@
 
 /* ─── Team Dialogs ───────────────────────────────────────────────────────── */
 
-.bridge-team-dialog {
+/* The team dialogs carry [data-bridge-team-dialog]; the upgrade dialog the class. */
+.bridge-team-dialog,
+[data-bridge-team-dialog] {
   border: none;
   padding: 0;
   max-width: 400px;
   width: 90%;
 }
 
-.bridge-team-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.4);
+:where(.bridge-team-dialog, [data-bridge-team-dialog]) {
+  background: var(--bridge-bg);
+  color: var(--bridge-foreground);
+  border-radius: var(--bridge-border-radius);
+}
+
+.bridge-team-dialog::backdrop,
+[data-bridge-team-dialog]::backdrop {
+  background: var(--bridge-overlay);
 }
 
 .bridge-team-dialog-content {
@@ -764,25 +860,25 @@
   letter-spacing: 0.05em;
   font-weight: 500;
   text-align: left;
-  border-bottom: 1px solid var(--bridge-border, #e5e7eb);
-  color: var(--bridge-muted, #6b7280);
+  border-bottom: 1px solid var(--bridge-border);
+  color: var(--bridge-muted);
 }
 
 [data-bridge-api-tokens] .bridge-api-td,
 [data-bridge-api-tokens] .bridge-api-td-name,
 [data-bridge-api-tokens] .bridge-api-td-muted {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--bridge-border, #e5e7eb);
+  border-bottom: 1px solid var(--bridge-border);
 }
 
 [data-bridge-api-tokens] .bridge-api-td-muted {
-  color: var(--bridge-muted, #6b7280);
+  color: var(--bridge-muted);
 }
 
 [data-bridge-api-tokens] .bridge-api-td-actions {
   padding: 0.75rem 1rem;
   text-align: right;
-  border-bottom: 1px solid var(--bridge-border, #e5e7eb);
+  border-bottom: 1px solid var(--bridge-border);
 }
 
 [data-bridge-api-tokens] .bridge-api-privileges {
@@ -792,7 +888,7 @@
 }
 
 [data-bridge-api-tokens] .bridge-api-inline-form {
-  border: 1px solid var(--bridge-border, #e5e7eb);
+  border: 1px solid var(--bridge-border);
   border-radius: 0.5rem;
   padding: 1rem 1.25rem;
 }
@@ -957,9 +1053,9 @@
   gap: 0.25rem;
   margin-bottom: 1.25rem;
   padding: 0.25rem;
-  border: 1px solid var(--bridge-border, #e2e8f0);
-  border-radius: var(--bridge-border-radius, 0.5rem);
-  background: var(--bridge-muted-bg, var(--bridge-bg-muted, #f8fafc));
+  border: 1px solid var(--bridge-border);
+  border-radius: var(--bridge-border-radius);
+  background: var(--bridge-muted-bg, var(--bridge-bg-muted, #f3f4f6));
 }
 
 .bridge-plan-interval-tab {
@@ -970,19 +1066,19 @@
   font: inherit;
   font-size: 0.8125rem;
   padding: 0.375rem 0.875rem;
-  border-radius: calc(var(--bridge-border-radius, 0.5rem) - 0.2rem);
-  color: var(--bridge-muted, #64748b);
+  border-radius: calc(var(--bridge-border-radius) - 0.2rem);
+  color: var(--bridge-muted);
 }
 
 .bridge-plan-interval-tab[data-active="true"] {
-  background: var(--bridge-primary, #2563eb);
-  color: var(--bridge-primary-fg, var(--bridge-primary-foreground, #fff));
+  background: var(--bridge-primary);
+  color: var(--bridge-primary-fg, var(--bridge-primary-foreground, #ffffff));
 }
 
 .bridge-plan-unavailable {
   margin: 0;
   font-size: 0.8125rem;
-  color: var(--bridge-muted, #64748b);
+  color: var(--bridge-muted);
 }
 
 /* Plan-change confirmation dialog + success notice (TBP-33) */
@@ -993,7 +1089,7 @@
 .bridge-plan-confirm-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+  background: var(--bridge-overlay);
   display: grid;
   place-items: center;
   z-index: 1000;
@@ -1001,9 +1097,9 @@
 }
 
 .bridge-plan-confirm {
-  background: var(--bridge-bg, #fff);
-  border: 1px solid var(--bridge-border, #e2e8f0);
-  border-radius: var(--bridge-border-radius, 0.5rem);
+  background: var(--bridge-bg);
+  border: 1px solid var(--bridge-border);
+  border-radius: var(--bridge-border-radius);
   box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.35);
   max-width: 26rem;
   width: 100%;
@@ -1028,7 +1124,7 @@
 .bridge-plan-confirm-note {
   margin: 0;
   font-size: 0.8125rem;
-  color: var(--bridge-muted, #64748b);
+  color: var(--bridge-muted);
   line-height: 1.5;
 }
 
@@ -1129,12 +1225,12 @@
 }
 
 [data-bridge-workspace-item]:hover:not(:disabled) {
-  background: var(--bridge-muted-bg, #f3f4f6);
+  background: var(--bridge-muted-bg, var(--bridge-bg-muted, #f3f4f6));
 }
 
 [data-bridge-workspace-item][data-active="true"] {
-  background: var(--bridge-primary-light, #eff6ff);
-  border-color: var(--bridge-primary, #3b82f6);
+  background: var(--bridge-primary-light, color-mix(in srgb, var(--bridge-primary) 10%, #ffffff));
+  border-color: var(--bridge-primary);
 }
 
 [data-bridge-workspace-item][data-loading="true"] {
@@ -1153,8 +1249,8 @@
   width: 2rem;
   height: 2rem;
   border-radius: 0.375rem;
-  background: var(--bridge-primary, #3b82f6);
-  color: var(--bridge-primary-foreground, #ffffff);
+  background: var(--bridge-primary);
+  color: var(--bridge-primary-fg, var(--bridge-primary-foreground, #ffffff));
   font-size: 0.875rem;
   font-weight: 600;
   flex-shrink: 0;
@@ -1178,7 +1274,7 @@
 [data-bridge-workspace-name] {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--bridge-foreground, #111827);
+  color: var(--bridge-foreground);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1186,7 +1282,7 @@
 
 [data-bridge-workspace-user] {
   font-size: 0.75rem;
-  color: var(--bridge-muted, #6b7280);
+  color: var(--bridge-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

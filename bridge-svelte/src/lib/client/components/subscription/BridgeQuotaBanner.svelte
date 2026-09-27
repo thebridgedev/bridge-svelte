@@ -283,7 +283,7 @@
     margin-top: 0.25rem;
     width: 100%;
     height: 0.375rem;
-    background: rgba(0, 0, 0, 0.08);
+    background: color-mix(in srgb, currentColor 15%, transparent);
     border-radius: 999px;
     overflow: hidden;
   }
@@ -309,7 +309,7 @@
 
   .bqb-cta:hover {
     background: currentColor;
-    color: white;
+    color: var(--bridge-bg, #ffffff);
   }
 
   /* Chassis — rail only for US-11. */
@@ -320,13 +320,13 @@
 
   /* Severity tokens — mirror BridgeBillingNotice for visual consistency. */
   .bqb-severity-warn {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--bridge-alert-warning-bg, #fffbeb);
+    color: var(--bridge-alert-warning-fg, #92400e);
   }
 
   .bqb-severity-critical {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--bridge-alert-error-bg, #fef2f2);
+    color: var(--bridge-alert-error-fg, #991b1b);
   }
 
   @media (prefers-reduced-motion: reduce) {

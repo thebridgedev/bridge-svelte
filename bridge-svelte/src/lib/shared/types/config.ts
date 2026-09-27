@@ -31,8 +31,11 @@ export interface BridgeConfig extends BridgeAuthConfig {
    *  onboarding page rendering `<BridgePaywallPage />`. */
   billing?: {
     /** Where a signed-in workspace with no plan is redirected, before any page
-     *  renders. `false` turns the redirect off — for an app that gates with the
-     *  `<BridgePaywall>` overlay instead, or not at all.
+     *  renders. The default applies only to an app that has plans (an app
+     *  without billing has only plan-less workspaces); a value set here always
+     *  applies. `false` turns the redirect off — for an app that gates with the
+     *  `<BridgePaywall>` overlay instead, or not at all. Workspaces of an app
+     *  with `paymentsAutoRedirect` off are never redirected.
      *  @default '/subscription/plan' */
     paywallRoute?: string | false;
     /** Where a failed Stripe checkout confirmation lands.

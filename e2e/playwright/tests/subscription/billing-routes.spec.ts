@@ -151,6 +151,35 @@ test.describe('The paywall points at a page that exists (TBP-702)', () => {
     expect(new URL(page.url()).pathname).toBe('/subscription/error');
   });
 
+  test('an app without billing (no plans) keeps plan-less workspaces in the app', async ({
+    page,
+    testUser,
+    testDataClient,
+  }) => {
+    // Every workspace of an app that never set billing up is plan-less. The
+    // default paywall must not send them to a page such an app does not have.
+    // The worker app's plan catalogue is shared, so "no plans" is the API's
+    // answer for this page only.
+    await page.route('**/account/subscription/plans', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+    );
+    await testDataClient.configureApp({ paymentsAutoRedirect: true, stripeEnabled: false });
+    const cleared = await testDataClient.clearTenantPlan(testUser.tenantId);
+    expect(cleared.shouldSelectPlan).toBe(true);
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('bridge:defaultPaywall', 'true'));
+    await loginViaSdkAuth(page, testUser.email, testUser.password);
+
+    // Both paywall checks read the plan list: the load's, and <BridgeBootstrap>'s
+    // reactive one. Once it has been served, neither may have moved the page.
+    const plansServed = page.waitForResponse('**/account/subscription/plans', { timeout: LONG_TIMEOUT });
+    await page.goto('/protected');
+    await plansServed;
+    await expect(page.locator('h1:has-text("Protected Page")')).toBeVisible({ timeout: LONG_TIMEOUT });
+    await page.waitForTimeout(1_000);
+    expect(new URL(page.url()).pathname).toBe('/protected');
+  });
+
   test('the /welcome opt-in moves the paywall there', async ({ page, testUser, testDataClient }) => {
     await signInPlanless(page, testUser, testDataClient);
     await page.evaluate(() => localStorage.removeItem('bridge:defaultPaywall'));

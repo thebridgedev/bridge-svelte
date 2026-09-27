@@ -28,7 +28,7 @@ the gate is already on. `bridgeBootstrap()` checks the subscription status befor
 
 It only redirects when all of the following hold, so there's no redirect loop and no gate on exempt workspaces:
 
-- `billing.paywallRoute` is not `false`
+- `billing.paywallRoute` is not `false`, and, for the default `/subscription/plan`, the app has at least one plan (a `paywallRoute` you set applies regardless)
 - the current path isn't the paywall page or the payment-error page
 - the workspace is authenticated but has `shouldSelectPlan: true`
 - the workspace hasn't opted out via `paymentsAutoRedirect: false`

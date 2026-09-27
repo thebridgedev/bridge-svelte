@@ -26,6 +26,7 @@ const h = vi.hoisted(() => {
     refreshImpl: (): Promise<unknown> => Promise.resolve(null),
     paywall: false,
     confirmImpl: (): Promise<void> => Promise.resolve(),
+    plansImpl: (): Promise<unknown[]> => Promise.resolve([{ key: 'pro' }]),
     calls: {
       refresh: 0,
       loadFlags: 0,
@@ -89,6 +90,7 @@ const h = vi.hoisted(() => {
     createLoginUrl: () => 'https://hosted.example/login',
     createRouteGuard,
     confirmStripeCheckout: () => s.confirmImpl(),
+    getPlans: () => s.plansImpl(),
   };
 
   return { s, auth, ready: undefined as undefined | { set(v: boolean): void } };
@@ -183,6 +185,7 @@ beforeEach(() => {
   h.s.refreshImpl = () => Promise.resolve(null);
   h.s.paywall = false;
   h.s.confirmImpl = () => Promise.resolve();
+  h.s.plansImpl = () => Promise.resolve([{ key: 'pro' }]);
   h.s.calls = { refresh: 0, loadFlags: 0, mount: 0, initBridge: 0, installFetch: 0, invalidate: 0, stash: [] };
 });
 
@@ -357,6 +360,31 @@ describe('billing destinations default to the pages <BridgeBillingRoutes> serves
     h.s.authenticated = true;
     h.s.paywall = true;
     expect((await redirectOf(bridgeBootstrap(at('/admin'), SDK_CONFIG, ROUTES))).location).toBe('/subscription/plan');
+  });
+
+  it('the default paywall stands aside for an app without billing (no plans)', async () => {
+    const { bridgeBootstrap } = await load();
+    h.s.authenticated = true;
+    h.s.paywall = true;
+    h.s.plansImpl = () => Promise.resolve([]);
+    await expect(bridgeBootstrap(at('/admin'), SDK_CONFIG, ROUTES)).resolves.toBeDefined();
+  });
+
+  it('the default paywall fails open when the plan list cannot be read', async () => {
+    const { bridgeBootstrap } = await load();
+    h.s.authenticated = true;
+    h.s.paywall = true;
+    h.s.plansImpl = () => Promise.reject(new Error('no network'));
+    await expect(bridgeBootstrap(at('/admin'), SDK_CONFIG, ROUTES)).resolves.toBeDefined();
+  });
+
+  it('an explicit paywallRoute applies whether or not the app has plans', async () => {
+    const { bridgeBootstrap } = await load();
+    h.s.authenticated = true;
+    h.s.paywall = true;
+    h.s.plansImpl = () => Promise.resolve([]);
+    const config = { ...SDK_CONFIG, billing: { paywallRoute: '/welcome' } };
+    expect((await redirectOf(bridgeBootstrap(at('/admin'), config, ROUTES))).location).toBe('/welcome');
   });
 
   it('paywallRoute: false turns the redirect off', async () => {

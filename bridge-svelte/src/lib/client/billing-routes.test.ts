@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   BRIDGE_BILLING_DEFAULTS,
   BRIDGE_BILLING_PAGES,
+  appUsesBilling,
   isPaywallExempt,
   parseBridgeBillingRoute,
   resolveBillingRoutes,
@@ -37,6 +38,7 @@ describe('resolveBillingRoutes', () => {
     expect(resolveBillingRoutes(undefined)).toEqual({
       manageRoute: '/subscription',
       paywallRoute: '/subscription/plan',
+      paywallIsDefault: true,
       paymentErrorRoute: '/subscription/error',
       successRoute: '/subscription/success',
     });
@@ -48,6 +50,7 @@ describe('resolveBillingRoutes', () => {
     expect(r).toEqual({
       manageRoute: '/billing/',
       paywallRoute: '/welcome',
+      paywallIsDefault: false,
       paymentErrorRoute: '/oops',
       successRoute: '/billing/success',
     });
@@ -55,6 +58,7 @@ describe('resolveBillingRoutes', () => {
 
   it('paywallRoute: false turns the paywall off', () => {
     expect(resolveBillingRoutes({ paywallRoute: false }).paywallRoute).toBeNull();
+    expect(resolveBillingRoutes({ paywallRoute: false }).paywallIsDefault).toBe(false);
   });
 
   it('an empty string counts as unset', () => {
@@ -76,5 +80,17 @@ describe('isPaywallExempt', () => {
   it('gates everything else, the subscription page included', () => {
     expect(isPaywallExempt('/subscription', routes)).toBe(false);
     expect(isPaywallExempt('/dashboard', routes)).toBe(false);
+  });
+});
+
+describe('appUsesBilling', () => {
+  it('an app with plans uses billing', () => {
+    expect(appUsesBilling([{ key: 'free' }])).toBe(true);
+  });
+
+  it('an app with no plans, or a plan list not read, does not', () => {
+    expect(appUsesBilling([])).toBe(false);
+    expect(appUsesBilling(null)).toBe(false);
+    expect(appUsesBilling(undefined)).toBe(false);
   });
 });

@@ -57,6 +57,13 @@ export interface BridgeBillingRoutes {
   manageRoute: string;
   /** Where a plan-less workspace is sent; `null` when the redirect is turned off. */
   paywallRoute: string | null;
+  /**
+   * True when `paywallRoute` is the built-in default rather than the app's own
+   * choice. The default only applies to an app that uses billing — see
+   * `appUsesBilling` — so an app that never set billing up, where every
+   * workspace is plan-less, is not sent to a page it does not have.
+   */
+  paywallIsDefault: boolean;
   /** Where a failed checkout confirmation lands. */
   paymentErrorRoute: string;
   /** Where a completed checkout lands by default: `<manageRoute>/success`. */
@@ -74,6 +81,7 @@ export function resolveBillingRoutes(billing?: BridgeConfig['billing']): BridgeB
   return {
     manageRoute,
     paywallRoute: paywall === false ? null : paywall || BRIDGE_BILLING_DEFAULTS.paywallRoute,
+    paywallIsDefault: paywall !== false && !paywall,
     paymentErrorRoute: billing?.paymentErrorRoute || BRIDGE_BILLING_DEFAULTS.paymentErrorRoute,
     successRoute: `${manageRoute.replace(/\/+$/, '')}/success`,
   };
@@ -92,6 +100,22 @@ export function billingRoutes(): BridgeBillingRoutes {
     billing = undefined;
   }
   return resolveBillingRoutes(billing);
+}
+
+/**
+ * Whether the app uses billing, for the default paywall (TBP-702): it has at
+ * least one plan. Every workspace of an app with no billing is plan-less
+ * (`shouldSelectPlan` is true whenever a workspace has no plan), so without this
+ * the default would send all of its users to `/subscription/plan`.
+ *
+ * The plan catalogue is the app-level signal the client can see. The
+ * subscription status's `paymentsEnabled` is per workspace (it has a Stripe
+ * customer and subscription), so it is false for every plan-less workspace, and
+ * the app config and the token carry no billing flag. `paymentsAutoRedirect` is
+ * checked separately, by the paywall decision itself.
+ */
+export function appUsesBilling(plans: readonly unknown[] | null | undefined): boolean {
+  return Array.isArray(plans) && plans.length > 0;
 }
 
 /**

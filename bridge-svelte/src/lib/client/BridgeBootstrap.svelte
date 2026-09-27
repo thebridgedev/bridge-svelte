@@ -15,7 +15,7 @@
   import { bridge as bridgeSurface } from '../core/bridge.js';
   import { setBridgeContext } from '../core/use-bridge.js';
   import { getConfig, getRouteGuardConfig } from './stores/config.store.js';
-  import { billingRoutes, isPaywallExempt } from './billing-routes.js';
+  import { appUsesBilling, billingRoutes, isPaywallExempt } from './billing-routes.js';
   import {
     onBridgeAuthorizationChange,
     onBridgeFlagChange,
@@ -81,7 +81,7 @@
     const paywallRoute = routes.paywallRoute;
     if (!paywallRoute || !$isAuthenticated) return;
 
-    const { status, loading, error } = $subscriptionStore;
+    const { status, plans, loading, error } = $subscriptionStore;
 
     // Status unknown → trigger a single load. Guarding on `!error` avoids a
     // tight refetch loop on persistent failure (fail-pending, not fail-open);
@@ -95,9 +95,12 @@
     // navigation too, so manual nav to a protected page while plan-less is
     // also caught. Path guard prevents a redirect loop on the paywall itself,
     // and leaves the payment-error page readable.
+    // TBP-702 — the default paywall only applies to an app that uses billing
+    // (has plans); an explicit paywallRoute always applies.
     if (
       status?.shouldSelectPlan === true &&
       status?.paymentsAutoRedirect !== false &&
+      (!routes.paywallIsDefault || appUsesBilling(plans)) &&
       !isPaywallExempt($page.url.pathname, routes)
     ) {
       goto(paywallRoute);

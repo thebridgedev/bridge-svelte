@@ -24,7 +24,13 @@ import type { BridgeConfig } from '../shared/types/config.js';
 import { bridgeConfig, getConfig, getRouteGuardConfig } from './stores/config.store.js';
 import { resolveBridgeConfig } from './resolve-config.js';
 import { BRIDGE_AUTH_ROUTE_PARAM, isBridgeAuthRouteId, parseBridgeAuthRoute } from './auth-routes.js';
-import { billingRoutes, isPaywallExempt, parseBridgeBillingRoute, resolveBillingRoutes } from './billing-routes.js';
+import {
+  appUsesBilling,
+  billingRoutes,
+  isPaywallExempt,
+  parseBridgeBillingRoute,
+  resolveBillingRoutes,
+} from './billing-routes.js';
 
 // TBP-653 — `bridgeBootstrap` used to short-circuit on every call after the
 // first completed one, and the route guard lived below that return. SvelteKit
@@ -476,6 +482,10 @@ async function handleCallbackRoute(url: URL, kitFetch?: typeof globalThis.fetch)
 // (TBP-369). We only own the route/config guards here:
 //   - billing.paywallRoute is not turned off (TBP-702: it defaults to
 //     `/subscription/plan`, served by <BridgeBillingRoutes>)
+//   - an explicit paywallRoute always applies; the default only when the app
+//     uses billing (it has plans) — an app without billing has only plan-less
+//     workspaces and no paywall page. The plan list is fetched only here, for a
+//     workspace that would otherwise be redirected.
 //   - the current path is not the paywall (no redirect loop) or the
 //     payment-error page (a failed checkout must be readable)
 async function enforcePaywall(url: URL): Promise<void> {
@@ -485,6 +495,7 @@ async function enforcePaywall(url: URL): Promise<void> {
     if (paywallRoute && !isPaywallExempt(url.pathname, routes)) {
       const bridge = getBridgeAuth();
       if (await bridge.shouldRedirectToPaywall()) {
+        if (routes.paywallIsDefault && !appUsesBilling(await bridge.getPlans())) return;
         logger.debug('[bridgeBootstrap] paywall redirect', paywallRoute);
         redirect(303, paywallRoute);
       }

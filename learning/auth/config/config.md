@@ -103,7 +103,7 @@ If you leave `loginRoute` unset, Bridge uses hosted auth instead: unauthenticate
 | `locale` | `string` | `'en'` | UI language of the SDK auth components, e.g. `'sv'`. Unknown locales fall back to English |
 | `messages` | `MessageOverrides` | (none) | Per-key copy overrides on top of the locale |
 | `devBadge` | `boolean` | `true` | Show the "Live updates off — why?" badge in development builds. Never shown in production builds. See [Live updates](/live-updates/#when-live-updates-are-off) |
-| `billing.paywallRoute` | `string \| false` | `'/subscription/plan'` | Where a signed-in workspace (called a *tenant* in the API) with no plan is redirected, before any page renders. `false` turns the redirect off |
+| `billing.paywallRoute` | `string \| false` | `'/subscription/plan'` | Where a signed-in workspace (called a *tenant* in the API) with no plan is redirected, before any page renders. The default applies only when the app has plans; a value you set always applies. `false` turns the redirect off |
 | `billing.paymentErrorRoute` | `string` | `'/subscription/error'` | Where a failed Stripe checkout confirmation lands |
 | `billing.manageRoute` | `string` | `'/subscription'` | The subscription page; where the Upgrade/Manage buttons in `<BridgeQuotaBanner>` and `<BridgeBillingNotice>` point |
 

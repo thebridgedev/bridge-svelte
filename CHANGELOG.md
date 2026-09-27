@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`<BridgeBillingRoutes />` — every billing page from one file** (TBP-702). Mounted from `src/routes/subscription/[...bridge]/+page.svelte`, it serves `/subscription` (current plan, plan picker, "Manage billing"), `/subscription/plan` (the paywall), `/subscription/success` and `/subscription/error` (where a checkout returns). An unknown segment gets the app's own 404. Customise with `--bridge-*` tokens, `frame(page, content)` / `heading(page)` snippets, or take over one page by creating it.
+- **`<BridgePaywallPage />`** — an onboarding paywall at an address of the app's choosing (e.g. `/welcome`), opted into with `billing: { paywallRoute: '/welcome' }`.
+- **`<BillingPortalButton />`** — the "Manage billing" button (Stripe billing portal) for the workspace owner.
+
+### Changed
+
+- **Billing destinations default to pages `<BridgeBillingRoutes>` serves:** `billing.manageRoute` `/billing` → `/subscription`; `billing.paymentErrorRoute` `/payment-error` → `/subscription/error`; `billing.paywallRoute` unset → `/subscription/plan`. The Upgrade/Manage buttons in `<BridgeQuotaBanner>` and `<BridgeBillingNotice>` follow `manageRoute`.
+- **The default paywall redirect applies only to an app that uses billing** (it has at least one plan) and whose `paymentsAutoRedirect` is on. An explicit `billing.paywallRoute` applies as before; `paywallRoute: false` turns the redirect off. The redirect never leaves the payment-error page.
+
+### Migration
+
+- **Apps with billing (plans) must add `src/routes/subscription/[...bridge]/+page.svelte` rendering `<BridgeBillingRoutes />` before upgrading** — or set `billing: { paywallRoute: false }` (e.g. apps gating with the `<BridgePaywall>` overlay). Otherwise a workspace without a plan is redirected to `/subscription/plan`, and a failed checkout to `/subscription/error`, which the app does not have.
+- Apps that relied on the old `/billing` or `/payment-error` defaults either set `billing.manageRoute` / `billing.paymentErrorRoute` explicitly or move to the new pages.
+
 ## [0.2.2] - 2026-02-25
 
 ### Changed

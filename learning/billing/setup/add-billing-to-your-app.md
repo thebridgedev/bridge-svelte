@@ -67,7 +67,10 @@ configure and nothing Bridge redirects to is a 404:
 | `billing.paywallRoute` | `/subscription/plan` | Where a signed-in workspace (called a *tenant* in the API) with no plan is sent, **before any page renders** |
 | `billing.paymentErrorRoute` | `/subscription/error` | Where a failed checkout confirmation lands |
 
-Workspaces that opt out via `paymentsAutoRedirect: false` are never redirected.
+The default paywall applies only once your app has plans, so an app that
+doesn't use billing is never redirected; a `paywallRoute` you set yourself
+always applies. Workspaces that opt out via `paymentsAutoRedirect: false` are
+never redirected.
 An unknown address under `/subscription` gets your app's own 404. The file can
 live under another folder; links between its pages follow it.
 

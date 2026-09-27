@@ -135,7 +135,7 @@ Import from `@nebulr-group/bridge-svelte`.
 
 ## Step 2b — Plan-selection paywall (default)
 
-Already on. A signed-in tenant with no plan is redirected to `/subscription/plan` **before any page renders** and can't use the app until they pick one; returning users who already have a plan pass straight through. Step 1's file serves that page — there is nothing else to create and nothing to configure.
+Already on, as soon as the app has plans (the default paywall stands aside for an app with none; a `paywallRoute` you set always applies). A signed-in tenant with no plan is redirected to `/subscription/plan` **before any page renders** and can't use the app until they pick one; returning users who already have a plan pass straight through. Step 1's file serves that page — there is nothing else to create and nothing to configure.
 
 The redirect is gated by the app-level `paymentsAutoRedirect` flag (**`true` by default**). To turn the whole paywall off so users reach the app without choosing a plan:
 

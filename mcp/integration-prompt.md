@@ -103,16 +103,21 @@ Create or update `src/routes/+layout.svelte`:
 - Put your navigation and page shell inside it too (e.g. `<Nav />`, `<BridgeBillingNotice />`, `<main>`), so everything that reads Bridge state renders after Bridge is ready.
 - **You must import `@nebulr-group/bridge-svelte/styles`** — this provides required structural CSS and visual defaults for Bridge components (login forms, alerts, buttons). Without it, Bridge UI elements will render unstyled and broken. If the project uses its own design system (e.g., Tailwind), you can override the visual defaults via CSS variables but the import must still be present.
 
-## Create the OAuth callback route
+## Serve the auth pages (the OAuth callback)
 
-SvelteKit requires an actual route file for the callback URL. Without it, SvelteKit throws a 404 before `BridgeBootstrap` can handle the code exchange.
-
-Create an empty `src/routes/auth/oauth-callback/+page.svelte`:
+SvelteKit needs a route for the callback URL, or it answers 404 before `bridgeBootstrap` can exchange the code. Create `src/routes/auth/[...bridge]/+page.svelte`:
 
 ```svelte
+<script lang="ts">
+  import { BridgeAuthRoutes } from '@nebulr-group/bridge-svelte';
+</script>
+
+<BridgeAuthRoutes />
 ```
 
-The file must exist but should be empty. `BridgeBootstrap` intercepts this route in the layout `load` function, exchanges the code for tokens, and redirects to `/` before this page ever renders. If the file doesn't exist, SvelteKit will 404 before the load function runs.
+In hosted mode this file serves `/auth/oauth-callback`: `bridgeBootstrap` exchanges the code in the layout `load` and redirects before the page renders, so nothing flashes. Every other sign-in address under `/auth` (`/auth/login`, `/auth/signup`, …) shows a short page saying sign-in is hosted, with a button to the hosted login — useful for old bookmarks and emailed links. Any other address under `/auth` gets your app's 404.
+
+It is the same file an in-app (SDK auth) app uses, so switching to in-app login later is a config change (`loginRoute`), not new pages.
 
 ## Configure the Bridge app (redirect URIs and allowed origins)
 
@@ -319,7 +324,7 @@ Before verifying, confirm every item was applied. Do not skip any:
 - [ ] `src/routes/+layout.ts` — `defaultAccess` is `'protected'`, only `/auth/*` is public
 - [ ] `src/routes/+layout.svelte` — wraps the app in `<BridgeBootstrap>…</BridgeBootstrap>` (no `ready` flag of your own)
 - [ ] `src/routes/+layout.svelte` — imports `@nebulr-group/bridge-svelte/styles`
-- [ ] `src/routes/auth/oauth-callback/+page.svelte` — file exists (even if minimal)
+- [ ] `src/routes/auth/[...bridge]/+page.svelte` — file exists and renders `<BridgeAuthRoutes />` (serves the OAuth callback)
 - [ ] Bridge app configured: `redirect-uris` includes the callback URL, `allowed-origins` includes the frontend origin
 - [ ] Login/logout buttons added to nav using `auth.login()` and `auth.logout()`
 - [ ] User display using `isAuthenticated` store and `profileStore`

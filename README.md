@@ -98,11 +98,15 @@ The zero-config approach. Users are redirected to Bridge's hosted login page (cl
 <Login />
 ```
 
-You also need an OAuth callback page at `/auth/oauth-callback`:
+You also need a route for the OAuth callback at `/auth/oauth-callback`. One file serves it (and tells anyone landing on `/auth/login` that sign-in is hosted):
 
 ```svelte
-<!-- src/routes/auth/oauth-callback/+page.svelte -->
-<p>Signing you in...</p>
+<!-- src/routes/auth/[...bridge]/+page.svelte -->
+<script>
+  import { BridgeAuthRoutes } from '@nebulr-group/bridge-svelte';
+</script>
+
+<BridgeAuthRoutes />
 ```
 
 The `bridgeBootstrap()` function in your `+layout.ts` automatically detects the callback and exchanges the code for tokens.
@@ -116,6 +120,19 @@ For more details, see:
 ### Option B: SDK Auth (Embedded Components)
 
 Full auth UI runs on **your domain** — no redirects. Users never leave your app. Supports password login, SSO, MFA, passkeys, magic links, signup, and password reset.
+
+Set `loginRoute: '/auth/login'` in `bridgeBootstrap()`, then serve every auth page — login, signup, OAuth callback, set password, forgot password, magic link, passkey setup, workspaces — from one file:
+
+```svelte
+<!-- src/routes/auth/[...bridge]/+page.svelte -->
+<script>
+  import { BridgeAuthRoutes } from '@nebulr-group/bridge-svelte';
+</script>
+
+<BridgeAuthRoutes />
+```
+
+Restyle with the `frame(page, children)` and `heading(page)` snippets, or take over a single page by creating its file (`src/routes/auth/login/+page.svelte` wins over the catch-all). The components below are what it renders, and what you build a page of your own from:
 
 ```svelte
 <script>
@@ -155,6 +172,7 @@ You can also use individual components for custom flows:
 
 | Component | Purpose | Key Props |
 |-----------|---------|-----------|
+| `<BridgeAuthRoutes />` | Every auth page from one catch-all route | `frame`, `heading` (snippets), `redirectTo`, `messages` |
 | `<LoginForm />` | Full multi-step login | `showSignupLink`, `showForgotPassword`, `showMagicLink`, `showPasskeys`, `ssoMode` (`'redirect'` \| `'popup'`, default `'redirect'`), `onLogin`, `heading` |
 | `<SignupForm />` | Registration form | `onSignup`, `showLoginLink`, `loginHref` |
 | `<MfaChallenge />` | MFA code entry + recovery | `onVerified`, `showRecoveryOption` |

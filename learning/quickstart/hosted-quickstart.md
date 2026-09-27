@@ -52,13 +52,18 @@ Wrap your app in the `BridgeBootstrap` component. It renders its children only o
 
 ## 4. Add the callback route
 
-SvelteKit requires a route file to exist so it doesn't return a 404 when Bridge redirects back to your app. Create an empty page component:
+SvelteKit needs a route file for the callback address, or it answers 404 when Bridge redirects back to your app. One file covers it:
 
 ```svelte
-<!-- src/routes/auth/oauth-callback/+page.svelte -->
+<!-- src/routes/auth/[...bridge]/+page.svelte -->
+<script lang="ts">
+  import { BridgeAuthRoutes } from '@nebulr-group/bridge-svelte';
+</script>
+
+<BridgeAuthRoutes />
 ```
 
-This file can be completely empty. The `BridgeBootstrap` component handles the OAuth callback token exchange automatically during bootstrap.
+At `/auth/oauth-callback` it renders nothing: Bridge exchanges the code and redirects during bootstrap. Any other sign-in address under `/auth` (an old `/auth/login` bookmark, say) shows a short page saying sign-in is hosted, with a button to it. It is the same file an in-app login uses, so switching later is a config change.
 
 ## 5. That's it: no login page needed
 

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
   import type { MessageOverrides } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
@@ -15,6 +16,13 @@
     loginHref?: string;
     /** Heading text. Pass `null`/`''` to render no heading and use your own page title. */
     heading?: string | null;
+    /**
+     * TBP-696 — renders in place of the heading on this component's main step
+     * (the form), the way `LoginForm.headingSnippet` does. Result states (the
+     * "check your email" / "password set" screens) keep their own heading, so a
+     * page title passed here never stacks on top of one.
+     */
+    headingSnippet?: Snippet;
     /** Step description. Pass `null`/`''` to render nothing and use your own subtitle (TBP-631). */
     description?: string | null;
     /** Per-key copy overrides for this component only (TBP-630). */
@@ -26,6 +34,7 @@
     onError,
     loginHref = '/login',
     heading = undefined,
+    headingSnippet,
     description = undefined,
     messages,
     class: className,
@@ -108,6 +117,7 @@
 
 <AuthFormWrapper
   heading={sent ? null : wrapperHeading}
+  headingSnippet={sent ? undefined : headingSnippet}
   description={sent ? null : wrapperDescription}
   class={className}
   {style}

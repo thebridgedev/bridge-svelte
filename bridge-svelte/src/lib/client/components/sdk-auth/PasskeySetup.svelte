@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
   import type { MessageOverrides } from '@nebulr-group/bridge-auth-core';
   import { onMount } from 'svelte';
@@ -25,6 +26,13 @@
      * outcome than one component guarding its own element.
      */
     description?: string | null;
+    /**
+     * TBP-696 — renders in place of the heading on this component's main step
+     * (setting the passkey up), the way `LoginForm.headingSnippet` does. Result states (the
+     * "check your email" / "password set" screens) keep their own heading, so a
+     * page title passed here never stacks on top of one.
+     */
+    headingSnippet?: Snippet;
     /** Per-key copy overrides for this component only (TBP-630). */
     messages?: MessageOverrides;
   }
@@ -36,6 +44,7 @@
     onBack,
     onExpired,
     description = undefined,
+    headingSnippet,
     messages,
     class: className,
     style,
@@ -113,7 +122,13 @@
   });
 </script>
 
-<AuthFormWrapper {heading} class={className} {style} {...rest}>
+<AuthFormWrapper
+  {heading}
+  headingSnippet={viewState === 'loading' ? headingSnippet : undefined}
+  class={className}
+  {style}
+  {...rest}
+>
   {#if viewState === 'loading'}
     <div class="bridge-passkey-loading">
       <Spinner size={16} />

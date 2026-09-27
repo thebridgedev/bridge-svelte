@@ -86,6 +86,12 @@ export { default as PasskeyLogin } from './client/components/sdk-auth/PasskeyLog
 export { default as PasskeyRequestSetupLink } from './client/components/sdk-auth/PasskeyRequestSetupLink.svelte';
 export { default as PasskeySetup } from './client/components/sdk-auth/PasskeySetup.svelte';
 
+// TBP-696 — every auth page from one file:
+//   src/routes/auth/[...bridge]/+page.svelte  →  <BridgeAuthRoutes />
+export { default as BridgeAuthRoutes } from './client/components/sdk-auth/BridgeAuthRoutes.svelte';
+export { BRIDGE_AUTH_PAGES, parseBridgeAuthRoute } from './client/auth-routes.js';
+export type { BridgeAuthPage, BridgeAuthRoute } from './client/auth-routes.js';
+
 // Subscription components
 export { default as PlanSelector } from './client/components/subscription/PlanSelector.svelte';
 

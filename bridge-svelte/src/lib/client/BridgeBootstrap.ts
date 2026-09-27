@@ -1,6 +1,6 @@
 // src/lib/bridge/bootstrap.ts
 
-import { redirect, isRedirect } from '@sveltejs/kit';
+import { error, redirect, isRedirect } from '@sveltejs/kit';
 import { get } from 'svelte/store';
 import type { RouteGuardConfig } from '../auth/route-guard.js';
 import { createRouteGuard } from '../auth/route-guard.js';
@@ -23,6 +23,7 @@ import { logger } from '../shared/logger.js';
 import type { BridgeConfig } from '../shared/types/config.js';
 import { bridgeConfig, getConfig, getRouteGuardConfig } from './stores/config.store.js';
 import { resolveBridgeConfig } from './resolve-config.js';
+import { BRIDGE_AUTH_ROUTE_PARAM, isBridgeAuthRouteId, parseBridgeAuthRoute } from './auth-routes.js';
 
 // TBP-653 — `bridgeBootstrap` used to short-circuit on every call after the
 // first completed one, and the route guard lived below that return. SvelteKit
@@ -69,6 +70,10 @@ export interface BridgeBootstrapData {
 export type BridgeBootstrapLoad = (event: {
   url: URL;
   fetch: typeof globalThis.fetch;
+  /** Route params — read to 404 an unknown `[...bridge]` auth page (TBP-696). */
+  params?: Record<string, string>;
+  /** The matched route — only its id is read. */
+  route?: { id: string | null };
 }) => Promise<BridgeBootstrapData>;
 
 /**
@@ -122,11 +127,35 @@ function createBootstrapLoad(options: BridgeBootstrapOptions): BridgeBootstrapLo
   // Resolved on the first call, not at import: a missing app id must surface
   // as a load error the developer sees, and the environment is only final then.
   let resolved: BridgeConfig | null = null;
-  return async ({ url, fetch }) => {
+  return async ({ url, fetch, params, route }) => {
+    rejectUnknownAuthPage(route?.id, params);
     resolved ??= resolveBridgeConfig(configOptions);
     await runBootstrap(url, resolved, routeConfig, fetch);
     return { config: getConfig(), routeConfig };
   };
+}
+
+/**
+ * TBP-696 — `src/routes/auth/[...bridge]/+page.svelte` matches every address
+ * under `/auth`, including ones Bridge serves no page for. Those must get the
+ * app's own 404, and only a `load` can produce it: a component that throws
+ * while rendering never reaches the app's error page. The root layout load is
+ * the one `load` every Bridge app already has, so the check lives here and the
+ * app writes no `+page.ts` of its own.
+ *
+ * Only a route whose rest param is literally `[...bridge]` is checked, so an
+ * app's own catch-all is never touched. SvelteKit re-runs this load with empty
+ * params to render its error page; `params.bridge` is then absent and the
+ * check stands aside.
+ */
+function rejectUnknownAuthPage(
+  routeId: string | null | undefined,
+  params: Record<string, string> | undefined,
+): void {
+  if (!isBridgeAuthRouteId(routeId)) return;
+  const rest = params?.[BRIDGE_AUTH_ROUTE_PARAM];
+  if (rest === undefined) return;
+  if (!parseBridgeAuthRoute(rest)) error(404, 'Not Found');
 }
 
 async function runBootstrap(

@@ -488,3 +488,68 @@ describe('bridgeBootstrap(options) returns the layout load (TBP-695)', () => {
     );
   });
 });
+
+// TBP-696 — `src/routes/auth/[...bridge]/+page.svelte` matches every address
+// under /auth. An address Bridge serves no page for must get the app's own 404,
+// which only a load can produce — so the root load throws it.
+describe('the auth catch-all 404s an unknown page (TBP-696)', () => {
+  const AUTH_ROUTE = { id: '/auth/[...bridge]' };
+  const kitFetch = (() => Promise.reject(new Error('no network'))) as typeof fetch;
+
+  async function statusOf(p: Promise<unknown>): Promise<number | 'resolved'> {
+    try {
+      await p;
+      return 'resolved';
+    } catch (err: any) {
+      if (typeof err?.status === 'number' && !isRedirect(err)) return err.status;
+      throw err;
+    }
+  }
+
+  async function oneCallLoad() {
+    const { bridgeBootstrap } = await load();
+    return bridgeBootstrap({ ...SDK_CONFIG, apiBaseUrl: 'http://api', ...ROUTES });
+  }
+
+  it.each([
+    ['not-a-page'],
+    ['login/extra'],
+    ['set-password'],
+    ['setup-passkey'],
+    ['set-password/tok/more'],
+    [''],
+  ])('/auth/%s → 404', async (rest) => {
+    const bootLoad = await oneCallLoad();
+    const url = at(`/auth/${rest}`);
+    expect(await statusOf(bootLoad({ url, fetch: kitFetch, params: { bridge: rest }, route: AUTH_ROUTE }))).toBe(404);
+  });
+
+  it.each([
+    ['login'],
+    ['signup'],
+    ['oauth-callback'],
+    ['set-password/abc123'],
+    ['forgot-password'],
+    ['magic-link'],
+    ['setup-passkey/abc123'],
+    ['workspaces'],
+  ])('/auth/%s is served', async (rest) => {
+    const bootLoad = await oneCallLoad();
+    const url = at(`/auth/${rest}`);
+    expect(await statusOf(bootLoad({ url, fetch: kitFetch, params: { bridge: rest }, route: AUTH_ROUTE }))).toBe('resolved');
+  });
+
+  it("stands aside when SvelteKit re-runs the load to render its error page (params are empty)", async () => {
+    const bootLoad = await oneCallLoad();
+    const url = at('/auth/not-a-page');
+    expect(await statusOf(bootLoad({ url, fetch: kitFetch, params: {}, route: AUTH_ROUTE }))).toBe('resolved');
+  });
+
+  it("never touches an app's own catch-all with a different param name", async () => {
+    const bootLoad = await oneCallLoad();
+    const url = at('/auth/anything');
+    expect(
+      await statusOf(bootLoad({ url, fetch: kitFetch, params: { rest: 'anything' }, route: { id: '/auth/[...rest]' } })),
+    ).toBe('resolved');
+  });
+});

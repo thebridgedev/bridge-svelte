@@ -3,7 +3,9 @@
   nothing. When the app's backend refuses a request because a plan limit is
   reached (402, code QUOTA_EXCEEDED — bridge-nestjs's @RequireQuota), it opens,
   names the metric and the numbers, and links to the refusal's `fix` path or
-  `billing.manageRoute` (default /subscription).
+  `billing.manageRoute` (default /subscription). A member who cannot manage
+  billing (the <BridgeQuotaBanner> rule, billing-role.ts) is told to contact the
+  workspace owner instead, with no Upgrade link.
 
   `billing.upgradeDialog: false` turns it off; a component there replaces it
   and receives the same props.
@@ -12,8 +14,9 @@
 -->
 <script lang="ts">
   import type { BridgeUpgradeDialogProps } from '../../../shared/types/config.js';
+  import { quotaMemberBody } from '../../billing-role.js';
 
-  let { refusal, upgradeHref, onclose }: BridgeUpgradeDialogProps = $props();
+  let { refusal, upgradeHref, canUpgrade, onclose }: BridgeUpgradeDialogProps = $props();
 
   let dialogEl: HTMLDialogElement | undefined = $state();
 
@@ -39,21 +42,27 @@
   {#if refusal}
     <div class="bridge-team-dialog-content">
       <h3 id="bridge-upgrade-dialog-title" class="bridge-team-dialog-title">You've reached your plan's limit</h3>
-      <p class="bridge-team-dialog-message" data-bridge-upgrade-dialog-message>
-        {#if hasNumbers}
+      <p class="bridge-team-dialog-message" data-bridge-upgrade-dialog-message data-variant={canUpgrade ? 'admin' : 'member'}>
+        {#if !canUpgrade}
+          {quotaMemberBody(refusal.metric, 'over')}
+        {:else if hasNumbers}
           This workspace has used <strong>{refusal.used?.toLocaleString()}</strong> of
           <strong>{refusal.limit?.toLocaleString()}</strong>
           <strong data-bridge-upgrade-dialog-metric>{refusal.metric}</strong> on its current plan.
         {:else}
           This workspace has reached its <strong data-bridge-upgrade-dialog-metric>{refusal.metric}</strong> limit.
         {/if}
-        Upgrade the plan to keep going.
+        {#if canUpgrade}Upgrade the plan to keep going.{/if}
       </p>
       <div class="bridge-team-dialog-actions">
-        <button type="button" class="bridge-btn bridge-btn-secondary" onclick={() => onclose()}>Not now</button>
-        <a class="bridge-btn bridge-btn-primary" href={upgradeHref} data-bridge-upgrade-dialog-cta onclick={() => onclose()}>
-          Upgrade plan
-        </a>
+        {#if canUpgrade}
+          <button type="button" class="bridge-btn bridge-btn-secondary" onclick={() => onclose()}>Not now</button>
+          <a class="bridge-btn bridge-btn-primary" href={upgradeHref} data-bridge-upgrade-dialog-cta onclick={() => onclose()}>
+            Upgrade plan
+          </a>
+        {:else}
+          <button type="button" class="bridge-btn bridge-btn-primary" onclick={() => onclose()}>OK</button>
+        {/if}
       </div>
     </div>
   {/if}

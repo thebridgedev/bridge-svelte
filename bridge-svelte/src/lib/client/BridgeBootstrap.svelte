@@ -27,6 +27,7 @@
   import BridgeUpgradeDialog from './components/subscription/BridgeUpgradeDialog.svelte';
   import { dismissQuotaRefusal, quotaRefusal } from '../core/quota-refusal.js';
   import { resolveUpgradeDialog, upgradeHrefFor } from './upgrade-dialog.js';
+  import { isBillingAdmin } from './billing-role.js';
 
   // TBP-644 — the "Live updates off — why?" badge is mounted here so every app
   // gets it without code changes. It renders in development builds only;
@@ -54,6 +55,8 @@
   const upgradeDialog = resolveUpgradeDialog(billingConfig);
   const UpgradeDialog = upgradeDialog === 'default' ? BridgeUpgradeDialog : upgradeDialog;
   const upgradeHref = $derived(upgradeHrefFor($quotaRefusal, billingConfig));
+  // Re-read for every refusal: the same owner rule as <BridgeQuotaBanner>.
+  const canUpgrade = $derived($quotaRefusal ? isBillingAdmin() : false);
 
   // Props: optional `runtime` overrides for advanced/debug use (websocketFactory,
   // reconnect overrides, etc.); `onBootstrapComplete` callback fires after the
@@ -280,7 +283,7 @@
 <RealtimeDevBadge enabled={devBadgeEnabled} />
 
 {#if UpgradeDialog}
-  <UpgradeDialog refusal={$quotaRefusal} {upgradeHref} onclose={dismissQuotaRefusal} />
+  <UpgradeDialog refusal={$quotaRefusal} {upgradeHref} {canUpgrade} onclose={dismissQuotaRefusal} />
 {/if}
 
 {#if runtimeAttached && $bridgeReadyStore}

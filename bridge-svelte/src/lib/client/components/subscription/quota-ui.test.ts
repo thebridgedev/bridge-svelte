@@ -37,6 +37,7 @@ import QuotaGateFixture from './QuotaGateFixture.test.svelte';
 import EntitledFixture from './EntitledFixture.test.svelte';
 import BridgeUpgradeDialog from './BridgeUpgradeDialog.svelte';
 import { resolveUpgradeDialog, upgradeHrefFor } from '../../upgrade-dialog.js';
+import { quotaMemberBody } from '../../billing-role.js';
 
 function render(component: unknown, props: Record<string, unknown> = {}): string {
   return ssr(component as never, { props } as never).body;
@@ -168,7 +169,7 @@ describe('<BridgeUpgradeDialog> — TBP-703', () => {
   const refusal = { metric: 'tickets', used: 3, limit: 3, fix: '/subscription', message: null, url: '/api/tickets' };
 
   it('names the metric and the numbers, and links to the upgrade path', () => {
-    const html = render(BridgeUpgradeDialog, { refusal, upgradeHref: '/subscription?from=tickets', onclose: () => {} });
+    const html = render(BridgeUpgradeDialog, { refusal, upgradeHref: '/subscription?from=tickets', canUpgrade: true, onclose: () => {} });
     expect(html).toContain('data-metric="tickets"');
     expect(html).toMatch(/used <strong>3<\/strong> of\s*<strong>3<\/strong>\s*<strong[^>]*>tickets<\/strong>/);
     expect(html).toContain('href="/subscription?from=tickets"');
@@ -178,14 +179,32 @@ describe('<BridgeUpgradeDialog> — TBP-703', () => {
     const html = render(BridgeUpgradeDialog, {
       refusal: { ...refusal, used: null, limit: null },
       upgradeHref: '/subscription',
+      canUpgrade: true,
       onclose: () => {},
     });
     expect(html).toMatch(/reached its <strong[^>]*>tickets<\/strong> limit/);
     expect(html).not.toContain('>0<');
   });
 
+  it('a member who cannot manage billing is told who to ask — the banner’s wording — and gets no Upgrade link', () => {
+    const html = render(BridgeUpgradeDialog, { refusal, upgradeHref: '/subscription', canUpgrade: false, onclose: () => {} });
+    expect(html).toContain('data-variant="member"');
+    expect(html).toContain(quotaMemberBody('tickets', 'over'));
+    expect(html).toContain('Contact your workspace owner.');
+    expect(html).not.toContain('data-bridge-upgrade-dialog-cta');
+    expect(html).not.toContain('href="/subscription"');
+    expect(html).not.toContain('Upgrade the plan');
+  });
+
+  it('an owner/admin keeps the Upgrade link and is not told to contact anyone', () => {
+    const html = render(BridgeUpgradeDialog, { refusal, upgradeHref: '/subscription', canUpgrade: true, onclose: () => {} });
+    expect(html).toContain('data-variant="admin"');
+    expect(html).toMatch(/<a[^>]*href="\/subscription"[^>]*data-bridge-upgrade-dialog-cta/);
+    expect(html).not.toContain('Contact your workspace owner');
+  });
+
   it('with nothing refused it has no content', () => {
-    const html = render(BridgeUpgradeDialog, { refusal: null, upgradeHref: '/subscription', onclose: () => {} });
+    const html = render(BridgeUpgradeDialog, { refusal: null, upgradeHref: '/subscription', canUpgrade: true, onclose: () => {} });
     expect(html).not.toContain('data-bridge-upgrade-dialog-cta');
   });
 });

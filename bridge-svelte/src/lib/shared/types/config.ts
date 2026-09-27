@@ -73,6 +73,10 @@ export interface BridgeUpgradeDialogProps {
   refusal: BridgeQuotaRefusal | null;
   /** Where the upgrade button goes: the refusal's `fix` path, else `billing.manageRoute`. */
   upgradeHref: string;
+  /** Whether this user may manage billing (the same rule as `<BridgeQuotaBanner>`'s
+   *  Upgrade button). `false`: a member — tell them to contact the workspace
+   *  owner instead of linking to a page they cannot act on. */
+  canUpgrade: boolean;
   /** Close the dialog. */
   onclose: () => void;
 }

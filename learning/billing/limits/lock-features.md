@@ -44,17 +44,21 @@ Read the reactive snapshot in your markup:
 
 ```svelte
 <script lang="ts">
-  import { bridge } from '@nebulr-group/bridge-svelte';
-
-  const entitlements = bridge.tenant.entitlements.snapshot;
+  import { entitlements } from '@nebulr-group/bridge-svelte';
 </script>
 
-{#if $entitlements?.ai_completions}
+{#if !$entitlements.ready}
+  <Spinner />
+{:else if $entitlements.can('ai_completions')}
   <AiPanel />
+{:else}
+  <UpgradePrompt />
 {/if}
 ```
 
-Or check imperatively (synchronous, fail-closed: `false` until the snapshot lands):
+`can()` is fail-closed: `false` until Bridge has answered. `ready` tells "not loaded yet" apart from "this plan doesn't include it", so check it first and a cold start shows a spinner instead of an upgrade prompt.
+
+Or check imperatively, outside a component (synchronous, fail-closed):
 
 ```ts
 if (bridge.tenant.entitlements.can('ai_completions')) { /* ... */ }

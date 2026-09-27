@@ -274,44 +274,25 @@ For feature flags, read them via the Feature Flags 2.0 surface — `useFlag(() =
 
 Once your backend is protected with Bridge auth guards, your frontend needs to send the user's access token on API requests. Bridge handles its own API calls internally — this is only for calls to **your own backend**.
 
-The token is available via `tokenStore`. Read it and attach it as a `Bearer` header using whatever HTTP client the project uses.
-
-**With `fetch`:**
+Use `bridgeFetch` — `fetch` with the user's access token attached, and one refresh-and-retry when your backend answers `401`. Same signature as `fetch`; do not write your own `fetchWithAuth`.
 
 ```ts
-import { get } from 'svelte/store';
-import { tokenStore } from '@nebulr-group/bridge-svelte';
+import { bridgeFetch } from '@nebulr-group/bridge-svelte';
 
-async function fetchWithAuth(url: string, options: RequestInit = {}) {
-  const tokens = get(tokenStore);
-  const headers = new Headers(options.headers);
-  if (tokens?.accessToken) {
-    headers.set('Authorization', `Bearer ${tokens.accessToken}`);
-  }
-  return fetch(url, { ...options, headers });
-}
+const res = await bridgeFetch('/api/projects', { method: 'POST', body: JSON.stringify(input) });
 ```
 
-**With `urql` (GraphQL):**
+**With `urql` (GraphQL):** hand it to the client as its `fetch`.
 
 ```ts
-import { get } from 'svelte/store';
-import { tokenStore } from '@nebulr-group/bridge-svelte';
+import { bridgeFetch } from '@nebulr-group/bridge-svelte';
 
-const client = createClient({
-  url: '/graphql',
-  fetchOptions: () => {
-    const tokens = get(tokenStore);
-    return {
-      headers: tokens?.accessToken
-        ? { Authorization: `Bearer ${tokens.accessToken}` }
-        : {},
-    };
-  },
-});
+const client = createClient({ url: '/graphql', fetch: bridgeFetch });
 ```
 
-Adapt the pattern to whatever HTTP client the project uses. The key is: read `tokenStore`, add the `Authorization: Bearer` header to requests that hit protected endpoints. Public endpoints (e.g., card search) don't need the header.
+It sends the user's token to the URL you give it, so use it for **your** backend only — never for a third-party URL.
+
+For an HTTP client that takes no `fetch` option (axios and similar), read the token from `tokenStore` at request time and set the `Authorization: Bearer` header yourself. Public endpoints (e.g., card search) don't need the header.
 
 ## Integration checklist
 
@@ -329,7 +310,7 @@ Before verifying, confirm every item was applied. Do not skip any:
 - [ ] Login/logout buttons added to nav using `auth.login()` and `auth.logout()`
 - [ ] User display using `isAuthenticated` store and `profileStore`
 - [ ] `VITE_BRIDGE_APP_ID` set in the `.env` file (plus `VITE_BRIDGE_API_BASE_URL` for a stage or local app)
-- [ ] Auth headers added to API calls that hit protected backend endpoints (using `tokenStore`)
+- [ ] Calls to protected backend endpoints go through `bridgeFetch` (no hand-written auth fetch helper)
 - [ ] Old env vars removed (`VITE_NBLOCKS_APP_ID`, etc.)
 - [ ] Old auth imports and route config removed (e.g., `PUBLIC_ROUTES` array)
 
@@ -385,18 +366,22 @@ bridge.user                      // Readable<UserSnapshot | null>  // { id, emai
 ### Reading entitlements
 
 ```svelte
-{#if bridge.tenant.entitlements.can('ai_completions')}
+<script lang="ts">
+  import { entitlements } from '@nebulr-group/bridge-svelte';
+</script>
+
+{#if $entitlements.ready && $entitlements.can('ai_completions')}
   <FeatureUI />
 {/if}
 ```
 
-`can()` is synchronous and reflects the latest snapshot or `entitlements.changed` push.
+`$entitlements.can(key)` is fail-closed and live: it follows the latest snapshot and every `entitlements.changed` push. `$entitlements.ready` is `false` until Bridge has answered — check it before treating a `false` as "this plan cannot". Outside a component, `bridge.tenant.entitlements.can(key)` is the same answer, read once. For quota numbers use `useQuota(metric)` (see the billing guide).
 
 ### Using in components
 
 Import the `bridge` singleton from `@nebulr-group/bridge-svelte` wherever you need it — components, `.svelte.ts` modules or plain `.ts` files. Its scopes are Svelte stores, so use `$` in templates (for example `const subscription = bridge.tenant.subscription;` then `$subscription?.plan?.slug`). No provider or context wiring is needed beyond the `<BridgeBootstrap>` already in your root layout.
 
-> `@nebulr-group/bridge-svelte` does **not** export a `useBridge()` hook. Do not import one from it — use the `bridge` singleton above.
+`useBridge()` (also exported) returns the same `bridge` object; a parent component can override it for its children with `setBridgeContext(fixture)` — for tests and Storybook, never needed in an app.
 
 ### Mapping from legacy exports
 

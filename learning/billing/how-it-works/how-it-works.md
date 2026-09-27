@@ -92,19 +92,19 @@ Read state from the **`bridge` object** (`bridge.tenant.subscription`, `bridge.t
 {/if}
 ```
 
-**Read an entitlement** to gate a feature on what the plan grants. In markup, subscribe to the reactive snapshot store so the gate re-evaluates when entitlements change:
+**Read an entitlement** to gate a feature on what the plan grants. In markup, use the `entitlements` store so the gate re-evaluates when entitlements change:
 
 ```svelte
 <script lang="ts">
-  import { bridge } from '@nebulr-group/bridge-svelte';
-
-  const entitlements = bridge.tenant.entitlements.snapshot;
+  import { entitlements } from '@nebulr-group/bridge-svelte';
 </script>
 
-{#if $entitlements?.ai_completions}
+{#if $entitlements.can('ai_completions')}
   <AiPanel />
 {/if}
 ```
+
+`$entitlements.ready` is `false` until Bridge has answered; check it when a `false` should show a spinner rather than an upgrade prompt. **Read quota numbers** the same way with [`useQuota(metric)`](/billing/limits/usage-limits/#reading-quota-state-yourself).
 
 For imperative checks outside markup (event handlers, load functions), `can()` is the synchronous read. It is fail-closed (`false` until the snapshot lands) and **not reactive**, so don't call it directly in an `{#if}` block; the block would never re-render when entitlements change:
 

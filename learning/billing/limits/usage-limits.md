@@ -26,20 +26,42 @@ It updates live on `quota.updated` pushes.
 
 ## Reading quota state yourself
 
-For a fully custom quota UI, read the underlying snapshot directly:
+For a fully custom quota UI, `useQuota(metric)` gives you the numbers, live:
 
-```ts
-import { useBridge } from '@nebulr-group/bridge-auth-core';
+```svelte
+<script lang="ts">
+  import { useQuota } from '@nebulr-group/bridge-svelte';
 
-const q = useBridge().quota('ai_completions');
-// undefined while loading (first call triggers a fetch), then:
-// q?.used, q?.limit, q?.remaining, q?.warningLevel ('approaching' | 'critical' | null)
-// q?.policy ('hard' | 'metered')
-// metered-only fields (present when policy === 'metered'):
-//   q?.unitAmount      per-unit price (whole currency units, e.g. 0.01)
-//   q?.currency        ISO currency of unitAmount / overageEstimate
-//   q?.overageEstimate estimated overage cost this period
-//   q?.overcap         true once billing engaged (past the allotment; limit 0 ⇒ used > 0)
+  const projects = useQuota('projects');
+</script>
+
+{#if projects.loading}
+  <Spinner />
+{:else if projects.unlimited}
+  Unlimited projects
+{:else}
+  {projects.used} of {projects.limit} projects · {projects.remaining} left
+{/if}
 ```
 
-> **Note:** this imports from the underlying `@nebulr-group/bridge-auth-core` package, not from `@nebulr-group/bridge-svelte`. It's a temporary escape hatch: the Svelte SDK doesn't yet expose quota state on the `bridge` object, and `@nebulr-group/bridge-svelte` does not export a `useBridge()` of its own. Until the SDK surfaces quotas, this one read comes from auth-core — add it to your app's own dependencies (`npm i @nebulr-group/bridge-auth-core`). It is bridge-svelte's peer dependency, so it is already in `node_modules` under npm and bun, but importing a package you haven't declared fails under pnpm and Yarn PnP.
+| Field | Meaning |
+|---|---|
+| `loading` | `true` until Bridge answers. While loading, the numbers are `null`, never `0`, so a workspace at its cap never flashes "0 used". |
+| `unlimited` | The plan puts no quota on this metric. |
+| `used`, `limit`, `remaining` | The numbers. For a **counter**, `used` is this billing period's total. For a **gauge**, it's how many exist right now. |
+| `warningLevel` | `'approaching'` from 80%, `'critical'` from 95%, otherwise `null`. |
+| `kind` | `'counter'` or `'gauge'` (see below). |
+| `snapshot` | The full quota: `policy` (`'hard'` or `'metered'`), plus for metered quotas `unitAmount`, `currency`, `overageEstimate` and `overcap`. |
+
+It updates on its own when usage changes. When the metric key comes from a prop, pass a getter: `useQuota(() => metric)`.
+
+### Counter or gauge?
+
+If deleting it frees room, it's a gauge and your app counts it. If it happened, it's a counter and Bridge counts it.
+
+- **Counter** (the default): AI completions, exports, API calls. Bridge sums what you [report](/billing/limits/report-usage/) and resets it each billing period: "40 of 100 this month".
+- **Gauge**: projects, documents, seats. Your app tells Bridge how many exist right now, and the number never resets: "8 of 10 projects". Seats (`users`) are counted by Bridge from the workspace's members.
+
+Set the kind on the plan's quota (`bridge plan quota set <plan> --metric projects --limit 10 --policy hard --kind gauge`).
+
+> Showing a quota is display, not enforcement. The cap has to be checked where the write happens: your backend, which reads the same quota and refuses the request.

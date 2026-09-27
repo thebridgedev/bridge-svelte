@@ -1,18 +1,19 @@
 /**
- * Phase 4 (TBP-288/320) — `useBridge()` Svelte context hook.
+ * `useBridge()` — the `bridge` surface for the current component.
  *
- * Default behavior: returns the module-level singleton `bridge` (from
- * `bridge.ts`). Works from any context — components, regular .ts modules,
- * tests — because the singleton is always available.
+ * Returns the module-level `bridge` singleton (`bridge.app`, `bridge.tenant`,
+ * `bridge.user`, `bridge.usage`, `bridge.events`, `bridge.attributes`). Works
+ * from anywhere — components, `.svelte.ts`, plain `.ts`, tests — because the
+ * singleton always exists. `import { bridge }` and `useBridge()` are the same
+ * object unless a parent component overrides it.
  *
- * Component-scoped override: a parent `<BridgeProvider>` may set a different
- * bridge instance into Svelte context. Useful for SSR, multi-tenant test
- * harnesses, or storybook fixtures that need isolated bridge state.
+ * Override: a parent component can call `setBridgeContext(fixture)` during its
+ * initialisation, and every `useBridge()` below it returns the fixture. That is
+ * for tests, Storybook and isolated previews — an app never needs it.
  *
- * Naming collision with auth-core's `useBridge` (billing/quota factory):
- * bridge-svelte's `useBridge()` SHADOWS the auth-core import. Consumers
- * who explicitly want the auth-core factory should import it as
- * `useBillingBridge` (alias added in auth-core re-exports in TBP-324).
+ * TBP-697: exported from the package root. auth-core has a different
+ * `useBridge` (the billing/quota factory); import quota numbers through
+ * `useQuota(metric)` instead of reaching for that one.
  */
 import { getContext, hasContext, setContext } from 'svelte';
 import { bridge as _singleton, type BridgeSurface } from './bridge.js';
@@ -20,18 +21,18 @@ import { bridge as _singleton, type BridgeSurface } from './bridge.js';
 const BRIDGE_CONTEXT_KEY = Symbol('bridge-svelte:bridge');
 
 /**
- * Set a bridge instance into Svelte context. Called by `<BridgeProvider>`
- * during component initialization. Calling this outside a component
- * initialization phase will throw (Svelte's `setContext` contract).
+ * Put a different bridge surface into Svelte context for this component and
+ * its children (tests, Storybook). Must be called during component
+ * initialisation — Svelte's `setContext` contract.
  */
 export function setBridgeContext(b: BridgeSurface): void {
   setContext(BRIDGE_CONTEXT_KEY, b);
 }
 
 /**
- * Return the bridge surface for the current component scope, falling back
- * to the module-level singleton outside components (or when no provider
- * has been mounted). Safe to call from any code path.
+ * The bridge surface for the current component scope, falling back to the
+ * module-level singleton outside components or when no parent overrode it.
+ * Safe to call from any code path.
  */
 export function useBridge(): BridgeSurface {
   try {

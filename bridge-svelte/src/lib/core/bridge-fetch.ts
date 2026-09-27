@@ -65,3 +65,48 @@ export function wrapFetchWithBridgeAuth(baseFetch: typeof fetch, apiBaseUrl: str
     return baseFetch(input, { ...init, headers: freshHeaders });
   } as typeof fetch;
 }
+
+/**
+ * TBP-697 — `bridgeFetch(url, init)`: `fetch` for calls to **your own backend**
+ * that carry the signed-in user's Bridge access token.
+ *
+ *   import { bridgeFetch } from '@nebulr-group/bridge-svelte';
+ *   const res = await bridgeFetch('/api/projects', { method: 'POST', body });
+ *
+ * Adds `Authorization: Bearer <access token>` (when signed in), and on a `401`
+ * refreshes the token once and retries — so an expired token mid-session is
+ * not an error the page has to handle. Same signature as `fetch`.
+ *
+ * Bridge's own API calls do not need it: those already carry the token.
+ *
+ * It sends the user's token to whatever URL you give it, so call it for your
+ * backend only — never for a third-party URL.
+ */
+export async function bridgeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  let auth: ReturnType<typeof getBridgeAuth>;
+  try {
+    auth = getBridgeAuth();
+  } catch {
+    // Bridge not initialised (SSR, a test) — behave exactly like fetch.
+    return fetch(input, init);
+  }
+
+  const withToken = (token: string | undefined): RequestInit => {
+    const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    return { ...init, headers };
+  };
+
+  const sentToken = auth.getTokens()?.accessToken;
+  const response = await fetch(input, withToken(sentToken));
+  if (response.status !== 401 || !sentToken) return response;
+
+  // A streamed body is gone after the first attempt; it cannot be replayed.
+  const replayable = !(input instanceof Request) && !(init?.body instanceof ReadableStream);
+  if (!replayable) return response;
+
+  const fresh = await auth.refreshTokens().catch(() => null);
+  const freshToken = fresh?.accessToken ?? auth.getTokens()?.accessToken;
+  if (!freshToken || freshToken === sentToken) return response;
+  return fetch(input, withToken(freshToken));
+}

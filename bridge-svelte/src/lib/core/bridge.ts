@@ -12,9 +12,8 @@
  * (`subscriptionStore`, `appConfigStore`, etc.) continue to exist and are
  * populated by the same internal state; both surfaces coexist.
  *
- * Note: `useBridge()` (Svelte context hook) lands in TBP-320. This module
- * only exposes the singleton aggregate `bridge`; consumers can import it
- * directly until the context hook ships.
+ * `useBridge()` (use-bridge.ts) returns this same object, or a component-scoped
+ * override set with `setBridgeContext()`.
  */
 import { derived, get, type Readable } from 'svelte/store';
 import {
@@ -29,7 +28,7 @@ import {
   type UserSnapshot,
 } from './snapshot-stores.js';
 import { LazySlice } from './lazy-slice.js';
-import type { CurrentUser, Plan, SubscriptionStatus } from '@nebulr-group/bridge-auth-core';
+import type { BridgeAuth, CurrentUser, Plan, SubscriptionStatus } from '@nebulr-group/bridge-auth-core';
 import { DevAttributeProvider } from '@nebulr-group/bridge-auth-core';
 import { getBridgeAuth, tokenStore, subscriptionStore, loadSubscription } from './bridge-instance.js';
 import { bridgeEvents, type BridgeEventsDispatcher } from './events.js';
@@ -68,6 +67,41 @@ export interface BridgeTenantSurface {
   };
 }
 
+/**
+ * TBP-697 — usage reporting from the browser.
+ *
+ * **Self-reported: this is a trusted-client path.** Anything running in the
+ * user's browser can call it with any value, so a frontend-only app cannot
+ * *enforce* a quota with it — only a backend can refuse a write. Use it when the
+ * app has no backend that sees the action: a local-first or mobile app whose
+ * data lives on the device. When you do have a backend, report there instead
+ * (bridge-nestjs `@RequireQuota`, `usage.report` on the server SDK).
+ *
+ * Which call: *if deleting it frees room, it's a gauge and your app counts it
+ * (`set`); if it happened, it's a counter and Bridge counts it (`report`).*
+ */
+export interface BridgeUsageSurface {
+  /**
+   * Count something that happened (a counter): `report('ai_completions')`,
+   * `report('tokens', 1375)`. Fire-and-forget; queued durably and sent in
+   * batches. Pass an `idempotencyKey` when the same event could be reported
+   * twice (a retry), so Bridge counts it once.
+   */
+  report(metric: string, value?: number, idempotencyKey?: string): void;
+  /**
+   * Say how many of something exist right now (a gauge): `set('projects', 8)`
+   * after the app creates or deletes one. Absolute, never added up; resolves
+   * once Bridge has stored it. Needs `@nebulr-group/bridge-auth-core`
+   * 0.8.0-beta.0 or later.
+   */
+  set(metric: string, value: number): Promise<void>;
+  /** Queue depth, retries and the last flush — for a debug panel. */
+  getQueueStatus(): Promise<UsageQueueStatus>;
+}
+
+/** What `bridge.usage.getQueueStatus()` resolves to. */
+export type UsageQueueStatus = Awaited<ReturnType<BridgeAuth['usage']['getQueueStatus']>>;
+
 export interface BridgeSurface {
   app: BridgeAppSurface;
   tenant: BridgeTenantSurface;
@@ -89,6 +123,12 @@ export interface BridgeSurface {
    * handlers (`useBridge().handle({...})`, `realtime.setOnXyz()`, etc.).
    */
   events: BridgeEventsDispatcher;
+  /**
+   * TBP-697 — report usage from the browser: `bridge.usage.report(metric)` for
+   * a counter, `bridge.usage.set(metric, value)` for a gauge. Self-reported —
+   * see {@link BridgeUsageSurface}.
+   */
+  usage: BridgeUsageSurface;
 }
 
 let _lastEntitlements: Record<string, boolean> | null = null;
@@ -217,6 +257,29 @@ const _subscriptionSurface: Readable<SubscriptionSnapshot | null> = {
   },
 };
 
+// TBP-697 — `bridge.usage`. Resolved on each call, not at import: the
+// BridgeAuth instance does not exist until bootstrap, and SSR imports this module.
+const _usage: BridgeUsageSurface = {
+  report(metric, value, idempotencyKey) {
+    getBridgeAuth().usage.report(metric, value, idempotencyKey);
+  },
+  async set(metric, value) {
+    const usage = getBridgeAuth().usage as Partial<BridgeAuth['usage']>;
+    // Peer range still admits auth-core 0.7.x, which has no gauges. Say so
+    // instead of "set is not a function".
+    if (typeof usage.set !== 'function') {
+      throw new Error(
+        'bridge.usage.set() needs @nebulr-group/bridge-auth-core 0.8.0-beta.0 or later (gauge quotas). ' +
+          'Upgrade it, or report a counter with bridge.usage.report().',
+      );
+    }
+    await usage.set(metric, value);
+  },
+  getQueueStatus() {
+    return getBridgeAuth().usage.getQueueStatus();
+  },
+};
+
 export const bridge: BridgeSurface = {
   app: {
     branding: appBrandingStore,
@@ -234,6 +297,7 @@ export const bridge: BridgeSurface = {
   user: _userSurface,
   attributes: _devAttributes,
   events: bridgeEvents,
+  usage: _usage,
 };
 
 /** Internal: createBridgeFlags imports this to register the dev provider. */

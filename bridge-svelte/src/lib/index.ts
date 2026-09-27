@@ -1,4 +1,5 @@
 // Core stores and setup
+import BridgeBootstrapComponent from './client/BridgeBootstrap.svelte';
 export * from './client/BridgeBootstrap.js';
 export * from './client/stores/config.store.js';
 
@@ -33,14 +34,30 @@ export type { SubscriptionState } from './core/bridge-instance.js';
 
 // Phase 4 (TBP-288/319) — unified read surface. Single `bridge` aggregate
 // with scoped slices (`bridge.app` / `bridge.tenant` / `bridge.user`) fed
-// by session.snapshot. Coexists with the legacy module-level stores above;
-// `<BridgeProvider>` + `useBridge()` context hook land in TBP-320.
+// by session.snapshot. Coexists with the legacy module-level stores above.
+// TBP-697 adds `bridge.usage` (report / set from the browser, self-reported).
 export { bridge } from './core/bridge.js';
 export type {
   BridgeSurface,
   BridgeAppSurface,
   BridgeTenantSurface,
+  BridgeUsageSurface,
+  UsageQueueStatus,
 } from './core/bridge.js';
+
+// TBP-697 — everything the guides say not to rebuild, importable from here:
+//   useBridge()       the `bridge` surface for this component (or a test override)
+//   useQuota(metric)  one quota's live numbers; `loading`, never a fake 0
+//   entitlements      `$entitlements.can('key')`, with `.ready` to tell
+//                     "not loaded yet" from "this plan cannot"
+export { useBridge, setBridgeContext } from './core/use-bridge.js';
+export { useQuota } from './core/use-quota.js';
+export type { QuotaState } from './core/use-quota.js';
+export { entitlements } from './core/entitlements.js';
+// TBP-697 — `fetch` for calls to your own backend, with the user's token and a
+// one-time refresh on 401. Replaces the `fetchWithAuth` the guides had you write.
+export { bridgeFetch } from './core/bridge-fetch.js';
+export type { EntitlementsState } from './core/entitlements.js';
 export type {
   BrandingSnapshot,
   SubscriptionSnapshot,
@@ -53,7 +70,12 @@ export type {
 export type { BridgeEventHandlers, BridgeEventsDispatcher } from './core/events.js';
 
 // Components (Svelte components must have `export default`)
-export { default as BridgeBootstrap, default as BridgeProvider } from './client/BridgeBootstrap.svelte';
+export { default as BridgeBootstrap } from './client/BridgeBootstrap.svelte';
+/**
+ * @deprecated Use `BridgeBootstrap` — this is the same component under an old
+ * name, and will be removed in the next minor release.
+ */
+export const BridgeProvider: typeof BridgeBootstrapComponent = BridgeBootstrapComponent;
 export { default as ApiTokenManagement } from './client/components/developer/ApiTokenManagement.svelte';
 // TBP-644 — dev-only live-updates badge. <BridgeBootstrap /> already mounts it;
 // exported for apps that render their own bootstrap.
@@ -71,6 +93,12 @@ export { default as TeamManagementPanel } from './client/components/team/TeamMan
 export { default as TeamUserList } from './client/components/team/TeamUserList.svelte';
 export { default as TeamProfileForm } from './client/components/team/TeamProfileForm.svelte';
 export { default as TeamWorkspaceForm } from './client/components/team/TeamWorkspaceForm.svelte';
+// TBP-697 — the dialogs `<TeamUserList>` is built from, for a page that lays
+// out its own team UI: invite, edit role / enable, confirm, and the row menu.
+export { default as TeamAddUserDialog } from './client/components/team/TeamAddUserDialog.svelte';
+export { default as TeamEditUserDialog } from './client/components/team/TeamEditUserDialog.svelte';
+export { default as TeamConfirmDialog } from './client/components/team/TeamConfirmDialog.svelte';
+export { default as TeamUserActionsMenu } from './client/components/team/TeamUserActionsMenu.svelte';
 
 // SDK Auth Components
 export { default as LoginForm } from './client/components/sdk-auth/LoginForm.svelte';
@@ -168,11 +196,10 @@ export type {
 export { BridgeAuth, BridgeAuthError, HttpError, TeamService, ApiTokenService } from '@nebulr-group/bridge-auth-core';
 export type { SessionStalePayload } from '@nebulr-group/bridge-auth-core';
 
-// Billing 2.0 quota shape. `useBridge().quota(metric)` returns this, so a
-// TypeScript consumer needs to be able to NAME it — without this re-export the
-// only way to type a quota read was to reach into @nebulr-group/bridge-auth-core
-// directly or hand-copy the interface, and hand-copied mirrors drift silently
-// the first time a field is added.
+// Billing 2.0 quota shape — `useQuota(metric).snapshot` and
+// `<BridgeQuotaBanner onActionClick>` hand you one, so a TypeScript consumer
+// needs to be able to NAME it without reaching into
+// @nebulr-group/bridge-auth-core or hand-copying the interface.
 export type { QuotaSnapshot } from '@nebulr-group/bridge-auth-core';
 export type {
   ApiToken,

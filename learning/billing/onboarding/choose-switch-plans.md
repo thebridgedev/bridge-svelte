@@ -2,7 +2,18 @@
 
 This is the self-service billing page most apps need: one place where a user picks their first plan, upgrades, downgrades, or switches billing interval. `<PlanSelector>` is the whole thing in one component. Unlike [`<BridgePaywall>`](/billing/onboarding/require-plan/), which *forces* a choice before the app loads, this is the always-available page a user visits when they choose to.
 
-Drop `<PlanSelector>` onto your subscription page. It loads the plans and the status of the current workspace (called a *tenant* in the API) automatically, renders plan cards, and handles free plan selection, Stripe Checkout, and plan changes.
+If your app has the billing catch-all from [Add billing to your app](/billing/setup/add-billing-to-your-app/), this page already exists at `/subscription`: the current plan, `<PlanSelector>`, and "Manage billing". A completed checkout lands on `/subscription/success`, a cancelled one back on `/subscription`.
+
+```svelte
+<!-- src/routes/subscription/[...bridge]/+page.svelte -->
+<script lang="ts">
+  import { BridgeBillingRoutes } from '@nebulr-group/bridge-svelte';
+</script>
+
+<BridgeBillingRoutes />
+```
+
+To build the page yourself, take it over by creating `src/routes/subscription/+page.svelte` (a specific route wins over the catch-all, and the paywall, success and error pages keep working) and drop `<PlanSelector>` onto it. It loads the plans and the status of the current workspace (called a *tenant* in the API) automatically, renders plan cards, and handles free plan selection, Stripe Checkout, and plan changes.
 
 ```svelte
 <!-- src/routes/subscription/+page.svelte -->
@@ -10,7 +21,7 @@ Drop `<PlanSelector>` onto your subscription page. It loads the plans and the st
   import { PlanSelector } from '@nebulr-group/bridge-svelte';
 </script>
 
-<PlanSelector successRedirect="/subscription/success" cancelRedirect="/subscription/cancel" />
+<PlanSelector successRedirect="/subscription/success" cancelRedirect="/subscription" />
 ```
 
 **Props:**
@@ -35,7 +46,7 @@ The default plan cards are intentionally plain. If you want them to match your p
   import { PlanSelector, type Plan, type PriceOfferSdk } from '@nebulr-group/bridge-svelte';
 </script>
 
-<PlanSelector successRedirect="/subscription/success" cancelRedirect="/subscription/cancel">
+<PlanSelector successRedirect="/subscription/success" cancelRedirect="/subscription">
   {#snippet planCard({ plan, prices, isCurrent, onPick })}
     <div class="plan-card" class:current={isCurrent}>
       <h2>{plan.name}</h2>

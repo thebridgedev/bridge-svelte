@@ -27,7 +27,7 @@
     type QuotaSnapshot,
   } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
-  import { getConfig } from '../../stores/config.store.js';
+  import { billingRoutes } from '../../billing-routes.js';
 
   type Chassis = 'rail';
   type Severity = 'warn' | 'critical';
@@ -224,15 +224,10 @@
       return;
     }
     // Destination priority: `actionHref` prop → `billing.manageRoute` config
-    // → '/billing'.
+    // → '/subscription' (TBP-702: served by <BridgeBillingRoutes>; it used to be
+    // '/billing', a page no guide created).
     if (typeof window !== 'undefined') {
-      let manageRoute: string | undefined;
-      try {
-        manageRoute = getConfig().billing?.manageRoute;
-      } catch {
-        // Config not initialized — fall through to the default.
-      }
-      window.location.href = actionHref ?? manageRoute ?? '/billing';
+      window.location.href = actionHref ?? billingRoutes().manageRoute;
     }
   }
 </script>

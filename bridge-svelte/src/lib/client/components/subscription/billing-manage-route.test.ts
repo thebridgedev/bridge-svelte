@@ -6,7 +6,7 @@
 //   onActionClick callback  (highest — short-circuits, no navigation at all)
 //     → `actionHref` prop
 //       → getConfig().billing?.manageRoute
-//         → '/billing'                                          (default)
+//         → '/subscription'  (default, TBP-702 — served by <BridgeBillingRoutes>)
 //
 // HARNESS NOTE: bridge-svelte's vitest config (vitest.config.ts) runs in a
 // `node` environment with no Svelte compiler plugin and no DOM (jsdom /
@@ -32,6 +32,22 @@
 // match — a drift between the two is a test bug, not a component bug.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { resolveBillingRoutes } from '../../billing-routes.js';
+
+/**
+ * `billingRoutes()` from billing-routes.ts with `getConfig` injected: the real
+ * resolver (defaults included) over the injected config, and an uninitialised
+ * config treated as "nothing configured", exactly as the real one does.
+ */
+function billingRoutesFrom(getConfig: GetConfig) {
+  let billing: BillingConfigSlice['billing'];
+  try {
+    billing = getConfig().billing;
+  } catch {
+    billing = undefined;
+  }
+  return resolveBillingRoutes(billing);
+}
 
 // ── Injected doubles ─────────────────────────────────────────────────────────
 
@@ -87,15 +103,9 @@ function makeNoticeHarness(opts: NoticeHarnessOptions = {}) {
       return;
     }
     // Default: open the app's billing surface. Destination priority:
-    // `actionHref` prop → `billing.manageRoute` config → '/billing'.
+    // `actionHref` prop → `billing.manageRoute` config → '/subscription'.
     if (hasWindow) {
-      let manageRoute: string | undefined;
-      try {
-        manageRoute = getConfig().billing?.manageRoute;
-      } catch {
-        // Config not initialized — fall through to the default.
-      }
-      navigations.push(actionHref ?? manageRoute ?? '/billing');
+      navigations.push(actionHref ?? billingRoutesFrom(getConfig).manageRoute);
     }
   }
 
@@ -131,15 +141,9 @@ function makeQuotaHarness(opts: QuotaHarnessOptions = {}) {
       return;
     }
     // Destination priority: `actionHref` prop → `billing.manageRoute` config
-    // → '/billing'.
+    // → '/subscription'.
     if (hasWindow) {
-      let manageRoute: string | undefined;
-      try {
-        manageRoute = getConfig().billing?.manageRoute;
-      } catch {
-        // Config not initialized — fall through to the default.
-      }
-      navigations.push(actionHref ?? manageRoute ?? '/billing');
+      navigations.push(actionHref ?? billingRoutesFrom(getConfig).manageRoute);
     }
   }
 
@@ -167,23 +171,23 @@ describe('Billing CTA manage-route precedence (TBP-451)', () => {
   describe.each(COMPONENTS)('%s', (component) => {
     const harness = HARNESSES[component];
 
-    describe("default — '/billing'", () => {
-      it('navigates to /billing when config is uninitialized and no props are given', () => {
+    describe("default — '/subscription' (TBP-702)", () => {
+      it('navigates to /subscription when config is uninitialized and no props are given', () => {
         const h = harness({ getConfig: uninitializedConfig });
         h.handleAction();
-        expect(h.navigations).toEqual(['/billing']);
+        expect(h.navigations).toEqual(['/subscription']);
       });
 
-      it('navigates to /billing when config is loaded but has no billing block', () => {
+      it('navigates to /subscription when config is loaded but has no billing block', () => {
         const h = harness({ getConfig: configWithoutBillingBlock });
         h.handleAction();
-        expect(h.navigations).toEqual(['/billing']);
+        expect(h.navigations).toEqual(['/subscription']);
       });
 
-      it('navigates to /billing when billing exists but manageRoute is unset', () => {
+      it('navigates to /subscription when billing exists but manageRoute is unset', () => {
         const h = harness({ getConfig: () => ({ billing: {} }) });
         h.handleAction();
-        expect(h.navigations).toEqual(['/billing']);
+        expect(h.navigations).toEqual(['/subscription']);
       });
     });
 
@@ -208,7 +212,7 @@ describe('Billing CTA manage-route precedence (TBP-451)', () => {
         manageRoute = '/settings/billing';
         h.handleAction(); // same component instance, config now set
 
-        expect(h.navigations).toEqual(['/billing', '/settings/billing']);
+        expect(h.navigations).toEqual(['/subscription', '/settings/billing']);
       });
     });
 
@@ -278,9 +282,9 @@ describe('Billing CTA manage-route precedence (TBP-451)', () => {
   describe('BridgeBillingNotice and BridgeQuotaBanner resolve identically', () => {
     const cases: { label: string; opts: NoticeHarnessOptions; expected: string[] }[] = [
       {
-        label: 'no config, no props → /billing',
+        label: 'no config, no props → /subscription',
         opts: { getConfig: uninitializedConfig },
-        expected: ['/billing'],
+        expected: ['/subscription'],
       },
       {
         label: 'config manageRoute only',

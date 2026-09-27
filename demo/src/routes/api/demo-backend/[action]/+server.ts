@@ -3,7 +3,7 @@
 //
 // A real app's backend is a NestJS handler with one decorator:
 //
-//   @Post() @RequireQuota('tickets', { current: (t) => this.tickets.countFor(t.id) })
+//   @Post() @RequireQuota('tickets', { current: (t, self: TicketsController) => self.tickets.countFor(t.id) })
 //   create(...) {}
 //
 // which, at the cap, answers exactly the 402 below (bridge-nestjs
@@ -19,7 +19,7 @@ function atCap(metric: string, used: number, limit: number, fix: string) {
 		{
 			statusCode: 402,
 			code: 'QUOTA_EXCEEDED',
-			message: `Plan limit reached for ${metric}`,
+			message: `Your plan allows ${limit} ${metric}; ${used} are in use.`,
 			metric,
 			used,
 			limit,

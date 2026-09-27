@@ -45,7 +45,7 @@ const API = 'https://api.bridge.test';
 const NEST_402 = {
   statusCode: 402,
   code: 'QUOTA_EXCEEDED',
-  message: 'Plan limit reached for tickets',
+  message: 'Your plan allows 3 tickets; 3 are in use.',
   metric: 'tickets',
   used: 3,
   limit: 3,
@@ -84,7 +84,7 @@ describe('parseQuotaRefusal', () => {
       used: 3,
       limit: 3,
       fix: '/subscription',
-      message: 'Plan limit reached for tickets',
+      message: 'Your plan allows 3 tickets; 3 are in use.',
       url: 'u',
     });
   });

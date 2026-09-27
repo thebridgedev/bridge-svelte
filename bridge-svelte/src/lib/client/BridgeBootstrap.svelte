@@ -15,6 +15,7 @@
   import { bridge as bridgeSurface } from '../core/bridge.js';
   import { setBridgeContext } from '../core/use-bridge.js';
   import { getConfig, getRouteGuardConfig } from './stores/config.store.js';
+  import { appUsesBilling, billingRoutes, isPaywallExempt } from './billing-routes.js';
   import {
     onBridgeAuthorizationChange,
     onBridgeFlagChange,
@@ -72,11 +73,15 @@
   // `shouldSelectPlan` resolves true. Same data source as <BridgePaywall>, so the
   // overlay and the redirect agree. The load() redirect remains a no-flash
   // fast-path for direct loads/refreshes only.
+  //
+  // TBP-702 — the paywall defaults to `/subscription/plan` (served by
+  // <BridgeBillingRoutes>); `billing.paywallRoute: false` turns it off.
   $effect(() => {
-    const paywallRoute = getConfig().billing?.paywallRoute;
+    const routes = billingRoutes();
+    const paywallRoute = routes.paywallRoute;
     if (!paywallRoute || !$isAuthenticated) return;
 
-    const { status, loading, error } = $subscriptionStore;
+    const { status, plans, loading, error } = $subscriptionStore;
 
     // Status unknown → trigger a single load. Guarding on `!error` avoids a
     // tight refetch loop on persistent failure (fail-pending, not fail-open);
@@ -88,11 +93,15 @@
 
     // Status known → enforce. `$page.url.pathname` makes this re-run on
     // navigation too, so manual nav to a protected page while plan-less is
-    // also caught. Path guard prevents a redirect loop on the paywall itself.
+    // also caught. Path guard prevents a redirect loop on the paywall itself,
+    // and leaves the payment-error page readable.
+    // TBP-702 — the default paywall only applies to an app that uses billing
+    // (has plans); an explicit paywallRoute always applies.
     if (
       status?.shouldSelectPlan === true &&
       status?.paymentsAutoRedirect !== false &&
-      $page.url.pathname !== paywallRoute
+      (!routes.paywallIsDefault || appUsesBilling(plans)) &&
+      !isPaywallExempt($page.url.pathname, routes)
     ) {
       goto(paywallRoute);
     }

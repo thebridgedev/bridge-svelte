@@ -16,21 +16,27 @@ export const ssr = false;
 // thing, whether `loginRoute` is set. The hosted branch is otherwise
 // unreachable from this demo, so a toggle lets one server serve both.
 //
+// `bridge:defaultPaywall` — TBP-702: drops the /welcome opt-in below, so the
+// suite can prove where the paywall goes when an app configures nothing.
+//
 // Guarded: the server imports this module to read `ssr`, and has no localStorage.
 const stored = (key: string) =>
 	typeof localStorage === 'undefined' ? null : localStorage.getItem(key);
 const storedAppId = stored('bridge:appId') || undefined;
 const hostedMode = stored('bridge:hostedMode') === 'true';
+const defaultPaywall = stored('bridge:defaultPaywall') === 'true';
 
 export const load = bridgeBootstrap({
 	...(storedAppId ? { appId: storedAppId } : {}),
 	...(hostedMode ? {} : { loginRoute: '/auth/login' }),
 	debug: true,
-	billing: { paywallRoute: '/welcome', paymentErrorRoute: '/payment-error' },
+	// TBP-702 — the optional onboarding page. Without this line plan-less
+	// workspaces go to /subscription/plan, which routes/subscription/[...bridge]
+	// serves along with the subscription page and the checkout return pages.
+	...(defaultPaywall ? {} : { billing: { paywallRoute: '/welcome' } }),
 	rules: [
 		{ match: '/', public: true },
 		{ match: new RegExp('^/auth($|/)'), public: true },
-		{ match: '/welcome', public: true },
 		{ match: new RegExp('^/docs($|/)'), public: true },
 		{ match: '/beta*', featureFlag: 'test-global-admin-access', redirectTo: '/', public: true },
 		// /flag-context-demo — TBP-178 E2E sandbox; FF 2.0 works without auth

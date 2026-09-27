@@ -2,14 +2,14 @@
 
 You are integrating The Bridge into a SvelteKit application using **in-app SDK authentication**. Instead of redirecting users to an external hosted login page, the app renders its own login and signup forms using Bridge SDK components (`LoginForm`, `SignupForm`). Users never leave the app.
 
-> **SDK version:** Specific behaviors called out below — `profileStore` being the store directly (not an object), `LoginForm` not navigating after sign-in (your `onLogin` does it), the SDK reading no environment variables — hold from `@nebulr-group/bridge-svelte` 0.3 onwards. `readReturnTo` (deep-link return after login) is exported from 0.7 onwards. If in doubt, check the published `.d.ts` files of the installed version.
+> **SDK version:** Specific behaviors called out below — `profileStore` being the store directly (not an object), `LoginForm` not navigating after sign-in (your `onLogin` does it), the SDK reading no environment variables — hold from `@nebulr-group/bridge-svelte` 0.3 onwards. `readReturnTo` (deep-link return after login) is exported from 0.7 onwards. `BridgeAuthRoutes` (every auth page from one file) is newer still — if the installed version does not export it, upgrade rather than hand-writing the pages. If in doubt, check the published `.d.ts` files of the installed version.
 
 ## Decide first — hosted or in-app?
 
 | You want | Mode | What you build | Config |
 |---|---|---|---|
 | Bridge owns the login UI | **Hosted** (default) | Nothing — no login page | No `loginRoute` |
-| Login inside your app, your styling | **SDK auth** — **this guide** | Your own routes rendering `LoginForm` | Set `loginRoute` |
+| Login inside your app, your styling | **SDK auth** — **this guide** | One catch-all route rendering `<BridgeAuthRoutes />` | Set `loginRoute` |
 
 **One config field is the whole switch.** Passing `loginRoute` to `bridgeBootstrap()` turns hosted mode off. If you are being redirected to a route you never built, that is why.
 
@@ -39,7 +39,7 @@ All of them import from `@nebulr-group/bridge-svelte`. There is no hosted-login 
 >
 > If you are about to write a password input, check whether `LoginForm` already covers the case.
 
-**The one route you cannot skip is `/auth/set-password/[token]`.** bridge-api hard-codes it as the signup verification URL, so a missing route breaks 100% of new signups — they land on a 404 with no recovery path. All seven required routes are listed under *Required auth routes* below; create them all, even for features currently switched off in admin.
+**The auth pages are one file.** `src/routes/auth/[...bridge]/+page.svelte` rendering `<BridgeAuthRoutes />` serves login, signup, the OAuth callback, set password, forgot password, magic link, passkey setup and workspace selection — see *Serve the auth pages* below.
 
 ## Prerequisites
 
@@ -136,7 +136,7 @@ export const load = bridgeBootstrap({
 - `loginRoute` tells Bridge where to redirect unauthenticated users. This is the key difference from hosted auth: instead of redirecting to an external hosted page, users go to your in-app login page.
 - `defaultAccess: 'protected'` means all routes require login unless marked `public`.
 - `/auth/*` must be public so the login and signup pages are accessible to unauthenticated users.
-- The signup link rendered by `LoginForm` points at `signupRoute`, which defaults to `/auth/signup`. With the routes below you need neither; pass `signupRoute` to `bridgeBootstrap()` (or the `signupHref` prop on `LoginForm`, which wins over it) only if your signup page lives elsewhere.
+- `<BridgeAuthRoutes>` links its pages to each other itself, so you set no `signupRoute`.
 
 ## Wire the root layout component
 
@@ -160,235 +160,80 @@ Create or update `src/routes/+layout.svelte`:
 - Put your navigation and page shell inside it too (e.g. `<Nav />`, `<BridgeBillingNotice />`, `<main>`).
 - **You must import `@nebulr-group/bridge-svelte/styles`** — this provides required structural CSS and visual defaults for Bridge components (login forms, alerts, buttons). Without it, Bridge UI elements will render unstyled and broken. If the project uses its own design system (e.g., Tailwind), you can override the visual defaults via CSS variables but the import must still be present.
 
-## Required auth routes — overview
+## Serve the auth pages — one file
 
-You must create **all seven** of the routes below, even if some of the corresponding features (magic link, passkeys, SSO) are currently disabled in the Bridge admin config.
-
-**Why all seven, always.** The Bridge admin config toggles feature *visibility in the UI* — whether the magic-link button, passkey button, or SSO providers appear inside `LoginForm`. It does **not** toggle feature *presence in the codebase*. If a feature is enabled in admin and the matching route is missing, users hit a dead 404. Scaffolding all routes up front means the operator can flip features on or off in production via the admin dashboard without ever touching application code or shipping a deploy.
-
-| # | Route | Component | Purpose |
-|---|---|---|---|
-| 1 | `/auth/login` | `LoginForm` | Email/password login + inline magic link / passkey / SSO / forgot-password / MFA / tenant selection |
-| 2 | `/auth/signup` | `SignupForm` | New account creation. Sends a verification email to the user |
-| 3 | `/auth/oauth-callback` | Stub page | Landing page for OAuth/SSO redirects. `bridgeBootstrap` handles the code exchange — the page only needs to exist |
-| 4 | `/auth/set-password/[token]` | `ForgotPassword` (with `token`) | **Dual purpose** — both signup verification emails AND password reset emails redeem their token here |
-| 5 | `/auth/forgot-password` | `ForgotPassword` (no `token`) | Standalone password-reset request entry point |
-| 6 | `/auth/magic-link` | `MagicLink` | Standalone magic-link request page (request flow only — token redemption happens automatically inside `LoginForm` when `?bridge_magic_link_token=` is present in the URL) |
-| 7 | `/auth/setup-passkey/[token]` | `PasskeySetup` (with `token`) | Passkey registration page reached from a one-time email link |
-
-**The most important route is #4 (`set-password/[token]`).** bridge-api hard-codes the signup verification URL pattern as `{app-origin}/auth/set-password/{token}?flow=signup`. There is no way to opt out — every SDK-mode signup uses this URL. Missing this route silently breaks 100% of new signups: users sign up successfully, get the verification email, click the link, and land on a blank 404 with no recovery path.
-
-The sections below walk through each of the seven routes in order.
-
-## Create the login page
-
-Create `src/routes/auth/login/+page.svelte`:
+Create `src/routes/auth/[...bridge]/+page.svelte`:
 
 ```svelte
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
-  import { LoginForm, readReturnTo } from '@nebulr-group/bridge-svelte';
-
-  function onLogin() {
-    // The page the visitor was turned away from (validated, same-origin only),
-    // or null — then fall back to your own default route.
-    goto(readReturnTo($page.url) ?? '/');
-  }
+  import { BridgeAuthRoutes } from '@nebulr-group/bridge-svelte';
 </script>
 
-<div class="login-page">
-  <LoginForm showSignupLink {onLogin} />
-</div>
-
-<style>
-  .login-page {
-    display: flex;
-    justify-content: center;
-    padding: 3rem 1rem;
-  }
-</style>
+<BridgeAuthRoutes />
 ```
 
-**How it works:**
-- **`onLogin` is required to navigate the user away from the login page.** `LoginForm` does NOT auto-redirect after successful authentication. It only fires the `onLogin` callback, and your code is responsible for navigating. Without an `onLogin` handler the user stays on `/auth/login` after entering valid credentials — every API call succeeds but the page never changes, which looks broken.
-- The route guard redirects unauthenticated users TO the login page, but never redirects authenticated users AWAY from it (the login route is public). That's why `onLogin` is needed.
-- **Returning to the page they asked for.** When the guard sends a signed-out visitor to your `loginRoute`, it appends the page they were heading to as `?redirectUri=/that/page`. `readReturnTo($page.url)` reads it back and validates it: it returns the path only when it is a same-origin path, and `null` otherwise (absent, absolute URL, `//host`, backslash tricks, `javascript:`). Always go through `readReturnTo` — never navigate to `$page.url.searchParams.get(...)` directly; whoever wrote the link controls that value, so navigating to it unchecked is an open redirect. If you customised the parameter name with `routeConfig.returnTo.param`, pass the same name as the second argument.
-- Auth method visibility (password, magic link, passkeys, SSO) is derived from your app's configuration in the Bridge dashboard. You don't need to configure this in code.
-- `LoginForm` handles multi-step flows inline: forgot password, magic link requests, passkey login, MFA challenge, MFA setup, and tenant selection all render within the same component automatically when needed.
-- `showSignupLink` renders the "Sign up" link in the form footer. It points at `BridgeConfig.signupRoute` (default `/auth/signup`); pass `signupHref` to override it for this form.
+That one file serves every auth page. Do not create the pages one by one.
 
-**Optional props:** `onError` (fires on auth failure), `signupHref` (overrides `signupRoute`), `forgotPasswordHref` (sends users to `/auth/forgot-password` instead of the inline forgot-password step).
+| Route | Renders | Purpose |
+|---|---|---|
+| `/auth/login` | `LoginForm` | Email/password login + inline magic link / passkey / SSO / forgot-password / MFA / workspace selection. After sign-in it goes to the `?redirectUri=` deep link (validated with `readReturnTo`), else `/` |
+| `/auth/signup` | `SignupForm` | New account creation. Sends a verification email |
+| `/auth/oauth-callback` | nothing | Landing page for OAuth/SSO redirects. `bridgeBootstrap` exchanges the code and redirects before the page mounts |
+| `/auth/set-password/[token]` | `ForgotPassword` with the token | **Both** signup verification emails and password-reset emails land here |
+| `/auth/forgot-password` | `ForgotPassword` | Password-reset request |
+| `/auth/magic-link` | `MagicLink` | Magic-link request; a link requested here also signs the user in here |
+| `/auth/setup-passkey/[token]` | `PasskeySetup` | Passkey registration from a one-time email link |
+| `/auth/workspaces` | `WorkspaceSelector` | Switch workspace (a signed-out visitor is sent to sign in first) |
 
-## Create the signup page
-
-Create `src/routes/auth/signup/+page.svelte`:
-
-```svelte
-<script lang="ts">
-  import { SignupForm } from '@nebulr-group/bridge-svelte';
-</script>
-
-<div class="signup-page">
-  <SignupForm showLoginLink loginHref="/auth/login" />
-</div>
-
-<style>
-  .signup-page {
-    display: flex;
-    justify-content: center;
-    padding: 3rem 1rem;
-  }
-</style>
-```
+Any other address under `/auth` gets your app's own 404.
 
 **How it works:**
-- `showLoginLink` + `loginHref="/auth/login"` renders the "Log in" link in the form footer. Always pass `loginHref` explicitly — same reason as `signupHref` on `LoginForm`.
-- After a successful signup, `SignupForm` swaps in-place to a "Check your email" success state — it does NOT navigate the user away. The user stays on `/auth/signup` reading the verification instructions, which is correct: they cannot proceed until they click the email link, and the next route in the flow is `/auth/set-password/{token}` reached via the email — not anything you `goto()` directly.
-- The verification email goes to `{app-origin}/auth/set-password/{token}?flow=signup`. Make sure that route exists (covered below).
+- bridge-api writes `{app-origin}/auth/set-password/{token}?flow=signup` into every signup verification email. The catch-all serves that page, so signups cannot break because a page was left out.
+- Which sign-in methods appear (magic link, passkeys, SSO) comes from the app's configuration in the Bridge dashboard at runtime. The operator turns a method on or off there, with no code change and no deploy, and the page for it is already served.
+- The pages render inside your own `+layout.svelte`, so your navigation and shell stay around them.
+- `redirectTo` (default `'/'`) sets where a finished sign-in lands when there is no deep link to return to: `<BridgeAuthRoutes redirectTo="/dashboard" />`.
 
-**Optional props:** `onSignup` (fires after the API call succeeds — useful for analytics or to redirect to a custom "check your email" page if you'd rather render your own success state), `onError` (fires on failure).
+### Customising — pick the lowest rung that does the job
 
-## Create the OAuth callback page
+1. **Tokens.** Restyle the forms with the `--bridge-*` CSS variables (see Theming). `--bridge-auth-page-padding` sets the default page padding.
+2. **Frame and heading.** Two snippets restyle everything around the form, on every page, without owning any route:
 
-Create `src/routes/auth/oauth-callback/+page.svelte`:
+   ```svelte
+   <script lang="ts">
+     import { BridgeAuthRoutes, type BridgeAuthPage } from '@nebulr-group/bridge-svelte';
 
-```svelte
-<!-- OAuth callback. The code-for-tokens exchange happens in +layout.ts via
-     bridgeBootstrap, which throws a SvelteKit redirect() before this
-     component ever mounts. Intentionally empty — no flash, no markup. -->
-```
+     const titles: Partial<Record<BridgeAuthPage, string>> = {
+       login: 'Welcome back',
+       signup: 'Create your account',
+     };
+   </script>
 
-**How it works:**
-- `bridgeBootstrap` (called from `+layout.ts`) detects when the URL matches the configured `callbackUrl` path, reads the `?code=` query parameter, exchanges it for tokens, and **throws a SvelteKit `redirect(303, ...)`** to send the user to `/` (or the originally-requested route).
-- Because the redirect is thrown from the layout `load` function, the page component never mounts. Leaving the file empty produces a clean no-flash UX: the user lands on the callback URL, the load runs, the redirect fires, and the user sees the destination page directly. There is no visible "Signing you in…" screen.
-- The file MUST still exist (even if empty) so SvelteKit recognizes the route and runs the layout `load`. A missing route file means SvelteKit returns 404 before the layout has a chance to handle the callback.
-- Required for SSO flows (Google, GitHub, Microsoft, etc.) and for any OAuth-based federated login.
+   <BridgeAuthRoutes>
+     {#snippet frame(page, children)}
+       <main class="auth-card">{@render children()}</main>
+     {/snippet}
+     {#snippet heading(page)}
+       <h1>{titles[page] ?? 'Account'}</h1>
+     {/snippet}
+   </BridgeAuthRoutes>
+   ```
 
-**Edge case:** If the callback URL is hit without a `?code=` param (or if the exchange fails), `bridgeBootstrap` logs a warning and falls through to the route guard, which sends the user to `/auth/login`. The user still sees no flash from this page. If you want to render a custom error UI for this case, add a Svelte component to this file — but for the happy path, empty is best.
+   `frame(page, children)` replaces the default centred container entirely. `heading(page)` replaces the form's heading on each page's main step only: the login credentials step, the signup form, the set-password form. Sub-steps ("Reset your password", "Check your email") keep their own heading, so the two never stack. There are no per-page snippets; to change more than the frame and heading, take over the page (next rung).
+3. **Take over one page.** Create that page's own file, for example `src/routes/auth/login/+page.svelte`. SvelteKit prefers the specific route over `[...bridge]`, so yours renders and every other page keeps working. Build it from the component in the table above:
 
-## Create the set-password page
+   ```svelte
+   <!-- src/routes/auth/login/+page.svelte -->
+   <script lang="ts">
+     import { goto } from '$app/navigation';
+     import { page } from '$app/stores';
+     import { LoginForm, readReturnTo } from '@nebulr-group/bridge-svelte';
+   </script>
 
-Create `src/routes/auth/set-password/[token]/+page.svelte`:
+   <LoginForm onLogin={() => goto(readReturnTo($page.url) ?? '/')} />
+   ```
 
-```svelte
-<script lang="ts">
-  import { page } from '$app/stores';
-  import { ForgotPassword } from '@nebulr-group/bridge-svelte';
-
-  let token = $derived($page.params.token);
-</script>
-
-<div class="page-container">
-  <ForgotPassword {token} loginHref="/auth/login" />
-</div>
-
-<style>
-  .page-container {
-    display: flex;
-    justify-content: center;
-    padding: 3rem 1rem;
-  }
-</style>
-```
-
-**How it works:**
-- This route handles **two flows with the same component**: signup email verification AND password reset. Both flows redeem a one-time token to set a password, so they share the same UI and the same backend endpoint.
-- The `ForgotPassword` component renders a "Set new password" form when a `token` prop is provided (this route) and a "Reset your password" email-entry form when no token is provided (the next route).
-- bridge-api builds the verification email URL as `{app-origin}/auth/set-password/{token}?flow=signup`. The `flow=signup` query parameter is used internally by Bridge for analytics — your code does not need to read it.
-- After the user sets a password, they're shown a success state with a link back to `/auth/login`.
-
-**This is the most critical route.** Missing it silently breaks every new signup — users sign up successfully but cannot complete verification.
-
-## Create the forgot-password page
-
-Create `src/routes/auth/forgot-password/+page.svelte`:
-
-```svelte
-<script lang="ts">
-  import { ForgotPassword } from '@nebulr-group/bridge-svelte';
-</script>
-
-<div class="page-container">
-  <ForgotPassword loginHref="/auth/login" />
-</div>
-
-<style>
-  .page-container {
-    display: flex;
-    justify-content: center;
-    padding: 3rem 1rem;
-  }
-</style>
-```
-
-**How it works:**
-- Same component as the set-password page, but without a `token` prop. The component switches into "request a reset link" mode: it shows an email input, and on submit calls `sendResetPasswordLink(email)`.
-- `LoginForm` already has an inline forgot-password flow built into it (the "Forgot password?" link toggles into a sub-step), so this standalone route is not the only entry point — but it is required for two cases: (1) users arriving cold via a "forgot password" link in your marketing emails or docs, and (2) the case where you set `forgotPasswordHref` on `LoginForm` to send users here instead of using the inline flow.
-
-## Create the magic-link page
-
-Create `src/routes/auth/magic-link/+page.svelte`:
-
-```svelte
-<script lang="ts">
-  import { MagicLink } from '@nebulr-group/bridge-svelte';
-</script>
-
-<div class="page-container">
-  <MagicLink loginHref="/auth/login" />
-</div>
-
-<style>
-  .page-container {
-    display: flex;
-    justify-content: center;
-    padding: 3rem 1rem;
-  }
-</style>
-```
-
-**How it works:**
-- Standalone page for requesting a magic link. The user enters their email, presses send, and receives an email containing a one-time login link.
-- **Magic-link redemption is handled automatically inside `LoginForm`.** When `LoginForm` mounts, it checks `window.location.search` for `?bridge_magic_link_token=…`; if found, it redeems the token and logs the user in. No separate redemption route is needed — the email link points back at `/auth/login?bridge_magic_link_token=…`.
-- This route must exist even if magic link is currently disabled in the Bridge admin config. Toggling magic link on later should not require a code deploy.
-
-## Create the setup-passkey page
-
-Create `src/routes/auth/setup-passkey/[token]/+page.svelte`:
-
-```svelte
-<script lang="ts">
-  import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
-  import { PasskeySetup } from '@nebulr-group/bridge-svelte';
-
-  let token = $derived($page.params.token);
-</script>
-
-<div class="page-container">
-  <PasskeySetup
-    {token}
-    onComplete={() => goto('/')}
-    onBack={() => goto('/auth/login')}
-    onExpired={() => goto('/auth/login')}
-  />
-</div>
-
-<style>
-  .page-container {
-    display: flex;
-    justify-content: center;
-    padding: 3rem 1rem;
-  }
-</style>
-```
-
-**How it works:**
-- Reached via a one-time email link sent by `PasskeyRequestSetupLink` (which is itself rendered inline by `LoginForm` when the user chooses "set up a passkey").
-- `onComplete` fires after the passkey is registered with the device — redirect the user wherever makes sense for your app (a protected home page, account settings, etc.).
-- `onBack` fires if the user cancels; `onExpired` fires if the setup token has expired — both should send the user back to `/auth/login`.
-- This route must exist even if passkeys are currently disabled in the Bridge admin config.
+   A page you own must navigate after sign-in itself: `LoginForm` never navigates, it calls `onLogin`. Always go through `readReturnTo` — never navigate to `$page.url.searchParams.get(...)` directly; whoever wrote the link controls that value, so navigating to it unchecked is an open redirect.
+4. **Headless.** Build your own UI on `getBridgeAuth()`.
 
 ## Convert to SDK auth (existing hosted setup)
 
@@ -408,11 +253,11 @@ export const load = bridgeBootstrap({
 
 If your layout still uses the older `await bridgeBootstrap(url, config, routeConfig)` form inside a hand-written `load`, replace it with the one-call form above and wrap your app in `<BridgeBootstrap>…</BridgeBootstrap>` as shown in [Wire the root layout component](#wire-the-root-layout-component). The old form still works, but it reads no environment variables.
 
-`loginRoute` is what switches Bridge from hosted auth to SDK auth. When it's set, the route guard redirects unauthenticated users to your in-app page instead of the external hosted login. `LoginForm`'s signup link points at `signupRoute` (default `/auth/signup`; covered in the login page section).
+`loginRoute` is what switches Bridge from hosted auth to SDK auth. When it's set, the route guard redirects unauthenticated users to your in-app page instead of the external hosted login.
 
-### 2. Create the login and signup pages
+### 2. Serve the auth pages
 
-Create `src/routes/auth/login/+page.svelte` and `src/routes/auth/signup/+page.svelte` as described in the sections above.
+Create `src/routes/auth/[...bridge]/+page.svelte` rendering `<BridgeAuthRoutes />`, as described in [Serve the auth pages](#serve-the-auth-pages--one-file). If the project already has hand-written pages under `src/routes/auth/` (for example an empty `oauth-callback/+page.svelte` from hosted mode), delete the ones that only render a Bridge component — a specific page file takes precedence over the catch-all, so a leftover stub would hide the page Bridge serves.
 
 ### 3. Remove manual `auth.login()` calls
 
@@ -421,9 +266,9 @@ If the project calls `auth.login()` to trigger the hosted login redirect, those 
 - **Navigation buttons** that called `auth.login()` should now use `<a href="/auth/login">` instead (or the route guard handles it automatically when the user hits a protected route).
 - **Logout** now requires passing `redirectTo` in SDK mode: `getBridgeAuth().logout({ redirectTo: '/auth/login' })`. Without it, `logout()` redirects to the hosted Bridge portal instead of your in-app login page.
 
-### 4. The OAuth callback route can remain
+### 4. The OAuth callback is served too
 
-If the project has `src/routes/auth/oauth-callback/+page.svelte`, it can stay. It won't interfere with SDK auth. If the app uses social login (Google, GitHub, etc.), the callback route is still needed to complete the OAuth code exchange for those providers.
+`/auth/oauth-callback` is one of the pages the catch-all serves, so social login (Google, GitHub, etc.) keeps completing its code exchange. An old empty `oauth-callback/+page.svelte` does no harm, but it is no longer needed.
 
 ## Add login/logout to navigation
 
@@ -484,7 +329,7 @@ export const load = bridgeBootstrap({
 
 **When an unauthenticated user hits a protected route:**
 - They are redirected to your `loginRoute` (`/auth/login`) — the in-app login page — with the page they asked for attached as `?redirectUri=…`.
-- After login, your `onLogin` sends them back to it with `goto(readReturnTo($page.url) ?? '/')` (see the login page section). `LoginForm` does not navigate by itself.
+- After login, `<BridgeAuthRoutes>` sends them back to it (validated with `readReturnTo`), or to `redirectTo` when there is none. A login page you own does this in its `onLogin` (see *Take over one page*).
 
 **Key difference from hosted auth:** In hosted auth, unauthenticated users are redirected to an external Bridge login page. With SDK auth, they are redirected to your in-app login page at `/auth/login` (or whatever you set as `loginRoute`).
 
@@ -604,19 +449,13 @@ Before verifying, confirm every item was applied. Do not skip any:
 - [ ] `@nebulr-group/bridge-svelte` installed using the project's package manager
 - [ ] `src/routes/+layout.ts` — `export const load = bridgeBootstrap({ loginRoute, rules, defaultAccess })`
 - [ ] `src/routes/+layout.ts` — exports `ssr = false`
-- [ ] `src/routes/+layout.ts` — the call includes `loginRoute` (`signupRoute` only if the signup page is not at `/auth/signup`)
-- [ ] `LoginForm` has an `onLogin` that navigates with `goto(readReturnTo($page.url) ?? '/')` — without `onLogin` the user remains stuck on the login page after authenticating, and without `readReturnTo` deep links are lost (never read the query parameter by hand)
+- [ ] `src/routes/+layout.ts` — the call includes `loginRoute: '/auth/login'`
+- [ ] If the app owns its own login page (rung 3), its `LoginForm` has an `onLogin` that navigates with `goto(readReturnTo($page.url) ?? '/')` — `<BridgeAuthRoutes>` does this itself
 - [ ] `src/routes/+layout.ts` — `defaultAccess` is `'protected'`, `/auth/*` is public
 - [ ] `src/routes/+layout.svelte` — wraps the app in `<BridgeBootstrap>…</BridgeBootstrap>` (no `ready` flag of your own)
 - [ ] `src/routes/+layout.svelte` — imports `@nebulr-group/bridge-svelte/styles`
-- [ ] `src/routes/auth/login/+page.svelte` — file exists and renders `<LoginForm>`
-- [ ] `src/routes/auth/signup/+page.svelte` — file exists and renders `<SignupForm>`
-- [ ] `src/routes/auth/oauth-callback/+page.svelte` — file exists (stub page; `bridgeBootstrap` handles the code exchange)
-- [ ] `src/routes/auth/set-password/[token]/+page.svelte` — file exists and renders `<ForgotPassword>` with the `token` route param **(critical — missing this breaks every signup)**
-- [ ] `src/routes/auth/forgot-password/+page.svelte` — file exists and renders `<ForgotPassword>` with no token prop
-- [ ] `src/routes/auth/magic-link/+page.svelte` — file exists and renders `<MagicLink>`
-- [ ] `src/routes/auth/setup-passkey/[token]/+page.svelte` — file exists and renders `<PasskeySetup>` with the `token` route param
-- [ ] All 7 route files match the structure shown above (correct component, correct token wiring where applicable)
+- [ ] `src/routes/auth/[...bridge]/+page.svelte` — file exists and renders `<BridgeAuthRoutes />` (with the `frame` / `heading` snippets if the app restyles the auth pages)
+- [ ] No hand-written page under `src/routes/auth/` that only renders a Bridge component — each one hides the catch-all's page for that address
 - [ ] `tenantSelfSignup` is enabled on the Bridge app (server-side) — confirmed in admin dashboard or via `bridge app get`
 - [ ] App origin is in `allowedOrigins` (server-side) — confirmed in admin dashboard or via `bridge app get`
 - [ ] Login/logout controls added to navigation (`<a href="/auth/login">` for login; logout calls `getBridgeAuth().logout({ redirectTo: '/auth/login' })`)
@@ -636,9 +475,9 @@ After completing the setup:
 3. **Protected route redirect:** Navigate to a protected route while logged out. You should be redirected to `/auth/login` (your in-app login page), NOT an external hosted page.
 4. **Login page renders:** The `/auth/login` page should display the `LoginForm` component with proper styling. The visible auth methods (password, magic link, passkeys, SSO) depend on your app's configuration in the Bridge dashboard.
 5. **Signup page renders:** The `/auth/signup` page should display the `SignupForm` component with proper styling.
-6. **Login flow works:** Enter credentials and submit. The network calls should succeed AND the page should navigate away from `/auth/login` to your post-login destination. **If the network calls succeed but the page does not navigate, your `LoginForm` is missing the `onLogin` handler — it will not auto-redirect.** Add the `onLogin` from the login page section. **If a sign-in request answers `403 {"message":"Origin not allowed"}`**, the origin you are serving from (scheme, host and port) is not in the app's allowed origins — add it with `bridge app update --allowed-origins …` or under Bridge admin → Authentication → Security → Allowed Origins.
-7. **Signup flow works end-to-end:** Create a new account via `/auth/signup`. Open the inbox and find the verification email. The link should point at `{your-app-origin}/auth/set-password/{token}?flow=signup`. Click it — the page should render the "Set new password" form (NOT a 404 and NOT a blank page). Set a password, confirm you land on a "password set" success state, then log in with the new credentials. **If you see a blank page or 404 after clicking the email link, the `set-password/[token]` route is missing — go back and create it.**
+6. **Login flow works:** Enter credentials and submit. The network calls should succeed AND the page should navigate away from `/auth/login` to your post-login destination. **If the network calls succeed but the page does not navigate, the app owns its login page and its `LoginForm` is missing `onLogin`** — `LoginForm` never navigates by itself. Add the `onLogin` shown in *Take over one page*, or delete the page and let the catch-all serve it. **If a sign-in request answers `403 {"message":"Origin not allowed"}`**, the origin you are serving from (scheme, host and port) is not in the app's allowed origins — add it with `bridge app update --allowed-origins …` or under Bridge admin → Authentication → Security → Allowed Origins.
+7. **Signup flow works end-to-end:** Create a new account via `/auth/signup`. Open the inbox and find the verification email. The link should point at `{your-app-origin}/auth/set-password/{token}?flow=signup`. Click it — the page should render the "Set new password" form (NOT a 404 and NOT a blank page). Set a password, confirm you land on a "password set" success state, then log in with the new credentials. **If you see a 404 after clicking the email link, `src/routes/auth/[...bridge]/+page.svelte` is missing or misnamed — the rest parameter must be `[...bridge]`.**
 8. **Styles render correctly:** Bridge UI components (LoginForm, SignupForm, buttons, inputs) should have proper styling. If they appear unstyled, confirm that `@nebulr-group/bridge-svelte/styles` is imported in the root layout.
 9. **Logout works in-app:** Clicking logout clears the session and lands the user on `/auth/login` of YOUR app — NOT on `auth.thebridge.dev`. If the user ends up on the hosted Bridge page, the logout call is missing `redirectTo`. Use `getBridgeAuth().logout({ redirectTo: '/auth/login' })`.
 10. **Forgot-password flow works end-to-end:** From the login page, click "Forgot password?" (or navigate to `/auth/forgot-password`). Enter the email of an existing user, submit, and check the inbox. Click the reset link — it should land on `/auth/set-password/{token}` and render the same "Set new password" form. Set a new password and log in with it.
-11. **All seven auth routes resolve (no 404s):** With the dev server running and signed out, navigate manually to each of `/auth/login`, `/auth/signup`, `/auth/oauth-callback`, `/auth/set-password/test-token`, `/auth/forgot-password`, `/auth/magic-link`, `/auth/setup-passkey/test-token`. Every route must render its component without a 404. The set-password and setup-passkey pages will show an error state for an invalid token — that is correct; the page itself rendering is what matters here. The magic-link button and passkey button only appear inside `LoginForm` when their feature is enabled in admin config — that's expected. The standalone routes themselves must always exist.
+11. **The auth pages resolve:** Signed out, open `/auth/signup`, `/auth/set-password/test-token`, `/auth/forgot-password`, `/auth/magic-link` and `/auth/setup-passkey/test-token`. Each renders its form (set-password and setup-passkey show an error for the made-up token — the page rendering is what matters). `/auth/not-a-page` shows your app's 404. The magic-link and passkey buttons appear inside `LoginForm` only when those methods are enabled in the Bridge dashboard — that is expected.

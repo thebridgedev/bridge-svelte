@@ -32,7 +32,7 @@
     { id: 'past_due_trial', label: 'Past due — trial expired', state: { plan: PLAN, status: 'past_due', pastDueReason: 'trial_expired' } },
     { id: 'dunning', label: 'Dunning — retry scheduled', state: { plan: PLAN, status: 'past_due', pastDueReason: 'card_declined', cardLast4: '4242', nextRetryAt: inDays(3) } },
     { id: 'dunning_final', label: 'Dunning — final retry', state: { plan: PLAN, status: 'past_due', pastDueReason: 'card_declined', cardLast4: '4242', nextRetryAt: inDays(1), finalRetryAt: inDays(1) } },
-    { id: 'locked', label: 'Locked (gate engaged)', state: { plan: PLAN, status: 'past_due', gateEngaged: true, recoveryUrl: '/billing' } },
+    { id: 'locked', label: 'Locked (gate engaged)', state: { plan: PLAN, status: 'past_due', gateEngaged: true, recoveryUrl: '/subscription' } },
     { id: 'canceled', label: 'Canceled', state: { plan: PLAN, status: 'canceled', endsAt: inDays(-1) } },
   ];
 
@@ -43,6 +43,7 @@
   let chassis = $state<'bar' | 'rail' | 'card'>('card');
   let mode = $state<'soft' | 'hard'>('soft');
   let activeId = $state<string | null>(null);
+  let defaultCta = $state(false);
 
   function simulate(p: Preset) {
     activeId = p.id;
@@ -57,8 +58,10 @@
     }
   }
 
-  // CTA override: keep the demo on-page (the default navigates to /billing) and,
-  // when locked, treat the lockscreen CTA as a recovery so you're never trapped.
+  // CTA override: keep the demo on-page (the default navigates to
+  // billing.manageRoute — /subscription unless configured, TBP-702) and, when
+  // locked, treat the lockscreen CTA as a recovery so you're never trapped.
+  // "Default CTA" turns the override off to show where the real one goes.
   function handleCta(state: BillingNoticeState) {
     logEvent('cta.click', { noticeState: state });
     if (state === 'dunning_exhausted') {
@@ -76,7 +79,7 @@
   // ── Dev event console — useBridge().handle(...) ──────────────────────────
   // Real SDK events from the realtime channel. createBridgeFlags() (in the
   // root layout) already called attachToRealtimeClient, so these fire live.
-  // Fire usage on /subscription to see quota.updated / entitlements.changed.
+  // Fire usage on /usage-probe to see quota.updated / entitlements.changed.
   type LogRow = { id: number; ts: string; kind: string; payload: unknown };
   let events = $state<LogRow[]>([]);
   let _id = 0;
@@ -132,6 +135,10 @@
           <option value="hard">hard (lockscreen when locked)</option>
         </select>
       </label>
+      <label>
+        <input type="checkbox" bind:checked={defaultCta} data-testid="default-cta" />
+        Default CTA (navigates)
+      </label>
       <span class="derived">
         notice: <code>{noticeState}</code> · severity: <code>{severity}</code>
         {#if locked}· <span class="locked-tag">LOCKED</span>{/if}
@@ -142,7 +149,7 @@
       {#if noticeState === 'active'}
         <div class="silent">No notice — the component renders nothing while billing is healthy (status <code>active</code>).</div>
       {/if}
-      <BridgeBillingNotice {chassis} {mode} onActionClick={handleCta} />
+      <BridgeBillingNotice {chassis} {mode} onActionClick={defaultCta ? undefined : handleCta} />
     </div>
   </section>
 
@@ -182,7 +189,7 @@
     </div>
     <p class="hint">
       Registered via <code>useBridge().handle(&#123; ... &#125;)</code> — real events off the realtime channel.
-      Fire usage on the <a href="/subscription">Subscription</a> page to see <code>quota.updated</code> /
+      Fire usage on the <a href="/usage-probe">Usage probe</a> page to see <code>quota.updated</code> /
       <code>entitlements.changed</code> arrive here. (Simulator buttons patch state directly and do not emit events.)
     </p>
     <ul class="event-log">

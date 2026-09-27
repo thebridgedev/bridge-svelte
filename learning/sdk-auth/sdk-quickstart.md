@@ -68,70 +68,70 @@ Wrap your app in the `BridgeBootstrap` component. It renders its children only o
 </BridgeBootstrap>
 ```
 
-## 4. Create a login page
-
-Drop the `LoginForm` component onto a page that matches your `loginRoute`.
+## 4. Serve the auth pages — one file
 
 ```svelte
-<!-- src/routes/auth/login/+page.svelte -->
+<!-- src/routes/auth/[...bridge]/+page.svelte -->
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
-  import { LoginForm, readReturnTo } from '@nebulr-group/bridge-svelte';
-
-  function onLogin() {
-    // Back to the page the visitor asked for (validated), else your default.
-    goto(readReturnTo($page.url) ?? '/');
-  }
+  import { BridgeAuthRoutes } from '@nebulr-group/bridge-svelte';
 </script>
 
-<div class="login-page">
-  <LoginForm showSignupLink {onLogin} />
-</div>
-
-<!-- Optional: center the form on the page. Not required for the component to work. -->
-<style>
-  .login-page {
-    display: flex;
-    justify-content: center;
-    padding: 3rem 1rem;
-  }
-</style>
+<BridgeAuthRoutes />
 ```
 
-**`onLogin` is required.** `LoginForm` does not navigate after a successful sign-in; it calls `onLogin` and your page decides where to go. Without it the user stays on the login page. When the route guard sends a signed-out visitor here it attaches the page they asked for as `?redirectUri=…`; `readReturnTo` reads it back and returns `null` for anything that is not a same-origin path, so never read the parameter yourself (see [Returning to the page they asked for](/auth/securing/route-guards/#returning-to-the-page-they-asked-for)).
+That file serves every auth page, inside your own layout:
 
-Auth method visibility (magic link, passkeys, SSO) is derived from your app's configuration in the Control Center (your admin dashboard at app.thebridge.dev).
+| Address | Renders |
+|---|---|
+| `/auth/login` | `LoginForm` — password plus the inline magic link, passkey, SSO, forgot-password, MFA and workspace steps |
+| `/auth/signup` | `SignupForm` |
+| `/auth/oauth-callback` | nothing — Bridge finishes the login and redirects before it renders |
+| `/auth/set-password/[token]` | `ForgotPassword` with the token — where signup verification and password-reset emails land |
+| `/auth/forgot-password` | `ForgotPassword` |
+| `/auth/magic-link` | `MagicLink` |
+| `/auth/setup-passkey/[token]` | `PasskeySetup` |
+| `/auth/workspaces` | `WorkspaceSelector` |
 
-`LoginForm` handles multi-step flows inline: forgot password, magic link requests, passkey login, MFA challenge, MFA setup, and workspace selection (a workspace is called a *tenant* in the API) all render within the same component automatically when needed.
+Any other address under `/auth` gets your app's own 404.
 
-**Optional props:** `onError` (fires on auth failure), `signupHref` (overrides the `signupRoute` config for this form's signup link).
+After sign-in the user goes back to the page they asked for (the route guard attaches it as `?redirectUri=…`, and it is validated before use), or to `/`. Pass `redirectTo` to change the fallback: `<BridgeAuthRoutes redirectTo="/dashboard" />`.
 
-## 5. Create a signup page
+Which sign-in methods appear (magic link, passkeys, SSO) comes from your app's configuration in the Control Center (your admin dashboard at app.thebridge.dev). Turning one on or off there needs no code change and no deploy.
 
-```svelte
-<!-- src/routes/auth/signup/+page.svelte -->
-<script lang="ts">
-  import { SignupForm } from '@nebulr-group/bridge-svelte';
-</script>
+## 5. Make the pages yours
 
-<div class="signup-page">
-  <SignupForm showLoginLink loginHref="/auth/login" />
-</div>
+Pick the lowest rung that does the job:
 
-<!-- Optional: center the form on the page. -->
-<style>
-  .signup-page {
-    display: flex;
-    justify-content: center;
-    padding: 3rem 1rem;
-  }
-</style>
-```
+1. **CSS variables.** The `--bridge-*` tokens restyle the forms (see [Theming & Styles](../theming/theming.md)); `--bridge-auth-page-padding` sets the page padding.
+2. **Frame and heading.** Restyle everything around the form, on every page, without owning a route:
 
-After a successful signup the user receives a verification email. Once verified, they can sign in.
+   ```svelte
+   <BridgeAuthRoutes>
+     {#snippet frame(page, children)}
+       <main class="auth-card">{@render children()}</main>
+     {/snippet}
+     {#snippet heading(page)}
+       <h1>{page === 'signup' ? 'Create your account' : 'Welcome back'}</h1>
+     {/snippet}
+   </BridgeAuthRoutes>
+   ```
 
-**Optional props:** `onSignup` (fires after successful signup), `onError` (fires on failure).
+   `frame` replaces the default centred container. `heading` replaces the form heading on each page's main step (the credentials step, the signup form, the set-password form); sub-steps such as "Reset your password" keep their own, so two headings never stack.
+3. **Take over one page.** Create its file — for example `src/routes/auth/login/+page.svelte`. SvelteKit prefers the specific route over `[...bridge]`, so yours renders and the other pages keep working:
+
+   ```svelte
+   <!-- src/routes/auth/login/+page.svelte -->
+   <script lang="ts">
+     import { goto } from '$app/navigation';
+     import { page } from '$app/stores';
+     import { LoginForm, readReturnTo } from '@nebulr-group/bridge-svelte';
+   </script>
+
+   <LoginForm onLogin={() => goto(readReturnTo($page.url) ?? '/')} />
+   ```
+
+   A page you own navigates after sign-in itself — `LoginForm` calls `onLogin` and never navigates. `readReturnTo` returns `null` for anything that is not a same-origin path, so never read the parameter yourself (see [Returning to the page they asked for](/auth/securing/route-guards/#returning-to-the-page-they-asked-for)).
+4. **Headless.** Build your own UI on `getBridgeAuth()`.
 
 ## 6. Styles
 
@@ -145,12 +145,11 @@ The options you pass to `bridgeBootstrap` are `BridgeConfig` fields plus your ro
 |-------|---------|-------------|
 | `appId` | `VITE_BRIDGE_APP_ID` **(required)** | Your Bridge app ID |
 | `loginRoute` | (unset) | In-app route of your login page; unauthenticated users are redirected here |
-| `signupRoute` | `'/auth/signup'` | In-app route of your signup page; `LoginForm`'s signup link points here |
 | `apiBaseUrl` | `VITE_BRIDGE_API_BASE_URL`, else `https://api.thebridge.dev` | Root URL for the Bridge API — set it for any non-production app (stage, local, self-hosted) |
 | `hostedUrl` | `VITE_BRIDGE_HOSTED_URL`, else derived from the API address on Bridge's own domains, else `https://auth.thebridge.dev` | Bridge hosted UI URL (local or self-hosted override) |
 | `debug` | `VITE_BRIDGE_DEBUG === 'true'`, else `false` | Enable debug logging |
 
-Where a user lands after sign-in is decided by your `onLogin` (above), not by a config field.
+Where a user lands after sign-in is decided by `redirectTo` on `<BridgeAuthRoutes>` (or your own `onLogin`), not by a config field.
 
 See the [Configuration reference](/auth/config/) for the full list (token storage, billing routes).
 

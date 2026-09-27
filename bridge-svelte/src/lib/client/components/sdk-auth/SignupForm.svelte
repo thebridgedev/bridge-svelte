@@ -19,6 +19,13 @@
     /** Heading text. Pass `null`/`''` to render no heading and use your own page title. */
     heading?: string | null;
     /**
+     * TBP-696 — renders in place of the heading on this component's main step
+     * (the form), the way `LoginForm.headingSnippet` does. Result states (the
+     * "check your email" / "password set" screens) keep their own heading, so a
+     * page title passed here never stacks on top of one.
+     */
+    headingSnippet?: Snippet;
+    /**
      * Success-state description. Pass `null`/`''` to render nothing (TBP-631).
      *
      * NOT lifted into AuthFormWrapper: it follows the "Check your email"
@@ -48,6 +55,7 @@
     showLoginLink = true,
     loginHref = undefined,
     heading = undefined,
+    headingSnippet,
     description = undefined,
     messages,
     plan = null,
@@ -103,7 +111,13 @@
 
 <!-- In the success state, the "Check your email" heading below is the title,
      so suppress the form heading to avoid two stacked headings. -->
-<AuthFormWrapper heading={success ? null : wrapperHeading} class={className} {style} {...rest}>
+<AuthFormWrapper
+  heading={success ? null : wrapperHeading}
+  headingSnippet={success ? undefined : headingSnippet}
+  class={className}
+  {style}
+  {...rest}
+>
   {#if success}
     <h2 class="bridge-success-heading">{t('signup.successHeading')}</h2>
     {#if description === undefined}

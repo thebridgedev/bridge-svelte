@@ -1,5 +1,7 @@
 # Bridge Svelte Demo — Revamp Brief
 
+> **Superseded (TBP-698, 2026-09).** The feature-showcase demo this describes was replaced by the reference integration: `src/routes` now holds only what the guides tell an app to write, and the old showcase pages live on as e2e fixtures under `src/routes/(test-fixtures)`. See the repo README, "Demo Application". Kept for history.
+
 > **Purpose of this document.** It is the single source of truth for leveling up the
 > bridge-svelte demo app. It is written to be **handed to a designer (human or agent)**
 > with no other context required. Read top to bottom: product context → current state →

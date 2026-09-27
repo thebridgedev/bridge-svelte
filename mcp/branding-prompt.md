@@ -70,12 +70,11 @@ Theming is plain CSS against a fixed set of tokens: the `--bridge-*` variables a
 ```css
 :root {
   --bridge-primary: #7c3aed;
-  --bridge-primary-hover: #6d28d9;
   --bridge-border-radius: 10px;
 }
 ```
 
-The full list with defaults is in `bridge guide mechanisms` (section 6). Every default rule uses `:where()`, so any selector of yours wins without `!important`; drop the `@nebulr-group/bridge-svelte/styles` import to style the components from scratch. To bind a token to the workspace's live branding, set it from the store: `<div style:--bridge-primary={$branding?.primaryButtonBgColor ?? '#4f46e5'}>`.
+The full list with defaults is in `bridge guide mechanisms` (section 6); hover, focus and tint follow `--bridge-primary` unless set. The defaults sit on `:where(:root)`, so the app's `:root` wins whatever order the stylesheets load in, and every default rule uses `:where()`, so any selector of yours wins without `!important`. With Tailwind, keep the styles import and map the tokens to the theme (`--bridge-primary: var(--color-brand-600)`); drop the `@nebulr-group/bridge-svelte/styles` import to style the components from scratch. To bind a token to the workspace's live branding, set it from the store: `<div style:--bridge-primary={$branding?.primaryButtonBgColor ?? '#4f46e5'}>`.
 
 Beyond tokens, the sign-in and subscription pages take `frame` and `heading` snippets, and any one page can be replaced by creating its route file — the rungs in `bridge guide mechanisms`.
 

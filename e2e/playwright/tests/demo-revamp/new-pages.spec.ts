@@ -10,7 +10,7 @@
  * the `authenticatedPage` fixture (SDK-logged-in page).
  *
  * Selectors prefer the stable test ids the app exposes (rollout-key, rollout-in/out,
- * entitlement-key, entitlement-result, persona-select, theme-toggle, inspector-toggle),
+ * entitlement-key, entitlement-result),
  * falling back to the SDK components' own stable data-attributes / role+text.
  */
 
@@ -118,18 +118,5 @@ test.describe('Demo revamp — new feature pages', () => {
     await expect(
       page.locator('[data-bridge-workspace-selector]').first(),
     ).toBeVisible({ timeout: MED_TIMEOUT });
-  });
-
-  test('topbar exposes persona, theme and inspector controls on an authenticated page', async ({
-    authenticatedPage,
-  }) => {
-    const page = authenticatedPage;
-
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-
-    await expect(page.getByTestId('persona-select')).toBeVisible({ timeout: MED_TIMEOUT });
-    await expect(page.getByTestId('theme-toggle')).toBeVisible();
-    await expect(page.getByTestId('inspector-toggle')).toBeVisible();
   });
 });

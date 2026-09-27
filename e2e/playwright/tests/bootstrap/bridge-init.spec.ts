@@ -45,15 +45,6 @@ test.describe('Bridge Initialization', () => {
     await expect(heading).toBeVisible({ timeout: MED_TIMEOUT });
   });
 
-  test('ConfigStatus component displays configuration state', async ({ page }) => {
-    await page.goto('/');
-
-    // The ConfigStatus component should be visible on the home page
-    // It displays bridge config status information
-    const configStatus = page.locator('text=Bridge');
-    await expect(configStatus.first()).toBeVisible({ timeout: MED_TIMEOUT });
-  });
-
   // TBP-695 — <BridgeBootstrap> owns readiness: the app inside it renders only
   // once Bridge is ready, with no ready flag in the app. The demo's DEBUG
   // `onBootstrapComplete` stamps when Bridge reported ready; a MutationObserver

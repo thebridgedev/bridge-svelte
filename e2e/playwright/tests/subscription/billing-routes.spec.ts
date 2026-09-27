@@ -67,28 +67,18 @@ test.describe('BridgeBillingRoutes — every billing page from one file (TBP-702
 
   test('the billing notice’s Manage button lands on /subscription', async ({ authenticatedPage: page }) => {
     await page.goto('/billing-lifecycle');
-    await page.getByRole('button', { name: /Past due — card declined/ }).click();
     await page.getByTestId('default-cta').check();
-    const cta = page.locator('.bridge-billing-notice .bbn-cta');
-    await expect(cta).toBeVisible({ timeout: MED_TIMEOUT });
-    await cta.click();
+    // The page's own notice. The demo's layout mounts one too (every app's
+    // shell does) and they share one store, so the layout's first
+    // GET /billing/state can land after the preset and replace it. Re-apply
+    // the preset until its CTA takes the click.
+    const cta = page.locator('main .bridge-billing-notice .bbn-cta');
+    await expect(async () => {
+      await page.getByRole('button', { name: /Past due — card declined/ }).click();
+      await cta.click({ timeout: 2_000 });
+    }).toPass({ timeout: LONG_TIMEOUT });
     await page.waitForURL((url) => url.pathname === '/subscription', { timeout: LONG_TIMEOUT });
     await expect(page.locator(served('manage'))).toBeVisible({ timeout: MED_TIMEOUT });
-  });
-
-  test('frame and heading snippets restyle it, and links follow where it lives', async ({ authenticatedPage: page }) => {
-    await page.goto('/billing-framed/plan');
-    const frame = page.getByTestId('billing-frame');
-    await expect(frame).toHaveAttribute('data-page', 'plan', { timeout: MED_TIMEOUT });
-    await expect(frame.getByTestId('billing-heading')).toHaveText('Billing · plan');
-    await expect(frame.locator('.bridge-billing-heading')).toHaveCount(0);
-    await expect(frame.locator('[data-bridge-plan-selector]')).toBeVisible({ timeout: LONG_TIMEOUT });
-
-    await page.goto('/billing-framed/error');
-    await expect(page.getByTestId('billing-frame').getByRole('link', { name: 'Back to subscription' })).toHaveAttribute(
-      'href',
-      '/billing-framed',
-    );
   });
 });
 

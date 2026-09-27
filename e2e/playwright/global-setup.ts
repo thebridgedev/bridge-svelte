@@ -332,17 +332,18 @@ async function globalSetup(config: FullConfig) {
   try {
     await page.goto(baseURL);
 
-    // ConfigStatus renders the clickable app id only once Bridge config initialized.
-    const appIdCode = page.locator('code[title="Click to change"]');
+    // The demo's test hooks (demo/src/lib/test-fixtures/TestHooks.svelte)
+    // render the app id once Bridge's config has initialized.
+    const appIdCode = page.locator('[data-testid="bridge-app-id"]');
 
     try {
-      await appIdCode.waitFor({ timeout: 15_000 });
+      await appIdCode.waitFor({ state: 'attached', timeout: 15_000 });
     } catch (waitError: unknown) {
       // Report what the demo itself says rather than the locator that timed out.
       const demoMessage = await page
-        .locator('.feature-status')
-        .first()
+        .locator('body')
         .innerText()
+        .then((text) => text.slice(0, 300))
         .catch(() => '');
 
       throw new Error(
@@ -354,7 +355,7 @@ async function globalSetup(config: FullConfig) {
       );
     }
 
-    const shownAppId = (await appIdCode.innerText()).trim();
+    const shownAppId = ((await appIdCode.textContent()) ?? '').trim();
     if (shownAppId !== primary.appId) {
       throw new Error(
         `The demo at ${baseURL} initialized with app id ${shownAppId}, expected ${primary.appId}.\n` +
@@ -374,7 +375,7 @@ async function globalSetup(config: FullConfig) {
     // check above does not catch it, because the id is seeded through
     // localStorage and is correct either way (TBP-607).
     const expectedEnv = getCurrentEnvironment();
-    const envPill = page.locator('.env-pill');
+    const envPill = page.locator('[data-testid="bridge-env"]');
     const shownEnv = await envPill
       .first()
       .getAttribute('data-env')

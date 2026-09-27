@@ -40,6 +40,7 @@ describe('applyCatchUpSnapshot (TBP-660)', () => {
     expect(applyCatchUpSnapshot(snapshot('pro', { pro_page: false }))).toEqual({
       planChanged: true,
       entitlementsChanged: false,
+      initial: false,
     });
     expect(get(tenantSubscriptionStore)?.plan.slug).toBe('pro');
   });
@@ -55,6 +56,7 @@ describe('applyCatchUpSnapshot (TBP-660)', () => {
     expect(applyCatchUpSnapshot(snapshot('pro', { pro_page: false }))).toEqual({
       planChanged: false,
       entitlementsChanged: false,
+      initial: false,
     });
   });
 
@@ -65,7 +67,16 @@ describe('applyCatchUpSnapshot (TBP-660)', () => {
     expect(applyCatchUpSnapshot(snapshot('pro', { a: true })).entitlementsChanged).toBe(true);
   });
 
-  it('first catch-up into empty stores reports both as changed', () => {
-    expect(applyCatchUpSnapshot(snapshot('free', {}))).toEqual({ planChanged: true, entitlementsChanged: true });
+  // TBP-700 — the values did move (so the runtime still seeds auth-core's
+  // entitlements from it), but it is a first fill, not a recovered change:
+  // counting it as a plan change refreshed the token and swapped the socket
+  // after every first connect.
+  it('first catch-up into empty stores reports both as changed, and as the initial fill', () => {
+    expect(applyCatchUpSnapshot(snapshot('free', {}))).toEqual({
+      planChanged: true,
+      entitlementsChanged: true,
+      initial: true,
+    });
+    expect(applyCatchUpSnapshot(snapshot('pro', {})).initial).toBe(false);
   });
 });

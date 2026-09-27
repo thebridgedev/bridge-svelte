@@ -31,6 +31,13 @@ const _reauthCalls: number[] = [];
 let _startCalls = 0;
 let _stopCalls = 0;
 let _capturedRealtimeConfig: Record<string, unknown> | undefined;
+// What the fake RealtimeClient reports from getState().
+let _realtimeState = 'open';
+// TBP-700 — opt-in: give the fake client auth-core's `setOnSubscribed`, and
+// observe reauthorize() (the socket swap) from a test.
+let _fakeHasSubscribed = false;
+let _onSubscribed: (() => void) | undefined;
+let _onReauthorize: (() => void) | undefined;
 
 // Reset the spy state between tests.
 function resetSpies() {
@@ -43,6 +50,10 @@ function resetSpies() {
   _startCalls = 0;
   _stopCalls = 0;
   _capturedRealtimeConfig = undefined;
+  _realtimeState = 'open';
+  _fakeHasSubscribed = false;
+  _onSubscribed = undefined;
+  _onReauthorize = undefined;
   _onStatusChange = undefined;
   _refreshCalls = 0;
   _refreshImpl = undefined;
@@ -117,6 +128,11 @@ vi.mock('@nebulr-group/bridge-auth-core', () => {
   class FakeRealtimeClient {
     constructor(config: Record<string, unknown>) {
       _capturedRealtimeConfig = config;
+      if (_fakeHasSubscribed) {
+        (this as unknown as { setOnSubscribed: (fn: () => void) => void }).setOnSubscribed = (fn) => {
+          _onSubscribed = fn;
+        };
+      }
     }
     setOnOpen(fn: () => void) { _onOpen = fn; }
     setOnClose(fn: () => void) { _onClose = fn; }
@@ -128,7 +144,8 @@ vi.mock('@nebulr-group/bridge-auth-core', () => {
     setAppId(v: string | undefined) { _channelScopeCalls.push({ method: 'setAppId', value: v }); }
     setWorkspaceId(v: string | undefined) { _channelScopeCalls.push({ method: 'setWorkspaceId', value: v }); }
     setUserId(v: string | undefined) { _channelScopeCalls.push({ method: 'setUserId', value: v }); }
-    async reauthorize() { _reauthCalls.push(Date.now()); }
+    async reauthorize() { _reauthCalls.push(Date.now()); _onReauthorize?.(); }
+    getState() { return _realtimeState; }
     async start() { _startCalls++; }
     async stop() { _stopCalls++; }
   }
@@ -432,37 +449,90 @@ describe('reauthorizes on every token value change (TBP-644)', () => {
   });
 });
 
-describe('the self-induced refresh loop guard still holds (TBP-644)', () => {
-  it('the reconnect caused by a sign-in reauthorize does not fire the on-open refresh', () => {
+// TBP-700 replaced the TBP-644 "self-induced reconnects skip the refresh"
+// guard: that skip is exactly how a role change published during our own
+// socket swap was lost for good. Every open now reconciles with ONE refresh,
+// and the loop is broken by what the refresh returns instead — a token that
+// changes nothing does not replace the socket.
+describe('every open reconciles user state without looping (TBP-644, TBP-700)', () => {
+  // Each refresh mints the same authority with a new iat, like the server.
+  let iat = 0;
+  const mintSame = () => {
+    iat += 1;
+    const t = { accessToken: makeJwt({ sub: 'user-1', tid: 'ws-1', aid: 'app-1', tv: 1, iat }) };
+    _tokenStore.set(t);
+    return t;
+  };
+
+  it('the reconnect caused by a sign-in reauthorize reconciles once and stays on its socket', async () => {
     startBridgeRuntime();
-    _onOpen?.(); // initial, anonymous connect
-    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1' }) }); // → reauthorize
-    _onOpen?.(); // the reconnect that reauthorize caused
+    _onOpen?.(); // initial, anonymous connect — nothing to reconcile
+    await flush();
     expect(_refreshCalls).toBe(0);
-  });
-
-  it('a genuine reconnect still refreshes (catch-up for a missed user.state_changed)', () => {
-    startBridgeRuntime();
-    _onOpen?.();
-    _onOpen?.();
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1', tid: 'ws-1', aid: 'app-1', tv: 1, iat: 0 }) }); // → reauthorize
+    expect(_reauthCalls.length).toBe(1);
+    _refreshImpl = mintSame;
+    _onOpen?.(); // the reconnect that reauthorize caused
+    await flush();
     expect(_refreshCalls).toBe(1);
+    expect(_reauthCalls.length).toBe(1); // the reconcile's token replaced nothing
   });
 
-  it('refresh → new token → reauthorize → open stops there instead of refreshing again', async () => {
+  it('the first connect and a genuine reconnect each reconcile', async () => {
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1', tid: 'ws-1', aid: 'app-1', tv: 1, iat: 0 }) });
     startBridgeRuntime();
-    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1', iat: 1 }) });
+    _refreshImpl = mintSame;
     _onOpen?.();
+    await flush();
+    expect(_refreshCalls).toBe(1);
+    _onOpen?.();
+    await flush();
+    expect(_refreshCalls).toBe(2);
+    expect(_reauthCalls.length).toBe(0);
+  });
+
+  it('refresh → same authority → no reauthorize, so no reconnect to refresh again', async () => {
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1', tid: 'ws-1', aid: 'app-1', tv: 1, iat: 0 }) });
+    startBridgeRuntime();
+    _refreshImpl = mintSame;
+    for (let i = 0; i < 5; i++) {
+      _onOpen?.();
+      await flush();
+    }
+    // One refresh per open the TRANSPORT produced, and not one reconnect of
+    // our own making.
+    expect(_refreshCalls).toBe(5);
+    expect(_reauthCalls.length).toBe(0);
+  });
+
+  it('a new token with the same authority leaves the route guard alone', async () => {
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1', tid: 'ws-1', aid: 'app-1', tv: 1, iat: 0 }) });
+    startBridgeRuntime();
+    const reasons: string[] = [];
+    onBridgeAuthorizationChange((reason) => reasons.push(reason));
+    _refreshImpl = mintSame;
+    _onOpen?.();
+    await flush();
+    expect(_refreshCalls).toBe(1);
+    expect(reasons).toEqual([]);
+    expect(_invalidateCalls).toBe(0);
+  });
+
+  it('a claim that differs on every mint cannot turn into a reconnect loop', async () => {
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1', tid: 'ws-1', aid: 'app-1', tv: 1, nonce: 0 }) });
+    startBridgeRuntime();
+    let n = 0;
     _refreshImpl = () => {
-      const t = { accessToken: makeJwt({ sub: 'user-1', iat: 2 }) };
+      n += 1;
+      const t = { accessToken: makeJwt({ sub: 'user-1', tid: 'ws-1', aid: 'app-1', tv: 1, nonce: n }) };
       _tokenStore.set(t);
       return t;
     };
-    _onOpen?.(); // genuine reconnect → catch-up refresh → token change → reauthorize
-    await flush();
-    expect(_refreshCalls).toBe(1);
-    _onOpen?.(); // the reauthorize's reconnect
-    await flush();
-    expect(_refreshCalls).toBe(1);
+    for (let i = 0; i < 10; i++) {
+      _onOpen?.(); // every reauthorize "reconnects" at once
+      await flush();
+    }
+    expect(_reauthCalls.length).toBe(3); // MAX_RECONCILE_SWAPS, then it stops swapping
   });
 });
 
@@ -495,19 +565,25 @@ describe('refreshAuthToken is wired into the realtime client (TBP-644)', () => {
     await expect(refreshHook()()).resolves.toBeUndefined();
   });
 
-  it('the reconnect after a refreshAuthToken-driven token change does not refresh a second time', async () => {
+  it('the reconnect after a refreshAuthToken-driven token change reconciles once and stops', async () => {
     startBridgeRuntime();
     _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1', iat: 1 }) });
     _onOpen?.();
+    await flush();
+    let iat = 1;
     _refreshImpl = () => {
-      const t = { accessToken: makeJwt({ sub: 'user-1', iat: 2 }) };
+      iat += 1;
+      const t = { accessToken: makeJwt({ sub: 'user-1', iat }) };
       _tokenStore.set(t);
       return t;
     };
+    const refreshesBefore = _refreshCalls;
     await refreshHook()(); // realtime asked for it after a refusal
+    const reauthsBefore = _reauthCalls.length;
     _onOpen?.(); // reconnect with the refreshed token
     await flush();
-    expect(_refreshCalls).toBe(1);
+    expect(_refreshCalls).toBe(refreshesBefore + 2); // the hook's, then the reconcile's
+    expect(_reauthCalls.length).toBe(reauthsBefore); // …which changed nothing
   });
 
   it('an app-supplied refreshAuthToken override wins', () => {
@@ -546,12 +622,13 @@ describe('full realtime status reaches the public API (TBP-644)', () => {
     expect(get(realtimeStatusDetail)).toEqual(closing);
   });
 
-  it('a parked (unauthorized) client clears the self-induced flag so the next genuine reconnect refreshes', () => {
+  it('after a parked (unauthorized) episode, the next reconnect reconciles', async () => {
     startBridgeRuntime();
     _onOpen?.();
-    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1' }) }); // reauthorize → flag set
+    _tokenStore.set({ accessToken: makeJwt({ sub: 'user-1' }) }); // reauthorize
     _onStatusChange?.(unauthorized); // …but it was refused and parked
-    _onOpen?.(); // a later, genuine reconnect
+    _onOpen?.(); // a later reconnect
+    await flush();
     expect(_refreshCalls).toBe(1);
   });
 
@@ -758,7 +835,7 @@ describe('every connect catches up on state the socket swap may have lost (TBP-6
     }) as typeof fetch;
     const { applyCatchUpSnapshot } = await import('./snapshot-stores.js');
     vi.mocked(applyCatchUpSnapshot).mockReset();
-    vi.mocked(applyCatchUpSnapshot).mockReturnValue({ planChanged: false, entitlementsChanged: false });
+    vi.mocked(applyCatchUpSnapshot).mockReturnValue({ planChanged: false, entitlementsChanged: false, initial: false });
   });
 
   afterEach(async () => {
@@ -787,8 +864,9 @@ describe('every connect catches up on state the socket swap may have lost (TBP-6
     expect(reauthCall.url).toBe('http://test/session/init');
     expect(reauthCall.headers.authorization).toBe(`Bearer ${tokenB}`);
     expect(reauthCall.headers['x-app-id']).toBe('app-1');
-    // …without re-arming the self-induced token refresh loop (TBP-644).
-    expect(_refreshCalls).toBe(0);
+    // …without re-arming the TBP-644 loop: the only reauthorize is the one
+    // the test's own token change caused.
+    expect(_reauthCalls.length).toBe(1);
   });
 
   // TBP-686 — this used to assert the opposite: "the initial connect does not
@@ -809,14 +887,14 @@ describe('every connect catches up on state the socket swap may have lost (TBP-6
     expect(fetchCalls[0].headers.authorization).toBe(`Bearer ${tokenA}`);
   });
 
-  it('a genuine reconnect catches up too, alongside its token refresh', async () => {
+  it('a genuine reconnect catches up too, alongside its token reconcile', async () => {
     _tokenStore.set({ accessToken: tokenA });
     startBridgeRuntime();
-    _onOpen?.(); // initial connect — catches up (TBP-686)
-    _onOpen?.(); // a genuine reconnect — catches up and refreshes tokens
+    _onOpen?.(); // initial connect — catches up (TBP-686) and reconciles (TBP-700)
+    _onOpen?.(); // a genuine reconnect — the same, coalesced behind it
+    await vi.waitFor(() => expect(fetchCalls).toHaveLength(2));
     await flush();
-    expect(fetchCalls).toHaveLength(2);
-    expect(_refreshCalls).toBe(1);
+    expect(_refreshCalls).toBe(2);
   });
 
   it('a signed-out session has nothing to catch up on', async () => {
@@ -844,7 +922,9 @@ describe('every connect catches up on state the socket swap may have lost (TBP-6
 
   it('a recovered plan change re-runs the route guard, as the lost push would have (TBP-654)', async () => {
     const { applyCatchUpSnapshot } = await import('./snapshot-stores.js');
-    vi.mocked(applyCatchUpSnapshot).mockReturnValue({ planChanged: true, entitlementsChanged: false });
+    // Only one of the two catch-ups finds the change — the stores it moves
+    // are what the next one compares against.
+    vi.mocked(applyCatchUpSnapshot).mockReturnValueOnce({ planChanged: true, entitlementsChanged: false, initial: false });
     signedInThenReauthorized();
     const invalidatedBefore = _invalidateCalls; // the token change already invalidated once
     const reasons: string[] = [];
@@ -855,7 +935,7 @@ describe('every connect catches up on state the socket swap may have lost (TBP-6
 
   it('recovered entitlements reach auth-core\'s store and the route guard', async () => {
     const { applyCatchUpSnapshot } = await import('./snapshot-stores.js');
-    vi.mocked(applyCatchUpSnapshot).mockReturnValue({ planChanged: false, entitlementsChanged: true });
+    vi.mocked(applyCatchUpSnapshot).mockReturnValueOnce({ planChanged: false, entitlementsChanged: true, initial: false });
     signedInThenReauthorized();
     const reasons: string[] = [];
     onBridgeAuthorizationChange((reason) => reasons.push(reason));
@@ -1021,5 +1101,171 @@ describe('every connect catches up on state the socket swap may have lost (TBP-6
     const quotaCall = fetchCalls.find((c) => c.url.startsWith(QUOTA_URL))!;
     expect(quotaCall.url).toBe(`${QUOTA_URL}ai%2Fcompletions%20v2`);
     expect(_quotaApplied[0].metric).toBe(metric);
+  });
+});
+
+
+// ── TBP-700 — a user-state change published during a (re)connect ─────────────
+//
+// Regression, stage 2026-09-27: with bridge-svelte 0.9.0-beta.4 a role change
+// no longer reached a signed-in user live (4/4 runs; passed on 0.4.1). Since
+// TBP-686 (0.8.2) the first connect's catch-up counted filling the empty
+// stores as a plan change, which refreshed the token and swapped the socket.
+// The server published `user.state_changed` during that swap; AppSync has no
+// replay, so it was gone — and nothing recovered it: the reconnect our own
+// reauthorize() caused skipped the token refresh, and the catch-up only looked
+// at the plan and entitlements.
+//
+// The fake transport below delivers a publish only while the socket is live
+// and silently drops it otherwise, exactly like AppSync. The server is a tv
+// counter; a refresh mints a token carrying the current one.
+describe('a user-state change published during a (re)connect is never lost (TBP-700)', () => {
+  let serverTv: number;
+  let live: boolean;
+  let delivered: number;
+  let dropped: number;
+  let iat: number;
+
+  const tokenAt = (tv: number) => {
+    iat += 1;
+    return makeJwt({ sub: 'user-1', tid: 'ws-1', aid: 'app-1', role: tv > 1 ? 'OWNER' : 'ADMIN', tv, iat });
+  };
+  const currentTv = () => {
+    const at = get(_tokenStore)?.accessToken;
+    if (!at) return undefined;
+    return JSON.parse(atob(at.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).tv as number;
+  };
+  // The server's role change: bump tv, publish on the user channel.
+  const publishRoleChange = async () => {
+    serverTv += 1;
+    if (live) {
+      delivered += 1;
+      await _onUserState?.({ kind: 'user.state_changed', reason: 'role_changed', tokenVersion: serverTv } as never);
+    } else {
+      dropped += 1;
+    }
+  };
+  // The transport finishes (re)connecting: every channel subscribed.
+  const connected = () => {
+    live = true;
+    _onOpen?.();
+    _onSubscribed?.();
+  };
+  const settle = async () => {
+    await flush();
+    await new Promise((r) => setTimeout(r, 0));
+    await flush();
+  };
+
+  let realFetch: typeof fetch;
+  beforeEach(async () => {
+    serverTv = 1;
+    live = false;
+    delivered = 0;
+    dropped = 0;
+    iat = 0;
+    _refreshImpl = () => {
+      const t = { accessToken: tokenAt(serverTv) };
+      _tokenStore.set(t);
+      return t;
+    };
+    _onReauthorize = () => { live = false; }; // the old socket is closed first
+    realFetch = globalThis.fetch;
+    globalThis.fetch = (async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ tenant: { id: 'ws-1', entitlements: {} }, user: { id: 'user-1' } }),
+    })) as unknown as typeof fetch;
+    const { applyCatchUpSnapshot } = await import('./snapshot-stores.js');
+    vi.mocked(applyCatchUpSnapshot).mockReset();
+    vi.mocked(applyCatchUpSnapshot).mockReturnValue({ planChanged: false, entitlementsChanged: false, initial: false });
+  });
+  afterEach(async () => {
+    await stopBridgeRuntime();
+    globalThis.fetch = realFetch;
+  });
+
+  it('the stage sequence: first connect, then a role change right after it', async () => {
+    const { applyCatchUpSnapshot } = await import('./snapshot-stores.js');
+    // What a first connect's catch-up really reports: empty stores filled.
+    vi.mocked(applyCatchUpSnapshot).mockReturnValueOnce({ planChanged: true, entitlementsChanged: true, initial: true });
+    _tokenStore.set({ accessToken: tokenAt(1) });
+    startBridgeRuntime();
+    connected();
+    await settle(); // the post-connect catch-up has run
+    await publishRoleChange(); // the test flips ADMIN → OWNER
+    await settle();
+    if (!live) connected(); // a swap was under way: its replacement socket
+    await settle();
+    expect(currentTv()).toBe(2);
+  });
+
+  it('a role change published while our own reauthorize() is replacing the socket', async () => {
+    _tokenStore.set({ accessToken: tokenAt(1) });
+    startBridgeRuntime();
+    connected();
+    await settle();
+    // A token rotation — expiry refresh, sign-in, anything — reauthorizes…
+    _tokenStore.set({ accessToken: tokenAt(1) });
+    expect(live).toBe(false);
+    await publishRoleChange(); // …and the role change lands in the swap
+    expect(dropped).toBe(1);
+    connected(); // the replacement socket
+    await settle();
+    expect(currentTv()).toBe(2);
+  });
+
+  it('a role change published before the user channel is live — open fires on the first ack', async () => {
+    _fakeHasSubscribed = true;
+    _tokenStore.set({ accessToken: tokenAt(1) });
+    startBridgeRuntime();
+    _onOpen?.(); // the workspace channel acked first: 'open'
+    await settle();
+    await publishRoleChange(); // the user channel is not subscribed yet
+    expect(dropped).toBe(1);
+    live = true;
+    _onSubscribed?.(); // …and now it is
+    await settle();
+    expect(currentTv()).toBe(2);
+  });
+
+  it('with setOnSubscribed, the catch-up waits for every channel, not the first ack', async () => {
+    _fakeHasSubscribed = true;
+    _tokenStore.set({ accessToken: tokenAt(1) });
+    startBridgeRuntime();
+    _onOpen?.();
+    await settle();
+    expect(_refreshCalls).toBe(0);
+    _onSubscribed?.();
+    await settle();
+    expect(_refreshCalls).toBe(1);
+  });
+
+  it('a recovered change re-authorizes once, and the reconnect it causes finds nothing new', async () => {
+    _tokenStore.set({ accessToken: tokenAt(1) });
+    startBridgeRuntime();
+    connected();
+    await settle();
+    _tokenStore.set({ accessToken: tokenAt(1) }); // swap
+    await publishRoleChange(); // lost
+    const reauthsBefore = _reauthCalls.length;
+    connected();
+    await settle();
+    expect(currentTv()).toBe(2);
+    expect(_reauthCalls.length).toBe(reauthsBefore + 1); // the new role gets its socket
+    connected();
+    await settle();
+    expect(_reauthCalls.length).toBe(reauthsBefore + 1); // …and that is the end of it
+  });
+
+  it('a change delivered live still takes effect exactly as before', async () => {
+    _tokenStore.set({ accessToken: tokenAt(1) });
+    startBridgeRuntime();
+    connected();
+    await settle();
+    await publishRoleChange();
+    expect(delivered).toBe(1);
+    await settle();
+    expect(currentTv()).toBe(2);
   });
 });

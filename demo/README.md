@@ -1,38 +1,5 @@
-# sv
+# bridge-svelte demo
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+The reference integration: `src/routes` holds exactly what the guides tell a SvelteKit app to write, and nothing more. See the repo README, "Demo Application", for the file list and how to run it.
 
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
-
-```bash
-# create a new project in bridge current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
-npm run dev
-
-# or start bridge server and open bridge app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview bridge production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+Everything under `src/routes/(test-fixtures)` and `src/lib/test-fixtures` exists for the e2e suite and is not part of the integration.

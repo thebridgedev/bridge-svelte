@@ -49,6 +49,7 @@
       items: [
         { href: '/subscription', label: 'Subscription' },
         { href: '/usage-quota', label: 'Usage & quotas' },
+        { href: '/plan-limits', label: 'Plan limits' },
         { href: '/usage-probe', label: 'Usage probe' },
         { href: '/billing-lifecycle', label: 'Billing Lifecycle' },
         { href: '/paywall', label: 'Paywall' },

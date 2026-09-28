@@ -13,6 +13,14 @@ import type { NavigationDecision, RouteGuardConfig, RouteRule } from '@nebulr-gr
 // Re-export types from auth-core
 export type { FlagRequirement, NavigationDecision, RouteGuard, RouteGuardConfig, RouteRule } from '@nebulr-group/bridge-auth-core';
 
+/** TBP-756 — a route restriction and, for a feature flag, why. */
+export interface Restriction {
+  to: string;
+  reason?: 'plan' | 'permission' | 'off' | 'rule' | 'rollout';
+  flag?: string;
+  feature?: string;
+}
+
 // How many times a restriction check is re-run when the cache was invalidated
 // underneath it (TBP-654). Bounded so a burst of invalidations cannot spin.
 const MAX_FRESH_READS = 3;
@@ -45,15 +53,25 @@ export function createRouteGuard(flagsReady?: Promise<void>) {
   // plan / entitlements / user-state change started: the page shows the new
   // plan a few hundred ms before the token carrying it lands, and a verdict
   // taken in between would be evaluated with the old one.
-  async function checkRestrictionsFresh(pathname: string, deadline: number): Promise<string | null> {
+  async function checkRestrictionsFresh(pathname: string, deadline: number): Promise<Restriction | null> {
     for (let attempt = 1; ; attempt++) {
       await settleAuthorizationChange(deadline);
       const generation = guardCacheGeneration();
-      const redirectTo = await guard.checkRouteRestrictions(pathname);
-      if (generation === guardCacheGeneration()) return redirectTo;
+      const restriction = await readRestriction(pathname);
+      if (generation === guardCacheGeneration()) return restriction;
       dropFlagCache();
-      if (attempt >= MAX_FRESH_READS) return redirectTo;
+      if (attempt >= MAX_FRESH_READS) return restriction;
     }
+  }
+
+  // TBP-756 — the restriction with its reason, from an auth-core that reports
+  // one; an older auth-core gives the bare redirect target.
+  async function readRestriction(pathname: string): Promise<Restriction | null> {
+    const withReason = (guard as { checkRouteRestriction?: (p: string) => Promise<Restriction | null> })
+      .checkRouteRestriction;
+    if (typeof withReason === 'function') return withReason.call(guard, pathname);
+    const to = await guard.checkRouteRestrictions(pathname);
+    return to ? { to } : null;
   }
 
   function loginDecision(pathname: string, attempted?: string): NavigationDecision {
@@ -116,7 +134,7 @@ export function createRouteGuard(flagsReady?: Promise<void>) {
     async checkRouteRestrictions(pathname: string): Promise<string | null> {
       const deadline = Date.now() + AUTHORIZATION_CHANGE_WAIT_MS;
       await flagsReady;
-      return checkRestrictionsFresh(pathname, deadline);
+      return (await checkRestrictionsFresh(pathname, deadline))?.to ?? null;
     },
     async getNavigationDecision(pathname: string, attempted?: string): Promise<NavigationDecision> {
       // TBP-654 — one bound for the whole decision, however many reads it takes.
@@ -133,9 +151,11 @@ export function createRouteGuard(flagsReady?: Promise<void>) {
           return loginDecision(pathname, attempted);
         }
         await flagsReady;
-        const redirectTo = await checkRestrictionsFresh(pathname, deadline);
-        if (redirectTo) {
-          return { type: 'redirect', to: redirectTo };
+        const restriction = await checkRestrictionsFresh(pathname, deadline);
+        if (restriction) {
+          // TBP-756 — `reason: 'plan'` rides along so the adapter opens the
+          // upgrade dialog; everything else is the plain redirect it was.
+          return { type: 'redirect', ...restriction };
         }
         return { type: 'allow' };
       } catch (err) {

@@ -11,6 +11,11 @@
   and receives the same props.
 
   Decoration only: the backend already refused the write. This explains why.
+
+  TBP-756 — with no refusal and a `feature` set, it opens in its feature
+  variant ("This feature isn't on your plan", naming the plans that include
+  it). BridgeBootstrap sets `feature` only after the person did something
+  gated; a page that merely renders a hidden feature never opens it.
 -->
 <script lang="ts">
   import type { BridgeUpgradeDialogProps } from '../../../shared/types/config.js';
@@ -21,10 +26,16 @@
 
   let dialogEl: HTMLDialogElement | undefined = $state();
 
+  // TBP-756 — the feature variant: no plan-limit refusal, but a feature the
+  // plan does not include (a plan-gated route, a <FeatureFlag> upgrade click,
+  // a backend's 402 FEATURE_NOT_IN_PLAN).
+  const featureVariant = $derived(!refusal && feature != null);
+  const isOpen = $derived(!!refusal || featureVariant);
+
   $effect(() => {
     if (!dialogEl) return;
-    if (refusal && !dialogEl.open) dialogEl.showModal();
-    else if (!refusal && dialogEl.open) dialogEl.close();
+    if (isOpen && !dialogEl.open) dialogEl.showModal();
+    else if (!isOpen && dialogEl.open) dialogEl.close();
   });
 
   const hasNumbers = $derived(refusal?.used != null && refusal?.limit != null);
@@ -37,12 +48,40 @@
   class="bridge-team-dialog bridge-upgrade-dialog"
   data-bridge-upgrade-dialog
   data-metric={refusal?.metric}
+  data-variant={featureVariant ? 'feature' : refusal ? 'limit' : undefined}
+  data-feature={featureVariant ? feature : undefined}
   aria-labelledby="bridge-upgrade-dialog-title"
   onclose={() => {
-    if (refusal) onclose();
+    if (isOpen) onclose();
   }}
 >
-  {#if refusal}
+  {#if featureVariant}
+    <div class="bridge-team-dialog-content">
+      <h3 id="bridge-upgrade-dialog-title" class="bridge-team-dialog-title">This feature isn't on your plan</h3>
+      <p class="bridge-team-dialog-message" data-bridge-upgrade-dialog-message data-variant={canUpgrade ? 'admin' : 'member'}>
+        {#if canUpgrade}
+          Upgrade the plan to use it.
+        {:else}
+          Ask the workspace owner to upgrade the plan to use it.
+        {/if}
+      </p>
+      {#if includedIn.length > 0}
+        <p class="bridge-team-dialog-message" data-bridge-upgrade-dialog-included-in>
+          Included in: {includedIn.join(', ')}
+        </p>
+      {/if}
+      <div class="bridge-team-dialog-actions">
+        {#if canUpgrade}
+          <button type="button" class="bridge-btn bridge-btn-secondary" onclick={() => onclose()}>Not now</button>
+          <a class="bridge-btn bridge-btn-primary" href={upgradeHref} data-bridge-upgrade-dialog-cta onclick={() => onclose()}>
+            Upgrade plan
+          </a>
+        {:else}
+          <button type="button" class="bridge-btn bridge-btn-primary" onclick={() => onclose()}>OK</button>
+        {/if}
+      </div>
+    </div>
+  {:else if refusal}
     <div class="bridge-team-dialog-content">
       <h3 id="bridge-upgrade-dialog-title" class="bridge-team-dialog-title">You've reached your plan's limit</h3>
       <p class="bridge-team-dialog-message" data-bridge-upgrade-dialog-message data-variant={canUpgrade ? 'admin' : 'member'}>

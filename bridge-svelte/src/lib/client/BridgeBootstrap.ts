@@ -1,6 +1,7 @@
 // src/lib/bridge/bootstrap.ts
 
 import { error, redirect, isRedirect } from '@sveltejs/kit';
+import { openFeatureUpgrade } from '../core/feature-upgrade.js';
 import { get } from 'svelte/store';
 import type { RouteGuardConfig } from '../auth/route-guard.js';
 import { createRouteGuard } from '../auth/route-guard.js';
@@ -540,7 +541,23 @@ async function enforceRouteGuard(url: URL, flagsReady: Promise<void>): Promise<v
     stashReturnTo(decision.returnTo);
     redirect(303, bridge.createLoginUrl());
   }
-  if (decision.type === 'redirect' && url.pathname !== decision.to) {
-    redirect(303, decision.to);
+  if (decision.type === 'redirect') {
+    upgradeForPlanDecision(url, decision as { reason?: string; flag?: string; feature?: string });
+    if (url.pathname !== decision.to) redirect(303, decision.to);
   }
+}
+
+/**
+ * TBP-756 — a route whose feature flag is off because of the plan opens the
+ * upgrade dialog (the owner case "reaching a gated page"). On a client-side
+ * navigation the visitor stays on the page they came from (the browser still
+ * shows it while the target loads); on a first load there is no such page, so
+ * they go to the rule's `redirectTo` first and the dialog opens there.
+ * Server-side there is no dialog to open: the plain redirect stands.
+ */
+function upgradeForPlanDecision(url: URL, decision: { reason?: string; flag?: string; feature?: string }): void {
+  if (decision.reason !== 'plan' || typeof window === 'undefined') return;
+  openFeatureUpgrade({ flag: decision.flag, feature: decision.feature });
+  const here = window.location;
+  if (here.pathname !== url.pathname) redirect(303, `${here.pathname}${here.search}`);
 }

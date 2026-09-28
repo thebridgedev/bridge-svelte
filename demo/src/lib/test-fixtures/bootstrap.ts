@@ -31,7 +31,9 @@ const FIXTURE_RULES: NonNullable<BridgeBootstrapOptions['rules']> = [
 	{ match: '/discovery-probe', public: true },
 	{ match: '/attr-probe', public: true },
 	// TBP-698 — customisation level 4: the app's own sign-in form.
-	{ match: '/headless', public: true }
+	{ match: '/headless', public: true },
+	// TBP-756 — a route gated on a flag that is off because of the plan.
+	{ match: '/feature-upgrade/gated', featureFlag: 'e2e-plan-gated', redirectTo: '/feature-upgrade' }
 ];
 
 export function withTestFixtures(options: BridgeBootstrapOptions): BridgeBootstrapOptions {

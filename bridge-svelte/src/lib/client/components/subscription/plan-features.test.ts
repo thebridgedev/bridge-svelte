@@ -109,12 +109,24 @@ describe('the upgrade dialog names the plans that include a missing feature — 
     }
   });
 
-  it('never renders the dialog body without a refusal — naming a feature does not open it', () => {
+  it('with neither a refusal nor a feature, nothing renders', () => {
+    const html = render(BridgeUpgradeDialog, {
+      refusal: null, upgradeHref: '/subscription', canUpgrade: true, onclose: () => {}, feature: null, plans: PLANS,
+    });
+    expect(html).not.toContain('Included in');
+    expect(html).not.toContain('data-bridge-upgrade-dialog-message');
+  });
+
+  // TBP-756 — a feature with no refusal is the dialog's feature variant.
+  // BridgeBootstrap sets `feature` only after the person did something gated
+  // (owner rule: nothing opens by itself), so the dialog renders it.
+  it('a feature with no refusal renders the feature variant, naming the plans', () => {
     const html = render(BridgeUpgradeDialog, {
       refusal: null, upgradeHref: '/subscription', canUpgrade: true, onclose: () => {}, feature: 'analytics', plans: PLANS,
     });
-    expect(html).not.toContain('Included in');
-    expect(html).not.toMatch(/<dialog[^>]*\sopen/);
+    expect(html).toContain('data-variant="feature"');
+    expect(html).toContain("This feature isn't on your plan");
+    expect(html).toContain('Included in: Pro, Team');
   });
 
   it('plansIncludingFeature tolerates a missing plan list', () => {

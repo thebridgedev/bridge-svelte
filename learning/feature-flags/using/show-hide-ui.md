@@ -22,6 +22,41 @@ The most common thing to do with a flag is decide whether a piece of UI renders 
 </FeatureFlag>
 ```
 
+## Why it's off, and selling the upgrade
+
+The `fallback` snippet's second argument says why the feature is off:
+
+| `reason` | Means |
+|---|---|
+| `'plan'` | The workspace's plan doesn't include it: an upgrade alone would turn it on. `feature` names the plan feature the rule asks for. |
+| `'permission'` | This person's role or privileges keep it off. |
+| `'off'` | The flag is switched off for everyone. |
+| `'rule'` / `'rollout'` | Another condition, or outside the rollout. |
+| `undefined` | Bridge hasn't said (the flag isn't loaded yet). |
+
+`openUpgrade()` opens the upgrade dialog for this feature, naming the plans that include it:
+
+```svelte
+<FeatureFlag key="reports" defaultValue={false}>
+  {#snippet children()}<Reports />{/snippet}
+  {#snippet fallback(_value, { reason, openUpgrade })}
+    {#if reason === 'plan'}
+      <button onclick={openUpgrade}>Reports are on Pro. See plans</button>
+    {:else if reason === 'permission'}
+      <p>Ask a workspace admin for access to reports.</p>
+    {/if}
+  {/snippet}
+</FeatureFlag>
+```
+
+Nothing opens by itself: a hidden feature with no fallback renders nothing and opens no dialog. For a ready-made prompt, add the one word `upgrade`. When the feature is off because of the plan, it renders an "Upgrade to use this" button in its place, and the dialog opens when the button is clicked:
+
+```svelte
+<FeatureFlag key="reports" defaultValue={false} upgrade>
+  <Reports />
+</FeatureFlag>
+```
+
 ## Sending context
 
 `<FeatureFlag>` takes the same per-call eval context (the identity and attributes a flag rule evaluates against) as `useFlag`'s third argument. Use it when the rule targets an app-specific attribute Bridge doesn't already know (see [Send context from your code](/feature-flags/targeting/send-context/)):
@@ -45,5 +80,6 @@ Since `context` is a plain prop, it's reactive for free: Svelte re-evaluates the
 | `key` | `string` | **(required)** | The flag key |
 | `defaultValue` | `T` | **(required)** | Safe value; also sets the flag's inferred type |
 | `context` | `Partial<EvalContext>` | (none) | Per-call eval context (attributes win on collision) |
+| `upgrade` | `boolean` | `false` | With no `fallback`: show an "Upgrade to use this" button when the plan is the reason |
 | `children` | snippet | (none) | Rendered when the flag passes; receives the value |
-| `fallback` | snippet | (none) | Rendered when it doesn't; receives the value |
+| `fallback` | snippet | (none) | Rendered when it doesn't; receives the value and `{ reason, feature, openUpgrade }` |

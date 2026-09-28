@@ -190,9 +190,12 @@ Pick the lowest level that does the job. Each is optional; level 0 is on without
 - Your app authenticates its own API calls with `bridgeFetch` anyway: a plain `fetch` sends no user token, so a protected backend answers `401`, never `402`. The limit handling still needs no code — the dialog opens from any `402 QUOTA_EXCEEDED` the wrapper sees. The dialog also catches a refusal from Bridge's own API; a backend on another origin called with plain `fetch` is listed in `billing.apiOrigins`. `billing: { upgradeDialog: false }` turns it off, `billing: { upgradeDialog: MyDialog }` replaces it.
 - Do not write a quota `if`, a "limit reached" toast or a `/quota` endpoint of your own: level 0 already covers the refusal, and the frontend reads quota directly from Bridge.
 
-## 5. Usage reported from the browser trusts the client
+## 5. Count usage once, where the action happens
 
-An app with no backend that sees the action — local-first, mobile, data on the device — can report usage from the frontend:
+Ask one question: **does the click call your server?**
+
+- **Yes** — the backend handler that does the work counts it (bridge-nestjs `@RequireQuota` / `@SyncQuota`). The page only shows the number and the upgrade dialog; it does not report anything.
+- **No** — the action happens in the browser (a local-first or mobile app, data on the device), so the browser counts it. This is a first-class way to use Bridge:
 
 ```ts
 import { bridge } from '@nebulr-group/bridge-svelte';
@@ -201,7 +204,9 @@ bridge.usage.report('exports');                        // a counter: it happened
 await bridge.usage.set('projects', projects.length);   // a gauge: how many exist now
 ```
 
-This is **self-reported, trusted-client usage**. Anything in a browser can send any number, so **a frontend alone cannot enforce a limit**: Bridge shows and bills what the client reports, and the client can lie. When the app has a backend, report and enforce there (section 2). Use the browser path only when there is no server to do it.
+Counting from the browser trusts the browser: Bridge shows and bills what the page reports, and only a backend can refuse a write.
+
+Never both: counting the same action on each side counts it twice. In development the plugin warns once in the console when your backend and the page count the same metric (bridge-nestjs marks a counting response with `X-Bridge-Usage-Counted` outside production; nothing is sent or printed in production).
 
 ## 6. Four levels of customising Bridge's pages
 

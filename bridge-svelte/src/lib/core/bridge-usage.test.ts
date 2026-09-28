@@ -24,7 +24,8 @@ vi.mock('./bridge-instance.js', async () => {
 });
 
 import { bridge } from './bridge.js';
-import { bridgeFetch } from './bridge-fetch.js';
+import { bridgeFetch, wrapFetchWithBridgeAuth } from './bridge-fetch.js';
+import { __resetDoubleCountWarning } from './double-count-warning.js';
 
 const API = 'https://api.example.test';
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -143,5 +144,86 @@ describe('bridgeFetch — TBP-697', () => {
   it('before Bridge is initialised it is plain fetch', async () => {
     await bridgeFetch('/api/x', { method: 'GET' });
     expect(fetchMock).toHaveBeenCalledWith('/api/x', { method: 'GET' });
+  });
+});
+
+// TBP-697 — in development the plugin warns when the browser and the backend
+// both count the same metric. The backend side is the real header
+// bridge-nestjs sends outside production; the browser side is the real
+// `bridge.usage` surface.
+describe('double-count warning (dev only) — TBP-697', () => {
+  const counted = (metrics: string) =>
+    new Response('{}', { status: 201, headers: { 'content-type': 'application/json', 'X-Bridge-Usage-Counted': metrics } });
+  let warn: ReturnType<typeof vi.spyOn>;
+  const doubleCountWarnings = () =>
+    warn.mock.calls.filter((c: unknown[]) => String(c[0]).includes('counted twice'));
+
+  beforeEach(() => {
+    __resetDoubleCountWarning();
+    warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    holder.auth = realAuth('user-tok');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('backend counted `tickets` (bridgeFetch) and the page reports it too → one warning naming the metric', async () => {
+    fetchMock.mockResolvedValueOnce(counted('tickets'));
+    await bridgeFetch('/api/tickets', { method: 'POST' });
+    expect(doubleCountWarnings()).toHaveLength(0);
+
+    bridge.usage.report('tickets');
+    expect(doubleCountWarnings()).toHaveLength(1);
+    expect(doubleCountWarnings()[0][0]).toContain("'tickets'");
+
+    // Once per metric: a second round does not repeat it.
+    fetchMock.mockResolvedValueOnce(counted('tickets'));
+    await bridgeFetch('/api/tickets', { method: 'POST' });
+    bridge.usage.report('tickets');
+    expect(doubleCountWarnings()).toHaveLength(1);
+  });
+
+  it('either order: the page reports first (set), then the backend says it counts it', async () => {
+    // Whether or not the installed auth-core stores gauges, the call is the
+    // page counting `projects`.
+    await bridge.usage.set('projects', 3).catch(() => {});
+    expect(doubleCountWarnings()).toHaveLength(0);
+    fetchMock.mockResolvedValueOnce(counted('exports, projects'));
+    await bridgeFetch('/api/projects', { method: 'POST' });
+    expect(doubleCountWarnings()).toHaveLength(1);
+    expect(doubleCountWarnings()[0][0]).toContain("'projects'");
+  });
+
+  it('a plain fetch to the app backend (the installed fetch wrapper) is noticed too, and a 402 refusal counts', async () => {
+    const base = vi.fn(async () =>
+      new Response('{}', { status: 402, headers: { 'X-Bridge-Usage-Counted': 'tickets' } }),
+    );
+    const wrapped = wrapFetchWithBridgeAuth(base as unknown as typeof fetch, API);
+    await wrapped('https://app.example.test/api/tickets', { method: 'POST' });
+    bridge.usage.report('tickets');
+    expect(doubleCountWarnings()).toHaveLength(1);
+  });
+
+  it('different metrics on each side → no warning', async () => {
+    fetchMock.mockResolvedValueOnce(counted('tickets'));
+    await bridgeFetch('/api/tickets', { method: 'POST' });
+    bridge.usage.report('ai_completions');
+    expect(doubleCountWarnings()).toHaveLength(0);
+  });
+
+  it('browser-only counting (no header from any backend) is first-class → no warning', async () => {
+    fetchMock.mockResolvedValueOnce(ok());
+    await bridgeFetch('/api/drafts', { method: 'POST' });
+    bridge.usage.report('drafts');
+    expect(doubleCountWarnings()).toHaveLength(0);
+  });
+
+  it('production build: silent, even when both sides count the same metric', async () => {
+    vi.stubEnv('DEV', false);
+    fetchMock.mockResolvedValueOnce(counted('tickets'));
+    await bridgeFetch('/api/tickets', { method: 'POST' });
+    bridge.usage.report('tickets');
+    expect(doubleCountWarnings()).toHaveLength(0);
   });
 });

@@ -4,7 +4,7 @@
 
 import type { Component } from 'svelte';
 import type { BridgeQuotaRefusal } from '../core/quota-refusal.js';
-import type { BridgeConfig, BridgeUpgradeDialogProps } from '../shared/types/config.js';
+import type { BridgeConfig, BridgeUpgradeDialogProps, PlanWithFeatures } from '../shared/types/config.js';
 import { resolveBillingRoutes } from './billing-routes.js';
 
 /**
@@ -32,4 +32,25 @@ export function upgradeHrefFor(
   billing: BridgeConfig['billing'] | undefined,
 ): string {
   return refusal?.fix ?? resolveBillingRoutes(billing).manageRoute;
+}
+
+/**
+ * TBP-755 — the names of the plans that include `feature`, cheapest first (the
+ * plan picker's order). Empty when there is no feature, no plan list, or no
+ * plan lists it. The upgrade dialog and the pricing table read the same list:
+ * each plan's `features`.
+ */
+export function plansIncludingFeature(
+  plans: ReadonlyArray<PlanWithFeatures> | null | undefined,
+  feature: string | null | undefined,
+): string[] {
+  if (!feature || !plans) return [];
+  const cheapest = (p: PlanWithFeatures): number => {
+    const amounts = (p.prices ?? []).map((price) => price.amount);
+    return amounts.length > 0 ? Math.min(...amounts) : Number.POSITIVE_INFINITY;
+  };
+  return plans
+    .filter((p) => (p.features ?? []).some((f) => f.key === feature))
+    .sort((a, b) => cheapest(a) - cheapest(b))
+    .map((p) => p.name);
 }

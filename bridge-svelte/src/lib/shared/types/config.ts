@@ -79,4 +79,20 @@ export interface BridgeUpgradeDialogProps {
   canUpgrade: boolean;
   /** Close the dialog. */
   onclose: () => void;
+  /** TBP-755 — the plan feature the user is missing, by key. When set and
+   *  `plans` lists plans that include it, the dialog names those plans.
+   *  Nothing sets it by default; it never opens the dialog by itself. */
+  feature?: string | null;
+  /** TBP-755 — the app's plans (the plan picker's feed), each with the
+   *  features it includes. Used only to name the plans that include `feature`. */
+  plans?: ReadonlyArray<PlanWithFeatures> | null;
+}
+
+/** TBP-755 — a plan as the plan list returns it, with the features it
+ *  includes. Structural so it holds whichever auth-core release is installed. */
+export interface PlanWithFeatures {
+  key: string;
+  name: string;
+  prices?: ReadonlyArray<{ amount: number }>;
+  features?: ReadonlyArray<{ key: string; name: string }>;
 }

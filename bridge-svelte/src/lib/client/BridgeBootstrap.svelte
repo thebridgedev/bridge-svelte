@@ -283,7 +283,7 @@
 <RealtimeDevBadge enabled={devBadgeEnabled} />
 
 {#if UpgradeDialog}
-  <UpgradeDialog refusal={$quotaRefusal} {upgradeHref} {canUpgrade} onclose={dismissQuotaRefusal} />
+  <UpgradeDialog refusal={$quotaRefusal} {upgradeHref} {canUpgrade} onclose={dismissQuotaRefusal} plans={$subscriptionStore.plans} />
 {/if}
 
 {#if runtimeAttached && $bridgeReadyStore}

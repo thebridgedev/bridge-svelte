@@ -15,8 +15,9 @@
 <script lang="ts">
   import type { BridgeUpgradeDialogProps } from '../../../shared/types/config.js';
   import { quotaMemberBody } from '../../billing-role.js';
+  import { plansIncludingFeature } from '../../upgrade-dialog.js';
 
-  let { refusal, upgradeHref, canUpgrade, onclose }: BridgeUpgradeDialogProps = $props();
+  let { refusal, upgradeHref, canUpgrade, onclose, feature = null, plans = null }: BridgeUpgradeDialogProps = $props();
 
   let dialogEl: HTMLDialogElement | undefined = $state();
 
@@ -27,6 +28,8 @@
   });
 
   const hasNumbers = $derived(refusal?.used != null && refusal?.limit != null);
+  // TBP-755 — the plans that include the missing feature, from the plan list.
+  const includedIn = $derived(plansIncludingFeature(plans, feature));
 </script>
 
 <dialog
@@ -54,6 +57,11 @@
         {/if}
         {#if canUpgrade}Upgrade the plan to keep going.{/if}
       </p>
+      {#if includedIn.length > 0}
+        <p class="bridge-team-dialog-message" data-bridge-upgrade-dialog-included-in>
+          Included in: {includedIn.join(', ')}
+        </p>
+      {/if}
       <div class="bridge-team-dialog-actions">
         {#if canUpgrade}
           <button type="button" class="bridge-btn bridge-btn-secondary" onclick={() => onclose()}>Not now</button>

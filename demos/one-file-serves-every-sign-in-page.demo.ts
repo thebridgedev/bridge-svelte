@@ -31,7 +31,7 @@ import type { Page } from '@playwright/test';
 
 const STAGE = 'https://api-stage.thebridge.dev';
 const API_DIR = process.env.DEMO_BRIDGE_API_DIR ?? '/Users/imanpouya/code/nebulr/thebridge-platform/bridge-api';
-const SVELTE_VERSION = process.env.DEMO_SVELTE_VERSION ?? '0.9.0-beta.1';
+const SVELTE_VERSION = process.env.DEMO_SVELTE_VERSION ?? '0.9.0-beta.6';
 const DOMAIN = 'demo-one-auth-file';
 const PORT = 5291;
 const LOCAL = `http://localhost:${PORT}`;

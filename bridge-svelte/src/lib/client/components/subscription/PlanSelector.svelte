@@ -126,6 +126,12 @@
     [...(plans ?? [])].sort((a, b) => minAmount(a) - minAmount(b)),
   );
 
+  // TBP-755 — the features the plan includes; the same list the upgrade dialog
+  // reads. Structural: an older auth-core `Plan` type has no `features`.
+  function planFeatures(plan: Plan): ReadonlyArray<{ key: string; name: string }> {
+    return (plan as Plan & { features?: ReadonlyArray<{ key: string; name: string }> }).features ?? [];
+  }
+
   function minAmount(plan: Plan): number {
     const amounts = (plan.prices ?? []).map((p) => p.amount);
     return amounts.length > 0 ? Math.min(...amounts) : Number.POSITIVE_INFINITY;
@@ -349,6 +355,14 @@
                 {@render planDescription({ plan, isCurrent })}
               {:else if plan.description}
                 <p class="bridge-plan-description">{plan.description}</p>
+              {/if}
+
+              {#if planFeatures(plan).length > 0}
+                <ul class="bridge-plan-features" data-bridge-plan-features aria-label={`Included in ${plan.name}`}>
+                  {#each planFeatures(plan) as feature (feature.key)}
+                    <li class="bridge-plan-feature" data-feature={feature.key}>{feature.name}</li>
+                  {/each}
+                </ul>
               {/if}
 
               <div class="bridge-plan-prices">

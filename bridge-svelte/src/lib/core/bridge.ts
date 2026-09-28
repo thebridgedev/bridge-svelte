@@ -28,6 +28,7 @@ import {
   type UserSnapshot,
 } from './snapshot-stores.js';
 import { LazySlice } from './lazy-slice.js';
+import { noteBrowserCount } from './double-count-warning.js';
 import type { BridgeAuth, CurrentUser, Plan, SubscriptionStatus } from '@nebulr-group/bridge-auth-core';
 import { DevAttributeProvider } from '@nebulr-group/bridge-auth-core';
 import { getBridgeAuth, tokenStore, subscriptionStore, loadSubscription } from './bridge-instance.js';
@@ -70,12 +71,13 @@ export interface BridgeTenantSurface {
 /**
  * TBP-697 — usage reporting from the browser.
  *
- * **Self-reported: this is a trusted-client path.** Anything running in the
- * user's browser can call it with any value, so a frontend-only app cannot
- * *enforce* a quota with it — only a backend can refuse a write. Use it when the
- * app has no backend that sees the action: a local-first or mobile app whose
- * data lives on the device. When you do have a backend, report there instead
- * (bridge-nestjs `@RequireQuota`, `usage.report` on the server SDK).
+ * Count once, where the action happens. When the action stays in the browser
+ * (a local-first or mobile app, data on the device) count it here — a
+ * first-class setup that trusts the browser: Bridge shows and bills what the
+ * page reports, and only a backend can refuse a write. When the click calls
+ * your server, the backend handler counts it (bridge-nestjs `@RequireQuota`)
+ * and the page reports nothing. In development the console warns once when a
+ * metric is counted on both sides.
  *
  * Which call: *if deleting it frees room, it's a gauge and your app counts it
  * (`set`); if it happened, it's a counter and Bridge counts it (`report`).*
@@ -261,9 +263,11 @@ const _subscriptionSurface: Readable<SubscriptionSnapshot | null> = {
 // BridgeAuth instance does not exist until bootstrap, and SSR imports this module.
 const _usage: BridgeUsageSurface = {
   report(metric, value, idempotencyKey) {
+    noteBrowserCount(metric); // TBP-697 — dev warning when the backend counts it too
     getBridgeAuth().usage.report(metric, value, idempotencyKey);
   },
   async set(metric, value) {
+    noteBrowserCount(metric);
     const usage = getBridgeAuth().usage as Partial<BridgeAuth['usage']>;
     // Peer range still admits auth-core 0.7.x, which has no gauges. Say so
     // instead of "set is not a function".

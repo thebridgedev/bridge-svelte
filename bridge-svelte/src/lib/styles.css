@@ -1177,6 +1177,16 @@
   font-size: 0.875rem;
 }
 
+/* TBP-755 — the features a plan includes. */
+.bridge-plan-features {
+  margin: 0;
+  padding-left: 1.125rem;
+  font-size: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
 .bridge-plan-prices {
   display: flex;
   flex-direction: column;

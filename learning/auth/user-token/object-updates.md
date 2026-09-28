@@ -14,18 +14,23 @@ Once `bridgeBootstrap()` connects, your app is subscribed to a live channel (a p
 ```svelte
 <script lang="ts">
   import { bridge } from '@nebulr-group/bridge-svelte';
+  import { useFlag } from '@nebulr-group/bridge-svelte/flags';
 
   const user = bridge.user;
+  // Flag rule: privileges contains "USER_MANAGE"
+  const adminPanel = useFlag('admin_panel', false);
 </script>
 
-{#if $user?.role === 'ADMIN'}
+<p>Signed in as {$user?.role}</p>
+
+{#if adminPanel.value}
   <AdminPanel />
 {:else}
   <p>You don't have access to this area.</p>
 {/if}
 ```
 
-If an admin changes this user's role from `MEMBER` to `ADMIN` in Control Center (your admin dashboard at app.thebridge.dev), `$user.role` updates on its own and `<AdminPanel />` appears without a refresh, because the template is driven by the reactive `$user` store rather than a value read once on mount. Structure your gated UI this way (branch on the live store, not a snapshot you captured earlier) and it stays correct automatically.
+If an admin changes this user's role from `MEMBER` to `ADMIN` in Control Center (your admin dashboard at app.thebridge.dev), `$user.role` updates on its own and, when the new role grants `USER_MANAGE`, `<AdminPanel />` appears without a refresh, because the template is driven by reactive stores rather than a value read once on mount. Structure your gated UI this way (branch on the live store, not a snapshot you captured earlier) and it stays correct automatically.
 
 ## Reacting to the exact moment something changes
 

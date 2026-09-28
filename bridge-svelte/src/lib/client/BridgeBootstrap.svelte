@@ -26,6 +26,7 @@
   import RealtimeDevBadge from './components/developer/RealtimeDevBadge.svelte';
   import BridgeUpgradeDialog from './components/subscription/BridgeUpgradeDialog.svelte';
   import { dismissQuotaRefusal, quotaRefusal } from '../core/quota-refusal.js';
+  import { dismissFeatureUpgrade, featureUpgrade, openFeatureUpgrade } from '../core/feature-upgrade.js';
   import { resolveUpgradeDialog, upgradeHrefFor } from './upgrade-dialog.js';
   import { isBillingAdmin } from './billing-role.js';
 
@@ -54,9 +55,26 @@
   })();
   const upgradeDialog = resolveUpgradeDialog(billingConfig);
   const UpgradeDialog = upgradeDialog === 'default' ? BridgeUpgradeDialog : upgradeDialog;
-  const upgradeHref = $derived(upgradeHrefFor($quotaRefusal, billingConfig));
+  // TBP-756 — the same dialog in its feature variant: a plan-gated route, a
+  // <FeatureFlag> upgrade click, or a backend's 402 FEATURE_NOT_IN_PLAN. A plan
+  // limit refusal wins when both are pending.
+  const upgradeHref = $derived(upgradeHrefFor($quotaRefusal ?? $featureUpgrade, billingConfig));
   // Re-read for every refusal: the same owner rule as <BridgeQuotaBanner>.
-  const canUpgrade = $derived($quotaRefusal ? isBillingAdmin() : false);
+  const canUpgrade = $derived($quotaRefusal || $featureUpgrade ? isBillingAdmin() : false);
+  const upgradeFeature = $derived(
+    $quotaRefusal ? null : ($featureUpgrade ? ($featureUpgrade.feature ?? $featureUpgrade.flag ?? '') : null),
+  );
+  // TBP-755/756 — the feature variant names the plans that include the
+  // feature, from the plan list. Load it once when that variant opens.
+  $effect(() => {
+    if (!$featureUpgrade || !$isAuthenticated) return;
+    const { plans, loading, error } = $subscriptionStore;
+    if (!plans && !loading && !error) loadSubscription().catch(() => { /* the dialog still opens, without plan names */ });
+  });
+  function closeUpgradeDialog(): void {
+    dismissQuotaRefusal();
+    dismissFeatureUpgrade();
+  }
 
   // Props: optional `runtime` overrides for advanced/debug use (websocketFactory,
   // reconnect overrides, etc.); `onBootstrapComplete` callback fires after the
@@ -168,6 +186,18 @@
         stashReturnTo(decision.returnTo);
         getBridgeAuth().login();
       }
+      return;
+    }
+    // TBP-756 — a plan-gated route opens the upgrade dialog instead of
+    // silently bouncing. A navigation is handled by the route's load
+    // (bridgeBootstrap), which keeps the visitor where they were; here only the
+    // re-check of the page they are already on is left: it takes them to the
+    // rule's redirectTo (client-side, so the dialog survives) and opens it.
+    if (decision.type === 'redirect' && (decision as { reason?: string }).reason === 'plan') {
+      if (cancel) return;
+      const { flag, feature } = decision as { flag?: string; feature?: string };
+      openFeatureUpgrade({ flag, feature });
+      if (window.location.pathname !== decision.to) await goto(decision.to);
       return;
     }
     if (decision.type === 'redirect' && window.location.pathname !== decision.to) {
@@ -283,7 +313,7 @@
 <RealtimeDevBadge enabled={devBadgeEnabled} />
 
 {#if UpgradeDialog}
-  <UpgradeDialog refusal={$quotaRefusal} {upgradeHref} {canUpgrade} onclose={dismissQuotaRefusal} />
+  <UpgradeDialog refusal={$quotaRefusal} {upgradeHref} {canUpgrade} onclose={closeUpgradeDialog} feature={upgradeFeature} plans={$subscriptionStore.plans} />
 {/if}
 
 {#if runtimeAttached && $bridgeReadyStore}

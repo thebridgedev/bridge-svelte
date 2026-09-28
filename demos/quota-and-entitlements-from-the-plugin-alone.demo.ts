@@ -43,9 +43,9 @@ import type { Page } from '@playwright/test';
 
 const STAGE = 'https://api-stage.thebridge.dev';
 const API_DIR = process.env.DEMO_BRIDGE_API_DIR ?? '/Users/imanpouya/code/nebulr/thebridge-platform/bridge-api';
-const SVELTE_VERSION = process.env.DEMO_SVELTE_VERSION ?? '0.9.0-beta.3';
-const NESTJS_VERSION = process.env.DEMO_NESTJS_VERSION ?? '0.8.0-beta.0';
-const AUTH_CORE_VERSION = process.env.DEMO_AUTH_CORE_VERSION ?? '0.8.0-beta.1';
+const SVELTE_VERSION = process.env.DEMO_SVELTE_VERSION ?? '0.9.0-beta.6';
+const NESTJS_VERSION = process.env.DEMO_NESTJS_VERSION ?? '0.8.0-beta.1';
+const AUTH_CORE_VERSION = process.env.DEMO_AUTH_CORE_VERSION ?? '0.8.0-beta.3';
 const DOMAIN = 'demo-quota-from-plugin';
 const OWNER = 'demo-quota-from-plugin@example.com';
 const PORT = 5294;

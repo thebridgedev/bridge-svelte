@@ -35,7 +35,7 @@ import type { Page } from '@playwright/test';
 const STAGE = 'https://api-stage.thebridge.dev';
 const API_DIR = process.env.DEMO_BRIDGE_API_DIR ?? '/Users/imanpouya/code/nebulr/thebridge-platform/bridge-api';
 const SVELTE_ENV = process.env.DEMO_SVELTE_TEST_ENV ?? '/Users/imanpouya/code/nebulr/thebridge-platform/bridge-plugins/bridge-svelte/config/.env.test.local';
-const SVELTE_VERSION = process.env.DEMO_SVELTE_VERSION ?? '0.9.0-beta.1';
+const SVELTE_VERSION = process.env.DEMO_SVELTE_VERSION ?? '0.9.0-beta.6';
 const PAID = 'demo-billing-routes';
 const FREE = 'demo-billing-routes-noplans';
 const PORT = 5292;

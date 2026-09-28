@@ -26,7 +26,7 @@ import { join } from 'node:path';
 
 const STAGE = 'https://api-stage.thebridge.dev';
 const API_DIR = process.env.DEMO_BRIDGE_API_DIR ?? '/Users/imanpouya/code/nebulr/thebridge-platform/bridge-api';
-const SVELTE_VERSION = process.env.DEMO_SVELTE_VERSION ?? '0.9.0-beta.0';
+const SVELTE_VERSION = process.env.DEMO_SVELTE_VERSION ?? '0.9.0-beta.6';
 const DOMAIN = 'demo-one-line-bootstrap';
 const PORT = 5290;
 const LOCAL = `http://localhost:${PORT}`;

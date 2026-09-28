@@ -99,9 +99,21 @@ export function wrapFetchWithBridgeAuth(baseFetch: typeof fetch, apiBaseUrl: str
 
     if (!isStale) return response;
 
-    // 3. Refresh — same call as the WebSocket user.state_changed path.
-    //    Dedup gate in BridgeAuth coalesces concurrent calls into one HTTP request.
-    await getBridgeAuth().refreshTokens().catch(() => {});
+    // 3. Refresh with a token minted AFTER this answer. The server just said
+    //    our tokenVersion is behind, so a refresh that was already in flight
+    //    (the per-connect reconcile, the WebSocket user.state_changed path)
+    //    may have been minted before the bump and come back just as stale —
+    //    retrying with it fails the same way and the caller sees "access
+    //    token has been invalidated; refresh required". `fresh` waits for
+    //    such a refresh and mints again (or joins one that started after
+    //    this call), so the retry carries the current version.
+    //    Stage, 2026-09-28: a new user's first CreateApp failed twice this way
+    //    (retry sent tv 0 while the server was at tv 1). TBP-747.
+    //    An auth-core older than 0.8.0-beta.2 (the peer range allows 0.7.x)
+    //    ignores the option and joins the in-flight refresh, as before.
+    const auth = getBridgeAuth();
+    const refresh = auth.refreshTokens as (options?: { fresh?: boolean }) => Promise<unknown>;
+    await refresh.call(auth, { fresh: true }).catch(() => {});
 
     const freshToken = getBridgeAuth().getTokens()?.accessToken;
     const freshHeaders = new Headers(init?.headers);

@@ -26,7 +26,7 @@ It updates live on `quota.updated` pushes.
 
 ## When a workspace reaches its limit
 
-**Your server decides; the UI explains.** The limit is enforced by your backend: with the NestJS SDK that is one decorator on the handler that creates the thing (`@RequireQuota('tickets')`), which refuses the request at the cap. Nothing in the browser can enforce a limit, because anyone can call your API directly. What the Svelte SDK does is make that refusal understandable, at three levels of effort.
+**Count once, where the action happens.** When the action calls your server, your backend counts it and refuses at the cap: with the NestJS SDK that is one decorator on the handler that creates the thing (`@RequireQuota('tickets')`). The Svelte SDK then makes that refusal understandable, at the three levels below, and counts nothing itself. When the action never reaches a server of yours, the page counts it with `bridge.usage.report` / `set` and `<QuotaGate>` stops the button at the cap (see [Report usage](/billing/limits/report-usage/)); that is first-class. Never both for one metric.
 
 ### Level 0: no code
 

@@ -1,6 +1,6 @@
 # How Bridge works
 
-The rules every Bridge guide builds on, on one page: what the smallest integration is, who enforces a plan limit, the three ways to show a limit in the UI, and the four levels of customising Bridge's pages. Coding agents get the same page from `bridge guide mechanisms`.
+The rules every Bridge guide builds on, on one page: what the smallest integration is, where a plan limit is counted, the three ways to show a limit in the UI, and the four levels of customising Bridge's pages. Coding agents get the same page from `bridge guide mechanisms`.
 
 The frontend examples are SvelteKit (`@nebulr-group/bridge-svelte`); the backend examples are NestJS (`@nebulr-group/bridge-nestjs`).
 
@@ -98,9 +98,14 @@ export class ExportsController {
 | `VITE_BRIDGE_HOSTED_URL` | — | Only for a local or self-hosted Bridge. On Bridge's own domains it follows the API address (`api-stage` → `auth-stage`) |
 | `VITE_BRIDGE_DEBUG` | `BRIDGE_DEBUG` | `true` for console logging |
 
-## 1. The server decides; the client decorates
+## 1. Decide once, where the action happens
 
-Anyone can call your API with curl, so a limit or a paid feature is enforced on the backend handler, never in the browser. Everything the frontend shows about limits — the upgrade dialog, a disabled button, a hidden panel — explains or anticipates a decision the server already makes. Remove every frontend check and the product is still correct; remove the backend decorator and it is not.
+Ask one question first: **does this action call your server?**
+
+- **It calls your backend:** the server decides; the client decorates. Anyone can call your API with curl, so the limit or the flag is enforced on the backend handler. Everything the frontend shows about it — the upgrade dialog, a disabled button, a hidden panel — explains or anticipates a decision the server already makes, and does not count the same metric again.
+- **It happens in the browser** and never reaches a server of yours (local-first, data on the device): the browser counts it and gates the button (section 5). That is a first-class setup.
+
+Never both for one metric: it would be counted twice.
 
 ## 2. A POST increments the limit
 

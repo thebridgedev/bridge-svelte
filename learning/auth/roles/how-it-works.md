@@ -20,11 +20,9 @@ The `bridge` object exposes the signed-in user's role live, reactively:
   const user = bridge.user;
 </script>
 
-{#if $user?.role === 'ADMIN'}
-  <AdminPanel />
-{/if}
+<p>Signed in as {$user?.role}</p>
 ```
 
-`bridge.user.role` is the role's **key** (a string); it doesn't include the role's full privilege list. Privileges travel in the JWT itself rather than the frontend snapshot, so if you need finer-grained checks than "is this role X", the flag targeting attributes cover it. See [Gate features by role or privilege](/auth/roles/gate-with-flags/).
+`bridge.user.role` is the role's **key** (a string); it doesn't include the role's full privilege list. Privileges travel in the JWT itself rather than the frontend snapshot.
 
-For anything that must be enforced (not just hidden in the UI), check the role or a specific privilege on your backend; never rely on a frontend role check alone for access control.
+To control who can use a page, an endpoint or a feature, don't compare the role in your code: use a feature flag whose rule targets a privilege (preferred, it survives renamed roles) or the role key. The same rule answers in the browser and on your NestJS backend, and changes without a release. See [Gate features by role or privilege](/auth/roles/gate-with-flags/).

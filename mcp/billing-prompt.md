@@ -282,7 +282,7 @@ The client reads quota **directly from Bridge**. You do not need an endpoint on 
 
 A `/quota` route on your own API, a hand-written `type MyQuota = { used, limit, remaining, … }`, and bespoke fetch-and-poll counter code are three symptoms of the same wrong turn.
 
-### Enforcement is the backend's
+### When the action calls your backend
 
 The cap belongs on the backend handler that creates the thing — with NestJS one decorator: `@RequireQuota('tickets', { current })` for something that exists and can be deleted (a gauge), `@RequireQuota('exports')` for something that happened (a counter), `@RequireEntitlement('analytics')` for a plan feature. A POST increments the limit; there is nothing else to wire. It refuses with the `402 QUOTA_EXCEEDED` body that opens the level-0 dialog — `bridge guide nestjs billing`.
 
@@ -348,7 +348,7 @@ Before verifying, confirm every item was applied:
 - [ ] `src/routes/subscription/[...bridge]/+page.svelte` created with `<BridgeBillingRoutes />` — and no hand-written `/billing`, `/payment-error`, success or paywall pages
 - [ ] `<BridgeBillingNotice />` added to root layout
 - [ ] Paywall: nothing to add (default `/subscription/plan`). `/welcome` + `billing.paywallRoute: '/welcome'` ONLY if the user asked for it — OR `<BridgePaywall>` + `billing.paywallRoute: false` for the overlay alternative
-- [ ] Plan limits: the backend enforces them (`@RequireQuota` / `@RequireEntitlement`); the frontend relies on the level-0 dialog, adding `<QuotaGate>` / `<Entitled>` only where the UI should react before the click — no hand-written quota checks, toasts or `/quota` endpoints
+- [ ] Plan limits: counted once, where the action happens — the backend handler (`@RequireQuota`) when the click calls your server, `bridge.usage.report` / `set` plus `<QuotaGate>` when it does not, never both; for backend actions the frontend relies on the level-0 dialog, adding `<QuotaGate>` / `<Entitled>` only where the UI should react before the click — no hand-written quota checks, toasts or `/quota` endpoints
 - [ ] No `<Entitled>` wrapped around a `<QuotaGate>` on the same key
 - [ ] No extra packages installed (`@stripe/stripe-js` must NOT be in package.json)
 

@@ -1,6 +1,7 @@
 import { getBridgeAuth } from './bridge-instance.js';
 import { observeQuotaRefusal, watchesQuotaOrigin } from './quota-refusal.js';
 import { getConfig } from '../client/stores/config.store.js';
+import { noteBackendResponse } from './double-count-warning.js';
 
 function requestUrl(input: RequestInfo | URL): string {
   return typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url;
@@ -67,6 +68,7 @@ export function wrapFetchWithBridgeAuth(baseFetch: typeof fetch, apiBaseUrl: str
     if (!url.startsWith(apiBaseUrl)) {
       const passthrough = await baseFetch(input, init);
       observeIfWatched(passthrough, url, apiBaseUrl);
+      noteBackendResponse(passthrough); // TBP-697 — dev-only double-count check
       return passthrough;
     }
 
@@ -130,10 +132,16 @@ export function wrapFetchWithBridgeAuth(baseFetch: typeof fetch, apiBaseUrl: str
  * `@RequireQuota` sends at the plan's cap) opens the upgrade dialog that
  * `<BridgeBootstrap>` mounts, whatever origin your backend is on. The response
  * is still returned to you unchanged.
+ *
+ * TBP-697 — in development, if your backend says it counted a metric (the
+ * `X-Bridge-Usage-Counted` header bridge-nestjs sends outside production) and
+ * this page also reports that metric with `bridge.usage`, the console warns
+ * once: count once, where the action happens.
  */
 export async function bridgeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const response = await fetchWithToken(input, init);
   void observeQuotaRefusal(response, absoluteUrl(requestUrl(input)));
+  noteBackendResponse(response);
   return response;
 }
 

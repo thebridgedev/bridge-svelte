@@ -83,7 +83,7 @@ With plans, one more file serves the subscription page, the paywall and both che
 <BridgeBillingRoutes />
 ```
 
-Plan limits are enforced by your backend (with NestJS, one `@RequireQuota` decorator per handler). The frontend has three levels, all optional:
+Usage is counted once, where the action happens: by your backend when the action calls it (with NestJS, one `@RequireQuota` decorator per handler), or by the page with `bridge.usage.report` when it never reaches a server of yours. For an action that calls your backend, the frontend has three levels, all optional:
 
 | Level | You write | The user sees |
 |---|---|---|
@@ -91,7 +91,7 @@ Plan limits are enforced by your backend (with NestJS, one `@RequireQuota` decor
 | 1 | `<QuotaGate metric>`, `<Entitled to>` | A button disabled at the cap; a feature shown only on plans that include it |
 | 2 | `useQuota(metric)`, `$entitlements.can(key)` | Your own UI from live numbers |
 
-`bridgeFetch()` calls your own backend with the user's token. See [How Bridge works](learning/mechanisms.md) for counter vs gauge, and why browser-reported usage cannot enforce a limit.
+`bridgeFetch()` calls your own backend with the user's token. See [How Bridge works](learning/mechanisms.md) for counter vs gauge, and for counting in the browser when there is no server call.
 
 ## What the package exports
 

@@ -159,6 +159,15 @@ export { default as QuotaGate } from './client/components/subscription/QuotaGate
 export { default as Entitled } from './client/components/subscription/Entitled.svelte';
 export { default as BridgeUpgradeDialog } from './client/components/subscription/BridgeUpgradeDialog.svelte';
 export { onBridgeQuotaExceeded, parseQuotaRefusal } from './core/quota-refusal.js';
+// TBP-756 — the upgrade dialog's feature variant: a plan-gated route, a
+// <FeatureFlag> upgrade click, or a backend's 402 FEATURE_NOT_IN_PLAN.
+export {
+  openFeatureUpgrade,
+  dismissFeatureUpgrade,
+  featureUpgrade,
+  parseFeatureRefusal,
+} from './core/feature-upgrade.js';
+export type { BridgeFeatureUpgrade, BridgeFeatureOffReason } from './core/feature-upgrade.js';
 export type { BridgeQuotaRefusal } from './core/quota-refusal.js';
 
 // Auth route guards

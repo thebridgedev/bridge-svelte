@@ -28,6 +28,9 @@ export { useFlag, flagStore, _flagVersionsRune, type FlagStore } from './flag.sv
 
 // Component
 export { default as FeatureFlag } from './FeatureFlag.svelte';
+export type { FeatureFlagOffInfo } from './FeatureFlag.svelte';
+// TBP-756 — open the upgrade dialog for a feature the plan does not include.
+export { openFeatureUpgrade } from '../core/feature-upgrade.js';
 
 // Reactive realtime connection status (subscribe in components to show
 // offline indicators, retry banners, etc.).

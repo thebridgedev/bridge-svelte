@@ -9,17 +9,19 @@ Role and privilege are both available as feature flag targeting attributes autom
 
 ## Continuing the enterprise example
 
-Following on from [Common role setups](/auth/roles/common-setups/), a flag `beta_reports` with a rule targeting the role directly:
+Following on from [Common role setups](/auth/roles/common-setups/), a flag `beta_reports` with a rule targeting the privilege (preferred):
+
+```
+privileges contains "BETA_REPORTS"
+```
+
+or targeting the role directly:
 
 ```
 user.role eq "ENTERPRISE_BETA"
 ```
 
-or targeting the privilege instead:
-
-```
-privileges contains "BETA_REPORTS"
-```
+`contains` on `privileges` matches a whole key: `BETA_REPORTS` does not match `BETA_REPORTS_ALL`.
 
 Either way, the frontend code doesn't change:
 
@@ -35,4 +37,4 @@ Either way, the frontend code doesn't change:
 {/if}
 ```
 
-Targeting the role is simpler when the role only ever means one thing. Targeting the privilege scales better if several different roles might eventually need the same access: grant them the privilege instead of duplicating the flag rule per role.
+Prefer the privilege: the rule keeps working when roles are renamed or reshuffled, and several roles can get the same access by granting them the privilege instead of duplicating the flag rule per role. Target the role key only when the role itself is the point.

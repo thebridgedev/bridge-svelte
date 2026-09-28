@@ -23,7 +23,7 @@ Read this table before writing anything. Every case below is already solved by t
 | **Show markup only when the plan grants it** | `<Entitled to="…">` in markup; `$entitlements.can('key')` in script | the component |
 | **A usage counter** — "42 of 1000 decks" | `<BridgeQuotaBanner metric="…" />` | the component |
 | **The raw quota numbers**, for your own UI | `useQuota(metric)` | component or `.svelte.ts` |
-| **Usage from an app with no backend** (local-first, mobile) | `bridge.usage.report(metric)` / `bridge.usage.set(metric, n)` — self-reported, see Step 3 | anywhere |
+| **Usage for an action that happens in the browser** (the click does not call your server: local-first, mobile) | `bridge.usage.report(metric)` / `bridge.usage.set(metric, n)` — see Step 3 | anywhere |
 | **Current plan / subscription state** | `bridge.tenant.subscription`, or `subscriptionStore` | anywhere |
 | **Manage payment method, cancel** | `<BillingPortalButton />` (already on `/subscription`) | anywhere else you want the button |
 | **Actually enforcing a cap** | **your server** — `@RequireQuota` / `@RequireEntitlement` in bridge-nestjs | your backend |
@@ -282,13 +282,13 @@ The client reads quota **directly from Bridge**. You do not need an endpoint on 
 
 A `/quota` route on your own API, a hand-written `type MyQuota = { used, limit, remaining, … }`, and bespoke fetch-and-poll counter code are three symptoms of the same wrong turn.
 
-### Enforcement is the backend's
+### When the action calls your backend
 
 The cap belongs on the backend handler that creates the thing — with NestJS one decorator: `@RequireQuota('tickets', { current })` for something that exists and can be deleted (a gauge), `@RequireQuota('exports')` for something that happened (a counter), `@RequireEntitlement('analytics')` for a plan feature. A POST increments the limit; there is nothing else to wire. It refuses with the `402 QUOTA_EXCEEDED` body that opens the level-0 dialog — `bridge guide nestjs billing`.
 
-### Reporting usage from the browser — self-reported
+### Count usage once, where the action happens
 
-An app with no backend that sees the action — a local-first or mobile app whose data lives on the device — reports usage from the client:
+Ask the user: **does the click call your server?** If it does, the backend handler counts it (`@RequireQuota` / `@SyncQuota` above) and the page reports nothing. If it does not — a local-first or mobile app whose data lives on the device, or any action that stays in the browser — the browser counts it. That is a first-class setup, not a fallback:
 
 ```ts
 import { bridge } from '@nebulr-group/bridge-svelte';
@@ -299,7 +299,9 @@ await bridge.usage.set('projects', projects.length); // a gauge: how many exist 
 
 If deleting it frees room, it's a gauge and your app counts it (`set`, after every create and delete, with the absolute count); if it happened, it's a counter and Bridge counts it (`report`). `report` is fire-and-forget and queued durably; `set` resolves once Bridge has stored the value and rejects if it was refused.
 
-**This is trusted-client usage.** Anything running in the browser can send any number, so a frontend-only app **cannot enforce** a quota — Bridge shows and bills what the client reports, and the client can lie. When the app has a backend, report and enforce there instead; use the browser path only when there is no server to do it.
+Counting from the browser trusts the browser: Bridge shows and bills what the page reports, and only a backend can refuse a write.
+
+**Never count one metric on both sides** — the same action is then counted twice. In development the plugin warns once in the console when your backend and the page count the same metric (bridge-nestjs marks a counting response with `X-Bridge-Usage-Counted` outside production; nothing is sent or printed in production).
 
 ### `hard` vs `metered` — they behave oppositely
 
@@ -346,7 +348,7 @@ Before verifying, confirm every item was applied:
 - [ ] `src/routes/subscription/[...bridge]/+page.svelte` created with `<BridgeBillingRoutes />` — and no hand-written `/billing`, `/payment-error`, success or paywall pages
 - [ ] `<BridgeBillingNotice />` added to root layout
 - [ ] Paywall: nothing to add (default `/subscription/plan`). `/welcome` + `billing.paywallRoute: '/welcome'` ONLY if the user asked for it — OR `<BridgePaywall>` + `billing.paywallRoute: false` for the overlay alternative
-- [ ] Plan limits: the backend enforces them (`@RequireQuota` / `@RequireEntitlement`); the frontend relies on the level-0 dialog, adding `<QuotaGate>` / `<Entitled>` only where the UI should react before the click — no hand-written quota checks, toasts or `/quota` endpoints
+- [ ] Plan limits: counted once, where the action happens — the backend handler (`@RequireQuota`) when the click calls your server, `bridge.usage.report` / `set` plus `<QuotaGate>` when it does not, never both; for backend actions the frontend relies on the level-0 dialog, adding `<QuotaGate>` / `<Entitled>` only where the UI should react before the click — no hand-written quota checks, toasts or `/quota` endpoints
 - [ ] No `<Entitled>` wrapped around a `<QuotaGate>` on the same key
 - [ ] No extra packages installed (`@stripe/stripe-js` must NOT be in package.json)
 

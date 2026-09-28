@@ -28,11 +28,11 @@ await bridge.usage.set('projects', projects.length);
 
 If deleting it frees room, it's a gauge and your app counts it (`set`). If it happened, it's a counter and Bridge counts it (`report`). `set` sends the absolute value (never added up), resolves once Bridge has stored it, and rejects if Bridge refused it. See [Show usage limits](/billing/limits/usage-limits/#counter-or-gauge) for choosing the kind on the plan.
 
-## Reporting from the browser is self-reported
+## Count once, where the action happens
 
-These calls run in your frontend, so the numbers are **trusted-client**: anything running in the user's browser can send any value. A frontend-only app can show quotas and report usage, but it **cannot enforce** a limit, because only a backend can refuse a write.
+Report from the browser when the action happens in the browser: a local-first or mobile app whose data lives on the device, or any click that does not call your server. That is a first-class setup. It trusts the browser: Bridge shows and bills what the page reports, and only a backend can refuse a write.
 
-Report from the browser when there is no backend that sees the action: a local-first or mobile app whose data lives on the device. When your app has a backend, report and enforce there instead (for NestJS, `@RequireQuota` and `usage.report` in the bridge-nestjs SDK).
+When the click calls your server, the backend handler counts it instead (for NestJS, `@RequireQuota` / `@SyncQuota`), and the page only shows the number. Never both: the same action would be counted twice. In development the plugin warns once in the console when your backend and the page count the same metric (bridge-nestjs marks a counting response with `X-Bridge-Usage-Counted` outside production; nothing is sent or printed in production).
 
 ## What happens to a reported event
 

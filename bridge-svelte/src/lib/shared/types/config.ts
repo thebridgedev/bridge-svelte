@@ -79,4 +79,24 @@ export interface BridgeUpgradeDialogProps {
   canUpgrade: boolean;
   /** Close the dialog. */
   onclose: () => void;
+  /** TBP-755/756 — the plan feature the user is missing, by key (or the
+   *  feature flag's key when its rule names no plan feature). With no
+   *  `refusal`, a non-null `feature` opens the dialog in its feature variant;
+   *  when `plans` lists plans that include it, the dialog names them.
+   *  BridgeBootstrap sets it only after the person did something gated: a
+   *  plan-gated route, a `<FeatureFlag>` upgrade click, or a backend's
+   *  `402 FEATURE_NOT_IN_PLAN`. */
+  feature?: string | null;
+  /** TBP-755 — the app's plans (the plan picker's feed), each with the
+   *  features it includes. Used only to name the plans that include `feature`. */
+  plans?: ReadonlyArray<PlanWithFeatures> | null;
+}
+
+/** TBP-755 — a plan as the plan list returns it, with the features it
+ *  includes. Structural so it holds whichever auth-core release is installed. */
+export interface PlanWithFeatures {
+  key: string;
+  name: string;
+  prices?: ReadonlyArray<{ amount: number }>;
+  features?: ReadonlyArray<{ key: string; name: string }>;
 }

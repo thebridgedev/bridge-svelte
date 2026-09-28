@@ -26,7 +26,7 @@ It updates live on `quota.updated` pushes.
 
 ## When a workspace reaches its limit
 
-**Your server decides; the UI explains.** The limit is enforced by your backend: with the NestJS SDK that is one decorator on the handler that creates the thing (`@RequireQuota('tickets')`), which refuses the request at the cap. Nothing in the browser can enforce a limit, because anyone can call your API directly. What the Svelte SDK does is make that refusal understandable, at three levels of effort.
+**Count once, where the action happens.** When the action calls your server, your backend counts it and refuses at the cap: with the NestJS SDK that is one decorator on the handler that creates the thing (`@RequireQuota('tickets')`). The Svelte SDK then makes that refusal understandable, at the three levels below, and counts nothing itself. When the action never reaches a server of yours, the page counts it with `bridge.usage.report` / `set` and `<QuotaGate>` stops the button at the cap (see [Report usage](/billing/limits/report-usage/)); that is first-class. Never both for one metric.
 
 ### Level 0: no code
 
@@ -46,11 +46,13 @@ A page that calls your backend needs nothing for the limit:
 
 When the backend refuses at the cap it answers `402` with `{ code: 'QUOTA_EXCEEDED', metric, used, limit, fix }`. `<BridgeBootstrap>` sees that answer and opens an **upgrade dialog**: *"This workspace has used 3 of 3 tickets on its current plan"*, with an **Upgrade plan** button that goes to `fix` (a path in your app) or else your subscription page. Your code still gets the `402` response, unchanged, to handle like any failed write.
 
+The same dialog opens, in its feature variant (*"This feature isn't on your plan"*, naming the plans that include it), when a flag-gated endpoint answers `402 FEATURE_NOT_IN_PLAN`, when someone opens a route whose feature flag is off because of the plan, or when they click a `<FeatureFlag>` upgrade prompt. A page that merely renders a hidden feature never opens it. See [Show or hide UI](/feature-flags/using/show-hide-ui/).
+
 Your app authenticates its own API calls with [`bridgeFetch`](/billing/limits/report-usage/) anyway: a plain `fetch` sends no user token, so a protected backend answers `401`, never `402`. The limit handling still needs no code — the dialog opens from any `402 QUOTA_EXCEEDED` the wrapper sees. A backend on another origin works the same way; list it in `billing.apiOrigins` if some calls to it go through plain `fetch`.
 
 | Config (`billing` in `bridgeBootstrap({...})`) | Default | Description |
 |------|---------|-------------|
-| `upgradeDialog` | `true` | `false` turns the dialog off; a component replaces it (it receives `refusal`, `upgradeHref`, `onclose`) |
+| `upgradeDialog` | `true` | `false` turns the dialog off; a component replaces it (it receives `refusal`, `upgradeHref`, `canUpgrade`, `onclose`, and for a feature the plan doesn't include, `feature` and `plans`) |
 | `apiOrigins` | `[]` | Other origins your backend answers from, e.g. `['https://api.example.com']` |
 | `manageRoute` | `'/subscription'` | Where **Upgrade plan** goes when the refusal names no `fix` |
 

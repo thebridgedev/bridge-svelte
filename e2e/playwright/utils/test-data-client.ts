@@ -318,6 +318,53 @@ export class TestDataClient {
   }
 
   /**
+   * TBP-756 — mint an API token for this worker's app (a real ApiToken record),
+   * for the management API (flags). `FLAG_DELETE` lets a test replace a flag.
+   */
+  async generateApiToken(privileges: string[] = []): Promise<{ token: string }> {
+    const response = await fetch(`${this.baseUrl}/account/test/playwright/generate-jwt`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-playwright-api-key': this.apiKey },
+      body: JSON.stringify({ appDomain: this.appDomain, privileges }),
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to generate API token: ${response.status} ${await response.text()}`);
+    }
+    return response.json();
+  }
+
+  /**
+   * TBP-756 — create or replace an FF 2.0 flag by key in this worker's app,
+   * through the management API (`/v1/admin/flags`).
+   */
+  async upsertFlag(apiToken: string, flag: { key: string } & Record<string, unknown>): Promise<{ id: string }> {
+    const headers = { 'Content-Type': 'application/json', 'x-api-key': apiToken };
+    const list = await fetch(`${this.baseUrl}/v1/admin/flags/flags`, { headers });
+    if (!list.ok) throw new Error(`Failed to list flags: ${list.status} ${await list.text()}`);
+    const existing = ((await list.json()) as Array<{ id: string; key: string }>).find((f) => f.key === flag.key);
+    const response = existing
+      ? await fetch(`${this.baseUrl}/v1/admin/flags/flag/${existing.id}`, { method: 'PUT', headers, body: JSON.stringify(flag) })
+      : await fetch(`${this.baseUrl}/v1/admin/flags/flag`, { method: 'POST', headers, body: JSON.stringify(flag) });
+    if (!response.ok) throw new Error(`Failed to save flag ${flag.key}: ${response.status} ${await response.text()}`);
+    return response.json();
+  }
+
+  /**
+   * TBP-756 — the reason Bridge gives for `flagKey` being off for an anonymous
+   * caller (`/cloud-views/flags/bulkEvaluate`), or null when it is on / absent.
+   */
+  async anonymousFlagReason(appId: string, flagKey: string): Promise<string | null> {
+    const response = await fetch(`${this.baseUrl}/cloud-views/flags/bulkEvaluate/${appId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    if (!response.ok) return null;
+    const body = (await response.json()) as { flags: Array<{ flag: string; evaluation?: { reason?: string } }> };
+    return body.flags.find((f) => f.flag === flagKey)?.evaluation?.reason ?? null;
+  }
+
+  /**
    * Creates a plan in the app for test scenarios.
    *
    * @param planData - Plan configuration

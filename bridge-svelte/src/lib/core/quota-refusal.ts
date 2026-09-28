@@ -22,6 +22,7 @@
  * The dialog is decoration. The refusal is the backend's; this only explains it.
  */
 import { readable, type Readable } from 'svelte/store';
+import { openFeatureUpgrade, parseFeatureRefusal } from './feature-upgrade.js';
 
 /** A backend's "plan limit reached" answer, as the upgrade dialog shows it. */
 export interface BridgeQuotaRefusal {
@@ -157,7 +158,14 @@ export function observeQuotaRefusal(response: Response, url = ''): Promise<void>
     .json()
     .then((body: unknown) => {
       const refusal = parseQuotaRefusal(body, url || response.url);
-      if (refusal) reportQuotaRefusal(refusal);
+      if (refusal) {
+        reportQuotaRefusal(refusal);
+        return;
+      }
+      // TBP-756 — a flag-gated endpoint refused because the plan does not
+      // include the feature: the same dialog, in its feature variant.
+      const feature = parseFeatureRefusal(body);
+      if (feature) openFeatureUpgrade(feature);
     })
     .catch(() => {
       /* not JSON — not a quota refusal */

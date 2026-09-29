@@ -113,6 +113,15 @@ vi.mock('../core/bridge-instance.js', async () => {
   };
 });
 
+// TBP-762 — observed: the checkout return must re-read the billing store.
+const billingRefreshes = vi.hoisted(() => ({ order: [] as string[] }));
+vi.mock('../core/billing-store.js', () => ({
+  refreshBilling: async () => {
+    billingRefreshes.order.push('refreshBilling');
+  },
+  tokenStaleHandlerOf: () => undefined,
+}));
+
 vi.mock('../core/bridge-runtime.js', () => ({
   installBridgeAuthFetch: () => {
     h.s.calls.installFetch += 1;
@@ -415,6 +424,23 @@ describe('billing destinations default to the pages <BridgeBillingRoutes> serves
     const config = { ...SDK_CONFIG, billing: { paymentErrorRoute: '/oops' } };
     const url = at('/auth/oauth-callback?stripe_success=1&session_id=cs_test_1');
     expect((await redirectOf(bridgeBootstrap(url, config, ROUTES))).location).toBe('/oops');
+  });
+
+  it('in the browser, a confirmed checkout re-reads the billing store BEFORE redirecting (TBP-762)', async () => {
+    const { bridgeBootstrap } = await load();
+    billingRefreshes.order.length = 0;
+    h.s.confirmImpl = async () => {
+      billingRefreshes.order.push('confirm');
+    };
+    vi.stubGlobal('window', { location: new URL('http://localhost/auth/oauth-callback') });
+    try {
+      const url = at('/auth/oauth-callback?stripe_success=1&session_id=cs_test_1&redirect=%2Fsubscription%2Fsuccess');
+      const { location } = await redirectOf(bridgeBootstrap(url, SDK_CONFIG, ROUTES));
+      billingRefreshes.order.push(`redirect:${location}`);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(billingRefreshes.order).toEqual(['confirm', 'refreshBilling', 'redirect:/subscription/success']);
   });
 
   it('a confirmed checkout lands where PlanSelector asked', async () => {

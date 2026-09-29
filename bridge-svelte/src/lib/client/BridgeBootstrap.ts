@@ -13,6 +13,7 @@ import {
   waitForBridge as _waitForBridge,
 } from '../core/bridge-instance.js';
 import { installBridgeAuthFetch } from '../core/bridge-runtime.js';
+import { refreshBilling, tokenStaleHandlerOf } from '../core/billing-store.js';
 import {
   useBridge,
   sanitizeReturnTo,
@@ -339,6 +340,8 @@ function ensureInitialised(): Promise<{ flagsReady: Promise<void> }> {
           apiBaseUrl: ctx.apiBaseUrl,
           accessToken: ctx.accessToken,
           appId: ctx.appId,
+          // TBP-762 — renew an out-of-date sign-in and retry instead of failing.
+          onTokenStale: tokenStaleHandlerOf(bridge),
         });
       }
     } catch {
@@ -456,6 +459,13 @@ async function handleCallbackRoute(url: URL, kitFetch?: typeof globalThis.fetch)
         const bridge = getBridgeAuth();
         try {
           await bridge.confirmStripeCheckout(sessionId, kitFetch);
+          // TBP-762 — the checkout changed the plan: re-read the billing stores
+          // before the landing page renders, so its "Current plan" is the new
+          // one on first render. In the browser only — a server-side read
+          // would fill a store no page sees. Never throws.
+          if (typeof window !== 'undefined') {
+            try { await refreshBilling(); } catch { /* the landing page re-reads */ }
+          }
           redirect(303, redirectTo);
         } catch (err) {
           if (isRedirect(err)) throw err;

@@ -24,6 +24,7 @@
     type BillingSubscriptionSnapshot,
   } from '@nebulr-group/bridge-auth-core';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
+  import { ensureBillingState } from '../../../core/billing-store.js';
   import { billingRoutes } from '../../billing-routes.js';
 
   type Chassis = 'bar' | 'rail' | 'card';
@@ -77,13 +78,9 @@
       useBridge().subscription.setError('Not authenticated');
       return;
     }
-    if (!snapshot.state) {
-      useBridge().subscription.mount({
-        apiBaseUrl: ctx.apiBaseUrl,
-        accessToken: ctx.accessToken,
-        appId: ctx.appId,
-      });
-    }
+    // TBP-762 — through the billing store: renews an out-of-date sign-in,
+    // retries once, and re-reads on the store's refresh rule.
+    void ensureBillingState();
   });
 
   onDestroy(() => unsubscribe?.());

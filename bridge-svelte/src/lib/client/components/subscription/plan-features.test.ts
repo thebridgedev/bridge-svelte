@@ -19,6 +19,8 @@ vi.mock('../../../core/bridge-instance.js', async () => {
   };
 });
 vi.mock('../../stores/config.store.js', () => ({ getConfig: () => ({}) }));
+// TBP-762 — a Free pick navigates on with SvelteKit's goto.
+vi.mock('$app/navigation', () => ({ goto: async () => {} }));
 
 import { render as ssr } from 'svelte/server';
 import PlanSelector from './PlanSelector.svelte';
@@ -80,6 +82,16 @@ describe('<PlanSelector> lists each plan\'s features — TBP-755', () => {
     plansHolder.current = [{ key: 'old', name: 'Old', prices: [{ id: 'o', amount: 5, currency: 'usd', recurrenceInterval: 'month' }] }];
     const html = render(PlanSelector);
     expect(card(html, 'Old')).not.toContain('data-bridge-plan-features');
+  });
+});
+
+describe('<PlanSelector> with an empty plan list — TBP-762', () => {
+  it('offers a retry, never "No plans available" (an empty list is not proof there are none)', () => {
+    plansHolder.current = [];
+    const html = render(PlanSelector);
+    expect(html).not.toContain('No plans available');
+    expect(html).toContain('data-bridge-plan-empty');
+    expect(html).toContain('Try again');
   });
 });
 

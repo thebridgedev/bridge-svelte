@@ -27,12 +27,14 @@
        pages keep working.
     4. Headless: `PlanSelector`, `BridgeSubscriptionStatus`, `BillingPortalButton`
        and `subscriptionStore` are the pieces these pages are built from.
+
+  A Free pick (like a paid checkout) lands on /subscription/success (TBP-762).
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { untrack } from 'svelte';
   import { page } from '$app/stores';
-  import { loadSubscription, subscriptionStore } from '../../../core/bridge-instance.js';
+  import { ensureSubscription, loadSubscription } from '../../../core/bridge-instance.js';
   import { BRIDGE_AUTH_ROUTE_PARAM, bridgeAuthBase } from '../../auth-routes.js';
   import { parseBridgeBillingRoute, type BridgeBillingPage } from '../../billing-routes.js';
   import PlanSelector from './PlanSelector.svelte';
@@ -64,19 +66,17 @@
     error: "We couldn't confirm your payment",
   };
 
-  // Every page reads the subscription. The success page always re-reads it: the
-  // checkout just changed it, and whatever the store holds predates that. Keyed
-  // on the page, because moving between these pages reuses this component.
+  // Every page reads the subscription through the billing store (TBP-762): a
+  // read younger than 30 s is reused, anything older is re-read. The success
+  // page always re-reads everything — the checkout just changed it, and
+  // whatever the store holds predates that. Keyed on the page, because moving
+  // between these pages reuses this component. (The success page's badge is
+  // `fresh`: it re-reads the billing state itself.)
   $effect(() => {
     const current = route?.page;
     if (!current) return;
     untrack(() => {
-      const { status, loading } = $subscriptionStore;
-      if (current === 'success' || (!status && !loading)) {
-        loadSubscription().catch(() => {
-          /* surfaced via subscriptionStore.error */
-        });
-      }
+      void (current === 'success' ? loadSubscription() : ensureSubscription());
     });
   });
 </script>
@@ -102,7 +102,7 @@
     <p class="bridge-billing-text">Your plan is active.</p>
     <div class="bridge-billing-current">
       <span class="bridge-billing-label">Current plan</span>
-      <BridgeSubscriptionStatus />
+      <BridgeSubscriptionStatus fresh />
     </div>
     <a class="bridge-btn-primary bridge-billing-action" href={redirectTo}>Continue</a>
   {:else if p === 'error'}

@@ -18,7 +18,7 @@ Require a second factor at login: a 6-digit code sent by SMS to the user's verif
   ```
 
 - **Control Center** (your admin dashboard at app.thebridge.dev): [Auth → Login](https://app.thebridge.dev/auth?tab=login)
-- **MCP (AI-assistant integration):** coming soon.
+- **MCP (AI-assistant integration):** connect your AI assistant to `https://api.thebridge.dev/mcp` as a remote MCP server (sign in and approve access to your app in the browser when it asks). Its `update_auth_methods` tool turns MFA on or off (`mfaEnabled`).
 
 ## What you need
 

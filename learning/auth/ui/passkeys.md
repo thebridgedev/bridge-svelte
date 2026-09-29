@@ -43,7 +43,7 @@ Registers a new passkey using a setup token (emailed to the user).
 | `onBack` | `() => void` | (none) | Called when user clicks back |
 | `onExpired` | `() => void` | (none) | Called when the token has expired |
 
-> `<BridgeAuthRoutes>` already serves this page at `/auth/setup-passkey/[token]` (see the [in-app quickstart](/sdk-auth/sdk-quickstart/)). The example below is for taking the page over; a file at that address wins over the catch-all.
+> `<BridgeAuthRoutes>` already serves this page at `/auth/setup-passkey/[token]` (see the [in-app quickstart](../../sdk-auth/sdk-quickstart.md)). The example below is for taking the page over; a file at that address wins over the catch-all.
 
 ```svelte
 <!-- src/routes/auth/setup-passkey/[token]/+page.svelte -->

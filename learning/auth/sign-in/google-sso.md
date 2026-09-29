@@ -18,9 +18,9 @@ Let users sign in with their Google account.
   ```
 
 - **Control Center** (your admin dashboard at app.thebridge.dev): [Auth → Login](https://app.thebridge.dev/auth?tab=login) → **Google SSO** → **Configuration**
-- **MCP (AI-assistant integration):** coming soon.
+- **MCP (AI-assistant integration):** connect your AI assistant to `https://api.thebridge.dev/mcp` as a remote MCP server (sign in and approve access to your app in the browser when it asks). Its `setup_sso` tool (provider `google`) saves your client ID and secret, turns Google sign-in on, and returns the callback URL to register with Google.
 
-Either path saves the credentials and turns the connection on. You need a Google OAuth client first; see below.
+Each path saves the credentials and turns the connection on. You need a Google OAuth client first; see below.
 
 ## Set up the Google side
 

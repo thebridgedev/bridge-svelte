@@ -6,7 +6,7 @@ You define both in two places:
 
 - **Control Center** (your admin dashboard at app.thebridge.dev): [Roles](https://app.thebridge.dev/roles) has separate **Roles** and **Privileges** tabs, with **Create Role** and **Create Privilege** buttons. This is the only way to create privileges today (see below).
 - **CLI:** roles only. Create, update, delete, and list them, referencing privileges that already exist.
-- **MCP (AI-assistant integration):** coming soon.
+- **MCP (AI-assistant integration):** connect your AI assistant to `https://api.thebridge.dev/mcp` as a remote MCP server (sign in and approve access to your app in the browser when it asks). Its `list_roles`, `get_role`, `create_role` and `update_role` tools manage roles built from privileges that already exist; it cannot delete roles or create privileges.
 
 ## Privileges
 

@@ -18,9 +18,9 @@ Let users sign in with their Microsoft / Azure AD account.
   ```
 
 - **Control Center** (your admin dashboard at app.thebridge.dev): [Auth → Login](https://app.thebridge.dev/auth?tab=login) → **Azure AD SSO** → **Configuration**
-- **MCP (AI-assistant integration):** coming soon.
+- **MCP (AI-assistant integration):** connect your AI assistant to `https://api.thebridge.dev/mcp` as a remote MCP server (sign in and approve access to your app in the browser when it asks). Its `setup_sso` tool (provider `azure`) saves your client ID, client secret and directory (tenant) ID, turns Azure AD sign-in on, and returns the callback URL to register in Azure.
 
-Either path saves the credentials and turns the connection on. You need an Azure AD app registration first; see below.
+Each path saves the credentials and turns the connection on. You need an Azure AD app registration first; see below.
 
 ## Set up the Azure side
 

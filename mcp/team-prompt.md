@@ -2,6 +2,16 @@
 
 You are adding team management to a SvelteKit application that uses The Bridge.
 
+## The one rule for app code
+
+**Every gate in app code is a flag.** A link, a page, a button, an endpoint: if some people get it and others do not, the code asks a flag, and the flag's rule says why: a privilege (`privileges contains "USER_WRITE"`), a plan feature (`bridge:billing.entitlement.analytics eq true`) or a rollout. App code never reads a role, a privilege list, the plan or a plan feature to decide what someone may see or do.
+
+Two things are not gates and are not flags: **numbers** are plan limits (`<QuotaGate>` in the browser, `@RequireQuota` on the backend), and **permission on one specific record** stays in app code ("only the author edits their post").
+
+Before calling the work done, run `npx @nebulr-group/bridge-cli check gates` in the project. It lists every direct role, privilege, plan or plan-feature check with the flag to use instead. Fix each one.
+
+In SvelteKit: a piece of UI is `<FeatureFlag key="…">`; a page is a route rule `{ match: '/admin/*', featureFlag: 'admin-area', redirectTo: '/' }`; a nav link is the same `<FeatureFlag>` around the link.
+
 ## Decide first — the whole panel, or one piece?
 
 Read this table before writing anything. Both rows are drop-in components; there is no hook, service or form for you to build against.
@@ -136,24 +146,47 @@ All three accept `class`, `style`, and `onError` props.
 <TeamWorkspaceForm onError={(err) => console.error(err)} />
 ```
 
-## Route setup
+## Route setup — who sees the team page
 
-Add a settings/team route. This route is protected by default (assuming `defaultAccess: 'protected'` in the existing `RouteGuardConfig`), so no extra route config is needed.
+Not everyone in a workspace should manage its members, so the team page and its nav link are gated. Like every gate in app code, that gate is a flag ruled on a privilege — never a role list in the code such as `['OWNER','ADMIN'].includes(role)`.
 
-Create the route file at `src/routes/settings/team/+page.svelte` as shown above. If the `src/routes/settings/` directory does not exist, create it.
+1. **Read the app's real roles first**: `list_roles` (MCP) or `bridge role list` (CLI). What a role can do is only "in the default setup"; pick the privilege the roles that should manage members actually hold (in the default setup, `USER_WRITE`).
+2. **Create the flag** `team-management`, ruled on that privilege:
 
-If you want a navigation link to the team page, add it to your app's navigation:
+```bash
+bridge flag create --key team-management --value-type boolean --state on-with-rule \
+  --rule '{"branches":[{"conditions":[{"attribute":"privileges","operator":"contains","values":["USER_WRITE"]}],"returnValue":true}],"otherwiseValue":false,"rolloutPct":100}'
+```
+
+(MCP: `create_feature_flag` with the same rule as a structured object.) `contains` on `privileges` is exact membership.
+
+3. **Gate the route** with a rule in the `bridgeBootstrap()` call in `src/routes/+layout.ts` — an edit to an existing rule for that path if there is one:
+
+```ts
+{ match: '/settings/team', featureFlag: 'team-management', redirectTo: '/' },
+```
+
+4. **Gate the nav link** with the same flag:
 
 ```svelte
-<a href="/settings/team">Team Settings</a>
+<script lang="ts">
+  import { FeatureFlag } from '@nebulr-group/bridge-svelte/flags';
+</script>
+
+<FeatureFlag key="team-management" defaultValue={false}>
+  <a href="/settings/team">Team Settings</a>
+</FeatureFlag>
 ```
+
+Create the page file at `src/routes/settings/team/+page.svelte` as shown above; if `src/routes/settings/` does not exist, create it. The route stays protected by `defaultAccess: 'protected'`, so a signed-out visitor is sent to the login first.
 
 ## Verify
 
-1. Navigate to `/settings/team` -- the team management panel should render
+1. Signed in with a role that holds the privilege, navigate to `/settings/team` -- the team management panel renders and the nav link shows; with a role that does not, the link is hidden and the route redirects to `/`
 2. Confirm the **Users** tab shows the current team members
 3. Try inviting a user using the invite form in the Users tab
 4. Switch to the **Profile** tab and verify it renders the team profile form
 5. Switch to the **Workspace** tab and verify it renders workspace settings
 6. Test saving changes on the Profile and Workspace tabs
 7. Run the project's build command to confirm no TypeScript or import errors
+8. Run `npx @nebulr-group/bridge-cli check gates` -- it reports nothing

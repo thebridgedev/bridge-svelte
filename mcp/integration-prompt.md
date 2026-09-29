@@ -4,6 +4,16 @@ You are integrating The Bridge into a SvelteKit application. The whole integrati
 
 `bridge guide mechanisms` explains the rules everything here builds on (the server decides limits, the three UI levels, the four customisation rungs). Read it when the developer asks for more than this guide covers.
 
+## The one rule for app code
+
+**Every gate in app code is a flag.** A link, a page, a button, an endpoint: if some people get it and others do not, the code asks a flag, and the flag's rule says why: a privilege (`privileges contains "USER_WRITE"`), a plan feature (`bridge:billing.entitlement.analytics eq true`) or a rollout. App code never reads a role, a privilege list, the plan or a plan feature to decide what someone may see or do.
+
+Two things are not gates and are not flags: **numbers** are plan limits (`<QuotaGate>` in the browser, `@RequireQuota` on the backend), and **permission on one specific record** stays in app code ("only the author edits their post").
+
+Before calling the work done, run `npx @nebulr-group/bridge-cli check gates` in the project. It lists every direct role, privilege, plan or plan-feature check with the flag to use instead. Fix each one.
+
+In SvelteKit: a piece of UI is `<FeatureFlag key="…">`; a page is a route rule `{ match: '/admin/*', featureFlag: 'admin-area', redirectTo: '/' }`; a nav link is the same `<FeatureFlag>` around the link.
+
 ## Decide first — hosted or in-app sign-in?
 
 | You want | Mode | Config |
@@ -120,8 +130,8 @@ A signed-out visitor on a protected page is sent to the login and brought back t
 | The user | `$profileStore` (`undefined` while loading, `null` when signed out) |
 | The access token for a client that takes no `fetch` (axios) | `$tokenStore?.accessToken` |
 | Workspace, subscription, branding, live | the `bridge` object: `bridge.tenant.subscription`, `bridge.app.branding`, `bridge.user` (Svelte stores) |
-| What the plan allows | `$entitlements.can('key')` after `$entitlements.ready`; `<Entitled to="key">` in markup |
-| A feature flag | `useFlag(key, default)` / `<FeatureFlag>` from `@nebulr-group/bridge-svelte/flags` — `bridge guide svelte feature-flags` |
+| Whether someone gets a feature (their privileges, their plan, a rollout) | a flag: `<FeatureFlag key>` / `useFlag(key, default)` from `@nebulr-group/bridge-svelte/flags`, or a route rule with `featureFlag` — `bridge guide svelte feature-flags` |
+| How much of a limit is left | `useQuota(metric)`, `<QuotaGate metric>` — `bridge guide svelte billing` |
 
 ## Calling your own backend
 
@@ -141,7 +151,7 @@ Reach for these before writing an equivalent; each is imported from `@nebulr-gro
 |---|---|---|
 | `BridgeAuthRoutes`, `LoginForm`, `SignupForm`, `ForgotPassword`, `MagicLink`, `PasskeyLogin`, `PasskeySetup`, `PasskeyRequestSetupLink`, `MfaChallenge`, `MfaSetup`, `SsoButton`, `WorkspaceSelector`, `TenantSelector` | Sign-in pages and their building blocks | `bridge guide svelte sdk-auth` |
 | `BridgeBillingRoutes`, `BridgePaywallPage`, `BridgePaywall`, `PlanSelector`, `BillingPortalButton`, `BridgeBillingNotice`, `BridgeSubscriptionStatus` | Subscription pages, paywall, plan picker, portal button, lifecycle notices, a plan/status badge | `bridge guide svelte billing` |
-| `QuotaGate`, `Entitled`, `BridgeQuotaBanner`, `BridgeUpgradeDialog` | Plan limits and features in the UI | `bridge guide svelte billing` |
+| `QuotaGate`, `BridgeQuotaBanner`, `BridgeUpgradeDialog` | Plan limits in the UI and the upgrade dialog | `bridge guide svelte billing` |
 | `TeamManagementPanel`, `TeamUserList`, `TeamProfileForm`, `TeamWorkspaceForm`, `TeamAddUserDialog`, `TeamEditUserDialog`, `TeamConfirmDialog`, `TeamUserActionsMenu` | Members, roles, workspace settings | `bridge guide svelte team` |
 | `ApiTokenManagement` | Lets a workspace create and revoke its API tokens | — |
 | `FeatureFlag` | Markup behind a flag | `bridge guide svelte feature-flags` |

@@ -2,9 +2,19 @@
 
 You are wiring **billing UI** into a SvelteKit application that uses The Bridge. Plans and Stripe are already configured — this guide covers the frontend only: the subscription pages, lifecycle notices, plan limits in the UI, and the billing portal.
 
-`bridge guide mechanisms` is the one-page model this guide builds on: the server decides and the client decorates, a POST increments the limit, counter vs gauge, and the three UI levels.
+`bridge guide mechanisms` is the one-page model this guide builds on: count usage once where the action happens, a POST increments the limit, counter vs gauge, and the three UI levels. `bridge guide fit-together` explains how plans, plan features, limits and flags split the work.
 
 > **Do not install any packages.** The only dependency is `@nebulr-group/bridge-svelte`, already installed. Checkout is a plain redirect to Stripe, so `@stripe/stripe-js` is not needed, even though it appears in the package's optional peer dependencies.
+
+## The one rule for app code
+
+**Every gate in app code is a flag.** A link, a page, a button, an endpoint: if some people get it and others do not, the code asks a flag, and the flag's rule says why: a privilege (`privileges contains "USER_WRITE"`), a plan feature (`bridge:billing.entitlement.analytics eq true`) or a rollout. App code never reads a role, a privilege list, the plan or a plan feature to decide what someone may see or do.
+
+Two things are not gates and are not flags: **numbers** are plan limits (`<QuotaGate>` in the browser, `@RequireQuota` on the backend), and **permission on one specific record** stays in app code ("only the author edits their post").
+
+Before calling the work done, run `npx @nebulr-group/bridge-cli check gates` in the project. It lists every direct role, privilege, plan or plan-feature check with the flag to use instead. Fix each one.
+
+In SvelteKit: a piece of UI is `<FeatureFlag key="…">`; a page is a route rule `{ match: '/admin/*', featureFlag: 'admin-area', redirectTo: '/' }`; a nav link is the same `<FeatureFlag>` around the link.
 
 ## Decide first — which billing surface?
 
@@ -20,18 +30,18 @@ Read this table before writing anything. Every case below is already solved by t
 | **Lifecycle messages** — payment failed, trial ending, cancelled | `<BridgeBillingNotice />` | root `+layout.svelte` |
 | **Your backend refused a request at a plan limit** — tell the user and offer the upgrade | nothing — `<BridgeBootstrap>` opens the upgrade dialog on the backend's `402 QUOTA_EXCEEDED` | (no code) |
 | **Disable an action at the cap**, before the click | `<QuotaGate metric="…">` around it | the component |
-| **Show markup only when the plan grants it** | `<Entitled to="…">` in markup; `$entitlements.can('key')` in script | the component |
+| **A feature some plans sell** (analytics, SSO) | the feature on the plan (`bridge plan feature add pro analytics`), a flag ruled `bridge:billing.entitlement.analytics eq true`, and `<FeatureFlag key="analytics">` around the markup — see *Plan features* in Step 3 | the component, or a route rule for a page |
 | **A usage counter** — "42 of 1000 decks" | `<BridgeQuotaBanner metric="…" />` | the component |
 | **The raw quota numbers**, for your own UI | `useQuota(metric)` | component or `.svelte.ts` |
 | **Usage for an action that happens in the browser** (the click does not call your server: local-first, mobile) | `bridge.usage.report(metric)` / `bridge.usage.set(metric, n)` — see Step 3 | anywhere |
 | **Current plan / subscription state** | `bridge.tenant.subscription`, or `subscriptionStore` | anywhere |
 | **Manage payment method, cancel** | `<BillingPortalButton />` (already on `/subscription`) | anywhere else you want the button |
-| **Actually enforcing a cap** | **your server** — `@RequireQuota` / `@RequireEntitlement` in bridge-nestjs | your backend |
+| **The action calls your backend** | the backend counts and refuses at the cap — `@RequireQuota` in bridge-nestjs | your backend |
 
 Two rows have real blast radius, and both are easy to get wrong in the same direction:
 
 - **The plan-less gate belongs to `bridgeBootstrap()`, not to a page.** It redirects before any page renders, to `/subscription/plan` unless `billing.paywallRoute` says otherwise. Checking "does this tenant have a plan?" inside a component means the page has already loaded and its `load` has already run, so you are redirecting after the fact — the same mistake as gating a route from inside the route.
-- **A client-side quota check is display, not enforcement.** Anyone can call your API directly and skip it. The server is authoritative, the client is decorative: the backend's decorator refuses the write; the upgrade dialog, `<QuotaGate>` and `<Entitled>` only explain or anticipate that refusal. Do not write a quota `if` on a page — the dialog already covers the refusal with zero code.
+- **A limit is counted once, where the action happens.** When the click calls your server, the backend's decorator counts it and refuses at the cap, and the upgrade dialog explains that refusal with zero code — do not write a quota `if` on a page. When the click stays in the browser, the page counts it with `bridge.usage` and `<QuotaGate>` stops it at the limit. Both are complete setups; ask which one the action is (Step 3).
 
 If the user has not said whether they want the redirect paywall or the overlay, the redirect is the default — and it is already on once Step 1's file exists. Do not hand-write a paywall page, a `/billing` page or a `/payment-error` page: `<BridgeBillingRoutes />` serves every page Bridge redirects to.
 
@@ -48,6 +58,8 @@ These can be configured from the Bridge **MCP tools** or the **`bridge` CLI**. S
 | Remove a price | `remove_plan_price` — `key`, `interval`, `currency?` | `bridge plan price rm <key> --interval …` |
 | Add/replace a quota | `set_plan_quota` — `key`, `metric`, `limit`, `policy`, `kind?`, `priceAmount?`, `priceCurrency?` | `bridge plan quota set <key> --metric … --limit … --policy … [--kind gauge]` |
 | Remove a quota | `remove_plan_quota` — `key`, `metric` | `bridge plan quota rm <key> --metric …` |
+| Sell an on/off feature on a plan | `add_plan_feature` | `bridge plan feature add <key> <feature> --name "…"` |
+| Stop selling it on a plan | `remove_plan_feature` | `bridge plan feature remove <key> <feature>` |
 
 Use whichever is already set up. **If the user asks for a specific surface, use that one** — both reach the same API. If neither is available, offer to install one; only fall back to the dashboard if they decline.
 
@@ -210,15 +222,17 @@ Import `BridgePaywallPage` / `BridgePaywall` from `@nebulr-group/bridge-svelte`.
 
 **Required if any plan has a limit or a metered price.** (Skip only when every plan is flat-rate with no per-resource limits.)
 
-> Quotas are configured with `set_plan_quota` (MCP) or `bridge plan quota set` (CLI) — `hard` / `--policy hard` for blocking caps, `metered` + `priceAmount` / `--policy metered --price-amount <n>` for per-unit billing; see *Configuring plans, prices and quotas* above. Entitlements are derived from `hard` quotas automatically — there is no entitlement tool or `plan entitlement set` command.
+> Quotas are configured with `set_plan_quota` (MCP) or `bridge plan quota set` (CLI) — `hard` / `--policy hard` for blocking caps, `metered` + `priceAmount` / `--policy metered --price-amount <n>` for per-unit billing; see *Configuring plans, prices and quotas* above. An on/off feature a plan sells is not a quota: it goes on the plan's features list (`add_plan_feature` / `bridge plan feature add`) and a flag reads it — see *Plan features* below.
 
-**The enforcement model: the server is authoritative, the client is decorative.** Your backend refuses a request at the cap — with bridge-nestjs that is one decorator on the handler that creates the thing (`@RequireQuota('tickets')`, `@RequireEntitlement('analytics')`; `bridge guide nestjs billing`). Everything in this step only *shows* that decision. Pick the lowest level that does the job — everything is imported from `@nebulr-group/bridge-svelte`:
+**Count once, where the action happens.** When the click calls your backend, the backend counts and refuses at the cap — with bridge-nestjs one decorator on the handler that creates the thing (`@RequireQuota('tickets')`; `bridge guide nestjs billing`) — and the page only shows it. When the click stays in the browser, the page counts it (*Count usage once* below) and `<QuotaGate>` stops it at the limit. Pick the lowest level that does the job — everything is imported from `@nebulr-group/bridge-svelte`:
 
 | Level | What the page writes | What the user sees |
 |---|---|---|
 | **0 — nothing** (default) | `<button onclick={createTicket}>New ticket</button>`, where `createTicket` calls the API with `bridgeFetch('/api/tickets', { method: 'POST' })` — no limit code | The click is refused by the backend (`402 QUOTA_EXCEEDED`) and the **upgrade dialog** opens, naming the metric and linking to the subscription page |
-| **1 — one component** | `<QuotaGate metric="tickets">…</QuotaGate>`, `<Entitled to="analytics">…</Entitled>` | The button is disabled at the cap with an upgrade line beside it; a paid feature shows only on a plan that grants it |
-| **2 — your own UI** | `useQuota(metric)`, `$entitlements.can(key)` | Whatever you build from the numbers |
+| **1 — one component** | `<QuotaGate metric="tickets">…</QuotaGate>` | The button is disabled at the cap with an upgrade line beside it |
+| **2 — your own UI** | `useQuota(metric)` | Whatever you build from the numbers |
+
+A feature a plan sells (analytics, SSO) is not a limit: it is a flag — see *Plan features* below.
 
 ### Level 0 — the upgrade dialog (no code)
 
@@ -230,13 +244,13 @@ Import `BridgePaywallPage` / `BridgePaywall` from `@nebulr-group/bridge-svelte`.
 
 Do **not** add a `try/catch` that shows your own "limit reached" toast on every page, and do not pre-check the quota before each call — that is the code level 0 exists to delete.
 
-### Level 1 — `<QuotaGate>` and `<Entitled>`
+### Level 1 — `<QuotaGate>`
 
 When the button should react *before* the click:
 
 ```svelte
 <script lang="ts">
-  import { QuotaGate, Entitled } from '@nebulr-group/bridge-svelte';
+  import { QuotaGate } from '@nebulr-group/bridge-svelte';
 </script>
 
 <QuotaGate metric="tickets">
@@ -245,17 +259,10 @@ When the button should react *before* the click:
     {quota.used} of {quota.limit} tickets used. <a href="/subscription">Upgrade</a>
   {/snippet}
 </QuotaGate>
-
-<Entitled to="analytics">
-  <AnalyticsPanel />
-  {#snippet fallback()}<a href="/subscription">Upgrade for analytics</a>{/snippet}
-</Entitled>
 ```
 
 - `<QuotaGate metric>` disables every button/input inside it (a `<fieldset disabled>`) only at a **known hard cap**, and shows `atLimit(quota)` — or a default "You've used all N … Upgrade" line — beside it. While the quota is loading, when the plan has no quota on the metric, and for `metered` quotas it stays **enabled**: "not loaded yet" is never "zero".
-- `<Entitled to>` renders the children when the plan grants the key and `fallback` when it does not. Until Bridge has answered it renders neither (only an optional `loading` snippet), so a cold start never flashes the paywall at a paying workspace.
-- **Do not wrap `<Entitled to="tickets">` around `<QuotaGate metric="tickets">`.** Bridge turns every hard quota into an entitlement of the same name, which becomes `false` at the cap — the `<Entitled>` would hide the button and the gate's upgrade line with it. Use `<Entitled>` for plan *features* (`analytics`, `sso`) and `<QuotaGate>` for *counted* things (`tickets`, `projects`).
-- In script, the same entitlement answer is `$entitlements.can('key')` (check `$entitlements.ready` first).
+- **Never put a flag ruled on `bridge:billing.entitlement.tickets` around `<QuotaGate metric="tickets">`.** Every hard quota is also an entitlement of the same name, `false` at the cap — the flag would hide the button and the gate's upgrade line with it. Plan *features* (`analytics`, `sso`) are flags; *counted* things (`tickets`, `projects`) are `<QuotaGate>`.
 
 ### Level 2 — your own UI: `useQuota(metric)`
 
@@ -284,7 +291,7 @@ A `/quota` route on your own API, a hand-written `type MyQuota = { used, limit, 
 
 ### When the action calls your backend
 
-The cap belongs on the backend handler that creates the thing — with NestJS one decorator: `@RequireQuota('tickets', { current })` for something that exists and can be deleted (a gauge), `@RequireQuota('exports')` for something that happened (a counter), `@RequireEntitlement('analytics')` for a plan feature. A POST increments the limit; there is nothing else to wire. It refuses with the `402 QUOTA_EXCEEDED` body that opens the level-0 dialog — `bridge guide nestjs billing`.
+The cap belongs on the backend handler that creates the thing — with NestJS one decorator: `@RequireQuota('tickets', { current })` for something that exists and can be deleted (a gauge), `@RequireQuota('exports')` for something that happened (a counter); a plan feature on the backend is `@RequireFeatureFlag('analytics')`, reading the same flag the page reads. A POST increments the limit; there is nothing else to wire. It refuses with the `402 QUOTA_EXCEEDED` body that opens the level-0 dialog — `bridge guide nestjs billing`.
 
 ### Count usage once, where the action happens
 
@@ -299,7 +306,7 @@ await bridge.usage.set('projects', projects.length); // a gauge: how many exist 
 
 If deleting it frees room, it's a gauge and your app counts it (`set`, after every create and delete, with the absolute count); if it happened, it's a counter and Bridge counts it (`report`). `report` is fire-and-forget and queued durably; `set` resolves once Bridge has stored the value and rejects if it was refused.
 
-Counting from the browser trusts the browser: Bridge shows and bills what the page reports, and only a backend can refuse a write.
+This is complete on its own: `<QuotaGate>` stops the action at the limit, and Bridge shows and bills what the page reports.
 
 **Never count one metric on both sides** — the same action is then counted twice. In development the plugin warns once in the console when your backend and the page count the same metric (bridge-nestjs marks a counting response with `X-Bridge-Usage-Counted` outside production; nothing is sent or printed in production).
 
@@ -310,25 +317,37 @@ Counting from the browser trusts the browser: Bridge shows and bills what the pa
 
 `<QuotaGate>` already branches on `policy`. In your own UI, branch on `policy`, never on `remaining` alone.
 
-### Entitlements in script
+### Plan features — a flag ruled on the plan's list
 
-`<Entitled to="key">` is the markup form. A plan feature is a `hard` quota nothing counts (`bridge plan quota set pro --metric analytics --limit 1 --policy hard`); `app_active` is true while the subscription is active. In script:
+An on/off feature that some plans sell (analytics, SSO, AI) is two pieces: the plan lists it, and a flag reads that list. The flag's rule never names plans, so when Pro gains or loses the feature you change the plan and no rule has to follow.
+
+1. Put the feature on each plan that sells it: `bridge plan feature add pro analytics --name "Analytics"` (MCP: `add_plan_feature`).
+2. Create the flag with the rule `bridge:billing.entitlement.analytics eq true`:
+
+```bash
+bridge flag create --key analytics --value-type boolean --state on-with-rule \
+  --rule '{"branches":[{"conditions":[{"attribute":"bridge:billing.entitlement.analytics","operator":"eq","values":[true]}],"returnValue":true}],"otherwiseValue":false,"rolloutPct":100}'
+```
+
+3. Gate on the flag. Markup:
 
 ```svelte
 <script lang="ts">
-  import { entitlements } from '@nebulr-group/bridge-svelte';
+  import { FeatureFlag } from '@nebulr-group/bridge-svelte/flags';
 </script>
 
-{#if !$entitlements.ready}
-  <Spinner />
-{:else if $entitlements.can('ai_completions')}
-  <AiPanel />
-{:else}
-  <UpgradePrompt />
-{/if}
+<FeatureFlag key="analytics" defaultValue={false} upgrade>
+  <AnalyticsPanel />
+</FeatureFlag>
 ```
 
-`$entitlements.can(key)` is fail-closed — `false` until Bridge has answered — and updates live when the plan changes or a hard quota reaches its cap. `$entitlements.ready` is what tells "not loaded yet" apart from "this plan cannot": check it first, so a cold start shows a spinner rather than an upgrade prompt. Outside a component, `bridge.tenant.entitlements.can('key')` is the same answer, read once.
+`upgrade` shows an "Upgrade to use this" prompt in its place when the plan is why it is off; clicking it opens the upgrade dialog naming the plans that include it. For your own prompt, pass a `fallback(value, { reason, openUpgrade })` snippet instead: `reason` is `'plan'` when an upgrade alone would turn it on. A whole page is a route rule: `{ match: '/analytics/*', featureFlag: 'analytics', redirectTo: '/' }`. In script, `useFlag('analytics', false)` from `@nebulr-group/bridge-svelte/flags`. On the backend, `@RequireFeatureFlag('analytics')` reads the same rule.
+
+The flag can later carry a rollout, a trial group or a one-customer exception without a code change — which a direct plan check cannot.
+
+### Exceptions — checking the plan directly
+
+`<Entitled to="analytics">` and `$entitlements.can('analytics')` read the plan's list with no flag in between. Use them only when the developer explicitly asks for no flag; in development they log a one-time note pointing at the flag rule. `$entitlements.can(key)` is fail-closed (`false` until `$entitlements.ready`), and `<Entitled>` renders nothing, or its `loading` snippet, until Bridge has answered.
 
 ## Step 4 — Billing portal
 
@@ -348,8 +367,9 @@ Before verifying, confirm every item was applied:
 - [ ] `src/routes/subscription/[...bridge]/+page.svelte` created with `<BridgeBillingRoutes />` — and no hand-written `/billing`, `/payment-error`, success or paywall pages
 - [ ] `<BridgeBillingNotice />` added to root layout
 - [ ] Paywall: nothing to add (default `/subscription/plan`). `/welcome` + `billing.paywallRoute: '/welcome'` ONLY if the user asked for it — OR `<BridgePaywall>` + `billing.paywallRoute: false` for the overlay alternative
-- [ ] Plan limits: counted once, where the action happens — the backend handler (`@RequireQuota`) when the click calls your server, `bridge.usage.report` / `set` plus `<QuotaGate>` when it does not, never both; for backend actions the frontend relies on the level-0 dialog, adding `<QuotaGate>` / `<Entitled>` only where the UI should react before the click — no hand-written quota checks, toasts or `/quota` endpoints
-- [ ] No `<Entitled>` wrapped around a `<QuotaGate>` on the same key
+- [ ] Plan limits: counted once, where the action happens — the backend handler (`@RequireQuota`) when the click calls your server, `bridge.usage.report` / `set` plus `<QuotaGate>` when it does not, never both; for backend actions the frontend relies on the level-0 dialog, adding `<QuotaGate>` only where the UI should react before the click — no hand-written quota checks, toasts or `/quota` endpoints
+- [ ] Plan features: on the plan (`bridge plan feature add`) and gated by a flag ruled `bridge:billing.entitlement.<key> eq true` — `<FeatureFlag>` or a route rule, never a check of the plan in the page
+- [ ] `npx @nebulr-group/bridge-cli check gates` reports nothing
 - [ ] No extra packages installed (`@stripe/stripe-js` must NOT be in package.json)
 
 ## Verify

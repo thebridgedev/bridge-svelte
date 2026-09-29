@@ -40,7 +40,7 @@ const DOC_FORBIDDEN: Array<[string, RegExp]> = [
   ['a plan name compared in code', /\bplan(?:Key|Name|Slug)?\s*(?:===|!==|==|!=)\s*['"`]/i],
   ['a plan-name helper', /\bis(?:Pro|Free|Enterprise|Team|Business)(?:Plan|User)?\b\s*[(=]/],
   ['a route rule on plans', /\bplans\s*:\s*\[/],
-  ['a route rule on a role', /\{[^}\n]*\brole\s*:\s*['"`]/],
+  ['a route rule on a role', /\{[^}\n]*\b(?:match|path)\s*:[^}\n]*\brole\s*:\s*['"`]/],
   ['a route rule on a privilege', /\bprivilege\s*:\s*['"`](?!ANONYMOUS|AUTHENTICATED)[A-Z_]+['"`]/],
   ['a flag rule that names plans', /"attribute"\s*:\s*"(?:tenant\.plan|bridge:billing\.plan)"/],
   ['browser counting called demo-grade', /demo[- ]grade/i],

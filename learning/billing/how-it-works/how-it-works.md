@@ -92,25 +92,19 @@ Read state from the **`bridge` object** (`bridge.tenant.subscription`, `bridge.t
 {/if}
 ```
 
-**Read an entitlement** to gate a feature on what the plan grants. In markup, use the `entitlements` store so the gate re-evaluates when entitlements change:
+**Gate a feature the plan sells with a flag.** List the feature on the plans that sell it (`bridge plan feature add pro ai_completions`) and rule a flag `bridge:billing.entitlement.ai_completions eq true`; the page asks the flag, and it re-evaluates live when the plan changes:
 
 ```svelte
 <script lang="ts">
-  import { entitlements } from '@nebulr-group/bridge-svelte';
+  import { FeatureFlag } from '@nebulr-group/bridge-svelte/flags';
 </script>
 
-{#if $entitlements.can('ai_completions')}
+<FeatureFlag key="use_ai" defaultValue={false} upgrade>
   <AiPanel />
-{/if}
+</FeatureFlag>
 ```
 
-`$entitlements.ready` is `false` until Bridge has answered; check it when a `false` should show a spinner rather than an upgrade prompt. **Read quota numbers** the same way with [`useQuota(metric)`](/billing/limits/usage-limits/#reading-quota-state-yourself).
-
-For imperative checks outside markup (event handlers, load functions), `can()` is the synchronous read. It is fail-closed (`false` until the snapshot lands) and **not reactive**, so don't call it directly in an `{#if}` block; the block would never re-render when entitlements change:
-
-```ts
-if (bridge.tenant.entitlements.can('ai_completions')) { /* ... */ }
-```
+See [Lock features to a plan](/billing/limits/lock-features/) for the whole pattern. **Read quota numbers** with [`useQuota(metric)`](/billing/limits/usage-limits/#reading-quota-state-yourself).
 
 **For UI, prefer a drop-in component** over wiring your own; each reads the same live state:
 

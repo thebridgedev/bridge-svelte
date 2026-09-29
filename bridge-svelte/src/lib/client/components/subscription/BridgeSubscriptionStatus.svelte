@@ -7,7 +7,16 @@
   `BridgeFlags`. Do NOT confuse with the older `<PlanSelector />` which
   consumes the Stripe-direct path via `subscriptionStore`.
 
-  No live push in v1 — that's US-3. Fetches once on mount.
+  TBP-762 — reads through the plugin's billing store (core/billing-store.ts):
+  it re-reads on a plan change, a renewed sign-in and tab focus, so the badge
+  follows the plan without a reload. A read that meets an out-of-date sign-in
+  renews it and retries; a failed read is retried once, and "Loading…" stays up
+  meanwhile. "Subscription unavailable" only after that; with `debug: true` the
+  reason is shown next to it.
+
+  `fresh` (the checkout success page): show "Loading…" until a read started
+  after this badge mounted has answered, so the plan it shows is the one the
+  checkout just bought, never the one the store held before.
 -->
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
@@ -15,46 +24,53 @@
     useBridge,
     type BillingSubscriptionSnapshot,
   } from '@nebulr-group/bridge-auth-core';
-  import { getBridgeAuth } from '../../../core/bridge-instance.js';
+  import { ensureBillingState, refreshBillingState } from '../../../core/billing-store.js';
+  import { isLoggerDebug } from '../../../shared/logger.js';
+  import { subscriptionBadgeView } from './subscription-badge.js';
 
   interface Props {
     /** Optional class applied to the root span. */
     class?: string;
+    /** Wait for a read made after mount before showing a plan. */
+    fresh?: boolean;
   }
 
-  let { class: className = '' }: Props = $props();
+  let { class: className = '', fresh = false }: Props = $props();
 
   let snapshot = $state<BillingSubscriptionSnapshot>(useBridge().subscription.snapshot());
+  // "Loading…" until this badge's own read has answered when it has nothing to
+  // show yet (never a "No subscription" flash), or always on `fresh`.
+  // svelte-ignore state_referenced_locally
+  let awaiting = $state(fresh || snapshot.state === null);
   let unsubscribe: (() => void) | undefined;
+  const debug = isLoggerDebug();
 
   onMount(() => {
     unsubscribe = useBridge().subscription.subscribe((snap) => {
       snapshot = snap;
     });
-
-    const ctx = getBridgeAuth().getApiContext();
-    if (!ctx.accessToken) {
-      useBridge().subscription.setError('Not authenticated');
-      return;
-    }
-    useBridge().subscription.mount({
-      apiBaseUrl: ctx.apiBaseUrl,
-      accessToken: ctx.accessToken,
-      appId: ctx.appId,
+    const read = fresh ? refreshBillingState() : ensureBillingState();
+    void read.finally(() => {
+      awaiting = false;
     });
   });
 
   onDestroy(() => unsubscribe?.());
+
+  const view = $derived(subscriptionBadgeView(snapshot, awaiting, debug));
 </script>
 
-<span class={`bridge-subscription-status ${className}`}>
-  {#if snapshot.loading}
+<span class={`bridge-subscription-status ${className}`} data-state={view.kind}>
+  {#if view.kind === 'loading'}
     <span class="bss-loading">Loading…</span>
-  {:else if snapshot.error}
+  {:else if view.kind === 'error'}
     <span class="bss-error">Subscription unavailable</span>
-  {:else if snapshot.state}
-    <span class="bss-plan">{snapshot.state.plan.name}</span>
-    <span class={`bss-badge bss-badge-${snapshot.state.status}`}>{snapshot.state.status}</span>
+    {#if view.reason}
+      <span class="bss-error-reason" data-bridge-error-reason>({view.reason})</span>
+    {/if}
+  {:else if view.kind === 'plan'}
+    <span class="bss-plan">{view.name}</span>
+    <span class={`bss-badge bss-badge-${view.status}`}>{view.status}</span>
   {:else}
     <span class="bss-empty">No subscription</span>
   {/if}
@@ -110,7 +126,8 @@
     font-style: italic;
   }
 
-  .bss-error {
+  .bss-error,
+  .bss-error-reason {
     color: var(--bridge-alert-error-fg, #991b1b);
   }
 </style>

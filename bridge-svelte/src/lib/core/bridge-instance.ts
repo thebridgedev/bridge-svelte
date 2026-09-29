@@ -71,6 +71,8 @@ export function initBridge(config: BridgeAuthConfig): BridgeAuth {
   _instance.on('auth:logout', () => {
     _tokens.set(null);
     _profile.set(null);
+    // TBP-762 — the next user must not see this one's plan.
+    resetSubscription();
   });
 
   _instance.on('auth:token-refreshed', (tokens) => {
@@ -92,7 +94,7 @@ export function initBridge(config: BridgeAuthConfig): BridgeAuth {
 
   _instance.on('auth:workspace-changed', (tokens) => {
     _tokens.set(tokens);
-    _subscriptionWritable.set({ status: null, plans: null, loading: false, error: null });
+    resetSubscription();
     _instance!.getProfile().then((p) => _profile.set(p ?? null)).catch((err) => logger.warn('[bridge-instance] profile fetch failed:', err));
   });
 
@@ -205,18 +207,139 @@ const _subscriptionWritable: Writable<SubscriptionState> = writable({
 /** Subscription status + plan list */
 export const subscriptionStore: Readable<SubscriptionState> = _subscriptionWritable;
 
-export async function loadSubscription(): Promise<void> {
-  _subscriptionWritable.update((s) => ({ ...s, loading: true, error: null }));
-  try {
-    const [status, plans] = await Promise.all([
-      getBridgeAuth().getSubscriptionStatus(),
-      getBridgeAuth().getPlans(),
-    ]);
-    _subscriptionWritable.set({ status, plans, loading: false, error: null });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to load subscription';
-    _subscriptionWritable.update((s) => ({ ...s, loading: false, error: msg }));
+// TBP-762 — one refresh rule for the plan list and the current plan.
+//
+// Every screen used to fetch on its own and only when `status` was missing, so
+// a list loaded once was served for the life of the tab: a plan added in Bridge
+// never appeared, and the list a checkout had just changed stayed stale. Now:
+//   - concurrent calls share one read, and a call made while a read is in
+//     flight gets a second read after it — the caller asked because something
+//     changed, and the in-flight answer may predate that;
+//   - a read that fails, or answers with an empty plan list, is retried once;
+//   - a background re-read never blanks what is on screen: `loading` is only
+//     true while there is nothing to show, and a failed re-read keeps the last
+//     good answer instead of replacing it with an error;
+//   - an answer that arrives after sign-out or a workspace switch is dropped.
+// `core/billing-store.ts` decides WHEN to re-read (sign-in renewal, live
+// billing events, tab focus after 30 s); this function is HOW.
+
+/** Delay before the one retry of a failed or empty read. */
+let _retryDelayMs = 1000;
+/** Test-only: shorten the retry delay. */
+export function __setBillingRetryDelay(ms: number): void {
+  _retryDelayMs = ms;
+}
+export function billingRetryDelay(): number {
+  return _retryDelayMs;
+}
+
+let _subInflight: Promise<void> | null = null;
+let _subAgain = false;
+let _subLoadedAt = 0;
+let _subWanted = false;
+/** Bumped on sign-out and workspace switch; a read started before is discarded. */
+let _subGeneration = 0;
+
+function resetSubscription(): void {
+  _subGeneration += 1;
+  _subLoadedAt = 0;
+  _subscriptionWritable.set({ status: null, plans: null, loading: false, error: null });
+}
+
+/** When the plan list and status were last read successfully (ms epoch), 0 if never. */
+export function subscriptionLoadedAt(): number {
+  return _subLoadedAt;
+}
+
+/** True once any screen has asked for the plan list / status in this session. */
+export function subscriptionWanted(): boolean {
+  return _subWanted;
+}
+
+/** Re-read the plan list and the current plan. Never rejects. */
+export function loadSubscription(): Promise<void> {
+  _subWanted = true;
+  if (_subInflight) {
+    _subAgain = true;
+    return _subInflight;
   }
+  _subInflight = (async () => {
+    try {
+      do {
+        _subAgain = false;
+        await readSubscriptionOnce();
+      } while (_subAgain);
+    } finally {
+      _subInflight = null;
+    }
+  })();
+  return _subInflight;
+}
+
+/**
+ * Read only when nothing has been read yet or the last read is older than
+ * `maxAgeMs`. What screens call on mount instead of fetching on their own.
+ */
+export function ensureSubscription(maxAgeMs = 30_000): Promise<void> {
+  if (_subInflight) return _subInflight;
+  if (_subLoadedAt > 0 && Date.now() - _subLoadedAt < maxAgeMs) return Promise.resolve();
+  return loadSubscription();
+}
+
+async function readSubscriptionOnce(): Promise<void> {
+  const generation = _subGeneration;
+  const current = get(_subscriptionWritable);
+  const hasData = current.status !== null || current.plans !== null;
+  if (!hasData) _subscriptionWritable.update((s) => ({ ...s, loading: true, error: null }));
+
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const [status, plans] = await Promise.all([
+        getBridgeAuth().getSubscriptionStatus(),
+        getBridgeAuth().getPlans(),
+      ]);
+      if (generation !== _subGeneration) return;
+      // An empty list is more often a read that raced a change than an app
+      // with no plans: ask once more before believing it.
+      if ((plans?.length ?? 0) === 0 && attempt === 0) {
+        await wait(_retryDelayMs);
+        if (generation !== _subGeneration) return;
+        continue;
+      }
+      _subscriptionWritable.set({ status, plans, loading: false, error: null });
+      _subLoadedAt = Date.now();
+      return;
+    } catch (err) {
+      if (generation !== _subGeneration) return;
+      if (attempt === 0) {
+        await wait(_retryDelayMs);
+        if (generation !== _subGeneration) return;
+        continue;
+      }
+      const msg = err instanceof Error ? err.message : 'Failed to load subscription';
+      logger.warn('[bridge-instance] subscription read failed:', msg);
+      const latest = get(_subscriptionWritable);
+      if (latest.status !== null || latest.plans !== null) {
+        // Keep the last good answer on screen; the next trigger re-reads.
+        _subscriptionWritable.update((s) => ({ ...s, loading: false }));
+      } else {
+        _subscriptionWritable.update((s) => ({ ...s, loading: false, error: msg }));
+      }
+      return;
+    }
+  }
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Test-only: forget every read and answer. */
+export function __resetSubscriptionForTests(): void {
+  resetSubscription();
+  _subInflight = null;
+  _subAgain = false;
+  _subWanted = false;
 }
 
 // ── Convenience singleton accessor ────────────────────────────────────────────

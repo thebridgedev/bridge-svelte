@@ -83,7 +83,7 @@ At a hard cap every button and input inside is disabled, and the `atLimit` snipp
 | `atLimit` | `Snippet<[QuotaState]>` | "You've used all … Upgrade" | Shown beside the disabled children at the cap; receives the live quota |
 | `class` | `string` | `''` | Class on the wrapper |
 
-For a plan *feature* rather than a counted thing, use [`<Entitled>`](/billing/limits/lock-features/). Bridge turns every hard quota into an entitlement of the same name that is `false` at the cap, so don't wrap `<Entitled to="tickets">` around `<QuotaGate metric="tickets">`: at the cap it would hide the button and the upgrade line together.
+A plan *feature* rather than a counted thing is a flag ruled on the plan's list: see [Lock features to a plan](/billing/limits/lock-features/). Bridge turns every hard quota into an entitlement of the same name that is `false` at the cap, so never wrap a flag ruled on `bridge:billing.entitlement.tickets` around `<QuotaGate metric="tickets">`: at the cap it would hide the button and the upgrade line together.
 
 ### Level 2: your own UI
 
@@ -121,8 +121,8 @@ It updates on its own when usage changes. When the metric key comes from a prop,
 If deleting it frees room, it's a gauge and your app counts it. If it happened, it's a counter and Bridge counts it.
 
 - **Counter** (the default): AI completions, exports, API calls. Bridge sums what you [report](/billing/limits/report-usage/) and resets it each billing period: "40 of 100 this month".
-- **Gauge**: projects, documents, seats. Your app tells Bridge how many exist right now, and the number never resets: "8 of 10 projects". Seats (`users`) are counted by Bridge from the workspace's members.
+- **Gauge**: projects, documents, seats. Your app tells Bridge how many exist right now, and the number never resets: "8 of 10 projects". Seats are the exception: name the limit (e.g. `seats`) with `--kind gauge --source membership` and Bridge counts it from the workspace's members.
 
 Set the kind on the plan's quota (`bridge plan quota set <plan> --metric projects --limit 10 --policy hard --kind gauge`).
 
-> Showing a quota is display, not enforcement. The cap has to be checked where the write happens: your backend, which refuses the request (see [Check plans on your backend](/billing/advanced/backend-checks/)). The dialog, `<QuotaGate>` and `useQuota` only explain or anticipate that refusal.
+> Count and check the cap once, where the action happens. When the click calls your server, your backend counts it and refuses at the cap (see [Check plans on your backend](/billing/advanced/backend-checks/)), and the dialog explains that refusal. When the click stays in the browser, the page [reports it](/billing/limits/report-usage/) and `<QuotaGate>` stops it at the limit — a complete, first-class setup.

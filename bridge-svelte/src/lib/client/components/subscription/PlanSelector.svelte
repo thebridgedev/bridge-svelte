@@ -2,8 +2,11 @@
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
   import type { Plan, PriceOfferSdk } from '@nebulr-group/bridge-auth-core';
-  import { getBridgeAuth, loadSubscription, subscriptionStore } from '../../../core/bridge-instance.js';
+  import { ensureSubscription, getBridgeAuth, loadSubscription, subscriptionStore } from '../../../core/bridge-instance.js';
+  import { refreshBilling } from '../../../core/billing-store.js';
+  import { pickPlan } from './plan-pick.js';
   import { getConfig } from '../../stores/config.store.js';
   import Alert from '../sdk-auth/shared/Alert.svelte';
   import Spinner from '../sdk-auth/shared/Spinner.svelte';
@@ -157,11 +160,22 @@
   );
 
   onMount(() => {
-    // Only load if not already loaded
-    if (!$subscriptionStore.status && !$subscriptionStore.loading) {
-      loadSubscription();
-    }
+    // TBP-762 — read unless the billing store holds a read younger than 30 s;
+    // the store re-reads on plan changes, renewed sign-ins and tab focus.
+    void ensureSubscription();
   });
+
+  // TBP-762 — an empty plan list is not proof the app has none (the store has
+  // already asked twice): offer a retry instead of "No plans available".
+  let retrying = $state(false);
+  async function retryPlans(): Promise<void> {
+    retrying = true;
+    try {
+      await loadSubscription();
+    } finally {
+      retrying = false;
+    }
+  }
 
   // ── Plan-change confirmation (TBP-33) ─────────────────────────────────
   // Switching an existing subscriber's plan is instant (no Stripe checkout
@@ -197,7 +211,7 @@
     confirmError = null;
     try {
       await getBridgeAuth().changePlan(plan.key, price);
-      await loadSubscription();
+      await refreshBilling();
       confirmTarget = null;
       showSuccess(`You're now on ${plan.name} (${formatPrice(price)}).`);
       onSelect?.({ plan, price });
@@ -213,37 +227,30 @@
     picking = true;
     pickError = null;
     try {
-      if (price.amount === 0 && !plan.hasCost) {
-        // Free plan — select directly. TBP-275: guard on `!plan.hasCost` so a
-        // $0-base plan that carries METERED pricing is NOT treated as free —
-        // it falls through to checkout/changePlan below, capturing a payment
-        // method so per-unit overage can be billed (US-C). Without this guard a
-        // metered $0-base plan would hit selectFreePlan, which the backend now
-        // rejects ("has a cost — use the checkout endpoint instead").
-        await getBridgeAuth().selectFreePlan(plan.key);
-        await loadSubscription();
-        onSelect?.({ plan, price });
-      } else if (status?.paymentsEnabled) {
-        // Already has payment method — instant switch, so require an explicit
+      const outcome = await pickPlan(
+        plan,
+        price,
+        {
+          paymentsEnabled: !!status?.paymentsEnabled,
+          successRedirect,
+          cancelRedirect,
+          callbackBase: getConfig().callbackUrl ?? `${window.location.origin}/auth/oauth-callback`,
+          onSelect,
+        },
+        {
+          auth: getBridgeAuth(),
+          refresh: refreshBilling,
+          navigate: (url) => goto(url),
+          leave: (url) => {
+            window.location.href = url;
+          },
+        },
+      );
+      if (outcome === 'confirm') {
+        // Already has a payment method — instant switch, so require an explicit
         // confirmation (TBP-33). The actual changePlan runs in confirmPlanChange.
         confirmTarget = { plan, price };
         confirmError = null;
-      } else {
-        // Needs checkout — redirect to Stripe (or direct plan set when Stripe not configured)
-        const base = getConfig().callbackUrl ?? `${window.location.origin}/auth/oauth-callback`;
-        // Use {CHECKOUT_SESSION_ID} placeholder — Stripe substitutes it in-place,
-        // avoiding the double-? bug that occurs when Stripe appends ?session_id= to a URL that already has query params.
-        const successUrl = `${base}?stripe_success=1&session_id={CHECKOUT_SESSION_ID}&redirect=${encodeURIComponent(successRedirect)}`;
-        const cancelUrl  = `${base}?stripe_cancel=1&redirect=${encodeURIComponent(cancelRedirect)}`;
-        const session = await getBridgeAuth().startCheckout(plan.key, price, { successUrl, cancelUrl });
-        if (session.sessionId === null) {
-          // Stripe not configured — plan was set directly on the backend
-          await loadSubscription();
-          onSelect?.({ plan, price });
-        } else {
-          if (!session.checkoutUrl) throw new Error('Checkout session URL missing');
-          window.location.href = session.checkoutUrl;
-        }
       }
     } catch (err) {
       pickError = err instanceof Error ? err.message : 'Something went wrong';
@@ -305,7 +312,12 @@
       {#if emptyState}
         {@render emptyState()}
       {:else}
-        <p class="bridge-plan-empty">No plans available.</p>
+        <div class="bridge-plan-empty" data-bridge-plan-empty>
+          <p>The plans could not be loaded.</p>
+          <button type="button" class="bridge-btn-primary" onclick={retryPlans} disabled={retrying}>
+            {retrying ? 'Loading…' : 'Try again'}
+          </button>
+        </div>
       {/if}
     {:else if plans}
       {#if showIntervalTabs}

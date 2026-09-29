@@ -2,7 +2,7 @@
   import type { Snippet } from 'svelte';
   import { onMount } from 'svelte';
   import type { Plan, PriceOfferSdk } from '@nebulr-group/bridge-auth-core';
-  import { subscriptionStore, loadSubscription } from '../../../core/bridge-instance.js';
+  import { subscriptionStore, ensureSubscription } from '../../../core/bridge-instance.js';
   import PlanSelector from './PlanSelector.svelte';
 
   interface Props {
@@ -29,9 +29,8 @@
   const loading = $derived($subscriptionStore.loading);
 
   onMount(() => {
-    if (!$subscriptionStore.status && !$subscriptionStore.loading) {
-      loadSubscription();
-    }
+    // TBP-762 — the billing store: reuses a read younger than 30 s.
+    void ensureSubscription();
   });
 
   // Show paywall only once the subscription status is known and the tenant

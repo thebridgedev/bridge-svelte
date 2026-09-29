@@ -24,6 +24,7 @@
     type StartBridgeRuntimeOptions,
   } from '../core/bridge-runtime.js';
   import RealtimeDevBadge from './components/developer/RealtimeDevBadge.svelte';
+  import { startBillingRefresh } from '../core/billing-store.js';
   import BridgeUpgradeDialog from './components/subscription/BridgeUpgradeDialog.svelte';
   import { dismissQuotaRefusal, quotaRefusal } from '../core/quota-refusal.js';
   import { dismissFeatureUpgrade, featureUpgrade, openFeatureUpgrade } from '../core/feature-upgrade.js';
@@ -219,6 +220,7 @@
   let _recheckTimer: ReturnType<typeof setTimeout> | undefined;
   let _stopFlagWatch: (() => void) | undefined;
   let _stopAuthzWatch: (() => void) | undefined;
+  let _stopBillingRefresh: (() => void) | undefined;
 
   function scheduleRouteRecheck() {
     if (_recheckTimer) clearTimeout(_recheckTimer);
@@ -255,6 +257,11 @@
     // protected page and a revoked entitlement ejects the user.
     _stopAuthzWatch = onBridgeAuthorizationChange(() => scheduleRouteRecheck());
 
+    // TBP-762 — the billing store's refresh rule: re-read the plan list,
+    // current plan and billing state on a renewed sign-in and on tab focus
+    // after 30 s (live billing events are wired in the runtime).
+    _stopBillingRefresh = startBillingRefresh();
+
     // Fetch app config outside load() so we use the correct fetch context.
     // LoginForm also calls ensureAppConfig() — both share the same in-flight promise.
     void ensureAppConfig();
@@ -287,6 +294,8 @@
   });
 
   onDestroy(() => {
+    _stopBillingRefresh?.();
+    _stopBillingRefresh = undefined;
     if (_recheckTimer) {
       clearTimeout(_recheckTimer);
       _recheckTimer = undefined;

@@ -2,6 +2,16 @@
 
 You are adding **Feature Flags** to a SvelteKit application that uses The Bridge. The goal is to ship code behind a switch you control from the Bridge dashboard — no redeploy needed.
 
+## The one rule for app code
+
+**Every gate in app code is a flag.** A link, a page, a button, an endpoint: if some people get it and others do not, the code asks a flag, and the flag's rule says why: a privilege (`privileges contains "USER_WRITE"`), a plan feature (`bridge:billing.entitlement.analytics eq true`) or a rollout. App code never reads a role, a privilege list, the plan or a plan feature to decide what someone may see or do.
+
+Two things are not gates and are not flags: **numbers** are plan limits (`<QuotaGate>` in the browser, `@RequireQuota` on the backend), and **permission on one specific record** stays in app code ("only the author edits their post").
+
+Before calling the work done, run `npx @nebulr-group/bridge-cli check gates` in the project. It lists every direct role, privilege, plan or plan-feature check with the flag to use instead. Fix each one.
+
+In SvelteKit: a piece of UI is `<FeatureFlag key="…">`; a page is a route rule `{ match: '/admin/*', featureFlag: 'admin-area', redirectTo: '/' }`; a nav link is the same `<FeatureFlag>` around the link.
+
 ## Choose the surface first
 
 Read this table before writing anything. Every case below is already solved by the SDK; **do not subscribe to the flag cache by hand.** If you find yourself reaching for `subscribeToFlagChanges`, `getBridgeFlagsInstance()` or a `cacheSize()` probe to work around flags "not being ready yet", you are rebuilding one of these three and will get the hydration edge cases wrong.
@@ -46,7 +56,7 @@ It is a separate evaluation path from `<FeatureFlag>` / `useFlag`, and the diffe
 |---|---|---|
 | Evaluated | server-side, via the Bridge eval API, against the session | in-browser, against the local flag cache |
 | Freshness | live: the current page is re-checked when a flag its rules name, the plan, entitlements or the session change | realtime push, instant |
-| Context | derived from the access token (`user.*`, `tenant.*`) | local context + `bridge.attributes` + per-call `context` |
+| Context | derived from the session (`user.*`, `tenant.*`, `privileges`) and the workspace's billing (`bridge:billing.*`) | local context + `bridge.attributes` + per-call `context` |
 | Values | boolean gate only | any value type |
 
 Both run the same FF 2.0 rule evaluator over the same flag records, so they agree on the verdict. They differ on *when* and on *what context they can see*: a rule targeting attributes you publish client-side with `bridge.attributes.set(...)` is invisible to the route guard.
@@ -86,7 +96,8 @@ The flag is created in Bridge, switched off, the first time it is evaluated; swi
 | `defaultValue` | `T` | yes | Value returned until the cache hydrates or if the flag doesn't exist |
 | `context` | `Partial<EvalContext>` | no | Per-call eval context — see *Eval context* below |
 | `children` | `Snippet<[T]>` | no | Rendered when the flag is on (`passed: true`). Receives the typed flag value |
-| `fallback` | `Snippet<[T]>` | no | Rendered when the flag is off (`passed: false`). Receives the typed flag value |
+| `fallback` | `Snippet<[T, { reason, feature, openUpgrade }]>` | no | Rendered when the flag is off (`passed: false`). Receives the typed flag value and why it is off: `reason` is `'plan'` (an upgrade alone would turn it on), `'permission'`, `'off'`, `'rule'` or `'rollout'`; `openUpgrade()` opens the upgrade dialog from a click |
+| `upgrade` | `boolean` | no | With no `fallback`: when the plan is why it is off, render an "Upgrade to use this" prompt that opens the upgrade dialog |
 
 Use the same `FeatureFlag` component anywhere in the app to gate any content behind a flag.
 
@@ -105,7 +116,7 @@ A rule is **branches + otherwiseValue + rolloutPct**, first match wins:
 ```jsonc
 {
   "branches": [
-    { "conditions": [ { "attribute": "tenant.plan", "operator": "in", "values": ["pro", "enterprise"] } ],
+    { "conditions": [ { "attribute": "bridge:billing.entitlement.export", "operator": "eq", "values": [true] } ],
       "returnValue": true }
   ],
   "otherwiseValue": false,
@@ -115,7 +126,9 @@ A rule is **branches + otherwiseValue + rolloutPct**, first match wins:
 
 - Conditions inside one branch are AND-ed; add more branches for OR / different return values.
 - Operators: `eq` `neq` `contains` `not_contains` `in` `not_in` `gt` `lt` `between` `regex` `exists` `not_exists` (numeric and date operators only apply to those attribute types).
-- `attribute` is a dotted path into the eval context (next step). With Bridge Auth, `user.id` `user.role` `user.email` `tenant.id` `tenant.plan` are populated for you.
+- `attribute` is a dotted path into the eval context (next step). With Bridge Auth and billing, `user.id`, `user.email`, `tenant.id`, `privileges`, `user.role` and `bridge:billing.entitlement.<feature>` are populated for you.
+- **A feature a plan sells**: list it on the plan (`bridge plan feature add pro export`, MCP `add_plan_feature`) and rule the flag `bridge:billing.entitlement.export eq true`, as above. The rule never names plans, so changing what a plan sells is one edit on the plan.
+- **Who someone is**: prefer a privilege rule, `{ "attribute": "privileges", "operator": "contains", "values": ["USER_WRITE"] }`, over a role rule. Read the app's real roles and privileges first (`list_roles` / `bridge role list`) — what a role can do is only "in the default setup". `contains` on `privileges` is exact membership: `USER_WRITE` does not match `USER_WRITE_ALL`. A role rule (`user.role eq "ADMIN"`) is for when the developer means the role itself.
 - **`rolloutPct` below 100 requires an identity** on the eval context — bucketing is `hash(flagKey + identity) mod 100`. With no identity the SDK refuses to bucket and returns the safe value rather than randomizing per call.
 
 ### Where to configure it
@@ -133,7 +146,7 @@ CLI:
 
 ```bash
 bridge flag create --key enterprise-export --value-type boolean --state on-with-rule \
-  --rule '{"branches":[{"conditions":[{"attribute":"tenant.plan","operator":"in","values":["pro","enterprise"]}],"returnValue":true}],"otherwiseValue":false,"rolloutPct":100}'
+  --rule '{"branches":[{"conditions":[{"attribute":"bridge:billing.entitlement.export","operator":"eq","values":[true]}],"returnValue":true}],"otherwiseValue":false,"rolloutPct":100}'
 ```
 
 MCP — `create_feature_flag`, same rule as structured arguments:
@@ -145,7 +158,7 @@ MCP — `create_feature_flag`, same rule as structured arguments:
   "state": "on-with-rule",
   "rule": {
     "branches": [
-      { "conditions": [ { "attribute": "tenant.plan", "operator": "in", "values": ["pro", "enterprise"] } ],
+      { "conditions": [ { "attribute": "bridge:billing.entitlement.export", "operator": "eq", "values": [true] } ],
         "returnValue": true }
     ],
     "otherwiseValue": false,
@@ -168,8 +181,8 @@ Both take the **key**. Use `update_feature_flag` (MCP, which takes the `id` from
 `bridge flag eval` evaluates a rule against a synthetic identity and attributes, with the app out of the way:
 
 ```bash
-bridge flag eval enterprise-export --identity user-123 --attribute tenant.plan=pro   # → true
-bridge flag eval enterprise-export --identity user-123 --attribute tenant.plan=free  # → false
+bridge flag eval enterprise-export --identity user-123 --attribute bridge:billing.entitlement.export=true   # → true
+bridge flag eval enterprise-export --identity user-123 --attribute bridge:billing.entitlement.export=false  # → false
 ```
 
 **There is no MCP equivalent today.** Over MCP the nearest check is reading the stored rule back with `list_feature_flags` and confirming the branches, operators and attribute paths are what you intended — that verifies the rule was *saved* correctly, not what it *evaluates to*. When you need the actual verdict, use the CLI.
@@ -188,7 +201,7 @@ Rules can only target what the app sends. Flags don't require auth — without i
 Per call, on the component:
 
 ```svelte
-<FeatureFlag key="enterprise-export" defaultValue={false} context={{ identity: user.id, attributes: { 'tenant.plan': plan } }}>
+<FeatureFlag key="new-editor" defaultValue={false} context={{ identity: user.id, attributes: { region } }}>
   {#snippet children()}<ExportButton />{/snippet}
 </FeatureFlag>
 ```
@@ -198,12 +211,12 @@ Or publish attributes once, app-wide, on the `bridge` singleton (package root, n
 ```ts
 import { bridge } from '@nebulr-group/bridge-svelte';
 
-bridge.attributes.set('tenant.plan', plan);            // static value
+bridge.attributes.set('region', region);              // static value
 bridge.attributes.bind('seats', () => currentSeats);   // live — re-read on every eval
 bridge.attributes.bindMany(() => ({ region, betaOptIn }));
 ```
 
-Per-call context wins on key collision. **With Bridge Auth**, the signed-in user's role and plan flow in automatically (`user.role`, `tenant.plan`) — no wiring needed; see `bridge guide svelte sdk-auth`.
+Per-call context wins on key collision. **With Bridge Auth**, the signed-in user's privileges, role and the plan's features flow in automatically (`privileges`, `user.role`, `bridge:billing.entitlement.*`) — no wiring needed, and never pass them yourself; see `bridge guide fit-together`.
 
 ## Gating logic instead of markup
 
@@ -231,7 +244,7 @@ Flag not appearing in the dashboard within ~30s, or a read returns the default f
 - **Realtime.** Live toggles ride the realtime channel; if a proxy blocks WebSockets the value still resolves on next load, just not instantly. In a dev build, `<BridgeBootstrap>` shows a "Live updates off — why?" badge in the corner when the channel is refused, connected but receiving nothing, or has been retrying for over 30 s; it names the reason and whose side it is. Read the same thing in code from `realtimeStatusDetail` (`state`, `reason`, `side`, `retrying`, `docsUrl`).
 - **First-render flicker is expected** — flags hydrate async. Set `defaultValue` to the safe-off state. This is a reason to gate a whole route with a `routeConfig` rule rather than in the page component, not a reason to hand-roll a readiness probe.
 - **A route-guard flag toggle seems to do nothing.** A flag change arriving on the live channel drops the guard's cache and re-checks the current page within about a second, so a toggle that has no effect usually means live updates are off — check the dev badge or `realtimeStatusDetail`. Without the live channel the guard's cache expires after 5 minutes. Also confirm the rule's `match` covers the path and names the key you toggled.
-- **A route-guard rule ignores attributes that work in components.** The guard evaluates server-side from the session token, so it never sees attributes you publish with `bridge.attributes.set(...)`. Target token-derived paths (`user.*`, `tenant.*`) in rules used by route guards.
+- **A route-guard rule ignores attributes that work in components.** The guard evaluates server-side from the session token, so it never sees attributes you publish with `bridge.attributes.set(...)`. Target what Bridge fills in from the session (`privileges`, `user.*`, `tenant.*`, `bridge:billing.entitlement.*`) in rules used by route guards.
 
 ## Verify
 

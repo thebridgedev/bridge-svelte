@@ -34,6 +34,7 @@ import {
 import { setBridgeFlagsInstance, notifyFlagChanged, notifyAllFlagsChanged } from './registry.js';
 import { tokenStore, getBridgeAuth } from '../core/bridge-instance.js';
 import { _getDevAttributeProvider } from '../core/bridge.js';
+import { tokenStaleHandlerOf } from '../core/billing-store.js';
 import {
   getBridgeRealtime,
   onBridgeRealtimeOpen,
@@ -208,6 +209,8 @@ export function createBridgeFlags(config: CreateBridgeFlagsConfig = {}): BridgeF
       apiBaseUrl: resolvedApiBaseUrl,
       appId: auth.getApiContext().appId,
       accessToken: auth.getApiContext().accessToken,
+      // TBP-762 — renew an out-of-date sign-in and retry, like every other billing read.
+      onTokenStale: tokenStaleHandlerOf(auth),
     });
   } catch {
     // No BridgeAuth — quota hydration falls back to live pushes only.

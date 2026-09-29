@@ -41,5 +41,9 @@ describe('quotaMemberBody — what a member reads', () => {
       'Your workspace is approaching its tickets cap. Contact your workspace owner.',
     );
     expect(quotaMemberBody('tickets', 'approaching')).toBe('Your workspace is approaching its tickets cap.');
+    // TBP-697 — exactly at a hard limit.
+    expect(quotaMemberBody('tickets', 'reached')).toBe(
+      'Your workspace has reached its tickets limit. Contact your workspace owner.',
+    );
   });
 });

@@ -25,12 +25,18 @@ export const CONTACT_WORKSPACE_OWNER = 'Contact your workspace owner.';
 
 /**
  * The member-facing sentence for a quota, by how close it is to the cap.
- * `over` is also what a refused request (the upgrade dialog) says.
+ * `over` is also what a refused request (the upgrade dialog) says. `reached`
+ * (TBP-697): exactly at a hard limit — 2 of 2 is not "approaching".
  */
-export function quotaMemberBody(label: string, state: 'over' | 'critical' | 'approaching'): string {
+export function quotaMemberBody(
+  label: string,
+  state: 'over' | 'reached' | 'critical' | 'approaching',
+): string {
   switch (state) {
     case 'over':
       return `Your workspace is over its ${label} cap. ${CONTACT_WORKSPACE_OWNER}`;
+    case 'reached':
+      return `Your workspace has reached its ${label} limit. ${CONTACT_WORKSPACE_OWNER}`;
     case 'critical':
       return `Your workspace is approaching its ${label} cap. ${CONTACT_WORKSPACE_OWNER}`;
     case 'approaching':

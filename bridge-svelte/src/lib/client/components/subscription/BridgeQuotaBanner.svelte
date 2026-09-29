@@ -9,9 +9,10 @@
     - the metric has no quota configured on the plan (server returns null), OR
     - usage is below 80% of the limit (warningLevel === null).
 
-  Three visible states:
+  Four visible states (hard quotas):
     - approaching  (80-94% used)        → severity 'warn'
     - critical     (95-99% used)        → severity 'critical'
+    - reached      (used == limit)      → severity 'critical', "limit reached" (TBP-697)
     - over-cap     (used > limit)       → severity 'critical', different copy
 
   Two role variants (admin / member): admins get an Upgrade CTA; members get
@@ -26,7 +27,8 @@
     useBridge,
     type QuotaSnapshot,
   } from '@nebulr-group/bridge-auth-core';
-  import { isBillingAdmin as canManageBilling, quotaMemberBody } from '../../billing-role.js';
+  import { isBillingAdmin as canManageBilling } from '../../billing-role.js';
+  import { quotaBannerCopy, quotaBannerState } from '../../quota-banner-copy.js';
   import { billingRoutes } from '../../billing-routes.js';
 
   type Chassis = 'rail';
@@ -92,29 +94,14 @@
     snapshot = useBridge().quota(metric);
   });
 
-  const warningLevel = $derived(snapshot?.warningLevel ?? null);
-  // TBP-275 — `metered` quotas bill overage instead of blocking. Prefer the
-  // server-authoritative `overcap` flag (handles limit === 0 pure-per-unit)
-  // over a UI-derived `used > limit`.
-  const isMetered = $derived(snapshot?.policy === 'metered');
-  const overCap = $derived(
-    snapshot
-      ? (snapshot.overcap ?? snapshot.used > snapshot.limit)
-      : false,
-  );
-  // Hard caps show only at the warning thresholds. Metered quotas also show
-  // once billing has engaged (overCap), even with no warningLevel — that's the
-  // live "you're now being billed for overage" state.
-  const visible = $derived(
-    snapshot !== undefined && (warningLevel !== null || (isMetered && overCap)),
-  );
+  // TBP-697 — the state and the copy live in quota-banner-copy.ts: at
+  // `used >= limit` on a hard quota the banner says the limit is REACHED (2 of
+  // 2 is not "approaching"), whatever warning level the server sent.
+  const bannerState = $derived(quotaBannerState(snapshot));
+  const visible = $derived(bannerState !== 'hidden');
   // Metered never blocks, so it never renders as 'critical' — it's informational.
   const severity = $derived<Severity>(
-    isMetered
-      ? 'warn'
-      : warningLevel === 'critical' || overCap
-        ? 'critical'
-        : 'warn',
+    bannerState === 'critical' || bannerState === 'reached' || bannerState === 'over' ? 'critical' : 'warn',
   );
   const displayLabel = $derived(label ?? snapshot?.label ?? metric);
   const percent = $derived(
@@ -125,94 +112,7 @@
   // Meter bar is meaningless for pure per-unit metered (limit 0) — hide it there.
   const showMeter = $derived(!!snapshot && snapshot.limit > 0);
 
-  /** Format an estimated cost like "$1.00" / "1.00 SEK". */
-  function formatCost(amount: number | undefined, currency: string | undefined): string {
-    if (amount === undefined) return '';
-    const cur = (currency ?? '').toUpperCase();
-    try {
-      return new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency: cur || 'USD',
-      }).format(amount);
-    } catch {
-      // Unknown currency code → fall back to "<amount> <CUR>".
-      return `${amount.toFixed(2)}${cur ? ` ${cur}` : ''}`;
-    }
-  }
-
-  function getCopy(
-    snap: QuotaSnapshot | undefined,
-    admin: boolean,
-  ): { title: string; body: string; cta?: string } {
-    if (!snap) return { title: '', body: '' };
-
-    // TBP-275 — metered: live usage + projected cost, never a blocking message.
-    if (snap.policy === 'metered') {
-      const overUnits = snap.limit > 0 ? Math.max(0, snap.used - snap.limit) : snap.used;
-      const cost = formatCost(snap.overageEstimate, snap.currency);
-      const costSuffix = cost ? ` · ~${cost} estimated this period` : '';
-      if (snap.limit > 0) {
-        // included allotment + overage
-        if (overUnits > 0) {
-          return {
-            title: `${displayLabel} overage`,
-            body: `${overUnits.toLocaleString()} over your ${snap.limit.toLocaleString()} included${costSuffix}.`,
-          };
-        }
-        // approaching the included allotment (warningLevel drove visibility)
-        const unit = formatCost(snap.unitAmount, snap.currency);
-        return {
-          title: `${displayLabel} approaching included limit`,
-          body: `You've used ${snap.used.toLocaleString()} of ${snap.limit.toLocaleString()} included${unit ? ` — extra usage is billed at ${unit}/unit` : ''}.`,
-        };
-      }
-      // pure per-unit (limit 0) — billed from unit 1
-      return {
-        title: `${displayLabel} usage`,
-        body: `${snap.used.toLocaleString()} ${displayLabel}${costSuffix}.`,
-      };
-    }
-
-    const over = snap.overcap ?? snap.used > snap.limit;
-    const remaining = Math.max(0, snap.remaining);
-    if (over) {
-      return admin
-        ? {
-            title: `${displayLabel} over cap`,
-            body: `You've used ${snap.used.toLocaleString()} of ${snap.limit.toLocaleString()}. Upgrade your plan to add headroom.`,
-            cta: 'Upgrade',
-          }
-        : {
-            title: `${displayLabel} over cap`,
-            body: quotaMemberBody(displayLabel, 'over'),
-          };
-    }
-    if (warningLevel === 'critical') {
-      return admin
-        ? {
-            title: `${displayLabel} near cap`,
-            body: `You've used ${snap.used.toLocaleString()} of ${snap.limit.toLocaleString()} (${remaining.toLocaleString()} left). Upgrade to avoid hitting the cap.`,
-            cta: 'Upgrade',
-          }
-        : {
-            title: `${displayLabel} near cap`,
-            body: quotaMemberBody(displayLabel, 'critical'),
-          };
-    }
-    // approaching
-    return admin
-      ? {
-          title: `${displayLabel} approaching cap`,
-          body: `You've used ${snap.used.toLocaleString()} of ${snap.limit.toLocaleString()} (${remaining.toLocaleString()} left).`,
-          cta: 'Upgrade',
-        }
-      : {
-          title: `${displayLabel} approaching cap`,
-          body: quotaMemberBody(displayLabel, 'approaching'),
-        };
-  }
-
-  const copy = $derived(getCopy(snapshot, isBillingAdmin));
+  const copy = $derived(quotaBannerCopy(snapshot, isBillingAdmin, displayLabel));
 
   function handleAction() {
     if (!snapshot) return;

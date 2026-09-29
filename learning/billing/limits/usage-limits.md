@@ -121,7 +121,7 @@ It updates on its own when usage changes. When the metric key comes from a prop,
 If deleting it frees room, it's a gauge and your app counts it. If it happened, it's a counter and Bridge counts it.
 
 - **Counter** (the default): AI completions, exports, API calls. Bridge sums what you [report](/billing/limits/report-usage/) and resets it each billing period: "40 of 100 this month".
-- **Gauge**: projects, documents, seats. Your app tells Bridge how many exist right now, and the number never resets: "8 of 10 projects". Seats (`users`) are counted by Bridge from the workspace's members.
+- **Gauge**: projects, documents, seats. Your app tells Bridge how many exist right now, and the number never resets: "8 of 10 projects". Seats are the exception: name the limit (e.g. `seats`) with `--kind gauge --source membership` and Bridge counts it from the workspace's members.
 
 Set the kind on the plan's quota (`bridge plan quota set <plan> --metric projects --limit 10 --policy hard --kind gauge`).
 

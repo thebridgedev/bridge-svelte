@@ -149,7 +149,7 @@ remove() { /* … */ }
 
 `current` returns your own count, and that count is what the limit is compared against, so Bridge's copy heals itself if it ever missed an update. There is no decrement and no reservation: every create and delete sends the whole count.
 
-**Seats** (`users`) are a gauge Bridge keeps itself from workspace membership. `@RequireQuota('users')` on your invite handler checks the seat limit and writes nothing.
+**Seats** are a gauge the app names (for example `seats`) and marks as counted from membership: `bridge plan quota set <plan> --metric seats --limit N --policy hard --kind gauge --source membership`. Bridge answers it with the workspace's members, pending invites included, so nothing reports it. The check runs where invites start: `seatsMetric="seats"` on the built-in team page, or `@RequireQuota('seats')` on your own invite handler, which checks the seat limit and writes nothing. Bridge's invite API does not refuse at the limit.
 
 `bridge plan quota list` shows every metric the app's plans limit, with its kind.
 

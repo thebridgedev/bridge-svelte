@@ -12,6 +12,7 @@ A drop-in panel for managing team members, team profile, and workspace settings.
 | `showProfileTab` | `boolean` | `true` | Show the profile tab |
 | `showWorkspaceTab` | `boolean` | `true` | Show the workspace tab |
 | `onError` | `(error: Error) => void` | (none) | Called on any error |
+| `seatsMetric` | `string` | (none) | The plan limit that counts seats, e.g. `"seats"` (a gauge counted from membership). With it, Invite stops at the plan's limit and says why; without it, the page does not check seats |
 | `tabBar` | `Snippet<[{ tabs, activeTab, setTab }]>` | (none) | Custom tab bar render snippet |
 
 **Usage:**

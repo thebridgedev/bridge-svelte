@@ -186,3 +186,74 @@ describe('no agent-facing guide teaches a direct role, privilege or plan check, 
     });
   });
 });
+
+// ── TBP-763 — seats ─────────────────────────────────────────────────────────
+//
+// Owner decisions 2026-09-29: seats are a plan limit the app names (e.g.
+// `seats`), kind gauge, counted by Bridge from membership (`--source
+// membership`). There is no built-in `users` seat metric. The limit is enforced
+// where invites start — `seatsMetric="seats"` on the built-in team page, or
+// `@RequireQuota('seats')` on the app's own invite handler — because Bridge's
+// invite API does not refuse at the limit. Never a flag or an entitlement.
+
+const SEAT_FORBIDDEN: Array<[string, RegExp]> = [
+  ['`users` as the built-in seat metric', /\bseats?\b\**\s*\(\s*`(?:metric:\s*)?["']?users["']?`\s*\)/i],
+  ['`users` as the built-in seat metric', /@RequireQuota\(\s*['"]users['"]/],
+  ['`users` as the built-in seat metric', /--metric\s+users\b|"metric"\s*:\s*"users"|\bmetric:\s*["']users["']/],
+  ['seats gated with a flag or an entitlement', /\bseats?\b[^.\n]{0,60}(?:<FeatureFlag|<Entitled|@RequireEntitlement|\bentitlement\b|\bflag\b)/i],
+];
+
+function seatViolations(markdown: string): DocViolation[] {
+  const out: DocViolation[] = [];
+  markdown.split('\n').forEach((line, i) => {
+    for (const sentence of line.split(/(?<=[.!?])\s+/)) {
+      if (NEGATED.test(sentence) || /\bno built-in\b/i.test(sentence)) continue;
+      for (const [rule, pattern] of SEAT_FORBIDDEN) {
+        if (pattern.test(sentence)) out.push({ line: i + 1, rule, text: sentence.trim() });
+      }
+    }
+  });
+  return out;
+}
+
+const SEATS_CLI = 'bridge plan quota set <plan> --metric seats --limit N --policy hard --kind gauge --source membership';
+
+describe('seats are a plan limit the app names, counted from membership — TBP-763', () => {
+  it.each(agentDocs.map((f) => [relative(REPO, f), f]))('%s', (_name, file) => {
+    expect(seatViolations(read(file))).toEqual([]);
+  });
+
+  it.each([['mcp/team-prompt.md'], ['mcp/billing-prompt.md']])('%s teaches the seat setup and both enforcement points', (file) => {
+    const guide = read(join(REPO, file));
+    expect(guide).toContain(SEATS_CLI);
+    expect(guide).toContain('seatsMetric="seats"');
+    expect(guide).toContain("@RequireQuota('seats')");
+    expect(guide).toMatch(/invite API does not refuse at the limit/i);
+    expect(guide).toMatch(/built-in team page or the app's own invite handler|built-in team page, or the app's own invite handler/i);
+    expect(guide).toMatch(/never gate seats with a flag or an entitlement/i);
+  });
+
+  describe('goes red on a planted bad line', () => {
+    it.each([
+      'Seats (`metric: "users"`) are counted by Bridge from workspace members.',
+      '**Seats** (`users`) are a gauge Bridge keeps itself.',
+      "Put `@RequireQuota('users')` on your invite handler.",
+      'bridge plan quota set free --metric users --limit 2 --policy hard',
+      'Gate the invite button on seats with a flag rule.',
+      'Put the seat count behind an entitlement.',
+    ])('%s', (bad) => {
+      expect(seatViolations(bad)).not.toEqual([]);
+    });
+  });
+
+  describe('stays green on the guides’ own sentences', () => {
+    it.each([
+      'There is no built-in `users` metric.',
+      'Never gate seats with a flag or an entitlement: a seat count is a limit.',
+      SEATS_CLI,
+      "`@RequireQuota('seats')` on that backend handler.",
+    ])('%s', (good) => {
+      expect(seatViolations(good)).toEqual([]);
+    });
+  });
+});

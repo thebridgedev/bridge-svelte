@@ -64,6 +64,7 @@ Create `src/routes/settings/team/+page.svelte`:
 | `showProfileTab` | `boolean` | `true` | Show the profile tab |
 | `showWorkspaceTab` | `boolean` | `true` | Show the workspace tab |
 | `onError` | `(error: Error) => void` | -- | Called on any error |
+| `seatsMetric` | `string` | -- | The plan limit that counts seats, e.g. `"seats"`. With it, Invite stops at the plan's limit and says why. See **Seat limits** below |
 | `tabBar` | `Snippet<[{ tabs, activeTab, setTab }]>` | -- | Custom tab bar render snippet |
 
 The panel includes:
@@ -146,6 +147,24 @@ All three accept `class`, `style`, and `onError` props.
 <TeamWorkspaceForm onError={(err) => console.error(err)} />
 ```
 
+## Seat limits — when a plan sells seats
+
+Seats are a plan limit the app names, `seats` here, like any other limit. It is a gauge that Bridge counts from workspace membership: the active members plus pending invites, read fresh however members are added or removed. There is no built-in `users` metric and no seat logic in Bridge. A seat count is a number, so it is a plan limit; never gate seats with a flag or an entitlement.
+
+1. **Put the limit on each plan**, counted from membership:
+
+```bash
+bridge plan quota set <plan> --metric seats --limit N --policy hard --kind gauge --source membership
+```
+
+For "2 seats on Free, 5 on Pro": `bridge plan quota set free --metric seats --limit 2 --policy hard --kind gauge --source membership`, then the same for `pro` with `--limit 5`. (MCP: `set_plan_quota` with `metric: "seats"`, `policy: "hard"`, `kind: "gauge"`, `source: "membership"`.)
+
+2. **Ask the user where invites start**: Bridge's built-in team page, or the app's own invite handler? Each answer is one line:
+   - **Built-in team page**: `<TeamManagementPanel seatsMetric="seats" />` (or `<TeamUserList seatsMetric="seats" />`). Invite stops at the plan's limit and the line under it explains why, with the upgrade link. The count is re-read after every invite, removal, enable or disable.
+   - **The app's own invite handler**: `@RequireQuota('seats')` on that backend handler. It checks the seat limit and writes nothing, because Bridge counts the members.
+
+3. **Bridge's invite API does not refuse at the limit.** The check runs where the invite starts, which is why step 2 matters. Without `seatsMetric` the team page invites past the limit.
+
 ## Route setup — who sees the team page
 
 Not everyone in a workspace should manage its members, so the team page and its nav link are gated. Like every gate in app code, that gate is a flag ruled on a privilege — never a role list in the code such as `['OWNER','ADMIN'].includes(role)`.
@@ -184,7 +203,7 @@ Create the page file at `src/routes/settings/team/+page.svelte` as shown above; 
 
 1. Signed in with a role that holds the privilege, navigate to `/settings/team` -- the team management panel renders and the nav link shows; with a role that does not, the link is hidden and the route redirects to `/`
 2. Confirm the **Users** tab shows the current team members
-3. Try inviting a user using the invite form in the Users tab
+3. Try inviting a user using the invite form in the Users tab. If the plans sell seats and the page has `seatsMetric="seats"`: on a plan with 2 seats and 2 members, Invite is disabled and says all seats are taken
 4. Switch to the **Profile** tab and verify it renders the team profile form
 5. Switch to the **Workspace** tab and verify it renders workspace settings
 6. Test saving changes on the Profile and Workspace tabs

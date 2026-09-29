@@ -74,7 +74,9 @@ The common two-tier shape — a free plan with a hard cap, a premium plan that m
   "priceAmount": 0.002, "priceCurrency": "USD" }
 ```
 
-**Counter or gauge?** If deleting it frees room, it's a gauge and your app counts it; if it happened, it's a counter and Bridge counts it. Projects, seats and documents are gauges (`kind: "gauge"` — "8 of 10 projects", never reset); AI completions, exports and API calls are counters (the default — "40 of 100 this month", reset each period). Seats (`metric: "users"`) are counted by Bridge from workspace members; every other gauge value comes from your app.
+**Counter or gauge?** If deleting it frees room, it's a gauge and your app counts it; if it happened, it's a counter and Bridge counts it. Projects, seats and documents are gauges (`kind: "gauge"` — "8 of 10 projects", never reset); AI completions, exports and API calls are counters (the default — "40 of 100 this month", reset each period). Every gauge value comes from your app, except seats.
+
+**Seats** are a plan limit the app names (`seats`), kind gauge, that Bridge counts from workspace membership, pending invites included: `bridge plan quota set <plan> --metric seats --limit N --policy hard --kind gauge --source membership` (MCP: `set_plan_quota` with `kind: "gauge"`, `source: "membership"`). There is no built-in `users` metric. Ask whether invites go through Bridge's built-in team page or the app's own invite handler. Built-in team page: `<TeamManagementPanel seatsMetric="seats" />`, and Invite stops at the limit. Own handler: `@RequireQuota('seats')` on it. Bridge's invite API does not refuse at the limit, so one of the two must be in place. Never gate seats with a flag or an entitlement: a seat count is a limit.
 
 `limit: 0` with `policy: "metered"` bills from the first unit. `policy: "hard"` must **not** carry `priceAmount`. `priceCurrency` defaults to the plan's price currency when the plan has exactly one — pass it explicitly otherwise. On the CLI these are `--policy hard` and `--policy metered --price-amount 0.002`.
 

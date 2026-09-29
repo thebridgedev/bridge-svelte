@@ -24,6 +24,7 @@ const h = vi.hoisted(() => {
     plansCalls: 0,
     billingCalls: [] as Array<{ accessToken: string; onTokenStale?: unknown }>,
     subscription: null as unknown,
+    reconciled: [] as Array<[string, number | undefined]>,
   };
   const staleHandler = async () => 'renewed';
   class FakeBridgeAuth {
@@ -75,7 +76,12 @@ vi.mock('@nebulr-group/bridge-auth-core', async (importOriginal) => {
       const next = h.s.billing.shift();
       return next ? next() : { plan: { slug: 'free', name: 'Free' }, status: 'active' };
     }),
-    useBridge: () => ({ subscription: h.s.subscription, quotas: {} }),
+    useBridge: () => ({
+      subscription: h.s.subscription,
+      quotas: {
+        reconcileAfterReport: (metric: string, delayMs?: number) => h.s.reconciled.push([metric, delayMs]),
+      },
+    }),
   };
 });
 
@@ -95,6 +101,7 @@ import {
   ensureBillingState,
   refreshBilling,
   refreshBillingState,
+  refreshQuota,
   startBillingRefresh,
 } from './billing-store.js';
 import { subscriptionBadgeView } from '../client/components/subscription/subscription-badge.js';
@@ -124,6 +131,7 @@ beforeEach(() => {
   h.s.plansCalls = 0;
   h.s.billingCalls = [];
   h.s.subscription = new BridgeSubscription();
+  h.s.reconciled = [];
   __setBillingRetryDelay(5);
   __resetSubscriptionForTests();
   __resetBillingStoreForTests();
@@ -304,5 +312,12 @@ describe('the refresh rule — TBP-762', () => {
     await new Promise((r) => setTimeout(r, 10));
     expect(h.s.plansCalls).toBe(0);
     expect(h.s.billingCalls).toHaveLength(0);
+  });
+});
+
+describe('refreshQuota — TBP-763', () => {
+  it('re-reads one quota now (the seat count after a team change)', () => {
+    refreshQuota('seats');
+    expect(h.s.reconciled).toEqual([['seats', 0]]);
   });
 });

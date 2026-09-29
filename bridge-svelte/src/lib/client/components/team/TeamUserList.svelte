@@ -9,13 +9,24 @@
   import TeamConfirmDialog from './TeamConfirmDialog.svelte';
   import TeamEditUserDialog from './TeamEditUserDialog.svelte';
   import TeamUserActionsMenu from './TeamUserActionsMenu.svelte';
+  import QuotaGate from '../subscription/QuotaGate.svelte';
+  import { useQuota, type QuotaState } from '../../../core/use-quota.js';
+  import { billingRoutes } from '../../billing-routes.js';
+  import { seatsChanged } from './seats.js';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     onError?: (error: Error) => void;
+    /**
+     * TBP-763 — the plan limit that counts seats (e.g. `'seats'`). With it,
+     * Invite is wrapped in <QuotaGate> and stops at the plan's limit; an
+     * invite, removal or enable/disable re-reads the seat count.
+     */
+    seatsMetric?: string;
   }
 
   let {
     onError,
+    seatsMetric,
     class: className,
     style,
     ...rest
@@ -36,6 +47,16 @@
   let deletingUser = $state<TeamUser | null>(null);
   let resettingUser = $state<TeamUser | null>(null);
   let actionLoading = $state(false);
+
+  // TBP-763 — the seat count, only when the page counts seats (no read otherwise).
+  // svelte-ignore state_referenced_locally
+  const seatsQuota: QuotaState | null = seatsMetric ? useQuota(() => seatsMetric ?? '') : null;
+  // Unknown (loading, no limit on the plan) or metered (bills extra seats): no cap here.
+  const seatsLeft = $derived(
+    seatsQuota && !seatsQuota.loading && !seatsQuota.unlimited && seatsQuota.snapshot?.policy !== 'metered'
+      ? seatsQuota.remaining
+      : null,
+  );
 
   onMount(() => {
     loadData();
@@ -79,10 +100,13 @@
 
   function handleUsersAdded(added: TeamUser[]) {
     users = [...users, ...added];
+    seatsChanged(seatsMetric);
   }
 
   function handleUserUpdated(updated: TeamUser) {
     users = users.map((u) => (u.id === updated.id ? updated : u));
+    // Enabling or disabling someone moves the seat count.
+    seatsChanged(seatsMetric);
   }
 
   async function handleDeleteConfirm() {
@@ -92,6 +116,7 @@
       const bridge = getBridgeAuth();
       await bridge.team.deleteUser(deletingUser.id);
       users = users.filter((u) => u.id !== deletingUser!.id);
+      seatsChanged(seatsMetric);
       showDeleteConfirm = false;
       deletingUser = null;
     } catch (err) {
@@ -119,12 +144,29 @@
   }
 </script>
 
+{#snippet seatsAtLimit(quota: QuotaState)}
+  All {quota.limit?.toLocaleString()} seats on your plan are taken (pending invites count).
+  <a href={billingRoutes().manageRoute}>Upgrade</a> to invite more people.
+{/snippet}
+
+{#snippet inviteButton(label: string)}
+  {#if seatsMetric}
+    <QuotaGate metric={seatsMetric} atLimit={seatsAtLimit}>
+      <button class="bridge-btn bridge-btn-primary" onclick={() => (showAddDialog = true)}>
+        {label}
+      </button>
+    </QuotaGate>
+  {:else}
+    <button class="bridge-btn bridge-btn-primary" onclick={() => (showAddDialog = true)}>
+      {label}
+    </button>
+  {/if}
+{/snippet}
+
 <div class={className} {style} data-bridge-team-users {...rest}>
   <div class="bridge-team-users-header">
     <h3 class="bridge-team-users-title">Team Members</h3>
-    <button class="bridge-btn bridge-btn-primary" onclick={() => (showAddDialog = true)}>
-      Add Member
-    </button>
+    {@render inviteButton('Add Member')}
   </div>
 
   {#if loading}
@@ -137,9 +179,7 @@
   {:else if users.length === 0}
     <div class="bridge-team-empty">
       <p>No team members yet.</p>
-      <button class="bridge-btn bridge-btn-primary" onclick={() => (showAddDialog = true)}>
-        Add your first team member
-      </button>
+      {@render inviteButton('Add your first team member')}
     </div>
   {:else}
     <div class="bridge-team-table-wrapper">
@@ -193,6 +233,7 @@
   open={showAddDialog}
   onclose={() => (showAddDialog = false)}
   onadded={handleUsersAdded}
+  {seatsLeft}
 />
 
 <TeamEditUserDialog

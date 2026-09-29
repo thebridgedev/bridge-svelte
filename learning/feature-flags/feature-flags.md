@@ -22,7 +22,8 @@ enabled.
 
 1. **You create a flag in Control Center** (your admin dashboard at
    app.thebridge.dev) and give it rules: on/off, a percentage rollout, or
-   conditions on attributes like `user.role` or `tenant.plan`.
+   conditions on attributes like `privileges` or
+   `bridge:billing.entitlement.<feature>`.
 2. **The SDK evaluates those rules locally** against the eval context: the
    identity and attributes a flag rule evaluates against. Bridge auth and
    billing feed attributes in automatically; your code can add its own.
@@ -56,9 +57,10 @@ it with `useFlag`, then flip it and watch your app change live.
 ## Targeting
 
 - [Target by plan or role](/feature-flags/targeting/by-plan-or-role/): with
-  Bridge auth or billing enabled, attributes like `user.role`, `tenant.plan`,
-  and `bridge:billing.*` merge into every evaluation with no app code. For
-  plan-granted features, prefer entitlement attributes; see
+  Bridge auth or billing enabled, attributes like `privileges`, `user.role`
+  and `bridge:billing.*` merge into every evaluation with no app code. A
+  feature a plan sells is a flag ruled
+  `bridge:billing.entitlement.<feature> eq true`; see
   [Lock features to a plan](/billing/limits/lock-features/).
 - [Send context from your code](/feature-flags/targeting/send-context/):
   supply app-specific facts (like a project count) per call or app-wide via

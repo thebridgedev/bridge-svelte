@@ -4,6 +4,8 @@ The rules every Bridge guide builds on, on one page: what the smallest integrati
 
 The frontend examples are SvelteKit (`@nebulr-group/bridge-svelte`); the backend examples are NestJS (`@nebulr-group/bridge-nestjs`).
 
+Who gets which feature, and how plans, roles, limits and flags divide the work, is on its own page: `bridge guide fit-together`. In short: every gate in app code is a flag, and its rule says why (a privilege, a plan feature, a rollout).
+
 ## The whole integration
 
 What a developer's repo holds once Bridge is in. Nothing else is required; every other page Bridge needs, it serves.
@@ -102,8 +104,8 @@ export class ExportsController {
 
 Ask one question first: **does this action call your server?**
 
-- **It calls your backend:** the server decides; the client decorates. Anyone can call your API with curl, so the limit or the flag is enforced on the backend handler. Everything the frontend shows about it — the upgrade dialog, a disabled button, a hidden panel — explains or anticipates a decision the server already makes, and does not count the same metric again.
-- **It happens in the browser** and never reaches a server of yours (local-first, data on the device): the browser counts it and gates the button (section 5). That is a first-class setup.
+- **It calls your backend:** the backend handler counts it and refuses at the limit, because that is where the action happens. The frontend shows the count and the upgrade dialog, and does not count the same metric again.
+- **It happens in the browser** and never reaches a server of yours (local-first, data on the device): the browser counts it and `<QuotaGate>` stops the button at the limit (section 5). That is a complete, first-class setup.
 
 Never both for one metric: it would be counted twice.
 
@@ -147,13 +149,13 @@ remove() { /* … */ }
 
 `current` returns your own count, and that count is what the limit is compared against, so Bridge's copy heals itself if it ever missed an update. There is no decrement and no reservation: every create and delete sends the whole count.
 
-**Seats** (`users`) are a gauge Bridge keeps itself from workspace membership. `@RequireQuota('users')` on your invite handler checks the seat limit and writes nothing.
+**Seats** are a gauge the app names (for example `seats`) and marks as counted from membership: `bridge plan quota set <plan> --metric seats --limit N --policy hard --kind gauge --source membership`. Bridge answers it with the workspace's members, pending invites included, so nothing reports it. The check runs where invites start: `seatsMetric="seats"` on the built-in team page, or `@RequireQuota('seats')` on your own invite handler, which checks the seat limit and writes nothing. Bridge's invite API does not refuse at the limit.
 
 `bridge plan quota list` shows every metric the app's plans limit, with its kind.
 
-**Every hard quota is also an entitlement** with the same name, true while there is room. So never pair `@RequireEntitlement('exports')` with `@RequireQuota('exports')`: at the cap the entitlement answers `403` before the quota can answer the `402` the frontend knows how to upsell. Use `@RequireEntitlement` for a plan *feature* (`analytics`, `sso`), `@RequireQuota` for a *limit*.
+**Every hard quota is also an entitlement** with the same name, true while there is room. So never pair `@RequireEntitlement('exports')` with `@RequireQuota('exports')`: at the cap the entitlement answers `403` before the quota can answer the `402` the frontend knows how to upsell. `@RequireQuota` is for a *limit*; a plan *feature* (`analytics`, `sso`) is a flag (next paragraph).
 
-**A plan feature is a hard quota nothing counts.** There is no separate entitlement setting: `bridge plan quota set pro --metric analytics --limit 1 --policy hard` makes `analytics` true on `pro`, and a plan without that quota answers false. Gate it with `@RequireEntitlement('analytics')` on the backend and `<Entitled to="analytics">` in the UI. `app_active` is always there: true while the workspace's subscription is active, trialing, past due or cancelling at period end.
+**A plan feature goes in the plan's features list.** `bridge plan feature add pro analytics --name "Analytics"` makes `analytics` true on `pro`, and false on every other plan. The pricing table and the upgrade dialog name it from the same list. Control the feature with a flag whose rule is `bridge:billing.entitlement.analytics eq true` — `<FeatureFlag key="analytics">` or a route rule with `featureFlag` in the UI, `@RequireFeatureFlag('analytics')` on the backend — so changing what Pro sells is one edit on the plan and no flag rule has to follow. `app_active` is always there: true while the workspace's subscription is active, trialing, past due or cancelling at period end.
 
 ## 4. Three ways to handle a limit in the UI
 
@@ -162,12 +164,12 @@ Pick the lowest level that does the job. Each is optional; level 0 is on without
 | Level | What the page writes | What the user sees |
 |---|---|---|
 | **0 — nothing** | a button calling your API with `bridgeFetch()`, as every authenticated call does | Your backend refuses at the cap (`402`), and `<BridgeBootstrap>` opens an **upgrade dialog** naming the metric, linking to the subscription page. A workspace member who cannot manage billing is told to ask the owner instead |
-| **1 — one component** | `<QuotaGate metric="tickets">…</QuotaGate>` around the button; `<Entitled to="analytics">…</Entitled>` around a paid feature | The button is disabled at a known hard cap with an upgrade line beside it; the paid feature shows only on a plan that grants it |
-| **2 — your own UI** | `useQuota('tickets')` and `$entitlements.can('analytics')` | Whatever you build from the live numbers |
+| **1 — one component** | `<QuotaGate metric="tickets">…</QuotaGate>` around the button; `<FeatureFlag key="analytics" upgrade>…</FeatureFlag>` around a paid feature | The button is disabled at a known hard cap with an upgrade line beside it; the paid feature shows on a plan that includes it, and elsewhere an "Upgrade to use this" button that opens the dialog when clicked |
+| **2 — your own UI** | `useQuota('tickets')`, and `<FeatureFlag key="analytics">` around what the plan sells | Whatever you build from the live numbers |
 
 ```svelte
 <script lang="ts">
-  import { QuotaGate, Entitled, useQuota } from '@nebulr-group/bridge-svelte';
+  import { QuotaGate, FeatureFlag, useQuota } from '@nebulr-group/bridge-svelte';
   const tickets = useQuota('tickets');
 </script>
 
@@ -176,10 +178,10 @@ Pick the lowest level that does the job. Each is optional; level 0 is on without
   <button onclick={createTicket}>New ticket</button>
 </QuotaGate>
 
-<Entitled to="analytics">
+<!-- the flag's rule: bridge:billing.entitlement.analytics eq true -->
+<FeatureFlag key="analytics" defaultValue={false} upgrade>
   <a href="/analytics">Analytics</a>
-  {#snippet fallback()}<a href="/subscription">Upgrade for analytics</a>{/snippet}
-</Entitled>
+</FeatureFlag>
 
 <!-- level 2 -->
 {#if tickets.loading}
@@ -191,7 +193,8 @@ Pick the lowest level that does the job. Each is optional; level 0 is on without
 {/if}
 ```
 
-- "Not loaded yet" is never "zero" and never "not allowed": `useQuota` numbers stay `null` while `loading`, `<QuotaGate>` stays enabled while loading, and `<Entitled>` renders nothing (or its `loading` snippet) until `$entitlements.ready`.
+- "Not loaded yet" is never "zero" and never "not allowed": `useQuota` numbers stay `null` while `loading`, and `<QuotaGate>` stays enabled while loading.
+- No upgrade dialog opens by itself: it opens on a `402` from your backend, when someone opens a route whose flag is off because of the plan, or when they click an upgrade prompt. A page that only renders a hidden feature opens nothing.
 - Your app authenticates its own API calls with `bridgeFetch` anyway: a plain `fetch` sends no user token, so a protected backend answers `401`, never `402`. The limit handling still needs no code — the dialog opens from any `402 QUOTA_EXCEEDED` the wrapper sees. The dialog also catches a refusal from Bridge's own API; a backend on another origin called with plain `fetch` is listed in `billing.apiOrigins`. `billing: { upgradeDialog: false }` turns it off, `billing: { upgradeDialog: MyDialog }` replaces it.
 - Do not write a quota `if`, a "limit reached" toast or a `/quota` endpoint of your own: level 0 already covers the refusal, and the frontend reads quota directly from Bridge.
 
@@ -200,7 +203,7 @@ Pick the lowest level that does the job. Each is optional; level 0 is on without
 Ask one question: **does the click call your server?**
 
 - **Yes** — the backend handler that does the work counts it (bridge-nestjs `@RequireQuota` / `@SyncQuota`). The page only shows the number and the upgrade dialog; it does not report anything.
-- **No** — the action happens in the browser (a local-first or mobile app, data on the device), so the browser counts it. This is a first-class way to use Bridge:
+- **No** — the action happens in the browser (a local-first or mobile app, data on the device), so the browser counts it. This is a complete, first-class way to run limits:
 
 ```ts
 import { bridge } from '@nebulr-group/bridge-svelte';
@@ -209,7 +212,7 @@ bridge.usage.report('exports');                        // a counter: it happened
 await bridge.usage.set('projects', projects.length);   // a gauge: how many exist now
 ```
 
-Counting from the browser trusts the browser: Bridge shows and bills what the page reports, and only a backend can refuse a write.
+Put `<QuotaGate metric="exports">` around the button (section 4, level 1) so it stops at the limit, and the upgrade line sells the next plan.
 
 Never both: counting the same action on each side counts it twice. In development the plugin warns once in the console when your backend and the page count the same metric (bridge-nestjs marks a counting response with `X-Bridge-Usage-Counted` outside production; nothing is sent or printed in production).
 
@@ -285,3 +288,7 @@ The derived tokens (hover, light, focus) follow `--bridge-primary` wherever you 
 - Plans and limits: [how billing works](/billing/how-it-works/), [usage limits](/billing/limits/usage-limits/), [lock features to a plan](/billing/limits/lock-features/), [report usage](/billing/limits/report-usage/)
 - Styling: [theming](/theming/)
 - The backend: the bridge-nestjs docs, "Plan limits"
+
+## Exceptions
+
+Checking a plan feature without a flag (`@RequireEntitlement` on the backend, `<Entitled>` or `$entitlements.can` in the UI) exists for the rare case where the developer explicitly asks for no flag. It prints a one-time note in development; mark the line `// bridge-gate-exception: <reason>` so `bridge check gates` leaves it.

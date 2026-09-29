@@ -2,7 +2,7 @@
 
 ## When to send your own context
 
-Every flag check runs against an eval context: the identity and attributes a flag rule evaluates against. Bridge already supplies some of that data for free. If the account is signed in, `user.role` and `tenant.plan` are already in every evaluation with zero code on your part (see [Target by plan or role](/feature-flags/targeting/by-plan-or-role/)).
+Every flag check runs against an eval context: the identity and attributes a flag rule evaluates against. Bridge already supplies some of that data for free. If the account is signed in, `privileges`, `user.role` and the plan's features (`bridge:billing.entitlement.*`) are already in every evaluation with zero code on your part (see [Target by plan or role](/feature-flags/targeting/by-plan-or-role/)).
 
 Send your own context when the thing you want to target on is something only *your app* knows: a business fact that lives in your own data, not in Bridge. For example: "only show the new dashboard to users with more than 3 projects." Bridge has no idea how many projects a user has, so you tell it:
 

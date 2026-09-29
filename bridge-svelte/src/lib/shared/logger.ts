@@ -6,6 +6,11 @@ export function setLoggerDebug(debug: boolean) {
   _debug = debug;
 }
 
+/** True when the app runs with `debug: true` — components may then show error reasons. */
+export function isLoggerDebug(): boolean {
+  return _debug;
+}
+
 function createPrefixed(method: LogMethod, prefix: string): LogMethod {
   return (...args: unknown[]) => method(prefix, ...args);
 }

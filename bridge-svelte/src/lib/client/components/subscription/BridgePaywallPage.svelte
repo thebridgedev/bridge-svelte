@@ -21,7 +21,7 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import type { Plan, PriceOfferSdk } from '@nebulr-group/bridge-auth-core';
-  import { loadSubscription, subscriptionStore } from '../../../core/bridge-instance.js';
+  import { ensureSubscription } from '../../../core/bridge-instance.js';
   import { logger } from '../../../shared/logger.js';
   import { billingRoutes } from '../../billing-routes.js';
   import PlanSelector from './PlanSelector.svelte';
@@ -56,11 +56,8 @@
   const cancel = $derived(cancelRedirect ?? $page.url.pathname);
 
   onMount(() => {
-    if (!$subscriptionStore.status && !$subscriptionStore.loading) {
-      loadSubscription().catch(() => {
-        /* surfaced via subscriptionStore.error */
-      });
-    }
+    // TBP-762 — the billing store: reuses a read younger than 30 s.
+    void ensureSubscription();
     const here = $page.url.pathname;
     if (isDevBuild() && routes.paywallRoute !== here) {
       logger.warn(

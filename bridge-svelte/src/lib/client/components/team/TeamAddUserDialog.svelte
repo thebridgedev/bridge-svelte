@@ -4,11 +4,18 @@
   import type { HTMLDialogAttributes } from 'svelte/elements';
   import { getBridgeAuth } from '../../../core/bridge-instance.js';
   import Alert from '../sdk-auth/shared/Alert.svelte';
+  import { inviteSeatError } from './seats.js';
 
   interface Props extends HTMLDialogAttributes {
     open?: boolean;
     onclose?: () => void;
     onadded?: (users: TeamUser[]) => void;
+    /**
+     * TBP-763 — seats left on the plan, when the page counts seats. An invite
+     * of more addresses than this is refused here, before Bridge (whose invite
+     * API does not check the limit) adds anyone. `null`/unset: no check.
+     */
+    seatsLeft?: number | null;
     titleSnippet?: Snippet;
     actions?: Snippet<[{ loading: boolean; onconfirm?: () => void; oncancel?: () => void }]>;
   }
@@ -17,6 +24,7 @@
     open = false,
     onclose,
     onadded,
+    seatsLeft = null,
     titleSnippet,
     actions,
     class: className,
@@ -48,6 +56,12 @@
 
     if (emails.length === 0) {
       error = 'Please enter at least one email address.';
+      return;
+    }
+
+    const seatError = inviteSeatError(emails.length, seatsLeft);
+    if (seatError) {
+      error = seatError;
       return;
     }
 

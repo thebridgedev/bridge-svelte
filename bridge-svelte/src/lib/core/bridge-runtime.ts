@@ -63,6 +63,7 @@ import {
   type SessionSnapshotData,
 } from './snapshot-stores.js';
 import { bridgeEvents } from './events.js';
+import { billingEventReceived, tokenStaleHandlerOf } from './billing-store.js';
 import { _setRealtimeStatus, _setRealtimeStatusDetail } from './realtime-status.js';
 import {
   clearPendingAuthorizationChange,
@@ -587,22 +588,23 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
     'subscription.plan_changed': (msg) => {
       try { applySubscriptionPlanChanged(msg); } catch { /* store updates shouldn't throw, defensive */ }
       authorizationChanged('subscription.plan_changed');
+      billingChanged(msg.kind);
       bridgeEvents._dispatch(msg);
     },
-    'payment.failed': (msg) => bridgeEvents._dispatch(msg),
-    'payment.succeeded': (msg) => bridgeEvents._dispatch(msg),
-    'subscription.created': (msg) => bridgeEvents._dispatch(msg),
-    'subscription.updated': (msg) => bridgeEvents._dispatch(msg),
-    'subscription.canceled': (msg) => bridgeEvents._dispatch(msg),
-    'subscription.reactivated': (msg) => bridgeEvents._dispatch(msg),
-    'subscription.trial_started': (msg) => bridgeEvents._dispatch(msg),
+    'payment.failed': (msg) => { billingChanged(msg.kind); bridgeEvents._dispatch(msg); },
+    'payment.succeeded': (msg) => { billingChanged(msg.kind); bridgeEvents._dispatch(msg); },
+    'subscription.created': (msg) => { billingChanged(msg.kind); bridgeEvents._dispatch(msg); },
+    'subscription.updated': (msg) => { billingChanged(msg.kind); bridgeEvents._dispatch(msg); },
+    'subscription.canceled': (msg) => { billingChanged(msg.kind); bridgeEvents._dispatch(msg); },
+    'subscription.reactivated': (msg) => { billingChanged(msg.kind); bridgeEvents._dispatch(msg); },
+    'subscription.trial_started': (msg) => { billingChanged(msg.kind); bridgeEvents._dispatch(msg); },
     'subscription.trial_ending_soon': (msg) => bridgeEvents._dispatch(msg),
-    'subscription.trial_converted': (msg) => bridgeEvents._dispatch(msg),
-    'subscription.trial_expired': (msg) => bridgeEvents._dispatch(msg),
+    'subscription.trial_converted': (msg) => { billingChanged(msg.kind); bridgeEvents._dispatch(msg); },
+    'subscription.trial_expired': (msg) => { billingChanged(msg.kind); bridgeEvents._dispatch(msg); },
     'dunning.entered': (msg) => bridgeEvents._dispatch(msg),
     'dunning.retry_scheduled': (msg) => bridgeEvents._dispatch(msg),
-    'dunning.recovered': (msg) => bridgeEvents._dispatch(msg),
-    'dunning.exhausted': (msg) => bridgeEvents._dispatch(msg),
+    'dunning.recovered': (msg) => { billingChanged(msg.kind); bridgeEvents._dispatch(msg); },
+    'dunning.exhausted': (msg) => { billingChanged(msg.kind); bridgeEvents._dispatch(msg); },
     'quota.updated': (msg) => bridgeEvents._dispatch(msg),
     'entitlements.changed': (msg) => {
       // Only the payload-carrying variant has a map; the signal-only one is a no-op here.
@@ -669,6 +671,8 @@ export function startBridgeRuntime(options: StartBridgeRuntimeOptions = {}): voi
         apiBaseUrl,
         appId: auth.getApiContext().appId,
         accessToken: tokens?.accessToken ?? null,
+        // TBP-762 — a quota read right after a checkout renews the sign-in and retries.
+        onTokenStale: tokenStaleHandlerOf(auth),
       });
     } catch {
       // No BridgeAuth yet — quota hydration falls back to live pushes only.
@@ -836,6 +840,18 @@ export function __resetBridgeRuntime(): void {
 }
 
 // ── helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * TBP-762 — a live billing event re-reads the plan list, the current plan and
+ * the billing state (core/billing-store.ts owns the rule). Never throws.
+ */
+function billingChanged(kind: string): void {
+  try {
+    billingEventReceived(kind);
+  } catch {
+    /* billing store unavailable (tests, SSR) — the live patch still applied */
+  }
+}
 
 /**
  * TBP-700 — how many reconcile-driven socket replacements may follow one

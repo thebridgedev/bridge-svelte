@@ -172,7 +172,7 @@ const UNLIMITED: QuotaState = Object.freeze({
 /**
  * Live numbers for one quota metric.
  *
- * @param metric The metric key (`'projects'`, `'ai_completions'`, `'users'`).
+ * @param metric The metric key (`'projects'`, `'ai_completions'`, `'seats'`).
  *   Pass a getter (`() => metric`) when the key is itself reactive, e.g. a prop.
  */
 export function useQuota(metric: string | (() => string)): QuotaState {

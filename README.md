@@ -88,10 +88,27 @@ Usage is counted once, where the action happens: by your backend when the action
 | Level | You write | The user sees |
 |---|---|---|
 | 0 | nothing beyond calling your API with `bridgeFetch()` | An upgrade dialog when the backend refuses at the limit |
-| 1 | `<QuotaGate metric>`, `<Entitled to>` | A button disabled at the cap; a feature shown only on plans that include it |
-| 2 | `useQuota(metric)`, `$entitlements.can(key)` | Your own UI from live numbers |
+| 1 | `<QuotaGate metric>` | A button disabled at the cap, with an upgrade line beside it |
+| 2 | `useQuota(metric)` | Your own UI from live numbers |
 
-`bridgeFetch()` calls your own backend with the user's token. See [How Bridge works](learning/mechanisms.md) for counter vs gauge, and for counting in the browser when there is no server call.
+`bridgeFetch()` calls your own backend with the user's token. See [How Bridge works](learning/mechanisms.md) for counter vs gauge, and for counting in the browser when there is no server call — a complete, first-class way to run limits.
+
+## Who gets which feature: flags
+
+Every gate in app code is a flag, and the flag's rule says why: a privilege (`privileges contains "USER_WRITE"`), a plan feature (`bridge:billing.entitlement.analytics eq true`) or a rollout. App code never reads a role, a privilege list, the plan or a plan feature to decide what someone may see or do.
+
+```svelte
+<script lang="ts">
+  import { FeatureFlag } from '@nebulr-group/bridge-svelte/flags';
+</script>
+
+<!-- the flag's rule: bridge:billing.entitlement.analytics eq true -->
+<FeatureFlag key="analytics" defaultValue={false} upgrade>
+  <AnalyticsPanel />
+</FeatureFlag>
+```
+
+A feature a plan sells goes on the plan (`bridge plan feature add pro analytics`), and the flag reads the plan's list, so changing what Pro includes never touches a rule. A page is a route rule: `{ match: '/admin/*', featureFlag: 'admin-area', redirectTo: '/' }`. Numbers are plan limits (`<QuotaGate>`), and permission on one specific record stays in your code. `npx @nebulr-group/bridge-cli check gates` lists any direct role, privilege or plan check in a project with the flag to use instead.
 
 ## What the package exports
 
@@ -100,7 +117,7 @@ Usage is counted once, where the action happens: by your backend when the action
 | Setup | `bridgeBootstrap`, `BridgeBootstrap`, `bridgeFetch` |
 | Sign-in | `BridgeAuthRoutes`, `LoginForm`, `SignupForm`, `ForgotPassword`, `MagicLink`, `PasskeyLogin`, `PasskeySetup`, `PasskeyRequestSetupLink`, `MfaChallenge`, `MfaSetup`, `SsoButton`, `WorkspaceSelector`, `TenantSelector`, `readReturnTo` |
 | State | `auth`, `getBridgeAuth`, `isAuthenticated`, `profileStore`, `tokenStore`, `bridge` (app, tenant, user, usage), `entitlements`, `useQuota` |
-| Billing | `BridgeBillingRoutes`, `BridgePaywallPage`, `BridgePaywall`, `PlanSelector`, `BillingPortalButton`, `BridgeBillingNotice`, `BridgeSubscriptionStatus`, `BridgeQuotaBanner`, `QuotaGate`, `Entitled`, `BridgeUpgradeDialog`, `onBridgeQuotaExceeded` |
+| Billing | `BridgeBillingRoutes`, `BridgePaywallPage`, `BridgePaywall`, `PlanSelector`, `BillingPortalButton`, `BridgeBillingNotice`, `BridgeSubscriptionStatus`, `BridgeQuotaBanner`, `QuotaGate`, `BridgeUpgradeDialog`, `Entitled` (checks the plan without a flag; only when asked for no flag), `onBridgeQuotaExceeded` |
 | Teams | `TeamManagementPanel`, `TeamUserList`, `TeamProfileForm`, `TeamWorkspaceForm`, `TeamAddUserDialog`, `TeamEditUserDialog`, `TeamConfirmDialog`, `TeamUserActionsMenu` |
 | Developer | `ApiTokenManagement` (a workspace's API tokens), `RealtimeDevBadge`, `realtimeStatus` |
 | Flags (`@nebulr-group/bridge-svelte/flags`) | `useFlag`, `FeatureFlag` |

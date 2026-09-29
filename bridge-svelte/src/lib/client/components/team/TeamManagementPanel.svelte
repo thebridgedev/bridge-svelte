@@ -12,6 +12,12 @@
     showProfileTab?: boolean;
     showWorkspaceTab?: boolean;
     onError?: (error: Error) => void;
+    /**
+     * TBP-763 — the name of the plan limit that counts seats (e.g. `'seats'`,
+     * set up as a gauge counted from membership). With it, Invite stops at the
+     * plan's limit and says why. Without it, nothing changes.
+     */
+    seatsMetric?: string;
     tabBar?: Snippet<[{ tabs: Tab[]; activeTab: string; setTab: (id: string) => void }]>;
   }
 
@@ -20,6 +26,7 @@
     showProfileTab = true,
     showWorkspaceTab = true,
     onError,
+    seatsMetric,
     tabBar,
     class: className,
     style,
@@ -62,7 +69,7 @@
 
   <div class="bridge-team-tab-content">
     {#if activeTab === 'users'}
-      <TeamUserList {onError} />
+      <TeamUserList {onError} {seatsMetric} />
     {:else if activeTab === 'profile'}
       <TeamProfileForm {onError} />
     {:else if activeTab === 'workspace'}

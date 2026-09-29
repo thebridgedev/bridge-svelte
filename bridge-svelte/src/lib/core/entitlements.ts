@@ -14,6 +14,11 @@
  *     Upgrade to use AI
  *   {/if}
  *
+ * The standard gate is a flag ruled `bridge:billing.entitlement.<key> eq true`
+ * (`<FeatureFlag key>`); this store reads the plan directly and is the
+ * exception for when the developer asks for no flag. In development the first
+ * `can()` call logs a one-time note saying so (TBP-705).
+ *
  * `can(key)` is fail-closed: `false` until Bridge has answered, and `false` for
  * a key the plan does not grant. `ready` is what tells those two apart — check
  * it before treating a `false` as "this plan cannot", so a cold start shows a
@@ -27,6 +32,7 @@ import { derived, readable, type Readable } from 'svelte/store';
 import { useBridge as useBillingBridge } from '@nebulr-group/bridge-auth-core';
 import { tokenStore } from './bridge-instance.js';
 import { tenantEntitlementsStore } from './snapshot-stores.js';
+import { noteDirectPlanCheck } from './direct-plan-check-note.js';
 
 export interface EntitlementsState {
   /** True once Bridge has answered for this session. Before that, every `can()` is `false`. */
@@ -65,7 +71,11 @@ function stateOf(map: Record<string, boolean> | null): EntitlementsState {
   return Object.freeze({
     ready: map !== null,
     all,
-    can: (key: string) => all[key] === true,
+    can: (key: string) => {
+      // TBP-705: a direct plan check is the documented exception; say so once in dev.
+      noteDirectPlanCheck('can', key);
+      return all[key] === true;
+    },
   });
 }
 

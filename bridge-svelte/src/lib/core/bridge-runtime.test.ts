@@ -76,7 +76,16 @@ vi.mock('./bridge-instance.js', () => ({
       return _refreshImpl ? _refreshImpl() : null;
     },
     invalidateFeatureFlagCache: () => { _invalidateCalls += 1; },
+    tokenStaleHandler: () => _staleHandler,
   }),
+}));
+
+// TBP-762 — the billing store is observed, not run: the runtime only has to
+// hand it every billing event and pass the stale-sign-in handler on.
+const _staleHandler = async () => 'fresh-token';
+vi.mock('./billing-store.js', () => ({
+  billingEventReceived: vi.fn(),
+  tokenStaleHandlerOf: (auth: { tokenStaleHandler?: () => unknown }) => auth.tokenStaleHandler?.(),
 }));
 
 vi.mock('../client/stores/config.store.js', () => ({
@@ -1267,5 +1276,33 @@ describe('a user-state change published during a (re)connect is never lost (TBP-
     expect(delivered).toBe(1);
     await settle();
     expect(currentTv()).toBe(2);
+  });
+});
+
+// TBP-762 — every billing read renews an out-of-date sign-in, and a live billing
+// event re-reads the billing store (plan list, current plan, billing state).
+describe('billing store wiring (TBP-762)', () => {
+  it('the quota store is configured with the stale-sign-in handler on every token', async () => {
+    startBridgeRuntime();
+    _quotaStore.configure.mockClear();
+    _tokenStore.set({ accessToken: 'header.eyJ0aWQiOiJ3cy0xIn0.sig' });
+    expect(_quotaStore.configure).toHaveBeenCalled();
+    const opts = _quotaStore.configure.mock.calls.at(-1)![0] as { onTokenStale?: unknown };
+    expect(opts.onTokenStale).toBe(_staleHandler);
+  });
+
+  it('plan, subscription and payment events re-read the billing store; the event still dispatches', async () => {
+    const { billingEventReceived } = await import('./billing-store.js');
+    const { bridgeEvents } = await import('./events.js');
+    vi.mocked(billingEventReceived).mockClear();
+    _billingHandlers = undefined;
+    startBridgeRuntime();
+    for (const kind of ['subscription.plan_changed', 'subscription.updated', 'subscription.created', 'payment.succeeded']) {
+      const msg = { kind, tenantId: 'ws-1', to: { slug: 'pro', name: 'Pro' }, status: 'active' };
+      _billingHandlers![kind](msg);
+      expect(billingEventReceived).toHaveBeenLastCalledWith(kind);
+      expect(bridgeEvents._dispatch).toHaveBeenLastCalledWith(msg);
+    }
+    expect(billingEventReceived).toHaveBeenCalledTimes(4);
   });
 });

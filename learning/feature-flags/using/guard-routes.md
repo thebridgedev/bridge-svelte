@@ -33,9 +33,8 @@ redirects when the flag is off.
 ## When the plan is the reason
 
 If a route's flag is off because the workspace's plan doesn't include the
-feature (its rule targets `bridge:billing.entitlement.<feature>`, `tenant.plan`
-or another `bridge:billing.*` attribute, and an upgrade alone would turn it
-on), the guard doesn't just bounce the visitor: the upgrade dialog opens,
+feature (its rule is `bridge:billing.entitlement.<feature> eq true`, and an
+upgrade alone would turn it on), the guard doesn't just bounce the visitor: the upgrade dialog opens,
 naming the plans that include the feature. You write nothing on the page.
 
 - **Clicking into the route** keeps the visitor on the page they were on, with

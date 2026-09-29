@@ -30,7 +30,7 @@ If deleting it frees room, it's a gauge and your app counts it (`set`). If it ha
 
 ## Count once, where the action happens
 
-Report from the browser when the action happens in the browser: a local-first or mobile app whose data lives on the device, or any click that does not call your server. That is a first-class setup. It trusts the browser: Bridge shows and bills what the page reports, and only a backend can refuse a write.
+Report from the browser when the action happens in the browser: a local-first or mobile app whose data lives on the device, or any click that does not call your server. That is a complete, first-class setup: put `<QuotaGate metric>` around the button so it stops at the limit, and Bridge shows and bills what the page reports.
 
 When the click calls your server, the backend handler counts it instead (for NestJS, `@RequireQuota` / `@SyncQuota`), and the page only shows the number. Never both: the same action would be counted twice. In development the plugin warns once in the console when your backend and the page count the same metric (bridge-nestjs marks a counting response with `X-Bridge-Usage-Counted` outside production; nothing is sent or printed in production).
 

@@ -10,7 +10,7 @@ This directory contains the Bridge Svelte learning docs.
 
 ## Top-level guides
 
-- **[How Bridge works](mechanisms.md)**: the mechanisms every other page builds on. The smallest integration, the server deciding plan limits while the client decorates, a POST incrementing the limit, counter vs gauge, the three ways to show a limit in the UI, self-reported usage, and the four levels of customising Bridge's pages with the `--bridge-*` token contract.
+- **[How Bridge works](mechanisms.md)**: the mechanisms every other page builds on. The smallest integration, counting a plan limit once where the action happens, every gate as a flag, a POST incrementing the limit, counter vs gauge, the three ways to show a limit in the UI, self-reported usage, and the four levels of customising Bridge's pages with the `--bridge-*` token contract.
 - **[Hosted auth quickstart](quickstart/hosted-quickstart.md)**: fastest path, Bridge handles the login UI on a hosted page.
 - **[SDK auth quickstart](sdk-auth/sdk-quickstart.md)**: in-app login/signup forms using SDK components.
 - **[Live updates and the `bridge` object](live-updates/live-updates.md)**: the unified `bridge` object (branding, workspace, subscription, entitlements, user), live channel events, and app-wide flag attributes.

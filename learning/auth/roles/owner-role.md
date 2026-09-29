@@ -14,7 +14,10 @@ If you're building a custom "change this user's role" flow, handle the case wher
 import { getBridgeAuth } from '@nebulr-group/bridge-svelte';
 
 try {
-  await getBridgeAuth().team.updateUser({ id: userId, role: 'MEMBER' });
+  await getBridgeAuth().team.updateUser({
+    id: userId,
+    role: 'MEMBER',
+  });
 } catch (err) {
   // "There must be at least one owner for this workspace."
   if (err instanceof Error && err.message.includes('at least one owner')) {

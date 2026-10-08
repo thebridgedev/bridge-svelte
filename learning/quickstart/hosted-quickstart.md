@@ -2,6 +2,8 @@
 
 The fastest way to add authentication to your SvelteKit app. Bridge handles the entire login UI on a hosted page, so you don't need to build any auth forms.
 
+> **Let your AI assistant set it up.** Connect the [Bridge MCP server](https://thebridge.dev/docs/ai-assistants/mcp/) to Claude, Cursor, Copilot or Gemini CLI and ask it to add Bridge to your app. Not using MCP? Run `npx @nebulr-group/bridge-cli guide add-login` in your project: it detects your framework from `package.json` and prints the steps for your assistant to follow. `npx @nebulr-group/bridge-cli doctor` checks the result.
+
 ## 1. Install the plugin
 
 ```bash

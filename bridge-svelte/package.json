@@ -1,7 +1,7 @@
 {
   "name": "@nebulr-group/bridge-svelte",
   "version": "0.9.0",
-  "description": "Bridge Svelte library, This library helps you to add bridge authentication and feature flags, and payments to your svelte application.",
+  "description": "The Bridge for SvelteKit: sign-in, workspaces and roles, feature flags, Stripe subscriptions and plan limits in one .env line and three files.",
   "author": "Iman Pouya",
   "license": "MIT",
   "repository": {
@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/thebridgedev/bridge-svelte/issues"
   },
-  "homepage": "https://thebridge.dev",
+  "homepage": "https://thebridge.dev/docs/quickstart/svelte/",
   "scripts": {
     "dev": "vite dev",
     "build": "bun run prepack",
@@ -82,12 +82,23 @@
   },
   "keywords": [
     "svelte",
+    "sveltekit",
+    "svelte5",
+    "passkeys",
+    "magic-link",
+    "the-bridge",
     "bridge",
-    "nebulr",
+    "authentication",
     "auth",
+    "login",
+    "sso",
     "feature-flags",
-    "payments",
     "stripe",
-    "saas control center"
+    "subscriptions",
+    "billing",
+    "plan-limits",
+    "multi-tenant",
+    "rbac",
+    "saas"
   ]
 }

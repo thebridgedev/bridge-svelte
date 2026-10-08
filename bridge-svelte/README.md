@@ -1,18 +1,33 @@
+<p align="center">
+  <a href="https://thebridge.dev/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte"><img src="https://raw.githubusercontent.com/thebridgedev/bridge-svelte/main/.github/assets/banner.png" alt="The Bridge for SvelteKit" width="100%"></a>
+</p>
 
-## @nebulr-group/bridge-svelte
+<p align="center">
+  <a href="https://www.npmjs.com/package/@nebulr-group/bridge-svelte"><img src="https://img.shields.io/npm/v/@nebulr-group/bridge-svelte?color=20006b&label=npm" alt="npm version"></a>
+  <a href="https://github.com/thebridgedev/bridge-svelte/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/@nebulr-group/bridge-svelte?color=20006b" alt="MIT license"></a>
+  <a href="https://madewithsvelte.com/p/the-bridge/shield-link"><img src="https://madewithsvelte.com/storage/repo-shields/5996-shield.svg" alt="Made with Svelte"></a>
+</p>
 
-[![MadeWithSvelte.com shield](https://madewithsvelte.com/storage/repo-shields/5996-shield.svg)](https://madewithsvelte.com/p/the-bridge/shield-link)
+<p align="center">
+  <a href="https://thebridge.dev/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte"><b>Website</b></a> ·
+  <a href="https://thebridge.dev/docs/quickstart/svelte/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte"><b>Quickstart</b></a> ·
+  <a href="https://thebridge.dev/docs/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte"><b>Docs</b></a> ·
+  <a href="https://thebridge.dev/docs/ai-assistants/mcp/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte"><b>Set up with your AI assistant</b></a>
+</p>
 
+# The Bridge for SvelteKit
 
-Bridge Svelte library. Add Bridge auth, feature flags, and payments to your SvelteKit 2 + Svelte 5 apps.
+`@nebulr-group/bridge-svelte` adds sign-in, workspaces and roles, feature flags, Stripe subscriptions and plan limits to a SvelteKit 2 + Svelte 5 app, with one `.env` line and three files.
 
-### Install
+**[The Bridge](https://thebridge.dev/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)** is a hosted backend for SaaS apps. It gives you sign-in (passwords, magic links, passkeys, social login and SSO), multi-tenant workspaces with roles, Stripe subscriptions with plan limits, and feature flags, all managed from one dashboard. Your AI coding assistant can set it up for you through the [Bridge MCP server](https://thebridge.dev/docs/ai-assistants/mcp/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte).
+
+## Install
 
 ```bash
 npm i @nebulr-group/bridge-svelte
 ```
 
-### Usage
+## Usage
 
 The whole integration is one `.env` line and three files:
 
@@ -52,48 +67,28 @@ A stage or local app also sets `VITE_BRIDGE_API_BASE_URL`. Add `loginRoute: '/au
 
 [How Bridge works](https://github.com/thebridgedev/bridge-svelte/blob/main/learning/mechanisms.md) explains plan limits, the three UI levels and the four customisation levels; the [learning docs](https://github.com/thebridgedev/bridge-svelte/tree/main/learning) cover everything else. Coding agents: `npx @nebulr-group/bridge-cli guide svelte`.
 
-### Build
+## Learn more
 
+- [Quickstart](https://thebridge.dev/docs/quickstart/svelte/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)
+- [Authentication](https://thebridge.dev/docs/auth/svelte/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)
+- [Sign-in inside your app](https://thebridge.dev/docs/sdk-auth/svelte/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)
+- [Feature flags](https://thebridge.dev/docs/feature-flags/svelte/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)
+- [Branding](https://thebridge.dev/docs/branding/svelte/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)
+- [Live updates](https://thebridge.dev/docs/live-updates/svelte/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)
+- [Subscriptions and plan limits](https://thebridge.dev/docs/billing/how-it-works/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)
 
-```bash
-npm run build
-```
+## Other Bridge packages
 
-Artifacts are emitted to `dist/` via `svelte-package`.
+| Package | For |
+|---|---|
+| [`@nebulr-group/bridge-react`](https://www.npmjs.com/package/@nebulr-group/bridge-react) | React |
+| [`@nebulr-group/bridge-nextjs`](https://www.npmjs.com/package/@nebulr-group/bridge-nextjs) | Next.js |
+| [`@nebulr-group/bridge-angular`](https://www.npmjs.com/package/@nebulr-group/bridge-angular) | Angular |
+| [`@nebulr-group/bridge-nestjs`](https://www.npmjs.com/package/@nebulr-group/bridge-nestjs) | NestJS |
+| [`@nebulr-group/bridge-express`](https://www.npmjs.com/package/@nebulr-group/bridge-express) | Express |
+| [`@nebulr-group/bridge-cli`](https://www.npmjs.com/package/@nebulr-group/bridge-cli) | CLI for people and AI agents |
+| [`@nebulr-group/bridge-auth-core`](https://www.npmjs.com/package/@nebulr-group/bridge-auth-core) | Any JavaScript app (core) |
 
-### Release (branch-protected main)
+## License
 
-```bash
-# 1) Create release branch
-git checkout -b release/v0.1.0-beta.1
-git push -u origin release/v0.1.0-beta.1
-
-# 2) Open a PR: release/v0.1.0-beta.1 -> main, approve and merge
-
-# 3) After merge to main, tag and push
-git checkout main && git pull
-git tag v0.1.0-beta.1
-git push origin v0.1.0-beta.1
-
-# 4) Monitor GitHub Actions "Publish to npm"
-```
-
-### Commit signing (required)
-
-Ensure your commits are verified before opening PRs:
-
-```bash
-# Option A: SSH signing (recommended)
-git config --global gpg.format ssh
-git config --global user.signingkey ~/.ssh/id_ed25519.pub
-git config --global commit.gpgsign true
-
-# Option B: GPG signing
-gpg --full-generate-key
-gpg --list-secret-keys --keyid-format=long
-git config --global user.signingkey <KEY_ID>
-git config --global commit.gpgsign true
-```
-
-### License
-MIT © thebridgedev
+[MIT](https://github.com/thebridgedev/bridge-svelte/blob/main/LICENSE) © Nebulr. Built by [The Bridge](https://thebridge.dev/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte).

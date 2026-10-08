@@ -1,7 +1,5 @@
 # Changelog
 
-All notable changes to this package are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the package uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
 ## [0.9.0] - 2026-09-30
 
 ### Added
@@ -25,48 +23,3 @@ All notable changes to this package are documented here. The format follows [Kee
 
 - **Role changes reaching open apps.** A role change made by an admin now reaches the person's open app without a reload. Since 0.8.2 it could be lost while the app was reconnecting.
 - **Billing screens stay current.** Plans added after a tab was opened now appear without a reload, the success page shows the new plan straight after checkout instead of "Subscription unavailable", and choosing Free takes you into the app instead of leaving you on the plan picker.
-
-## [0.2.2] - 2026-02-25
-
-### Changed
-
-- **`bridgeBootstrap()` now returns `{ flagsReady: Promise<void> }`** — the flag fetch runs in parallel with your page's own data loading instead of blocking bootstrap completion. Pages that don't depend on flags start rendering sooner; pages that do can `await flagsReady` before checking flag-gated content.
-- **`createRouteGuard(flagsReady?)` accepts the optional promise** — when a route has a `featureFlag` rule the guard awaits `flagsReady` before evaluating it; routes without flag checks are unaffected and proceed immediately.
-
-## [0.2.1] - 2025-02-17
-
-### Added
-
-- Install test: `bun run test:install` and CI workflow to verify the packed package installs with Svelte 5 and SvelteKit 2.
-
-### Fixed
-
-- Install test script now cleans up `install-test-tmp` and `install-test-pkg.tgz` after run (and on exit).
-
-## [0.2.0] - 2025-02-15
-
-### Added
-
-- Plan service: `planService.redirectToPlanSelection()` for subscription/plan management flows.
-- E2E test suite (Playwright) for auth, route guards, feature flags, and team management.
-
-### Changed
-
-- **Breaking:** Route config is passed to `bridgeBootstrap(url, config, routeConfig)` in `+layout.ts`; `BridgeBootstrap` component no longer accepts a `routeConfig` prop.
-- **FeatureFlag** (Svelte 5): use snippet API `{#snippet children({ enabled, rawEnabled })}` instead of `let:enabled` / `let:rawEnabled`.
-- Documentation: README, quickstart, and examples updated (package name `@nebulr-group/bridge-svelte`, correct links, default callback `/auth/oauth-callback`, route protection and FeatureFlag examples).
-- Learning docs structure documented in `learning/README.md`.
-
-### Fixed
-
-- Removed references to non-existent `fallback` prop on `FeatureFlag`.
-- Corrected typos and wording in examples (e.g. "bridge" → "the" where appropriate).
-
-## [0.2.0-alpha.9] - Previous
-
-Pre-release version before 0.2.0.
-
-[0.2.2]: https://github.com/thebridgedev/bridge-svelte/releases/tag/v0.2.2
-[0.2.1]: https://github.com/thebridgedev/bridge-svelte/releases/tag/v0.2.1
-[0.2.0]: https://github.com/thebridgedev/bridge-svelte/releases/tag/v0.2.0
-[0.2.0-alpha.9]: https://github.com/thebridgedev/bridge-svelte/releases/tag/v0.2.0-alpha.9

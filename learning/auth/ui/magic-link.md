@@ -12,7 +12,7 @@ Standalone magic link request form. It also redeems the link: the emailed link r
 
 **Usage:**
 
-> `<BridgeAuthRoutes>` already serves this page at `/auth/magic-link` (see the [in-app quickstart](/sdk-auth/sdk-quickstart/)). The example below is for taking the page over; a file at that address wins over the catch-all.
+> `<BridgeAuthRoutes>` already serves this page at `/auth/magic-link` (see the [in-app quickstart](../../sdk-auth/sdk-quickstart.md)). The example below is for taking the page over; a file at that address wins over the catch-all.
 
 ```svelte
 <!-- src/routes/auth/magic-link/+page.svelte -->

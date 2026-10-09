@@ -29,7 +29,7 @@ Dual-mode component:
 
 **Reset page (with token from URL):**
 
-> `<BridgeAuthRoutes>` already serves this page at `/auth/set-password/[token]` (see the [in-app quickstart](/sdk-auth/sdk-quickstart/)). The example below is for taking the page over; a file at that address wins over the catch-all.
+> `<BridgeAuthRoutes>` already serves this page at `/auth/set-password/[token]` (see the [in-app quickstart](../../sdk-auth/sdk-quickstart.md)). The example below is for taking the page over; a file at that address wins over the catch-all.
 
 Signup verification and password-reset emails both link there.
 

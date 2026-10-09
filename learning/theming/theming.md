@@ -31,7 +31,7 @@ The `--bridge-*` variables below are the supported way to restyle every Bridge p
 }
 ```
 
-The plugin declares its defaults on `:where(:root)`, which has zero specificity, so your `:root` wins whatever order the two stylesheets load in. Set a token on a wrapper instead of `:root` to theme one area (`<div style="--bridge-primary: #7c3aed">`). Tokens are rung 1 of the customisation rungs in [How Bridge works](/mechanisms/): rung 0 is your layout around every Bridge page, then the `frame` / `heading` snippets (2), taking over one page (3) and headless (4).
+The plugin declares its defaults on `:where(:root)`, which has zero specificity, so your `:root` wins whatever order the two stylesheets load in. Set a token on a wrapper instead of `:root` to theme one area (`<div style="--bridge-primary: #7c3aed">`). Tokens are rung 1 of the customisation rungs in [How Bridge works](../mechanisms.md): rung 0 is your layout around every Bridge page, then the `frame` / `heading` snippets (2), taking over one page (3) and headless (4).
 
 ### Colour
 

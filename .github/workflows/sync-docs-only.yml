@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
+      - name: 🔗 Check docs links (a broken link stops the sync, OPS-71)
+        run: node scripts/check-docs-links.mjs
       - name: 🔄 Sync Docs
         uses: ./.github/actions/sync-docs
         env:

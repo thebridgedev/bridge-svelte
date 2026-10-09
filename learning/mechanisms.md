@@ -284,7 +284,7 @@ The derived tokens (hover, light, focus) follow `--bridge-primary` wherever you 
 
 ## Where the details live
 
-- Sign-in: [hosted quickstart](/quickstart/hosted-quickstart/), [in-app quickstart](/sdk-auth/sdk-quickstart/), [route guards](/auth/securing/route-guards/)
+- Sign-in: [hosted quickstart](quickstart/hosted-quickstart.md), [in-app quickstart](sdk-auth/sdk-quickstart.md), [route guards](/auth/securing/route-guards/)
 - Plans and limits: [how billing works](/billing/how-it-works/), [usage limits](/billing/limits/usage-limits/), [lock features to a plan](/billing/limits/lock-features/), [report usage](/billing/limits/report-usage/)
 - Styling: [theming](/theming/)
 - The backend: the bridge-nestjs docs, "Plan limits"

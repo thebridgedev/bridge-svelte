@@ -6,6 +6,7 @@
     "demo"
   ],
   "scripts": {
+    "check:docs-links": "node scripts/check-docs-links.mjs",
     "build": "bun run --filter demo build",
     "build:bridge": "bun run --filter @nebulr-group/bridge-svelte build",
     "dev": "bun run --filter demo dev",

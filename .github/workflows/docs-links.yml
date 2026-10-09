@@ -1,0 +1,26 @@
+# Docs link check (OPS-71): every link in learning/ must work on thebridge.dev/docs as the docs
+# sync publishes it. Dependency-free node script, under a second. Run locally:
+#   node scripts/check-docs-links.mjs
+name: Docs links
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "learning/**"
+      - "scripts/check-docs-links.mjs"
+      - "scripts/docs-site-pages.txt"
+      - ".github/workflows/docs-links.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs-links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every learning/ link resolves the way the docs sync publishes it
+        run: node scripts/check-docs-links.mjs

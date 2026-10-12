@@ -16,15 +16,6 @@ Before calling the work done, run `npx @nebulr-group/bridge-cli check gates` in 
 
 In SvelteKit: a piece of UI is `<FeatureFlag key="…">`; a page is a route rule `{ match: '/admin/*', featureFlag: 'admin-area', redirectTo: '/' }`; a nav link is the same `<FeatureFlag>` around the link.
 
-## Decide first — hosted or in-app?
-
-| You want | Mode | Config |
-|---|---|---|
-| Bridge owns the login UI | **Hosted** (default) — `bridge guide svelte` | nothing |
-| Login inside the app, the app's styling | **In-app** — this guide | `loginRoute: '/auth/login'` |
-
-`loginRoute` is the whole switch; the files are identical. If the developer has not said which they want, ask.
-
 ## Before you start — the Bridge app's settings
 
 - **Allowed origins** must list every origin the app is served from, each dev port included (`http://localhost:5173` and `:5175` differ). From an unlisted origin, sign-in itself answers `403 {"message":"Origin not allowed"}` — password sign-in, the exchange that finishes magic-link, passkey and MFA sign-in, signup and passkeys. Sending a magic link still succeeds, so that failure shows after the link is clicked. `bridge app update --allowed-origins <origins>`, or Bridge admin → **Authentication** → **Security** → **Allowed Origins**.
@@ -41,7 +32,7 @@ In SvelteKit: a piece of UI is `<FeatureFlag key="…">`; a page is a route rule
 
 Nothing else: passkey support ships with the plugin.
 
-If `bridgeBootstrap()` and `<BridgeBootstrap>` are already wired (a hosted setup), skip to *Convert a hosted setup*. Migrating from `@nebulr/nblocks-svelte`: see `bridge guide svelte`.
+If `bridgeBootstrap()` and `<BridgeBootstrap>` are already wired without `loginRoute` and the developer asks to move sign-in into the app, skip to *Moving an existing app to in-app sign-in*. Migrating from `@nebulr/nblocks-svelte`: see `bridge guide svelte`.
 
 ## The files
 
@@ -65,6 +56,8 @@ export const load = bridgeBootstrap({
   rules: [{ match: new RegExp('^/auth($|/)'), public: true }],
 });
 ```
+
+(If the developer explicitly asks for Bridge's hosted sign-in page, or the app already uses it, respect that: leave out `loginRoute`, sign in with `auth.login()` instead of a link to `/auth/login`, and call `logout()` without `redirectTo`. Everything else stays the same; the design and customising sections below then do not apply.)
 
 **`src/routes/+layout.svelte`**:
 
@@ -108,10 +101,38 @@ Bridge reads the `VITE_BRIDGE_*` variables itself (*explicit option > environmen
 
 Any other address under `/auth` gets the app's own 404. The pages render inside the app's `+layout.svelte`, so its navigation stays around them. Signup cannot break because a page was forgotten: the set-password page the verification email links to is always served. Props: `redirectTo` (default `'/'`) and `messages` (copy overrides).
 
-## Customising — take the lowest rung that does the job
+## Match the app's design — always
 
-0. **Nothing.** The pages already sit inside the app's layout.
-1. **Tokens.** Set `--bridge-*` CSS variables (`--bridge-primary`, `--bridge-border-radius`, `--bridge-auth-page-padding`, …). The full list is the token contract in `bridge guide mechanisms`.
+The pages render inside the app, so they must look like the rest of it. Bridge's built-in look (indigo buttons, grey borders) is a fallback for an app with no design, never the finished result. Do this without asking:
+
+1. **Read the app's design.** The global stylesheet (`src/app.css` or what `+layout.svelte` imports) and its CSS variables, `tailwind.config.*` or the Tailwind `@theme` block, a component library's theme (shadcn-svelte, Skeleton, Flowbite, …), the font the app loads, and one existing primary button and text input.
+2. **Set the tokens from it** in the app's own global stylesheet, pointing at the app's variables rather than copying values, so dark mode and later theme changes carry over:
+
+   ```css
+   /* src/app.css — Bridge sign-in pages take the app's design */
+   :root {
+     --bridge-primary: var(--color-primary);          /* the app's primary button background */
+     --bridge-primary-hover: var(--color-primary-hover);
+     --bridge-primary-fg: var(--color-primary-foreground);
+     --bridge-border: var(--color-border);
+     --bridge-input-focus: var(--color-ring);
+     --bridge-border-radius: var(--radius);
+     --bridge-foreground: var(--color-foreground);
+     --bridge-muted: var(--color-muted-foreground);
+     --bridge-bg: var(--color-background);
+     --bridge-muted-bg: var(--color-muted);
+   }
+   ```
+
+   The variable names on the right are examples: use the ones the app actually defines, or its literal values when it has no variables (a Tailwind app without CSS variables: the hex values of its `primary`, `border` and so on). Map its error and success colours to the `--bridge-alert-*` tokens. The components inherit the page font; set nothing for it unless the app puts its font on something other than `body`. The full list is the token contract in `bridge guide mechanisms`.
+3. **Give the pages the app's frame** when the app's own pages sit in a card, a panel or a split layout: pass the `frame` snippet (rung 2 below) using the app's own classes or components, so sign-in is not the one page that looks different.
+
+Ask the developer for colours only when the project has no styles of its own.
+
+## Customising further — take the lowest rung that does the job
+
+0. **Layout.** The pages already sit inside the app's layout.
+1. **Tokens.** Set `--bridge-*` CSS variables (`--bridge-primary`, `--bridge-border-radius`, `--bridge-auth-page-padding`, …), as in *Match the app's design*. The full list is the token contract in `bridge guide mechanisms`.
 2. **Frame and heading.** Two snippets restyle everything around the form on every page, without owning a route:
 
    ```svelte
@@ -167,12 +188,12 @@ Any other address under `/auth` gets the app's own 404. The pages render inside 
 {/if}
 ```
 
-- In-app, **always pass `redirectTo` to `logout()`**; without it the user lands on Bridge's hosted page.
+- **Always pass `redirectTo` to `logout()`** so the user lands on the app's own login page.
 - A signed-out visitor on a protected page is sent to `/auth/login?redirectUri=…` and returned there after signing in.
 - `profileStore` is the store itself: `$profileStore`, never `const { profile } = profileStore`.
 - Calls to the app's own backend go through `bridgeFetch` (see `bridge guide svelte`); do not write a `fetchWithAuth` helper.
 
-## Convert a hosted setup
+## Moving an existing app to in-app sign-in (only when the developer asks)
 
 1. Add `loginRoute: '/auth/login'` to the `bridgeBootstrap()` call. An older layout that calls `await bridgeBootstrap(url, config, routeConfig)` inside its own `load` should become the one-call form above, with the app wrapped in `<BridgeBootstrap>`; the old form still works but reads no environment variables.
 2. Make sure `src/routes/auth/[...bridge]/+page.svelte` exists, and delete any page under `src/routes/auth/` that only renders a Bridge component (an old empty `oauth-callback/+page.svelte`, say): a specific page file hides the catch-all's page.
@@ -184,6 +205,7 @@ Any other address under `/auth` gets the app's own 404. The pages render inside 
 - [ ] `src/routes/+layout.ts`: `ssr = false`, `bridgeBootstrap({ loginRoute: '/auth/login', rules })`, only `/auth/*` public
 - [ ] `src/routes/+layout.svelte`: styles imported, app inside `<BridgeBootstrap>`
 - [ ] `src/routes/auth/[...bridge]/+page.svelte` renders `<BridgeAuthRoutes />` (with `frame` / `heading` if restyled)
+- [ ] The app's global stylesheet sets the `--bridge-*` tokens from the app's own design; `frame` used when the app frames its pages
 - [ ] No page under `src/routes/auth/` that only renders a Bridge component; a page the app owns navigates in `onLogin` via `readReturnTo`
 - [ ] Bridge app: every dev origin allowed, self-signup on, the chosen sign-in methods on
 - [ ] `logout()` passes `redirectTo`
@@ -191,10 +213,10 @@ Any other address under `/auth` gets the app's own 404. The pages render inside 
 ## Verify
 
 1. The build passes.
-2. Signed out, a protected page redirects to `/auth/login` in the app (not an external page), styled.
+2. Signed out, a protected page redirects to `/auth/login` in the app (not an external page). Next to one of the app's own pages, its buttons, inputs, font, corners and frame match — in dark mode too if the app has one. No Bridge indigo is left.
 3. Sign in: the page leaves `/auth/login` for the page you asked for. **Network calls succeed but the page stays put** → the app owns its login page and its `LoginForm` has no `onLogin`. **`403 Origin not allowed`** → add the origin (scheme, host and port).
 4. Sign up at `/auth/signup`; the verification email links to `{origin}/auth/set-password/{token}?flow=signup` and opens the "Set new password" form. A 404 there means the catch-all is missing or misnamed — the folder must be `[...bridge]`.
 5. Forgot password from the login page: the reset link lands on the same set-password form.
-6. Log out: you land on the app's `/auth/login`, not Bridge's hosted page.
+6. Log out: you land on the app's `/auth/login`.
 7. `/auth/not-a-page` shows the app's 404.
-8. Without a browser: `bridge test-user create`, then `bridge test-user verify` with its credentials; a failure names the reason (`WRONG_PASSWORD`, `ORIGIN_NOT_ALLOWED`, …), and `bridge event auth-attempts` shows recent sign-in failures.
+8. The developer does steps 2–6 themselves in a browser; do not create test users for them. If a step fails, `bridge event auth-attempts --user <their email>` names the reason (`WRONG_PASSWORD`, `ORIGIN_NOT_ALLOWED`, …) and the fix.

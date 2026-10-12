@@ -226,4 +226,4 @@ Ask the developer for colours only when the project has no styles of its own.
 5. Forgot password from the login page: the reset link lands on the same set-password form.
 6. Log out: you land on the app's `/auth/login`, not Bridge's hosted page.
 7. `/auth/not-a-page` shows the app's 404.
-8. Without a browser: `bridge test-user create`, then `bridge test-user verify` with its credentials; a failure names the reason (`WRONG_PASSWORD`, `ORIGIN_NOT_ALLOWED`, …), and `bridge event auth-attempts` shows recent sign-in failures.
+8. The developer does steps 2–6 themselves in a browser; do not create test users for them. If a step fails, `bridge event auth-attempts --user <their email>` names the reason (`WRONG_PASSWORD`, `ORIGIN_NOT_ALLOWED`, …) and the fix.

@@ -173,4 +173,4 @@ Reach for these before writing an equivalent; each is imported from `@nebulr-gro
 2. Signed out, a protected page redirects to the Bridge login; after signing in you land back on that page and see the user's name.
 3. `/auth/login` shows the "sign-in is hosted" page; `/auth/not-a-page` shows the app's 404.
 4. Bridge components render styled, not as raw HTML.
-5. To prove sign-in without a browser: `bridge test-user create`, then `bridge test-user verify` with the credentials it printed.
+5. The developer does step 2 themselves in a browser, and signs up once at `/auth/signup`; do not create test users. If a step fails, `bridge event auth-attempts --user <their email>` names the reason.

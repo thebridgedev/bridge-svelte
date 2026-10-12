@@ -1,6 +1,6 @@
 # Bridge SvelteKit Integration
 
-You are integrating The Bridge into a SvelteKit application. The whole integration is one `.env` line and three small files; the plugin serves every sign-in page itself. This guide sets up **hosted sign-in** (Bridge's login page, the default). For sign-in inside the app, read `bridge guide svelte sdk-auth` instead — it is the same files plus one config field.
+You are integrating The Bridge into a SvelteKit application. The whole integration is one `.env` line and three small files; the plugin serves every sign-in page itself. This guide sets up **hosted sign-in** (Bridge's login page). **In-app sign-in (SDK mode) is the default**: unless the developer explicitly asked for hosted sign-in, read `bridge guide svelte sdk-auth` instead — it is the same files plus one config field. Use this guide's bootstrap, routing and `bridgeFetch` details from there.
 
 `bridge guide mechanisms` explains the rules everything here builds on (the server decides limits, the three UI levels, the four customisation rungs). Read it when the developer asks for more than this guide covers.
 
@@ -18,10 +18,10 @@ In SvelteKit: a piece of UI is `<FeatureFlag key="…">`; a page is a route rule
 
 | You want | Mode | Config |
 |---|---|---|
-| The fastest path; Bridge owns the login UI | **Hosted** (default) — this guide | nothing |
-| Login inside the app, the app's styling | **In-app (SDK auth)** — `bridge guide svelte sdk-auth` | `loginRoute: '/auth/login'` |
+| Login inside the app, matching the app's design | **In-app (SDK auth)** (default) — `bridge guide svelte sdk-auth` | `loginRoute: '/auth/login'` |
+| Bridge owns the login UI | **Hosted** — this guide, only when the developer explicitly asks for it | nothing |
 
-`loginRoute` in `bridgeBootstrap()` is the whole switch; the files are the same. If the developer has not said which they want, ask.
+`loginRoute` in `bridgeBootstrap()` is the whole switch; the files are the same. Do not ask the developer to choose: sign-in is in-app unless they asked for hosted, or the app is already on hosted sign-in and they have not asked to change it. Say which in one line.
 
 ## Install
 

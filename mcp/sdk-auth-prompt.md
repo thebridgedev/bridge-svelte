@@ -20,10 +20,10 @@ In SvelteKit: a piece of UI is `<FeatureFlag key="…">`; a page is a route rule
 
 | You want | Mode | Config |
 |---|---|---|
-| Bridge owns the login UI | **Hosted** (default) — `bridge guide svelte` | nothing |
-| Login inside the app, the app's styling | **In-app** — this guide | `loginRoute: '/auth/login'` |
+| Login inside the app, matching the app's design | **In-app** (default) — this guide | `loginRoute: '/auth/login'` |
+| Bridge owns the login UI | **Hosted** — `bridge guide svelte`, only when the developer explicitly asks for it | nothing |
 
-`loginRoute` is the whole switch; the files are identical. If the developer has not said which they want, ask.
+`loginRoute` is the whole switch; the files are identical. Do not ask the developer to choose: this guide is the approach unless they asked for hosted. Tell them in one line that sign-in will be in-app, styled to match their app.
 
 ## Before you start — the Bridge app's settings
 
@@ -108,10 +108,38 @@ Bridge reads the `VITE_BRIDGE_*` variables itself (*explicit option > environmen
 
 Any other address under `/auth` gets the app's own 404. The pages render inside the app's `+layout.svelte`, so its navigation stays around them. Signup cannot break because a page was forgotten: the set-password page the verification email links to is always served. Props: `redirectTo` (default `'/'`) and `messages` (copy overrides).
 
-## Customising — take the lowest rung that does the job
+## Match the app's design — always
 
-0. **Nothing.** The pages already sit inside the app's layout.
-1. **Tokens.** Set `--bridge-*` CSS variables (`--bridge-primary`, `--bridge-border-radius`, `--bridge-auth-page-padding`, …). The full list is the token contract in `bridge guide mechanisms`.
+The pages render inside the app, so they must look like the rest of it. Bridge's built-in look (indigo buttons, grey borders) is a fallback for an app with no design, never the finished result. Do this without asking:
+
+1. **Read the app's design.** The global stylesheet (`src/app.css` or what `+layout.svelte` imports) and its CSS variables, `tailwind.config.*` or the Tailwind `@theme` block, a component library's theme (shadcn-svelte, Skeleton, Flowbite, …), the font the app loads, and one existing primary button and text input.
+2. **Set the tokens from it** in the app's own global stylesheet, pointing at the app's variables rather than copying values, so dark mode and later theme changes carry over:
+
+   ```css
+   /* src/app.css — Bridge sign-in pages take the app's design */
+   :root {
+     --bridge-primary: var(--color-primary);          /* the app's primary button background */
+     --bridge-primary-hover: var(--color-primary-hover);
+     --bridge-primary-fg: var(--color-primary-foreground);
+     --bridge-border: var(--color-border);
+     --bridge-input-focus: var(--color-ring);
+     --bridge-border-radius: var(--radius);
+     --bridge-foreground: var(--color-foreground);
+     --bridge-muted: var(--color-muted-foreground);
+     --bridge-bg: var(--color-background);
+     --bridge-muted-bg: var(--color-muted);
+   }
+   ```
+
+   The variable names on the right are examples: use the ones the app actually defines, or its literal values when it has no variables (a Tailwind app without CSS variables: the hex values of its `primary`, `border` and so on). Map its error and success colours to the `--bridge-alert-*` tokens. The components inherit the page font; set nothing for it unless the app puts its font on something other than `body`. The full list is the token contract in `bridge guide mechanisms`.
+3. **Give the pages the app's frame** when the app's own pages sit in a card, a panel or a split layout: pass the `frame` snippet (rung 2 below) using the app's own classes or components, so sign-in is not the one page that looks different.
+
+Ask the developer for colours only when the project has no styles of its own.
+
+## Customising further — take the lowest rung that does the job
+
+0. **Layout.** The pages already sit inside the app's layout.
+1. **Tokens.** Set `--bridge-*` CSS variables (`--bridge-primary`, `--bridge-border-radius`, `--bridge-auth-page-padding`, …), as in *Match the app's design*. The full list is the token contract in `bridge guide mechanisms`.
 2. **Frame and heading.** Two snippets restyle everything around the form on every page, without owning a route:
 
    ```svelte
@@ -184,6 +212,7 @@ Any other address under `/auth` gets the app's own 404. The pages render inside 
 - [ ] `src/routes/+layout.ts`: `ssr = false`, `bridgeBootstrap({ loginRoute: '/auth/login', rules })`, only `/auth/*` public
 - [ ] `src/routes/+layout.svelte`: styles imported, app inside `<BridgeBootstrap>`
 - [ ] `src/routes/auth/[...bridge]/+page.svelte` renders `<BridgeAuthRoutes />` (with `frame` / `heading` if restyled)
+- [ ] The app's global stylesheet sets the `--bridge-*` tokens from the app's own design; `frame` used when the app frames its pages
 - [ ] No page under `src/routes/auth/` that only renders a Bridge component; a page the app owns navigates in `onLogin` via `readReturnTo`
 - [ ] Bridge app: every dev origin allowed, self-signup on, the chosen sign-in methods on
 - [ ] `logout()` passes `redirectTo`
@@ -191,7 +220,7 @@ Any other address under `/auth` gets the app's own 404. The pages render inside 
 ## Verify
 
 1. The build passes.
-2. Signed out, a protected page redirects to `/auth/login` in the app (not an external page), styled.
+2. Signed out, a protected page redirects to `/auth/login` in the app (not an external page). Next to one of the app's own pages, its buttons, inputs, font, corners and frame match — in dark mode too if the app has one. No Bridge indigo is left.
 3. Sign in: the page leaves `/auth/login` for the page you asked for. **Network calls succeed but the page stays put** → the app owns its login page and its `LoginForm` has no `onLogin`. **`403 Origin not allowed`** → add the origin (scheme, host and port).
 4. Sign up at `/auth/signup`; the verification email links to `{origin}/auth/set-password/{token}?flow=signup` and opens the "Set new password" form. A 404 there means the catch-all is missing or misnamed — the folder must be `[...bridge]`.
 5. Forgot password from the login page: the reset link lands on the same set-password form.

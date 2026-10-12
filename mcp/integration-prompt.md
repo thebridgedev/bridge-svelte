@@ -1,6 +1,6 @@
 # Bridge SvelteKit Integration
 
-You are integrating The Bridge into a SvelteKit application. The whole integration is one `.env` line and three small files; the plugin serves every sign-in page itself. This guide sets up **hosted sign-in** (Bridge's login page). **In-app sign-in (SDK mode) is the default**: unless the developer explicitly asked for hosted sign-in, read `bridge guide svelte sdk-auth` instead — it is the same files plus one config field. Use this guide's bootstrap, routing and `bridgeFetch` details from there.
+You are integrating The Bridge into a SvelteKit application. The whole integration is one `.env` line and three small files. Sign-in happens inside the app: the login, signup and password pages render in the app's own layout, and the plugin serves every one of them itself. For the sign-in pages in detail, matching them to the app's design and customising them, read `bridge guide svelte sdk-auth`.
 
 `bridge guide mechanisms` explains the rules everything here builds on (the server decides limits, the three UI levels, the four customisation rungs). Read it when the developer asks for more than this guide covers.
 
@@ -13,15 +13,6 @@ Two things are not gates and are not flags: **numbers** are plan limits (`<Quota
 Before calling the work done, run `npx @nebulr-group/bridge-cli check gates` in the project. It lists every direct role, privilege, plan or plan-feature check with the flag to use instead. Fix each one.
 
 In SvelteKit: a piece of UI is `<FeatureFlag key="…">`; a page is a route rule `{ match: '/admin/*', featureFlag: 'admin-area', redirectTo: '/' }`; a nav link is the same `<FeatureFlag>` around the link.
-
-## Decide first — hosted or in-app sign-in?
-
-| You want | Mode | Config |
-|---|---|---|
-| Login inside the app, matching the app's design | **In-app (SDK auth)** (default) — `bridge guide svelte sdk-auth` | `loginRoute: '/auth/login'` |
-| Bridge owns the login UI | **Hosted** — this guide, only when the developer explicitly asks for it | nothing |
-
-`loginRoute` in `bridgeBootstrap()` is the whole switch; the files are the same. Do not ask the developer to choose: sign-in is in-app unless they asked for hosted, or the app is already on hosted sign-in and they have not asked to change it. Say which in one line.
 
 ## Install
 
@@ -51,9 +42,12 @@ import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
 export const ssr = false;
 
 export const load = bridgeBootstrap({
+  loginRoute: '/auth/login',
   rules: [{ match: new RegExp('^/auth($|/)'), public: true }],
 });
 ```
+
+(If the developer explicitly asks for Bridge's hosted sign-in page, or the app already uses it, respect that: leave out `loginRoute`, sign in with `auth.login()` instead of a link to `/auth/login`, and call `logout()` without `redirectTo`. Everything else stays the same.)
 
 **`src/routes/+layout.svelte`**:
 
@@ -82,12 +76,13 @@ export const load = bridgeBootstrap({
 
 That is the integration. What each piece does:
 
-- **Settings are read for you.** Bridge reads `VITE_BRIDGE_APP_ID`, `VITE_BRIDGE_API_BASE_URL`, `VITE_BRIDGE_HOSTED_URL` and `VITE_BRIDGE_DEBUG` itself. Each field resolves as *explicit option > environment > default*, so `bridgeBootstrap({ appId: 'other', rules })` wins over `.env`. With no app id anywhere Bridge refuses to start and names `VITE_BRIDGE_APP_ID`. Without `VITE_BRIDGE_API_BASE_URL` it talks to production, and a development build warns once in the console; the hosted login address follows the API address on Bridge's own domains, so only a local or self-hosted Bridge sets `VITE_BRIDGE_HOSTED_URL`.
+- **Settings are read for you.** Bridge reads `VITE_BRIDGE_APP_ID`, `VITE_BRIDGE_API_BASE_URL`, `VITE_BRIDGE_HOSTED_URL` and `VITE_BRIDGE_DEBUG` itself. Each field resolves as *explicit option > environment > default*, so `bridgeBootstrap({ appId: 'other', rules })` wins over `.env`. With no app id anywhere Bridge refuses to start and names `VITE_BRIDGE_APP_ID`. Without `VITE_BRIDGE_API_BASE_URL` it talks to production, and a development build warns once in the console; on Bridge's own domains every other Bridge address follows the API address, so only a local or self-hosted Bridge sets `VITE_BRIDGE_HOSTED_URL`.
 - **`ssr = false`** is required: Bridge runs in the browser.
+- **`loginRoute`** is where a signed-out visitor is sent: the app's own `/auth/login`.
 - **Everything is protected by default.** Only `/auth/*` must be public; the rules above say so.
 - **`<BridgeBootstrap>`** renders the app only once Bridge is ready (so protected content never flashes), finishes the OAuth callback, starts feature flags and live updates, and opens the upgrade dialog when your backend refuses a request at a plan limit. Write no ready-state logic of your own; put your navigation and shell inside it.
 - **The styles import** gives the Bridge components their structure and default look. Keep it even with Tailwind or a design system; restyle through the `--bridge-*` tokens.
-- **The `[...bridge]` file** serves `/auth/oauth-callback` (the code is exchanged in the layout `load`, before the page renders). Every other sign-in address under `/auth` shows a short "sign-in is hosted" page with a button to the login, for old bookmarks and emailed links. Any other address under `/auth` gets the app's own 404. It is the same file in-app sign-in uses, so switching later is one config field, not new pages.
+- **The `[...bridge]` file** serves every sign-in page: `/auth/login`, `/auth/signup`, `/auth/forgot-password`, `/auth/set-password/[token]` (where signup verification and password-reset emails land), `/auth/magic-link`, `/auth/setup-passkey/[token]`, `/auth/workspaces` and `/auth/oauth-callback` (the code is exchanged in the layout `load`, before the page renders). Any other address under `/auth` gets the app's own 404. The pages render inside the app's `+layout.svelte`; make them match the app's design as `bridge guide svelte sdk-auth` describes.
 
 ## Configure the Bridge app
 
@@ -101,7 +96,7 @@ bridge app update \
   --allowed-origins http://localhost:5173
 ```
 
-Use the real dev URL (and later the production domain). `bridge app redirect-uris add <url>` adds one callback without replacing the list. Allowed origins are more than CORS: from an origin that is not listed, in-app sign-in answers `403 {"message":"Origin not allowed"}`. Add every origin the app is served from, each dev port included. Without the CLI: Bridge admin → **Authentication** → **Security** → **Allowed Origins**.
+Use the real dev URL (and later the production domain). `bridge app redirect-uris add <url>` adds one callback without replacing the list. Allowed origins are more than CORS: from an origin that is not listed, sign-in answers `403 {"message":"Origin not allowed"}`. Add every origin the app is served from, each dev port included. Without the CLI: Bridge admin → **Authentication** → **Security** → **Allowed Origins**.
 
 ## Sign in and out
 
@@ -112,13 +107,13 @@ Use the real dev URL (and later the production domain). `bridge app redirect-uri
 
 {#if $isAuthenticated}
   <span>{$profileStore?.fullName ?? $profileStore?.email}</span>
-  <button onclick={() => auth.logout()}>Log out</button>
+  <button onclick={() => auth.logout({ redirectTo: '/auth/login' })}>Log out</button>
 {:else}
-  <button onclick={() => auth.login()}>Log in</button>
+  <a href="/auth/login">Log in</a>
 {/if}
 ```
 
-A signed-out visitor on a protected page is sent to the login and brought back to that page afterwards; the button is only for pages that are public. `profileStore` **is** the store: use `$profileStore`, never `const { profile } = profileStore` (that `profile` is `undefined`, so nothing renders).
+Always pass `redirectTo` to `logout()` so the user lands on the app's own login page. A signed-out visitor on a protected page is sent to `/auth/login?redirectUri=…` and brought back to that page afterwards; the link is only for pages that are public. `profileStore` **is** the store: use `$profileStore`, never `const { profile } = profileStore` (that `profile` is `undefined`, so nothing renders).
 
 **Route rules.** `match` takes a string (exact, or with `*`: `'/docs/*'`) or a `RegExp`; the first match wins. `public: true` opens a page. `featureFlag: 'key'` plus `redirectTo` hides a page unless the flag is on. The rules decide what the browser renders; they are not authorization — your API still verifies the token.
 
@@ -149,7 +144,7 @@ Reach for these before writing an equivalent; each is imported from `@nebulr-gro
 
 | Component | Does | Guide |
 |---|---|---|
-| `BridgeAuthRoutes`, `LoginForm`, `SignupForm`, `ForgotPassword`, `MagicLink`, `PasskeyLogin`, `PasskeySetup`, `PasskeyRequestSetupLink`, `MfaChallenge`, `MfaSetup`, `SsoButton`, `WorkspaceSelector`, `TenantSelector` | Sign-in pages and their building blocks | `bridge guide svelte sdk-auth` |
+| `BridgeAuthRoutes`, `LoginForm`, `SignupForm`, `ForgotPassword`, `MagicLink`, `PasskeyLogin`, `PasskeySetup`, `PasskeyRequestSetupLink`, `MfaChallenge`, `MfaSetup`, `SsoButton`, `WorkspaceSelector`, `TenantSelector` | Sign-in pages and their building blocks, matching the app's design, customising them | `bridge guide svelte sdk-auth` |
 | `BridgeBillingRoutes`, `BridgePaywallPage`, `BridgePaywall`, `PlanSelector`, `BillingPortalButton`, `BridgeBillingNotice`, `BridgeSubscriptionStatus` | Subscription pages, paywall, plan picker, portal button, lifecycle notices, a plan/status badge | `bridge guide svelte billing` |
 | `QuotaGate`, `BridgeQuotaBanner`, `BridgeUpgradeDialog` | Plan limits in the UI and the upgrade dialog | `bridge guide svelte billing` |
 | `TeamManagementPanel`, `TeamUserList`, `TeamProfileForm`, `TeamWorkspaceForm`, `TeamAddUserDialog`, `TeamEditUserDialog`, `TeamConfirmDialog`, `TeamUserActionsMenu` | Members, roles, workspace settings | `bridge guide svelte team` |
@@ -161,16 +156,18 @@ Reach for these before writing an equivalent; each is imported from `@nebulr-gro
 
 - [ ] `@nebulr-group/bridge-svelte` installed; old auth packages, env vars and route config removed
 - [ ] `.env` has `VITE_BRIDGE_APP_ID` (plus `VITE_BRIDGE_API_BASE_URL` for a stage or local app)
-- [ ] `src/routes/+layout.ts`: `ssr = false` and `export const load = bridgeBootstrap({ rules })`, only `/auth/*` public
+- [ ] `src/routes/+layout.ts`: `ssr = false` and `export const load = bridgeBootstrap({ loginRoute: '/auth/login', rules })`, only `/auth/*` public
 - [ ] `src/routes/+layout.svelte`: styles imported, app inside `<BridgeBootstrap>`, no `ready` flag of your own
 - [ ] `src/routes/auth/[...bridge]/+page.svelte` renders `<BridgeAuthRoutes />`, and no other page under `src/routes/auth/` only renders a Bridge component
+- [ ] The sign-in pages match the app's design (`bridge guide svelte sdk-auth`)
 - [ ] Bridge app: callback URL in redirect URIs, every dev origin in allowed origins
+- [ ] `logout()` passes `redirectTo`
 - [ ] Calls to the app's own backend go through `bridgeFetch`
 
 ## Verify
 
 1. The build passes with no type or import errors.
-2. Signed out, a protected page redirects to the Bridge login; after signing in you land back on that page and see the user's name.
-3. `/auth/login` shows the "sign-in is hosted" page; `/auth/not-a-page` shows the app's 404.
-4. Bridge components render styled, not as raw HTML.
-5. The developer does step 2 themselves in a browser, and signs up once at `/auth/signup`; do not create test users. If a step fails, `bridge event auth-attempts --user <their email>` names the reason.
+2. Signed out, a protected page redirects to `/auth/login` in the app; after signing in you land back on that page and see the user's name.
+3. Log out: you land on the app's `/auth/login`. `/auth/not-a-page` shows the app's 404.
+4. Bridge components render styled, not as raw HTML, and look like the rest of the app.
+5. The developer does steps 2 and 3 themselves in a browser, and signs up once at `/auth/signup`; do not create test users. If a step fails, `bridge event auth-attempts --user <their email>` names the reason.

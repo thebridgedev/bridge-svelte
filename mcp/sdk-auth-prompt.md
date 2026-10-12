@@ -16,15 +16,6 @@ Before calling the work done, run `npx @nebulr-group/bridge-cli check gates` in 
 
 In SvelteKit: a piece of UI is `<FeatureFlag key="…">`; a page is a route rule `{ match: '/admin/*', featureFlag: 'admin-area', redirectTo: '/' }`; a nav link is the same `<FeatureFlag>` around the link.
 
-## Decide first — hosted or in-app?
-
-| You want | Mode | Config |
-|---|---|---|
-| Login inside the app, matching the app's design | **In-app** (default) — this guide | `loginRoute: '/auth/login'` |
-| Bridge owns the login UI | **Hosted** — `bridge guide svelte`, only when the developer explicitly asks for it | nothing |
-
-`loginRoute` is the whole switch; the files are identical. Do not ask the developer to choose: this guide is the approach unless they asked for hosted. Tell them in one line that sign-in will be in-app, styled to match their app.
-
 ## Before you start — the Bridge app's settings
 
 - **Allowed origins** must list every origin the app is served from, each dev port included (`http://localhost:5173` and `:5175` differ). From an unlisted origin, sign-in itself answers `403 {"message":"Origin not allowed"}` — password sign-in, the exchange that finishes magic-link, passkey and MFA sign-in, signup and passkeys. Sending a magic link still succeeds, so that failure shows after the link is clicked. `bridge app update --allowed-origins <origins>`, or Bridge admin → **Authentication** → **Security** → **Allowed Origins**.
@@ -41,7 +32,7 @@ In SvelteKit: a piece of UI is `<FeatureFlag key="…">`; a page is a route rule
 
 Nothing else: passkey support ships with the plugin.
 
-If `bridgeBootstrap()` and `<BridgeBootstrap>` are already wired (a hosted setup), skip to *Convert a hosted setup*. Migrating from `@nebulr/nblocks-svelte`: see `bridge guide svelte`.
+If `bridgeBootstrap()` and `<BridgeBootstrap>` are already wired without `loginRoute` and the developer asks to move sign-in into the app, skip to *Moving an existing app to in-app sign-in*. Migrating from `@nebulr/nblocks-svelte`: see `bridge guide svelte`.
 
 ## The files
 
@@ -65,6 +56,8 @@ export const load = bridgeBootstrap({
   rules: [{ match: new RegExp('^/auth($|/)'), public: true }],
 });
 ```
+
+(If the developer explicitly asks for Bridge's hosted sign-in page, or the app already uses it, respect that: leave out `loginRoute`, sign in with `auth.login()` instead of a link to `/auth/login`, and call `logout()` without `redirectTo`. Everything else stays the same; the design and customising sections below then do not apply.)
 
 **`src/routes/+layout.svelte`**:
 
@@ -195,12 +188,12 @@ Ask the developer for colours only when the project has no styles of its own.
 {/if}
 ```
 
-- In-app, **always pass `redirectTo` to `logout()`**; without it the user lands on Bridge's hosted page.
+- **Always pass `redirectTo` to `logout()`** so the user lands on the app's own login page.
 - A signed-out visitor on a protected page is sent to `/auth/login?redirectUri=…` and returned there after signing in.
 - `profileStore` is the store itself: `$profileStore`, never `const { profile } = profileStore`.
 - Calls to the app's own backend go through `bridgeFetch` (see `bridge guide svelte`); do not write a `fetchWithAuth` helper.
 
-## Convert a hosted setup
+## Moving an existing app to in-app sign-in (only when the developer asks)
 
 1. Add `loginRoute: '/auth/login'` to the `bridgeBootstrap()` call. An older layout that calls `await bridgeBootstrap(url, config, routeConfig)` inside its own `load` should become the one-call form above, with the app wrapped in `<BridgeBootstrap>`; the old form still works but reads no environment variables.
 2. Make sure `src/routes/auth/[...bridge]/+page.svelte` exists, and delete any page under `src/routes/auth/` that only renders a Bridge component (an old empty `oauth-callback/+page.svelte`, say): a specific page file hides the catch-all's page.
@@ -224,6 +217,6 @@ Ask the developer for colours only when the project has no styles of its own.
 3. Sign in: the page leaves `/auth/login` for the page you asked for. **Network calls succeed but the page stays put** → the app owns its login page and its `LoginForm` has no `onLogin`. **`403 Origin not allowed`** → add the origin (scheme, host and port).
 4. Sign up at `/auth/signup`; the verification email links to `{origin}/auth/set-password/{token}?flow=signup` and opens the "Set new password" form. A 404 there means the catch-all is missing or misnamed — the folder must be `[...bridge]`.
 5. Forgot password from the login page: the reset link lands on the same set-password form.
-6. Log out: you land on the app's `/auth/login`, not Bridge's hosted page.
+6. Log out: you land on the app's `/auth/login`.
 7. `/auth/not-a-page` shows the app's 404.
 8. The developer does steps 2–6 themselves in a browser; do not create test users for them. If a step fails, `bridge event auth-attempts --user <their email>` names the reason (`WRONG_PASSWORD`, `ORIGIN_NOT_ALLOWED`, …) and the fix.

@@ -124,6 +124,7 @@ import { createBridgeFlags } from './bootstrap.js';
 import { AuthAttributeProvider, BillingAttributeProvider } from '@nebulr-group/bridge-auth-core';
 import { tokenStore as _mockedTokenStore } from '../core/bridge-instance.js';
 import { subscribeToFlagChanges } from './registry.js';
+import { prefetchFlagDefinitions, __resetFlagDefinitionsForTests } from '../core/flag-definitions.js';
 
 // The mocked writable, typed for test-side .set() pushes.
 const _tokenStore = _mockedTokenStore as unknown as Writable<TokenSet>;
@@ -252,6 +253,29 @@ describe('createBridgeFlags — Phase 1 / US-13 auto-registration', () => {
     } finally {
       off();
       await bundle.stop();
+    }
+  });
+
+  // TBP-810 — the root load reads the definitions before the first render; the
+  // flags bundle must use them rather than render fallbacks until its own
+  // fetch lands.
+  it('uses definitions prefetched by the root load, synchronously, without fetching again', async () => {
+    __resetFlagDefinitionsForTests();
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => [{ key: 'gated', state: 'on', valueType: 'boolean', offValue: false, onValue: true }],
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    await prefetchFlagDefinitions('http://test', 'k');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const bundle = bootstrap();
+    try {
+      expect(bundle.bridge.flag('gated', false).value).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      await bundle.stop();
+      __resetFlagDefinitionsForTests();
     }
   });
 });

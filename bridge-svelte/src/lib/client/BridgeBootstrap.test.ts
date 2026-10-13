@@ -31,6 +31,8 @@ const h = vi.hoisted(() => {
     entHydrated: false,
     entHydrateImpl: (): Promise<void> => Promise.resolve(),
     entConfigured: [] as Array<{ apiBaseUrl: string; getAccessToken: () => string | null }>,
+    defsImpl: (): Promise<unknown[] | null> => Promise.resolve([]),
+    defsCalls: [] as string[],
     calls: {
       refresh: 0,
       loadFlags: 0,
@@ -126,6 +128,14 @@ vi.mock('../core/billing-store.js', () => ({
   tokenStaleHandlerOf: () => undefined,
 }));
 
+// TBP-810 — the flag definitions read the root load starts before first render.
+vi.mock('../core/flag-definitions.js', () => ({
+  prefetchFlagDefinitions: (apiBaseUrl: string, appKey: string) => {
+    h.s.defsCalls.push(`${apiBaseUrl}|${appKey}`);
+    return h.s.defsImpl();
+  },
+}));
+
 vi.mock('../core/bridge-runtime.js', () => ({
   installBridgeAuthFetch: () => {
     h.s.calls.installFetch += 1;
@@ -209,6 +219,8 @@ beforeEach(() => {
   h.s.entHydrated = false;
   h.s.entHydrateImpl = () => Promise.resolve();
   h.s.entConfigured = [];
+  h.s.defsImpl = () => Promise.resolve([]);
+  h.s.defsCalls = [];
   h.s.calls = { refresh: 0, loadFlags: 0, mount: 0, initBridge: 0, installFetch: 0, invalidate: 0, stash: [] };
 });
 
@@ -775,5 +787,40 @@ describe('the plan\'s features load before the first render (TBP-810)', () => {
     };
     await bridgeBootstrap(at('/'), SDK_CONFIG, ROUTES);
     expect(reads).toBe(0);
+  });
+
+  it('holds the first render until the flag definitions <FeatureFlag> evaluates have loaded', async () => {
+    const { bridgeBootstrap } = await load();
+    h.s.authenticated = true;
+    const defs = deferred();
+    h.s.defsImpl = () => defs.promise.then(() => []);
+    let rendered = false;
+    const boot = bridgeBootstrap(at('/'), SDK_CONFIG, ROUTES).then(() => {
+      rendered = true;
+    });
+    await vi.waitFor(() => expect(h.s.defsCalls).toHaveLength(1));
+    expect(h.s.defsCalls[0]).toMatch(/\|app-1$/);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(rendered).toBe(false);
+    defs.resolve();
+    await boot;
+    expect(rendered).toBe(true);
+  });
+
+  it('a slow entitlements read does not hold up the route-guard flag load', async () => {
+    const { bridgeBootstrap } = await load();
+    h.s.authenticated = true;
+    const read = deferred();
+    h.s.entHydrateImpl = () => read.promise;
+    const boot = bridgeBootstrap(at('/'), SDK_CONFIG, ROUTES);
+    await vi.waitFor(() => expect(h.s.calls.loadFlags).toBe(1));
+    read.resolve();
+    await boot;
+  });
+
+  it('signed-out visitors still wait for the flag definitions (anonymous flags gate too)', async () => {
+    const { bridgeBootstrap } = await load();
+    await bridgeBootstrap(at('/'), SDK_CONFIG, ROUTES);
+    expect(h.s.defsCalls).toHaveLength(1);
   });
 });

@@ -14,6 +14,7 @@ import {
 } from '../core/bridge-instance.js';
 import { installBridgeAuthFetch } from '../core/bridge-runtime.js';
 import { refreshBilling, tokenStaleHandlerOf } from '../core/billing-store.js';
+import { prefetchFlagDefinitions } from '../core/flag-definitions.js';
 import {
   useBridge,
   sanitizeReturnTo,
@@ -313,8 +314,21 @@ async function waitForConfigured(): Promise<void> {
   }
 }
 
-/** Longest the first render waits for the plan's features before showing anyway. */
-const ENTITLEMENTS_FIRST_RENDER_WAIT_MS = 1500;
+/** Longest the first render waits for a startup read before showing anyway. */
+const FIRST_RENDER_WAIT_MS = 1500;
+
+/** Wait for `work`, but never longer than the first-render cap. Never rejects. */
+async function withinFirstRenderWait(work: Promise<unknown>): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, FIRST_RENDER_WAIT_MS);
+  });
+  try {
+    await Promise.race([work.catch(() => undefined), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 // TBP-810 — flag rules on `bridge:billing.entitlement.*` read auth-core's
 // entitlements store. Nothing ever configured it, so it could not load itself
@@ -334,17 +348,23 @@ async function loadEntitlementsBeforeFirstRender(bridge: ReturnType<typeof getBr
       logger,
     );
     if (store.isHydrated()) return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<void>((resolve) => {
-      timer = setTimeout(resolve, ENTITLEMENTS_FIRST_RENDER_WAIT_MS);
-    });
-    try {
-      await Promise.race([store.hydrate(), timeout]);
-    } finally {
-      clearTimeout(timer);
-    }
+    await withinFirstRenderWait(store.hydrate());
   } catch (err) {
     logger.debug('[bridgeBootstrap] entitlements not loaded before first render:', err);
+  }
+}
+
+// TBP-810 — `<FeatureFlag>` / `useFlag()` evaluate the flag definitions, which
+// the flags bundle used to fetch only once the page was showing: every gated
+// tile rendered its fallback first. Start the read now (it needs no sign-in);
+// `createBridgeFlags()` takes the result instead of fetching again.
+function startFlagDefinitions(): Promise<unknown> {
+  try {
+    const cfg = getConfig();
+    if (!cfg.appId) return Promise.resolve();
+    return prefetchFlagDefinitions(cfg.apiBaseUrl ?? 'https://api.thebridge.dev', cfg.appId);
+  } catch {
+    return Promise.resolve();
   }
 }
 
@@ -352,9 +372,16 @@ async function loadEntitlementsBeforeFirstRender(bridge: ReturnType<typeof getBr
 // navigation that redirects mid-bootstrap does not start a second refresh or
 // flag load. Never rejects: every step is best-effort by design — none of them
 // decides authorization, which is enforceRouteGuard's job alone.
+//
+// TBP-810 — every startup read runs at the same time, and the first render
+// waits for the ones the page's gates read (billing state, the plan's
+// features, the flag definitions), each capped. One slow read no longer holds
+// up the others.
 function ensureInitialised(): Promise<{ flagsReady: Promise<void> }> {
   if (_initialisation) return _initialisation;
   _initialisation = (async () => {
+    const definitions = startFlagDefinitions();
+
     // Ensure tokens are fresh if needed
     try {
       const bridge = getBridgeAuth();
@@ -363,29 +390,6 @@ function ensureInitialised(): Promise<{ flagsReady: Promise<void> }> {
       }
     } catch {
       // Non-fatal — stale tokens will be caught by route guard
-    }
-
-    // Auto-manage billing state so the notice/gate render without the
-    // integrator wiring a mount, and `hard` billing route rules can decide.
-    // The plan's features load alongside it (same round-trip time, so the
-    // page waits no longer).
-    try {
-      const bridge = getBridgeAuth();
-      const ctx = bridge.getApiContext();
-      if (ctx.accessToken) {
-        await Promise.all([
-          useBridge().subscription.mount({
-            apiBaseUrl: ctx.apiBaseUrl,
-            accessToken: ctx.accessToken,
-            appId: ctx.appId,
-            // TBP-762 — renew an out-of-date sign-in and retry instead of failing.
-            onTokenStale: tokenStaleHandlerOf(bridge),
-          }),
-          loadEntitlementsBeforeFirstRender(bridge),
-        ]);
-      }
-    } catch {
-      // Non-fatal — the notice hydrates lazily on first render.
     }
 
     // Warm the route-guard's flag cache without awaiting so GQL queries can
@@ -405,6 +409,34 @@ function ensureInitialised(): Promise<{ flagsReady: Promise<void> }> {
       .catch((err) => {
         logger.warn('[bridgeBootstrap] Feature flags failed to load:', err);
       });
+
+    // Auto-manage billing state so the notice/gate render without the
+    // integrator wiring a mount, and `hard` billing route rules can decide.
+    // The plan's features and the flag definitions load alongside it.
+    const reads: Promise<unknown>[] = [withinFirstRenderWait(definitions)];
+    try {
+      const bridge = getBridgeAuth();
+      const ctx = bridge.getApiContext();
+      if (ctx.accessToken) {
+        reads.push(
+          useBridge()
+            .subscription.mount({
+              apiBaseUrl: ctx.apiBaseUrl,
+              accessToken: ctx.accessToken,
+              appId: ctx.appId,
+              // TBP-762 — renew an out-of-date sign-in and retry instead of failing.
+              onTokenStale: tokenStaleHandlerOf(bridge),
+            })
+            .catch(() => {
+              // Non-fatal — the notice hydrates lazily on first render.
+            }),
+          loadEntitlementsBeforeFirstRender(bridge),
+        );
+      }
+    } catch {
+      // Non-fatal — the notice hydrates lazily on first render.
+    }
+    await Promise.all(reads);
 
     return { flagsReady };
   })();

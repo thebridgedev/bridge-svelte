@@ -40,6 +40,7 @@ import {
   onBridgeRealtimeOpen,
 } from '../core/bridge-runtime.js';
 import { getConfig } from '../client/stores/config.store.js';
+import { takePrefetchedFlagDefinitions } from '../core/flag-definitions.js';
 
 /** A storage implementation that uses `localStorage` (persistent) or `sessionStorage` (per-tab). */
 export class BrowserIdentityStorage implements IdentityStorage {
@@ -306,8 +307,16 @@ export function createBridgeFlags(config: CreateBridgeFlagsConfig = {}): BridgeF
   });
 
   // Initial hydrate fires here too — covers the case where realtime is
-  // disabled and onOpen never fires.
-  void hydrateFlagsCache();
+  // disabled and onOpen never fires. TBP-810 — the root `load` already read
+  // the definitions before the first render; use them so the first
+  // `<FeatureFlag>` evaluates against real rules instead of rendering its
+  // fallback until this fetch lands.
+  const prefetched = takePrefetchedFlagDefinitions(resolvedApiBaseUrl, resolvedApiKey);
+  if (prefetched && prefetched.length > 0) {
+    bridge.hydrate(prefetched as Parameters<typeof bridge.hydrate>[0]);
+  } else {
+    void hydrateFlagsCache();
+  }
 
   if (config.registerGlobal !== false) {
     setBridgeFlagsInstance(bridge);

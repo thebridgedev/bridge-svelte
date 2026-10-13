@@ -27,6 +27,10 @@ const h = vi.hoisted(() => {
     paywall: false,
     confirmImpl: (): Promise<void> => Promise.resolve(),
     plansImpl: (): Promise<unknown[]> => Promise.resolve([{ key: 'pro' }]),
+    // TBP-810 — auth-core's entitlements store, as the bootstrap sees it.
+    entHydrated: false,
+    entHydrateImpl: (): Promise<void> => Promise.resolve(),
+    entConfigured: [] as Array<{ apiBaseUrl: string; getAccessToken: () => string | null }>,
     calls: {
       refresh: 0,
       loadFlags: 0,
@@ -138,6 +142,13 @@ vi.mock('@nebulr-group/bridge-auth-core', async (importOriginal) => {
           h.s.calls.mount += 1;
         },
       },
+      entitlementsStore: {
+        configure: (opts: { apiBaseUrl: string; getAccessToken: () => string | null }) => {
+          h.s.entConfigured.push(opts);
+        },
+        isHydrated: () => h.s.entHydrated,
+        hydrate: () => h.s.entHydrateImpl(),
+      },
     }),
     stashReturnTo: (v: string | null | undefined) => {
       h.s.calls.stash.push(v);
@@ -195,6 +206,9 @@ beforeEach(() => {
   h.s.paywall = false;
   h.s.confirmImpl = () => Promise.resolve();
   h.s.plansImpl = () => Promise.resolve([{ key: 'pro' }]);
+  h.s.entHydrated = false;
+  h.s.entHydrateImpl = () => Promise.resolve();
+  h.s.entConfigured = [];
   h.s.calls = { refresh: 0, loadFlags: 0, mount: 0, initBridge: 0, installFetch: 0, invalidate: 0, stash: [] };
 });
 
@@ -705,5 +719,61 @@ describe('the billing catch-all 404s an unknown page (TBP-702)', () => {
     expect(await served('/account/[...bridge]', '/account', 'plan')).toBe('resolved');
     expect(await served('/account/[...bridge]', '/account', 'login')).toBe('resolved');
     expect(await served('/account/[...bridge]', '/account', 'nope')).toBe(404);
+  });
+});
+
+// TBP-810 — an entitled user saw plan-gated features locked for about a second
+// on every full page load: the page rendered before the plan's features were
+// known, and the entitlements store was never configured so it could not load
+// them itself.
+describe('the plan\'s features load before the first render (TBP-810)', () => {
+  function deferred() {
+    let resolve!: () => void;
+    const promise = new Promise<void>((r) => (resolve = r));
+    return { promise, resolve };
+  }
+
+  it('configures the entitlements store and holds the first render until it has loaded', async () => {
+    const { bridgeBootstrap } = await load();
+    h.s.authenticated = true;
+    const read = deferred();
+    h.s.entHydrateImpl = () => read.promise;
+    let rendered = false;
+    const boot = bridgeBootstrap(at('/'), SDK_CONFIG, ROUTES).then(() => {
+      rendered = true;
+    });
+    await vi.waitFor(() => expect(h.s.entConfigured).toHaveLength(1));
+    expect(h.s.entConfigured[0].apiBaseUrl).toBe('http://api');
+    expect(h.s.entConfigured[0].getAccessToken()).toBe('at');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(rendered).toBe(false);
+    read.resolve();
+    await boot;
+    expect(rendered).toBe(true);
+  });
+
+  it('a read that hangs does not hold the page past the cap', async () => {
+    const { bridgeBootstrap } = await load();
+    h.s.authenticated = true;
+    h.s.entHydrateImpl = () => new Promise<void>(() => {});
+    vi.useFakeTimers();
+    try {
+      const boot = bridgeBootstrap(at('/'), SDK_CONFIG, ROUTES);
+      await vi.advanceTimersByTimeAsync(1500);
+      await expect(boot).resolves.toBeDefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a signed-out visitor does not wait for or load entitlements', async () => {
+    const { bridgeBootstrap } = await load();
+    let reads = 0;
+    h.s.entHydrateImpl = () => {
+      reads += 1;
+      return Promise.resolve();
+    };
+    await bridgeBootstrap(at('/'), SDK_CONFIG, ROUTES);
+    expect(reads).toBe(0);
   });
 });

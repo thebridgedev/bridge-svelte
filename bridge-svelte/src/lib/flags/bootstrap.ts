@@ -333,8 +333,29 @@ export function createBridgeFlags(config: CreateBridgeFlagsConfig = {}): BridgeF
     notifyAllFlagsChanged();
   });
 
+  // TBP-810 — the billing provider reads these stores at eval time, so a
+  // mounted `<FeatureFlag>` / `useFlag()` only sees a plan change if something
+  // re-evaluates after the store moved. Without this, an upgraded user kept
+  // the old plan's answer until the component re-mounted. One re-eval per
+  // burst: plan_changed, entitlements and quota updates land together.
+  let _billingReevalQueued = false;
+  const onBillingStoreChange = (): void => {
+    if (_billingReevalQueued) return;
+    _billingReevalQueued = true;
+    queueMicrotask(() => {
+      _billingReevalQueued = false;
+      notifyAllFlagsChanged();
+    });
+  };
+  const unsubscribeBilling = [
+    useBridge().subscription.subscribe(onBillingStoreChange),
+    useBridge().quotas.subscribe(onBillingStoreChange),
+    useBridge().entitlementsStore.subscribe(onBillingStoreChange),
+  ];
+
   const stop = async (): Promise<void> => {
     unsubscribeAuth();
+    for (const off of unsubscribeBilling) off();
     unsubscribeOpen();
     await telemetry.stop();
   };

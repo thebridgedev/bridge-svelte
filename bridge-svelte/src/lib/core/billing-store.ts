@@ -33,6 +33,7 @@ import {
   subscriptionWanted,
   tokenStore,
 } from './bridge-instance.js';
+import { applyEntitlementsChanged } from './snapshot-stores.js';
 import { logger } from '../shared/logger.js';
 
 /** A read older than this is re-read when the tab regains focus. */
@@ -182,10 +183,71 @@ export async function refreshBilling(): Promise<void> {
     const reads: Promise<void>[] = [];
     if (subscriptionWanted()) reads.push(loadSubscription());
     if (_stateWanted || stateInStore()) reads.push(refreshBillingState());
+    reads.push(refreshEntitlements());
     await Promise.all(reads);
   } catch (err) {
     // Bridge not initialised (SSR, tests): nothing to re-read.
     logger.debug('[bridge-billing] refresh skipped:', err);
+  }
+}
+
+// ── Entitlements (what `bridge:billing.entitlement.*` flag rules read) ───────
+
+let _entInflight: Promise<void> | null = null;
+let _entAgain = false;
+
+/**
+ * TBP-810 — re-read the plan's features after a checkout return or a plan
+ * change. Bridge does not always push `entitlements.changed` for a plan change,
+ * and nothing else re-read them, so flags kept the old plan's answer.
+ *
+ * Not `entitlementsStore.refresh()`: that marks the store unloaded while it
+ * fetches, and every flag evaluated in that window reads "not entitled". This
+ * keeps the current map until the new one arrives, then writes it to both
+ * copies (auth-core's, which flags read, and `bridge.tenant.entitlements`).
+ * Never rejects.
+ */
+export function refreshEntitlements(): Promise<void> {
+  if (_entInflight) {
+    _entAgain = true;
+    return _entInflight;
+  }
+  _entInflight = (async () => {
+    try {
+      do {
+        _entAgain = false;
+        await readEntitlementsOnce();
+      } while (_entAgain);
+    } finally {
+      _entInflight = null;
+    }
+  })();
+  return _entInflight;
+}
+
+async function readEntitlementsOnce(): Promise<void> {
+  try {
+    // Nothing loaded them yet: there is no old answer to correct, and an app
+    // that never reads entitlements makes no extra request.
+    const store = useBillingBridge().entitlementsStore;
+    if (!store?.isHydrated()) return;
+    const opts = billingReadOptions();
+    if (!opts) return;
+    const res = await globalThis.fetch(`${opts.apiBaseUrl.replace(/\/+$/, '')}/entitlements`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${opts.accessToken}`, 'x-app-id': opts.appId ?? '' },
+    });
+    if (!res.ok) return;
+    const body = (await res.json()) as { entitlements?: unknown } | null;
+    const map = body?.entitlements;
+    if (!map || typeof map !== 'object' || Array.isArray(map)) return;
+    // Signed out or switched workspace while this was in flight.
+    if (tokenChangedWorkspace(opts.accessToken)) return;
+    store.applyEntitlementsChanged(map as Record<string, boolean>);
+    applyEntitlementsChanged({ entitlements: map });
+  } catch (err) {
+    // Best-effort: the next plan event, reconnect or token renewal repairs it.
+    logger.debug('[bridge-billing] entitlements refresh skipped:', err);
   }
 }
 
@@ -300,4 +362,6 @@ export function __resetBillingStoreForTests(): void {
   _stateLoadedAt = 0;
   _stateWanted = false;
   _stateToken = null;
+  _entInflight = null;
+  _entAgain = false;
 }

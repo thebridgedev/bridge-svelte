@@ -25,6 +25,8 @@ const h = vi.hoisted(() => {
     billingCalls: [] as Array<{ accessToken: string; onTokenStale?: unknown }>,
     subscription: null as unknown,
     reconciled: [] as Array<[string, number | undefined]>,
+    entHydrated: false,
+    entApplied: [] as Array<Record<string, boolean>>,
   };
   const staleHandler = async () => 'renewed';
   class FakeBridgeAuth {
@@ -81,6 +83,10 @@ vi.mock('@nebulr-group/bridge-auth-core', async (importOriginal) => {
       quotas: {
         reconcileAfterReport: (metric: string, delayMs?: number) => h.s.reconciled.push([metric, delayMs]),
       },
+      entitlementsStore: {
+        isHydrated: () => h.s.entHydrated,
+        applyEntitlementsChanged: (map: Record<string, boolean>) => h.s.entApplied.push(map),
+      },
     }),
   };
 });
@@ -104,6 +110,7 @@ import {
   refreshQuota,
   startBillingRefresh,
 } from './billing-store.js';
+import { tenantEntitlementsStore } from './snapshot-stores.js';
 import { subscriptionBadgeView } from '../client/components/subscription/subscription-badge.js';
 
 const STALE = () => Promise.reject(Object.assign(new Error('TOKEN_VERSION_STALE'), { status: 401 }));
@@ -132,6 +139,8 @@ beforeEach(() => {
   h.s.billingCalls = [];
   h.s.subscription = new BridgeSubscription();
   h.s.reconciled = [];
+  h.s.entHydrated = false;
+  h.s.entApplied = [];
   __setBillingRetryDelay(5);
   __resetSubscriptionForTests();
   __resetBillingStoreForTests();
@@ -312,6 +321,37 @@ describe('the refresh rule — TBP-762', () => {
     await new Promise((r) => setTimeout(r, 10));
     expect(h.s.plansCalls).toBe(0);
     expect(h.s.billingCalls).toHaveLength(0);
+  });
+});
+
+describe('entitlements re-read — TBP-810', () => {
+  function stubEntitlements(map: Record<string, boolean>) {
+    const fetch = vi.fn(async () => ({ ok: true, json: async () => ({ entitlements: map }) }));
+    vi.stubGlobal('fetch', fetch);
+    return fetch;
+  }
+
+  it('a refresh re-reads the plan features and writes them to both copies (flags and bridge.tenant)', async () => {
+    h.s.entHydrated = true;
+    const fetch = stubEntitlements({ gated_thing: true });
+    await refreshBilling();
+    expect(fetch).toHaveBeenCalledWith('http://api/entitlements', expect.objectContaining({ method: 'GET' }));
+    expect(h.s.entApplied).toEqual([{ gated_thing: true }]);
+    expect(get(tenantEntitlementsStore)).toEqual({ gated_thing: true });
+  });
+
+  it('a live plan change re-reads them, so the upgrade reaches flags without an entitlements push', async () => {
+    h.s.entHydrated = true;
+    stubEntitlements({ gated_thing: true });
+    billingEventReceived('subscription.plan_changed');
+    await vi.waitFor(() => expect(h.s.entApplied).toEqual([{ gated_thing: true }]));
+  });
+
+  it('makes no request when nothing has loaded entitlements yet', async () => {
+    const fetch = stubEntitlements({ gated_thing: true });
+    await refreshBilling();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(h.s.entApplied).toEqual([]);
   });
 });
 

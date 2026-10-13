@@ -64,6 +64,16 @@ vi.mock('../core/bridge-instance.js', async () => {
 // the three expected store shapes without bringing up the real billing stack.
 // We keep all OTHER auth-core exports real (BridgeFlags, the AttributeProvider
 // classes, etc.) — only useBridge() is replaced.
+// TBP-810 — every store's subscribe() feeds one shared listener set, so a
+// test can emit a billing-store change and watch the flags re-evaluate.
+const billingListeners = vi.hoisted(() => new Set<() => void>());
+const subscribeBilling = (cb: () => void) => {
+  billingListeners.add(cb);
+  return () => {
+    billingListeners.delete(cb);
+  };
+};
+
 vi.mock('@nebulr-group/bridge-auth-core', async (importOriginal) => {
   const real = await importOriginal<typeof import('@nebulr-group/bridge-auth-core')>();
   return {
@@ -72,14 +82,17 @@ vi.mock('@nebulr-group/bridge-auth-core', async (importOriginal) => {
       subscription: {
         snapshot: () => ({ state: undefined, loading: false, error: null }),
         attach: () => {},
+        subscribe: subscribeBilling,
       },
       quotas: {
         getAll: () => new Map(),
         configure: () => {},
+        subscribe: subscribeBilling,
       },
       entitlementsStore: {
         all: () => ({}),
         isHydrated: () => false,
+        subscribe: subscribeBilling,
       },
       attachToRealtimeClient: () => {},
       // Phase 5 (TBP-331) — bootstrap registers an event-forwarding handler.
@@ -110,6 +123,7 @@ beforeEach(() => {
 import { createBridgeFlags } from './bootstrap.js';
 import { AuthAttributeProvider, BillingAttributeProvider } from '@nebulr-group/bridge-auth-core';
 import { tokenStore as _mockedTokenStore } from '../core/bridge-instance.js';
+import { subscribeToFlagChanges } from './registry.js';
 
 // The mocked writable, typed for test-side .set() pushes.
 const _tokenStore = _mockedTokenStore as unknown as Writable<TokenSet>;
@@ -216,6 +230,27 @@ describe('createBridgeFlags — Phase 1 / US-13 auto-registration', () => {
       expect(() => bundle.bridge.flag('any', 'x')).not.toThrow();
       expect(bundle.bridge.flag('any', 'x')).toEqual({ passed: false, value: 'x' });
     } finally {
+      await bundle.stop();
+    }
+  });
+
+  // TBP-810 — billing attributes are read at eval time, so a change to the
+  // billing stores must re-evaluate mounted flags, once per burst.
+  it('a billing-store change re-evaluates all flags once per burst, and stops after stop()', async () => {
+    const bundle = bootstrap();
+    const seen: string[] = [];
+    const off = subscribeToFlagChanges((key) => seen.push(key));
+    try {
+      for (const emit of Array.from(billingListeners)) emit();
+      for (const emit of Array.from(billingListeners)) emit();
+      expect(seen).toEqual([]);
+      await Promise.resolve();
+      expect(seen).toEqual(['*']);
+
+      await bundle.stop();
+      expect(billingListeners.size).toBe(0);
+    } finally {
+      off();
       await bundle.stop();
     }
   });

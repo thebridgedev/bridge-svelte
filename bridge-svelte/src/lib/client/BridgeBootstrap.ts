@@ -313,6 +313,41 @@ async function waitForConfigured(): Promise<void> {
   }
 }
 
+/** Longest the first render waits for the plan's features before showing anyway. */
+const ENTITLEMENTS_FIRST_RENDER_WAIT_MS = 1500;
+
+// TBP-810 — flag rules on `bridge:billing.entitlement.*` read auth-core's
+// entitlements store. Nothing ever configured it, so it could not load itself
+// and only filled from `/session/init` on the first realtime connect, about a
+// second after the page rendered. Until then an entitled user saw every
+// plan-gated feature locked (and a click offered an upgrade). Configure it,
+// then load it before the first render — bounded, so a slow or failing read
+// shows the page anyway and the store fills in when it can, as before.
+async function loadEntitlementsBeforeFirstRender(bridge: ReturnType<typeof getBridgeAuth>): Promise<void> {
+  try {
+    const store = useBridge().entitlementsStore;
+    store.configure(
+      {
+        apiBaseUrl: bridge.getApiContext().apiBaseUrl,
+        getAccessToken: () => bridge.getApiContext().accessToken ?? null,
+      },
+      logger,
+    );
+    if (store.isHydrated()) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, ENTITLEMENTS_FIRST_RENDER_WAIT_MS);
+    });
+    try {
+      await Promise.race([store.hydrate(), timeout]);
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch (err) {
+    logger.debug('[bridgeBootstrap] entitlements not loaded before first render:', err);
+  }
+}
+
 // Once per page load. Concurrent callers share the same promise, so a first
 // navigation that redirects mid-bootstrap does not start a second refresh or
 // flag load. Never rejects: every step is best-effort by design — none of them
@@ -332,17 +367,22 @@ function ensureInitialised(): Promise<{ flagsReady: Promise<void> }> {
 
     // Auto-manage billing state so the notice/gate render without the
     // integrator wiring a mount, and `hard` billing route rules can decide.
+    // The plan's features load alongside it (same round-trip time, so the
+    // page waits no longer).
     try {
       const bridge = getBridgeAuth();
       const ctx = bridge.getApiContext();
       if (ctx.accessToken) {
-        await useBridge().subscription.mount({
-          apiBaseUrl: ctx.apiBaseUrl,
-          accessToken: ctx.accessToken,
-          appId: ctx.appId,
-          // TBP-762 — renew an out-of-date sign-in and retry instead of failing.
-          onTokenStale: tokenStaleHandlerOf(bridge),
-        });
+        await Promise.all([
+          useBridge().subscription.mount({
+            apiBaseUrl: ctx.apiBaseUrl,
+            accessToken: ctx.accessToken,
+            appId: ctx.appId,
+            // TBP-762 — renew an out-of-date sign-in and retry instead of failing.
+            onTokenStale: tokenStaleHandlerOf(bridge),
+          }),
+          loadEntitlementsBeforeFirstRender(bridge),
+        ]);
       }
     } catch {
       // Non-fatal — the notice hydrates lazily on first render.

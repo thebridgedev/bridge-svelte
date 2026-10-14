@@ -124,7 +124,9 @@ The pages render inside the app, so they must look like the rest of it. Bridge's
    }
    ```
 
-   The variable names on the right are examples: use the ones the app actually defines, or its literal values when it has no variables (a Tailwind app without CSS variables: the hex values of its `primary`, `border` and so on). Map its error and success colours to the `--bridge-alert-*` tokens. The components inherit the page font; set nothing for it unless the app puts its font on something other than `body`. The full list is the token contract in `bridge guide mechanisms`.
+   The variable names on the right are examples: use the ones the app actually defines, or its literal values when it has no variables (a Tailwind app without CSS variables: the hex values of its `primary`, `border` and so on). Map its error and success colours to the `--bridge-alert-*` tokens. If the app has a type style of its own (heavy headings, bold buttons, hard offset shadows), map that too: `--bridge-font-weight-heading`, `--bridge-font-weight-button`, `--bridge-font-weight-label`, `--bridge-button-shadow` and `--bridge-card-shadow`. Don't set what the app already gives: the components inherit the font and text colour, and every Bridge text size follows the app's `<body>` text size. Set a font only if the app puts it on something other than `body`. The full list is the token contract in `bridge guide mechanisms`.
+
+   For anything the tokens don't cover (a hover effect, a border width), write plain CSS against Bridge's classes and `[data-bridge-*]` attributes in the app's stylesheet, outside any `@layer`. Bridge's styles sit in a cascade layer named `bridge`, so that CSS wins with no `!important`. Tailwind utility classes on Bridge's elements lose where Bridge sets the same property; use plain CSS there.
 3. **Give the pages the app's frame** when the app's own pages sit in a card, a panel or a split layout: pass the `frame` snippet (rung 2 below) using the app's own classes or components, so sign-in is not the one page that looks different.
 
 Ask the developer for colours only when the project has no styles of its own.
@@ -205,7 +207,7 @@ Ask the developer for colours only when the project has no styles of its own.
 - [ ] `src/routes/+layout.ts`: `ssr = false`, `bridgeBootstrap({ loginRoute: '/auth/login', rules })`, only `/auth/*` public
 - [ ] `src/routes/+layout.svelte`: styles imported, app inside `<BridgeBootstrap>`
 - [ ] `src/routes/auth/[...bridge]/+page.svelte` renders `<BridgeAuthRoutes />` (with `frame` / `heading` if restyled)
-- [ ] The app's global stylesheet sets the `--bridge-*` tokens from the app's own design; `frame` used when the app frames its pages
+- [ ] The app's global stylesheet sets the `--bridge-*` tokens from the app's own design (weights and shadows too, if the app has its own); nothing set for font, text size or text colour that the app already gives; plain CSS for anything else; `frame` used when the app frames its pages
 - [ ] No page under `src/routes/auth/` that only renders a Bridge component; a page the app owns navigates in `onLogin` via `readReturnTo`
 - [ ] Bridge app: every dev origin allowed, self-signup on, the chosen sign-in methods on
 - [ ] `logout()` passes `redirectTo`

@@ -76,18 +76,21 @@
 </div>
 
 <style>
-  .bridge-paywall-page {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-    max-width: var(--bridge-billing-page-width, 60rem);
-    margin: 0 auto;
-    padding: var(--bridge-billing-page-padding, 3rem 1rem);
-  }
+  /* TBP-814 — in the `bridge` layer with the stylesheet, so any CSS of the app wins. */
+  @layer bridge {
+    .bridge-paywall-page {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      max-width: var(--bridge-billing-page-width, 60rem);
+      margin: 0 auto;
+      padding: var(--bridge-billing-page-padding, 3rem 1rem);
+    }
 
-  .bridge-paywall-page-heading {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 700;
+    .bridge-paywall-page-heading {
+      margin: 0;
+      font-size: calc(1.5 * var(--bridge-text-base, 1rem));
+      font-weight: var(--bridge-font-weight-heading, 700);
+    }
   }
 </style>

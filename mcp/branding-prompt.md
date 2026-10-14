@@ -84,7 +84,9 @@ Theming is plain CSS against a fixed set of tokens: the `--bridge-*` variables a
 }
 ```
 
-The full list with defaults is in `bridge guide mechanisms` (section 6); hover, focus and tint follow `--bridge-primary` unless set. The defaults sit on `:where(:root)`, so the app's `:root` wins whatever order the stylesheets load in, and every default rule uses `:where()`, so any selector of yours wins without `!important`. With Tailwind, keep the styles import and map the tokens to the theme (`--bridge-primary: var(--color-brand-600)`); drop the `@nebulr-group/bridge-svelte/styles` import to style the components from scratch. To bind a token to the workspace's live branding, set it from the store: `<div style:--bridge-primary={$branding?.primaryButtonBgColor ?? '#4f46e5'}>`.
+The full list with defaults is in `bridge guide mechanisms` (section 6); hover, focus and tint follow `--bridge-primary` unless set. Besides colours there are weight and shadow tokens (`--bridge-font-weight-heading` / `-button` / `-label`, `--bridge-button-shadow`, `--bridge-card-shadow`) for an app with its own type style. Don't set what the app already gives: Bridge inherits the font and text colour, and its text sizes follow the app's `<body>` (`--bridge-font-size` only to make them differ).
+
+All Bridge styles sit in a CSS cascade layer named `bridge`, so the app's `:root` wins whatever order the stylesheets load in, and any plain CSS the app writes outside a layer overrides Bridge's classes and data attributes without `!important` (`[data-bridge-plan-card] { border-width: 2px; }`). Tailwind utilities are themselves in a layer, so on Bridge's elements they lose where Bridge sets the same property: use plain CSS there, or Tailwind's important modifier. With Tailwind, keep the styles import and map the tokens to the theme (`--bridge-primary: var(--color-brand-600)`); drop the `@nebulr-group/bridge-svelte/styles` import to style the components from scratch. To bind a token to the workspace's live branding, set it from the store: `<div style:--bridge-primary={$branding?.primaryButtonBgColor ?? '#4f46e5'}>`.
 
 Beyond tokens, the sign-in and subscription pages take `frame` and `heading` snippets, and any one page can be replaced by creating its route file — the rungs in `bridge guide mechanisms`.
 
@@ -93,7 +95,7 @@ Beyond tokens, the sign-in and subscription pages take `frame` and `heading` sni
 - **Fetching branding from your own API.** It is already on the live channel; a copy in your backend is stale the moment an admin edits it, and you lose the push.
 - **Reading it once at startup.** It updates live; a one-shot read silently reverts the feature to "needs a reload".
 - **Assuming the colours exist.** They are optional. Always pass a fallback.
-- **Theming by reaching into component markup.** Start with the `--bridge-*` tokens; for state-based styling the components expose `[data-bridge-*]` attributes (the theming docs list them). Branding is the workspace's data, not a way to restyle the components.
+- **Theming by reaching into component markup.** Start with the `--bridge-*` tokens; for anything they don't cover, write plain CSS against Bridge's classes and the `[data-bridge-*]` attributes (the theming docs list them). Branding is the workspace's data, not a way to restyle the components.
 - **Confusing it with the hosted login page.** Bridge brands its own pages from the same record; nothing you do in app code affects those.
 
 ## Related guides

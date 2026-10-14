@@ -17,6 +17,41 @@ The stylesheet provides two layers:
 - **Structural CSS**: layout, spacing, and sizing that components need to render correctly.
 - **Visual defaults**: a minimal but complete out-of-the-box appearance so forms look reasonable with no extra work. These include a visible input border/focus ring, an indigo primary button, and colored error/success alert banners.
 
+All of it sits in a CSS cascade layer named `bridge`, so your own CSS wins over it (see [Your CSS wins](#your-css-wins)).
+
+## Matching your app's look
+
+Take these steps in order, and stop as soon as Bridge looks like the rest of your app:
+
+1. **Nothing.** Bridge pages render inside your layout and inherit your font, text size and text colour.
+2. **Set a few `--bridge-*` variables**: your primary colour, borders, corners, and if your app has a distinct type style, its weights and shadows. The tables below list them all.
+3. **Write plain CSS** against Bridge's classes and data attributes for anything the variables don't cover. It wins over Bridge's styles with no `!important`.
+
+For example, an app with heavy type and hard offset shadows gets there with variables alone:
+
+```css
+/* src/app.css */
+:root {
+  --bridge-primary: #ff6b2c;
+  --bridge-primary-fg: #111;
+  --bridge-border: #111;
+  --bridge-border-radius: 10px;
+  --bridge-font-weight-heading: 800;
+  --bridge-font-weight-button: 800;
+  --bridge-font-weight-label: 700;
+  --bridge-button-shadow: 4px 4px 0 #111;
+  --bridge-card-shadow: 6px 6px 0 #111;
+}
+```
+
+And a press effect on its buttons is one plain rule:
+
+```css
+.bridge-btn-primary:hover {
+  transform: translate(-2px, -2px);
+}
+```
+
 ## The token contract
 
 The `--bridge-*` variables below are the supported way to restyle every Bridge page and component, kept stable across releases. Set them once in your app's stylesheet:
@@ -31,7 +66,7 @@ The `--bridge-*` variables below are the supported way to restyle every Bridge p
 }
 ```
 
-The plugin declares its defaults on `:where(:root)`, which has zero specificity, so your `:root` wins whatever order the two stylesheets load in. Set a token on a wrapper instead of `:root` to theme one area (`<div style="--bridge-primary: #7c3aed">`). Tokens are rung 1 of the customisation rungs in [How Bridge works](../mechanisms.md): rung 0 is your layout around every Bridge page, then the `frame` / `heading` snippets (2), taking over one page (3) and headless (4).
+Bridge's defaults sit in its cascade layer, so your `:root` wins whatever order the two stylesheets load in. Set a token on a wrapper instead of `:root` to theme one area (`<div style="--bridge-primary: #7c3aed">`). Tokens are rung 1 of the customisation rungs in [How Bridge works](../mechanisms.md): rung 0 is your layout around every Bridge page, then the `frame` / `heading` snippets (2), taking over one page (3) and headless (4).
 
 ### Colour
 
@@ -49,7 +84,6 @@ The plugin declares its defaults on `:where(:root)`, which has zero specificity,
 | `--bridge-border` | `#d1d5db` | Input, table, card and secondary button borders |
 | `--bridge-border-radius` | `6px` | Corners of inputs, buttons, alerts, cards and dialogs |
 | `--bridge-card-bg` | `--bridge-bg` | Plan cards and the current-plan panel on the subscription page |
-| `--bridge-card-shadow` | a soft 1–3px shadow | Their shadow. `none` gives a flat look, which suits most dark themes |
 | `--bridge-overlay` | `rgba(15, 23, 42, 0.45)` | Backdrop behind dialogs |
 | `--bridge-alert-error-bg` / `-fg` / `-border` | `#fef2f2` / `#991b1b` / `#fca5a5` | Errors, critical billing notices, cancelled plan badge |
 | `--bridge-alert-success-bg` / `-fg` / `-border` | `#f0fdf4` / `#166534` / `#86efac` | Confirmations, the checkout banner, active plan badge |
@@ -57,6 +91,21 @@ The plugin declares its defaults on `:where(:root)`, which has zero specificity,
 | `--bridge-alert-warning-bg` / `-fg` / `-border` | `#fffbeb` / `#92400e` / `#fcd34d` | Warnings, a quota nearing its limit, past-due badge |
 
 The three derived tokens (`-hover`, `-light`, `--bridge-input-focus`) follow `--bridge-primary` wherever you set it, unless you set them too.
+
+### Type and shadow
+
+Every default is the look Bridge has without them.
+
+| Token | Default | Styles |
+|---|---|---|
+| `--bridge-font-size` | your `<body>` text size | The base every Bridge text size scales from. Set it only to size Bridge text differently from your body text, e.g. `18px` |
+| `--bridge-font-weight-heading` | `600`, `700` on a few titles | Page, dialog and section titles, plan names, prices |
+| `--bridge-font-weight-button` | `500` | Every Bridge button |
+| `--bridge-font-weight-label` | `500`, `600` on a few | Form labels, table headings, badges, names |
+| `--bridge-button-shadow` | `none` | Every Bridge button's shadow, e.g. `4px 4px 0 #111` |
+| `--bridge-card-shadow` | a soft 1–3px shadow on cards, a deeper one on the dialog | Plan cards, the current-plan panel and the plan-change dialog. `none` gives a flat look, which suits most dark themes |
+
+A weight token sets every element it covers to the same weight.
 
 ### Layout
 
@@ -70,7 +119,7 @@ The three derived tokens (`-hover`, `-light`, `--bridge-input-focus`) follow `--
 
 ### Not tokens
 
-Fonts and body text colour. Bridge pages render inside your `+layout.svelte`, so they inherit your font, text colour and background like any other page.
+Font family and text colour. Bridge pages render inside your `+layout.svelte`, so they inherit your font, text colour and background like any other page. Text size follows your page too: every Bridge text size is relative to your `<body>` text size, so at the browser default of 16px nothing changes, and if your body text is 18px, Bridge's is sized to match. `--bridge-font-size` is there only for when Bridge should differ from your body.
 
 ### Deprecated names
 
@@ -119,22 +168,27 @@ On Tailwind v3, the same with `theme()`:
 }
 ```
 
-Utility classes still work on anything that takes a `class` prop, and on your own markup inside the `frame` snippet.
+Utility classes work in full on your own markup, including inside the `frame` snippet. On Bridge's own elements, and on a component's `class` prop, a utility loses wherever Bridge sets the same property: Tailwind puts its utilities in a cascade layer that comes before Bridge's. Use plain CSS for those (see [Your CSS wins](#your-css-wins)), or Tailwind's important modifier (`bg-red-500!` in v4, `!bg-red-500` in v3).
 
-## Zero specificity
+Bridge declares its layer after Tailwind v4's (`@layer theme, base, components, utilities, bridge;`), so Tailwind's base reset never strips Bridge's buttons, whichever stylesheet loads first.
 
-All visual-default rules, and the token defaults on `:where(:root)`, use the `:where()` pseudo-class, which has zero specificity. Any class or element selector in your own CSS wins automatically, no `!important` needed.
+## Your CSS wins
 
-For example, the default primary button is styled as:
+Every Bridge style, in the stylesheet and in the components themselves, lives in a CSS cascade layer named `bridge`. Any CSS you write outside a layer overrides it, whatever its specificity and whatever the load order, with no `!important`:
 
 ```css
-:where(.bridge-btn-primary) {
-  background-color: var(--bridge-primary);
-  /* ... */
+.bridge-btn-primary:hover {
+  transform: translate(-2px, -2px);
+}
+
+[data-bridge-plan-card] {
+  border-width: 2px;
 }
 ```
 
-Your own `.bridge-btn-primary { background: red; }` or even a simple `.my-button { background: red; }` will override it without specificity battles.
+A plain `.bridge-btn-primary { background: red; }` is enough; there is no specificity to match.
+
+The one exception is CSS you put in a layer of your own. A layer declared before `bridge` ranks below it, so write overrides outside any `@layer`, or in a layer declared after `bridge`.
 
 ## Component-level overrides
 
@@ -150,7 +204,7 @@ All components forward `class` and `style` props to their root element, so you c
 }
 ```
 
-You can also use the `style` prop for inline overrides:
+Plain CSS like this wins over Bridge's styles; Tailwind utilities in `class` follow the rule in [Tailwind](#tailwind). You can also use the `style` prop for inline overrides:
 
 ```svelte
 <LoginForm style="--bridge-primary: #7c3aed;" />

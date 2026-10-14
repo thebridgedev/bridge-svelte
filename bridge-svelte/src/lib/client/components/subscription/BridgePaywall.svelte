@@ -58,36 +58,39 @@
 {/if}
 
 <style>
-  .bridge-paywall {
-    position: fixed;
-    inset: 0;
-    z-index: 9000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    background: var(--bridge-paywall-bg, rgba(15, 23, 42, 0.72));
-    backdrop-filter: blur(2px);
-  }
+  /* TBP-814 — in the `bridge` layer with the stylesheet, so any CSS of the app wins. */
+  @layer bridge {
+    .bridge-paywall {
+      position: fixed;
+      inset: 0;
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: var(--bridge-paywall-bg, rgba(15, 23, 42, 0.72));
+      backdrop-filter: blur(2px);
+    }
 
-  .bridge-paywall-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    width: 100%;
-    max-width: 42rem;
-    max-height: 90vh;
-    overflow-y: auto;
-    padding: 2rem;
-    border-radius: 0.75rem;
-    background: var(--bridge-paywall-panel-bg, var(--bridge-bg, #ffffff));
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-  }
+    .bridge-paywall-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 42rem;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 2rem;
+      border-radius: 0.75rem;
+      background: var(--bridge-paywall-panel-bg, var(--bridge-bg, #ffffff));
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    }
 
-  .bridge-paywall-heading {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-    text-align: center;
+    .bridge-paywall-heading {
+      margin: 0;
+      font-size: calc(1.25 * var(--bridge-text-base, 1rem));
+      font-weight: var(--bridge-font-weight-heading, 600);
+      text-align: center;
+    }
   }
 </style>

@@ -1,6 +1,6 @@
 {
   "name": "@nebulr-group/bridge-svelte",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "description": "The Bridge for SvelteKit: sign-in, workspaces and roles, feature flags, Stripe subscriptions and plan limits in one .env line and three files.",
   "author": "Iman Pouya",
   "license": "MIT",

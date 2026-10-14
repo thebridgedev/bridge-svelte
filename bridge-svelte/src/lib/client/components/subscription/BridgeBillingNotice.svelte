@@ -240,146 +240,149 @@
 {/if}
 
 <style>
-  .bridge-billing-notice {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    font: inherit;
-    transition: opacity 280ms ease, transform 320ms ease;
-  }
-
-  .bbn-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-    flex: 1 1 auto;
-  }
-
-  .bbn-title {
-    font-weight: 600;
-  }
-
-  .bbn-body {
-    font-size: 0.875rem;
-    opacity: 0.85;
-  }
-
-  .bbn-cta {
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
-    border: 1px solid currentColor;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    font-weight: 500;
-    cursor: pointer;
-    flex: 0 0 auto;
-  }
-
-  .bbn-cta:hover {
-    background: currentColor;
-    color: var(--bridge-bg, #ffffff);
-  }
-
-  /* Chassis variants */
-  .bbn-chassis-bar {
-    border-radius: 0;
-    width: 100%;
-  }
-
-  .bbn-chassis-rail {
-    border-left: 4px solid currentColor;
-    border-radius: 0 0.5rem 0.5rem 0;
-  }
-
-  .bbn-chassis-card {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    border: 1px solid var(--bridge-border, #d1d5db);
-  }
-
-  /* Severity tokens */
-  .bbn-severity-info {
-    background: var(--bridge-alert-info-bg, #eff6ff);
-    color: var(--bridge-alert-info-fg, #1e40af);
-  }
-
-  .bbn-severity-warn {
-    background: var(--bridge-alert-warning-bg, #fffbeb);
-    color: var(--bridge-alert-warning-fg, #92400e);
-  }
-
-  .bbn-severity-critical {
-    background: var(--bridge-alert-error-bg, #fef2f2);
-    color: var(--bridge-alert-error-fg, #991b1b);
-  }
-
-  /* Locked inverts the surface: foreground as background, and vice versa. */
-  .bbn-severity-locked {
-    background: var(--bridge-foreground, #111827);
-    color: var(--bridge-bg, #ffffff);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
+  /* TBP-814 — in the `bridge` layer with the stylesheet, so any CSS of the app wins. */
+  @layer bridge {
     .bridge-billing-notice {
-      transition: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font: inherit;
+      transition: opacity 280ms ease, transform 320ms ease;
     }
-  }
 
-  /* Hard-mode lockscreen — full-viewport blocking overlay */
-  .bridge-billing-lockscreen {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    background: var(--bridge-paywall-bg, rgba(15, 23, 42, 0.72));
-    backdrop-filter: blur(2px);
-  }
+    .bbn-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+      flex: 1 1 auto;
+    }
 
-  .bbl-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    max-width: 28rem;
-    width: 100%;
-    padding: 1.5rem;
-    border-radius: 0.75rem;
-    background: var(--bridge-foreground, #111827);
-    color: var(--bridge-bg, #ffffff);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
-    text-align: center;
-  }
+    .bbn-title {
+      font-weight: var(--bridge-font-weight-heading, 600);
+    }
 
-  .bbl-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-  }
+    .bbn-body {
+      font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+      opacity: 0.85;
+    }
 
-  .bbl-body {
-    font-size: 0.9375rem;
-    opacity: 0.85;
-  }
+    .bbn-cta {
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      border: 1px solid currentColor;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      font-weight: var(--bridge-font-weight-button, 500);
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
 
-  .bbl-cta {
-    align-self: center;
-    margin-top: 0.5rem;
-    padding: 0.625rem 1.25rem;
-    border-radius: 0.5rem;
-    border: 1px solid currentColor;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    font-weight: 500;
-    cursor: pointer;
-  }
+    .bbn-cta:hover {
+      background: currentColor;
+      color: var(--bridge-bg, #ffffff);
+    }
 
-  .bbl-cta:hover {
-    background: var(--bridge-bg, #ffffff);
-    color: var(--bridge-foreground, #111827);
+    /* Chassis variants */
+    .bbn-chassis-bar {
+      border-radius: 0;
+      width: 100%;
+    }
+
+    .bbn-chassis-rail {
+      border-left: 4px solid currentColor;
+      border-radius: 0 0.5rem 0.5rem 0;
+    }
+
+    .bbn-chassis-card {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--bridge-border, #d1d5db);
+    }
+
+    /* Severity tokens */
+    .bbn-severity-info {
+      background: var(--bridge-alert-info-bg, #eff6ff);
+      color: var(--bridge-alert-info-fg, #1e40af);
+    }
+
+    .bbn-severity-warn {
+      background: var(--bridge-alert-warning-bg, #fffbeb);
+      color: var(--bridge-alert-warning-fg, #92400e);
+    }
+
+    .bbn-severity-critical {
+      background: var(--bridge-alert-error-bg, #fef2f2);
+      color: var(--bridge-alert-error-fg, #991b1b);
+    }
+
+    /* Locked inverts the surface: foreground as background, and vice versa. */
+    .bbn-severity-locked {
+      background: var(--bridge-foreground, #111827);
+      color: var(--bridge-bg, #ffffff);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .bridge-billing-notice {
+        transition: none;
+      }
+    }
+
+    /* Hard-mode lockscreen — full-viewport blocking overlay */
+    .bridge-billing-lockscreen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: var(--bridge-paywall-bg, rgba(15, 23, 42, 0.72));
+      backdrop-filter: blur(2px);
+    }
+
+    .bbl-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-width: 28rem;
+      width: 100%;
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      background: var(--bridge-foreground, #111827);
+      color: var(--bridge-bg, #ffffff);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+      text-align: center;
+    }
+
+    .bbl-title {
+      font-size: calc(1.125 * var(--bridge-text-base, 1rem));
+      font-weight: var(--bridge-font-weight-heading, 600);
+    }
+
+    .bbl-body {
+      font-size: calc(0.9375 * var(--bridge-text-base, 1rem));
+      opacity: 0.85;
+    }
+
+    .bbl-cta {
+      align-self: center;
+      margin-top: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      border-radius: 0.5rem;
+      border: 1px solid currentColor;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      font-weight: var(--bridge-font-weight-button, 500);
+      cursor: pointer;
+    }
+
+    .bbl-cta:hover {
+      background: var(--bridge-bg, #ffffff);
+      color: var(--bridge-foreground, #111827);
+    }
   }
 </style>

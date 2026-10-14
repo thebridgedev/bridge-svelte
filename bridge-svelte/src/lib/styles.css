@@ -31,7 +31,16 @@
  *   --bridge-border           input, table, card and secondary button borders
  *   --bridge-border-radius    corners of inputs, buttons, alerts, cards, dialogs
  *   --bridge-card-bg          plan cards and the current-plan panel (defaults to --bridge-bg)
- *   --bridge-card-shadow      their shadow; `none` for a flat look (dark apps often want it)
+ *   --bridge-card-shadow      their shadow, and the plan-change dialog's; `none` for a flat look
+ *   --bridge-button-shadow    every Bridge button's shadow, e.g. `4px 4px 0 #000` (default none)
+ *
+ * Type (TBP-814). Bridge text follows your app: every size is relative to the
+ * text size of your page's <body>, and the font family is inherited.
+ *   --bridge-font-size              the base all Bridge text sizes scale from
+ *                                   (default: your <body> text size)
+ *   --bridge-font-weight-heading    page, dialog and section titles, plan names, prices
+ *   --bridge-font-weight-button     every Bridge button
+ *   --bridge-font-weight-label      form labels, table headings, badges, names
  *   --bridge-overlay          backdrop behind dialogs
  *   --bridge-alert-error-{bg,fg,border}     errors, critical billing notices
  *   --bridge-alert-success-{bg,fg,border}   confirmations, active plan badge
@@ -49,8 +58,8 @@
  * major:  --bridge-primary-foreground → --bridge-primary-fg
  *         --bridge-bg-muted           → --bridge-muted-bg
  *
- * Fonts and body text colour are not tokens: Bridge pages render inside your
- * layout and inherit them.
+ * Font family and text colour are not tokens: Bridge pages render inside your
+ * layout and inherit them. Text sizes follow your <body> (see Type above).
  *
  * State selectors:
  *   [data-active="true"]    — active tab
@@ -63,1394 +72,1430 @@
  *   [data-variant="danger"] — danger variant
  */
 
-/* ─── Token defaults — zero specificity, so the app's :root always wins ──── */
-
-:where(:root) {
-  /* Derived tokens (primary-hover, primary-fg, primary-light, input-focus,
-     muted-bg, paywall-panel-bg) have no value here on purpose: each falls back
-     to its source where it is used, so setting --bridge-primary on a wrapper
-     re-derives them for that wrapper too. */
-  --bridge-primary: #4f46e5;
-  --bridge-bg: #ffffff;
-  --bridge-foreground: #111827;
-  --bridge-muted: #6b7280;
-  --bridge-border: #d1d5db;
-  --bridge-border-radius: 6px;
-  --bridge-overlay: rgba(15, 23, 42, 0.45);
-  --bridge-alert-error-bg: #fef2f2;
-  --bridge-alert-error-fg: #991b1b;
-  --bridge-alert-error-border: #fca5a5;
-  --bridge-alert-success-bg: #f0fdf4;
-  --bridge-alert-success-fg: #166534;
-  --bridge-alert-success-border: #86efac;
-  --bridge-alert-info-bg: #eff6ff;
-  --bridge-alert-info-fg: #1e40af;
-  --bridge-alert-info-border: #bfdbfe;
-  --bridge-alert-warning-bg: #fffbeb;
-  --bridge-alert-warning-fg: #92400e;
-  --bridge-alert-warning-border: #fcd34d;
-
-  --bridge-auth-page-padding: 3rem 1rem;
-  --bridge-billing-page-width: 60rem;
-  --bridge-billing-page-padding: 3rem 1rem;
-  --bridge-paywall-bg: rgba(15, 23, 42, 0.72);
-}
-
-/* ─── Input visual defaults ──────────────────────────────────────────────── */
-
-:where(input[type="text"], input[type="email"], input[type="password"], input[type="tel"],
-       .bridge-input) {
-  border: 1px solid var(--bridge-border);
-  border-radius: var(--bridge-border-radius);
-  outline: none;
-}
-:where(input[type="text"]:focus, input[type="email"]:focus,
-       input[type="password"]:focus, input[type="tel"]:focus,
-       .bridge-input:focus) {
-  border-color: var(--bridge-input-focus, var(--bridge-primary));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bridge-input-focus, var(--bridge-primary)) 20%, transparent);
-}
-
-/* ─── Buttons ────────────────────────────────────────────────────────────── */
-
-.bridge-btn,
-.bridge-btn-primary,
-.bridge-btn-secondary,
-.bridge-btn-outline,
-.bridge-btn-danger,
-.bridge-btn-danger-sm {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1.25;
-  white-space: nowrap;
-  transition: opacity 0.15s;
-}
-
-.bridge-btn:disabled,
-.bridge-btn-primary:disabled,
-.bridge-btn-secondary:disabled,
-.bridge-btn-outline:disabled,
-.bridge-btn-danger:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.bridge-btn-danger-sm {
-  padding: 0.25rem 0.625rem;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-
-/* ─── Button visual defaults ─────────────────────────────────────────────── */
-
-:where(.bridge-btn-primary) {
-  background-color: var(--bridge-primary);
-  color: var(--bridge-primary-fg, var(--bridge-primary-foreground, #ffffff));
-  border: 1px solid var(--bridge-primary);
-  border-radius: var(--bridge-border-radius);
-}
-:where(.bridge-btn-primary:hover:not(:disabled)) {
-  background-color: var(--bridge-primary-hover, color-mix(in srgb, var(--bridge-primary) 85%, #000000));
-  border-color: var(--bridge-primary-hover, color-mix(in srgb, var(--bridge-primary) 85%, #000000));
-}
-:where(.bridge-btn-secondary, .bridge-btn-outline) {
-  background-color: transparent;
-  color: inherit;
-  border: 1px solid var(--bridge-border);
-  border-radius: var(--bridge-border-radius);
-}
-:where(.bridge-btn-secondary:hover:not(:disabled), .bridge-btn-outline:hover:not(:disabled)) {
-  background-color: color-mix(in srgb, currentColor 5%, transparent);
-}
-
-/* ─── Spinner ─────────────────────────────────────────────────────────────── */
-
-[data-bridge-spinner] {
-  display: inline-block;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: bridge-spin 0.6s linear infinite;
-}
-
-@keyframes bridge-spin {
-  to { transform: rotate(360deg); }
-}
-
-/* ─── Alert ───────────────────────────────────────────────────────────────── */
-
-[data-bridge-alert] {
-  padding: 0.625rem 0.875rem;
-  font-size: 0.875rem;
-}
-
-:where([data-bridge-alert]) {
-  border-radius: var(--bridge-border-radius);
-  border: 1px solid var(--bridge-border);
-}
-:where([data-bridge-alert][data-variant="error"]) {
-  background-color: var(--bridge-alert-error-bg);
-  color: var(--bridge-alert-error-fg);
-  border-color: var(--bridge-alert-error-border);
-}
-:where([data-bridge-alert][data-variant="success"]) {
-  background-color: var(--bridge-alert-success-bg);
-  color: var(--bridge-alert-success-fg);
-  border-color: var(--bridge-alert-success-border);
-}
-
-/* ─── AuthFormWrapper ─────────────────────────────────────────────────────── */
-
-[data-bridge-auth-form] {
-  width: 100%;
-  max-width: 400px;
-  margin: 0 auto;
-}
-
-[data-bridge-auth-form] label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.875rem;
-}
-
-[data-bridge-auth-form] input[type="text"],
-[data-bridge-auth-form] input[type="email"],
-[data-bridge-auth-form] input[type="password"],
-[data-bridge-auth-form] input[type="tel"] {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  box-sizing: border-box;
-  font-size: 0.875rem;
-}
-
-[data-bridge-auth-form] .bridge-btn,
-[data-bridge-auth-form] .bridge-btn-primary,
-[data-bridge-auth-form] .bridge-btn-secondary,
-[data-bridge-auth-form] [data-bridge-passkey-login] {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  box-sizing: border-box;
-}
-
-[data-bridge-auth-form] .bridge-form-group {
-  margin-bottom: 1rem;
-}
-
-[data-bridge-auth-form] .bridge-form-footer {
-  margin-top: 1rem;
-  text-align: center;
-  font-size: 0.875rem;
-}
-
-[data-bridge-auth-form] .bridge-form-footer a,
-[data-bridge-auth-form] .bridge-link {
-  cursor: pointer;
-  background: none;
-  border: none;
-  font-size: inherit;
-  padding: 0;
-  text-decoration: underline;
-}
-
-[data-bridge-auth-form] .bridge-divider {
-  display: flex;
-  align-items: center;
-  margin: 1rem 0;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-[data-bridge-auth-form] .bridge-divider::before,
-[data-bridge-auth-form] .bridge-divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px solid;
-}
-
-[data-bridge-auth-form] .bridge-divider::before { margin-right: 0.5rem; }
-[data-bridge-auth-form] .bridge-divider::after  { margin-left: 0.5rem; }
-
-/* ─── PasskeyLogin ────────────────────────────────────────────────────────── */
-
-[data-bridge-passkey-login] {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.875rem;
-}
-
-[data-bridge-passkey-login][data-loading="true"] {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-/* ─── SsoButton ──────────────────────────────────────────────────────────── */
-
-[data-bridge-sso-button] {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.875rem;
-  padding: 0.5rem 1rem;
-  box-sizing: border-box;
-}
-
-/* ─── Password visibility toggle ─────────────────────────────────────────── */
-
-.bridge-password-wrapper {
-  position: relative;
-}
-
-.bridge-password-wrapper input {
-  padding-right: 2.5rem;
-}
-
-.bridge-password-toggle {
-  position: absolute;
-  right: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.25rem;
-  color: var(--bridge-muted);
-  line-height: 1;
-}
-
-.bridge-password-toggle:hover {
-  color: var(--bridge-foreground);
-}
-
-/* ─── Auth form helpers ───────────────────────────────────────────────────── */
-
-.bridge-sso-row {
-  margin-bottom: 0.5rem;
-}
-
-.bridge-sso-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.bridge-sso-btn-inner {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  width: 12rem;
-}
-
-.bridge-step-desc {
-  font-size: 0.875rem;
-  margin: 0 0 1rem;
-}
-
-/* TBP-635 — the card between a successful sign-in and the host app navigating. */
-.bridge-auth-settling {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  /* Roughly the height of the credentials form it replaces, so the card does
-     not collapse and then re-expand under the cursor. */
-  min-height: 8rem;
-  color: var(--bridge-muted);
-  font-size: 0.875rem;
-}
-
-.bridge-mfa-help {
-  font-size: 0.8125rem;
-  color: var(--bridge-muted);
-  margin: 0.75rem 0 0.25rem;
-  text-align: center;
-}
-
-.bridge-email-display {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
-}
-
-.bridge-forgot-row {
-  margin-top: 0.5rem;
-  text-align: right;
-  font-size: 0.875rem;
-}
-
-.bridge-success-heading {
-  font-size: 1.25rem;
-  font-weight: 600;
-  text-align: center;
-  margin: 0 0 0.5rem;
-}
-
-/* ─── MfaSetup backup code ───────────────────────────────────────────────── */
-
-.bridge-backup-code {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  background: var(--bridge-muted-bg, var(--bridge-bg-muted, #f3f4f6));
-  border-radius: 0.5rem;
-}
-
-.bridge-backup-code code {
-  flex: 1;
-  font-size: 1.125rem;
-  font-family: monospace;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-}
-
-/* ─── TenantSelector ─────────────────────────────────────────────────────── */
-
-.bridge-tenant-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.bridge-tenant-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  cursor: pointer;
-  text-align: left;
-  width: 100%;
-  font-family: inherit;
-}
-
-.bridge-tenant-item:disabled,
-.bridge-tenant-item[data-loading="true"] {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.bridge-tenant-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.875rem;
-  font-weight: 600;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.bridge-tenant-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.bridge-tenant-info {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-.bridge-tenant-name {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.bridge-tenant-user {
-  font-size: 0.75rem;
-}
-
-/* ─── TeamManagementPanel ────────────────────────────────────────────────── */
-
-.bridge-team-tabs {
-  display: flex;
-  margin-bottom: 1.5rem;
-}
-
-.bridge-team-tab {
-  padding: 0.75rem 1rem;
-  border: none;
-  background: transparent;
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-:where(.bridge-team-tabs) {
-  border-bottom: 1px solid var(--bridge-border);
-}
-
-:where(.bridge-team-tab) {
-  color: var(--bridge-muted);
-}
-
-:where(.bridge-team-tab[data-active="true"]) {
-  color: var(--bridge-primary);
-  box-shadow: inset 0 -2px 0 var(--bridge-primary);
-}
-
-/* ─── TeamUserList ───────────────────────────────────────────────────────── */
-
-.bridge-team-users-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.bridge-team-users-title {
-  margin: 0;
-  font-size: 1.125rem;
-  font-weight: 600;
-}
-
-.bridge-team-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 3rem 1rem;
-  font-size: 0.875rem;
-}
-
-.bridge-team-empty {
-  text-align: center;
-  padding: 3rem 1rem;
-}
-
-.bridge-team-empty p {
-  margin: 0 0 1rem;
-}
-
-.bridge-team-table-wrapper {
-  overflow-x: auto;
-}
-
-.bridge-team-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-
-.bridge-team-table th {
-  text-align: left;
-  padding: 0.75rem 1rem;
-  font-weight: 500;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.bridge-team-table td {
-  padding: 0.75rem 1rem;
-  vertical-align: middle;
-}
-
-.bridge-team-user-cell {
-  display: flex;
-  flex-direction: column;
-}
-
-.bridge-team-user-name { font-weight: 500; }
-
-.bridge-team-user-email { font-size: 0.75rem; }
-
-.bridge-team-badge {
-  display: inline-block;
-  padding: 0.125rem 0.5rem;
-  font-size: 0.75rem;
-}
-
-.bridge-team-status {
-  display: inline-block;
-  padding: 0.125rem 0.5rem;
-  font-size: 0.75rem;
-}
-
-.bridge-team-actions-cell {
-  width: 48px;
-  text-align: right;
-}
-
-/* ─── TeamProfileForm / TeamWorkspaceForm ────────────────────────────────── */
-
-.bridge-team-section-title {
-  margin: 0 0 1.5rem;
-  font-size: 1.125rem;
-  font-weight: 600;
-}
-
-.bridge-team-alert {
-  margin-bottom: 1rem;
-}
-
-.bridge-team-form {
-  display: flex;
-  flex-direction: column;
-}
-
-.bridge-team-form-group {
-  margin-bottom: 1rem;
-}
-
-.bridge-team-form-group label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.875rem;
-}
-
-.bridge-team-form-group input,
-.bridge-team-form-group select,
-.bridge-team-form-group textarea {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
-  font-family: inherit;
-  box-sizing: border-box;
-}
-
-.bridge-team-form-group textarea {
-  resize: vertical;
-}
-
-.bridge-team-form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.bridge-team-readonly {
-  padding: 0.5rem 0;
-  font-size: 0.875rem;
-}
-
-.bridge-team-form-actions {
-  margin-top: 0.5rem;
-}
-
-.bridge-team-logo {
-  margin-bottom: 1.5rem;
-}
-
-.bridge-team-logo img {
-  max-width: 120px;
-  max-height: 60px;
-  object-fit: contain;
-}
-
-.bridge-team-checkbox-label {
-  display: flex !important;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-}
-
-.bridge-team-checkbox-label input[type="checkbox"] {
-  width: 1rem;
-  height: 1rem;
-}
-
-/* ─── TeamUserActionsMenu ────────────────────────────────────────────────── */
-
-.bridge-team-actions {
-  position: relative;
-  display: inline-block;
-}
-
-.bridge-team-actions-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-}
-
-.bridge-team-actions-menu {
-  position: absolute;
-  right: 0;
-  top: 100%;
-  z-index: 10;
-  min-width: 160px;
-}
-
-:where(.bridge-team-actions-menu) {
-  background: var(--bridge-bg);
-  color: var(--bridge-foreground);
-  border: 1px solid var(--bridge-border);
-  border-radius: var(--bridge-border-radius);
-}
-
-:where(.bridge-team-table th) {
-  color: var(--bridge-muted);
-  border-bottom: 1px solid var(--bridge-border);
-}
-
-:where(.bridge-team-table td) {
-  border-bottom: 1px solid var(--bridge-border);
-}
-
-.bridge-team-actions-item {
-  display: block;
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: none;
-  background: transparent;
-  font-size: 0.875rem;
-  text-align: left;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-/* ─── Team Dialogs ───────────────────────────────────────────────────────── */
-
-/* The team dialogs carry [data-bridge-team-dialog]; the upgrade dialog the class. */
-.bridge-team-dialog,
-[data-bridge-team-dialog] {
-  border: none;
-  padding: 0;
-  max-width: 400px;
-  width: 90%;
-}
-
-:where(.bridge-team-dialog, [data-bridge-team-dialog]) {
-  background: var(--bridge-bg);
-  color: var(--bridge-foreground);
-  border-radius: var(--bridge-border-radius);
-}
-
-.bridge-team-dialog::backdrop,
-[data-bridge-team-dialog]::backdrop {
-  background: var(--bridge-overlay);
-}
-
-.bridge-team-dialog-content {
-  padding: 1.5rem;
-}
-
-.bridge-team-dialog-title {
-  margin: 0 0 0.5rem;
-  font-size: 1.125rem;
-  font-weight: 600;
-}
-
-.bridge-team-dialog-message,
-.bridge-team-dialog-subtitle {
-  margin: 0 0 1rem;
-  font-size: 0.875rem;
-}
-
-.bridge-team-dialog-error {
-  margin-bottom: 1rem;
-}
-
-.bridge-team-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
-/* ─── ApiTokenManagement ─────────────────────────────────────────────────── */
-
-[data-bridge-api-tokens] {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-[data-bridge-api-tokens] .bridge-api-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 1rem;
-}
-
-[data-bridge-api-tokens] .bridge-api-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-[data-bridge-api-tokens] .bridge-api-subtitle {
-  font-size: 0.875rem;
-  margin: 0.25rem 0 0;
-}
-
-[data-bridge-api-tokens] .bridge-api-error-banner,
-[data-bridge-api-tokens] .bridge-api-success-banner {
-  padding: 0.75rem;
-  font-size: 0.875rem;
-}
-
-[data-bridge-api-tokens] .bridge-api-new-token-banner {
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-[data-bridge-api-tokens] .bridge-api-new-token-warning {
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin: 0;
-}
-
-[data-bridge-api-tokens] .bridge-api-new-token-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-[data-bridge-api-tokens] .bridge-api-token-input {
-  font-family: monospace;
-  font-size: 0.875rem;
-  flex: 1;
-}
-
-[data-bridge-api-tokens] .bridge-api-empty {
-  text-align: center;
-  padding: 2.5rem 1rem;
-  font-size: 0.875rem;
-}
-
-[data-bridge-api-tokens][data-loading="true"] .bridge-api-empty {
-  opacity: 0.6;
-}
-
-[data-bridge-api-tokens] .bridge-api-table {
-  width: 100%;
-  font-size: 0.875rem;
-  border-collapse: collapse;
-}
-
-[data-bridge-api-tokens] .bridge-api-th {
-  padding: 0.75rem 1rem;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
-  text-align: left;
-  border-bottom: 1px solid var(--bridge-border);
-  color: var(--bridge-muted);
-}
-
-[data-bridge-api-tokens] .bridge-api-td,
-[data-bridge-api-tokens] .bridge-api-td-name,
-[data-bridge-api-tokens] .bridge-api-td-muted {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--bridge-border);
-}
-
-[data-bridge-api-tokens] .bridge-api-td-muted {
-  color: var(--bridge-muted);
-}
-
-[data-bridge-api-tokens] .bridge-api-td-actions {
-  padding: 0.75rem 1rem;
-  text-align: right;
-  border-bottom: 1px solid var(--bridge-border);
-}
-
-[data-bridge-api-tokens] .bridge-api-privileges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-}
-
-[data-bridge-api-tokens] .bridge-api-inline-form {
-  border: 1px solid var(--bridge-border);
-  border-radius: 0.5rem;
-  padding: 1rem 1.25rem;
-}
-
-[data-bridge-api-tokens] .bridge-api-inline-form-title {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  margin: 0 0 0.875rem;
-}
-
-[data-bridge-api-tokens] .bridge-api-inline-form-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-[data-bridge-api-tokens] .bridge-api-inline-form-row {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  align-items: flex-start;
-}
-
-[data-bridge-api-tokens] .bridge-api-inline-field {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 160px;
-  min-width: 0;
-}
-
-[data-bridge-api-tokens] .bridge-api-inline-field--narrow {
-  flex: 0 1 160px;
-}
-
-[data-bridge-api-tokens] .bridge-api-inline-form-actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-  padding-top: 0.25rem;
-}
-
-[data-bridge-api-tokens] .bridge-api-hint {
-  font-size: 0.75rem;
-  margin: 0.25rem 0 0;
-}
-
-[data-bridge-api-tokens] .bridge-api-required {
-  /* intentionally unstyled — consumer should color this */
-}
-
-[data-bridge-api-tokens] .bridge-api-form-error {
-  font-size: 0.875rem;
-}
-
-[data-bridge-api-tokens] .bridge-privilege-picker { position: relative; }
-[data-bridge-api-tokens] .bridge-privilege-chips { display: flex; flex-wrap: wrap; gap: 0.375rem; min-height: 2.25rem; cursor: pointer; padding: 0.375rem 0.5rem; align-items: center; }
-[data-bridge-api-tokens] .bridge-privilege-chip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.5rem; font-size: 0.75rem; }
-[data-bridge-api-tokens] .bridge-privilege-chip button { background: none; border: none; cursor: pointer; padding: 0; line-height: 1; }
-[data-bridge-api-tokens] .bridge-privilege-placeholder { font-size: 0.875rem; }
-[data-bridge-api-tokens] .bridge-privilege-dropdown { position: absolute; z-index: 20; width: 100%; max-height: 200px; overflow-y: auto; top: 100%; left: 0; }
-[data-bridge-api-tokens] .bridge-privilege-search { display: block; width: 100%; padding: 0.375rem 0.5rem; font-size: 0.875rem; font-family: inherit; box-sizing: border-box; border: none; border-bottom: 1px solid; outline: none; }
-[data-bridge-api-tokens] .bridge-privilege-option { display: flex; flex-direction: column; align-items: flex-start; width: 100%; padding: 0.375rem 0.75rem; background: none; border: none; cursor: pointer; text-align: left; font-family: inherit; }
-[data-bridge-api-tokens] .bridge-privilege-option-key { font-size: 0.875rem; font-weight: 500; }
-[data-bridge-api-tokens] .bridge-privilege-option-desc { font-size: 0.75rem; }
-[data-bridge-api-tokens] .bridge-privilege-empty { padding: 0.5rem 0.75rem; font-size: 0.875rem; }
-
-.bridge-input {
-  display: block;
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
-  font-family: inherit;
-  box-sizing: border-box;
-}
-
-.bridge-label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-bottom: 0.375rem;
-}
-
-.bridge-badge {
-  display: inline-block;
-  padding: 0.125rem 0.5rem;
-  font-size: 0.7rem;
-  font-family: monospace;
-}
-
-.bridge-dialog-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-}
-
-.bridge-dialog {
-  position: fixed;
-  z-index: 51;
-  left: 50%;
-  top: 25%;
-  transform: translateX(-50%);
-  padding: 1.5rem;
-  width: 90vw;
-  max-width: 400px;
-}
-
-.bridge-dialog-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 0 0 0.5rem 0;
-}
-
-.bridge-dialog-body {
-  font-size: 0.875rem;
-  margin: 0 0 1.25rem 0;
-}
-
-.bridge-dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
-/* ─── PlanSelector ───────────────────────────────────────────────────────── */
-
-[data-bridge-plan-selector] {
-  position: relative;
-}
-
-[data-bridge-plan-selector][data-loading="true"] {
-  pointer-events: none;
-  opacity: 0.7;
-}
-
-.bridge-plan-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 1rem;
-}
-
-.bridge-plan-empty {
-  text-align: center;
-  padding: 2rem 1rem;
-  font-size: 0.875rem;
-}
-
-.bridge-plan-payment-failed {
-  margin-bottom: 1.5rem;
-}
-
-.bridge-plan-portal-btn {
-  margin-top: 0.75rem;
-}
-
-/* TBP-813 — a heading beside the interval switch (`heading` prop). */
-.bridge-plan-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
-}
-
-.bridge-plan-heading {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-}
-
-.bridge-plan-head .bridge-plan-interval-tabs {
-  margin: 0;
-}
-
-.bridge-plan-interval-tabs {
-  /* Centered above the plan cards; flex + fit-content (not inline-flex) so
-     auto margins can center it regardless of the host page's text alignment. */
-  display: flex;
-  width: fit-content;
-  margin-inline: auto;
-  gap: 0.25rem;
-  margin-bottom: 1.25rem;
-  padding: 0.25rem;
-  border: 1px solid var(--bridge-border);
-  border-radius: var(--bridge-border-radius);
-  background: var(--bridge-card-bg, var(--bridge-bg));
-}
-
-.bridge-plan-interval-tab {
-  appearance: none;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.8125rem;
-  padding: 0.375rem 0.875rem;
-  border-radius: calc(var(--bridge-border-radius) - 0.2rem);
-  color: var(--bridge-muted);
-}
-
-.bridge-plan-interval-tab[data-active="true"] {
-  background: var(--bridge-primary);
-  color: var(--bridge-primary-fg, var(--bridge-primary-foreground, #ffffff));
-}
-
-.bridge-plan-unavailable {
-  margin: 0;
-  font-size: 0.8125rem;
-  color: var(--bridge-muted);
-}
-
-/* Plan-change confirmation dialog + success notice (TBP-33) */
-.bridge-plan-success {
-  margin-bottom: 1rem;
-}
-
-.bridge-plan-confirm-backdrop {
-  position: fixed;
-  inset: 0;
-  background: var(--bridge-overlay);
-  display: grid;
-  place-items: center;
-  z-index: 1000;
-  padding: 1.25rem;
-}
-
-.bridge-plan-confirm {
-  background: var(--bridge-bg);
-  border: 1px solid var(--bridge-border);
-  border-radius: var(--bridge-border-radius);
-  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.35);
-  max-width: 26rem;
-  width: 100%;
-  padding: 1.25rem 1.25rem 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.bridge-plan-confirm-title {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.bridge-plan-confirm-body {
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-.bridge-plan-confirm-note {
-  margin: 0;
-  font-size: 0.8125rem;
-  color: var(--bridge-muted);
-  line-height: 1.5;
-}
-
-.bridge-plan-confirm-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 0.25rem;
-}
-
-.bridge-plan-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 1rem;
-  align-items: stretch;
-}
-
-/* TBP-813 — cards, and the current-plan panel, are surfaces of their own, so
-   they read on any app background and take the app's tokens. */
-[data-bridge-plan-card],
-.bridge-billing-summary {
-  background: var(--bridge-card-bg, var(--bridge-bg));
-  color: var(--bridge-foreground);
-  border: 1px solid var(--bridge-border);
-  border-radius: calc(var(--bridge-border-radius) * 1.5);
-  box-shadow: var(--bridge-card-shadow, 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.04));
-}
-
-.bridge-billing-summary {
-  padding: 1.1rem 1.25rem;
-  background: color-mix(in srgb, var(--bridge-primary) 6%, var(--bridge-card-bg, var(--bridge-bg)));
-}
-
-.bridge-billing-summary .bss-plan {
-  font-size: 1.2rem;
-  font-weight: 700;
-}
-
-.bridge-billing-summary-meta {
-  font-size: 0.85rem;
-  color: var(--bridge-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-[data-bridge-plan-card] {
-  position: relative;
-  padding: 1.35rem 1.25rem 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-}
-
-[data-bridge-plan-card][data-current="true"] {
-  border: 2px solid var(--bridge-primary);
-  padding: calc(1.35rem - 1px) calc(1.25rem - 1px) calc(1.25rem - 1px);
-}
-
-.bridge-plan-current-flag {
-  position: absolute;
-  top: -0.7rem;
-  left: 1.1rem;
-  padding: 0.15rem 0.55rem;
-  border-radius: 9999px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  background: var(--bridge-primary);
-  color: var(--bridge-primary-fg, var(--bridge-primary-foreground, #ffffff));
-}
-
-.bridge-plan-card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.bridge-plan-name {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.bridge-plan-trial-badge {
-  display: inline-block;
-  padding: 0.125rem 0.5rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  white-space: nowrap;
-  border-radius: 9999px;
-  border: 1px solid var(--bridge-alert-info-border);
-  background: var(--bridge-alert-info-bg);
-  color: var(--bridge-alert-info-fg);
-}
-
-.bridge-plan-price {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.bridge-plan-price-amount {
-  font-size: 1.9rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-}
-
-.bridge-plan-price-interval {
-  font-size: 0.85rem;
-  color: var(--bridge-muted);
-}
-
-.bridge-plan-description {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--bridge-muted);
-}
-
-/* TBP-755 — the features a plan includes. */
-.bridge-plan-features {
-  margin: 0;
-  padding: 0.9rem 0 0;
-  border-top: 1px solid var(--bridge-border);
-  list-style: none;
-  font-size: 0.875rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.bridge-plan-feature {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-}
-
-.bridge-plan-feature-check {
-  flex: none;
-  margin-top: 0.2rem;
-  color: var(--bridge-primary);
-}
-
-.bridge-plan-prices {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-top: auto;
-}
-
-.bridge-plan-select-btn {
-  width: 100%;
-  text-align: center;
-}
-
-[data-bridge-plan-card][data-current="true"] .bridge-plan-select-btn:disabled {
-  background: transparent;
-  color: var(--bridge-muted);
-  opacity: 1;
-}
-
-/* ─── BridgeCheckoutNotice (TBP-813) ─────────────────────────────────────── */
-
-.bridge-checkout-notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.85rem 1rem;
-  border: 1px solid var(--bridge-alert-success-border);
-  border-radius: var(--bridge-border-radius);
-  background: var(--bridge-alert-success-bg);
-  color: var(--bridge-alert-success-fg);
-  font-size: 0.875rem;
-}
-
-.bridge-checkout-notice-icon {
-  flex: none;
-  margin-top: 0.1rem;
-}
-
-.bridge-checkout-notice-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.bridge-checkout-notice-title {
-  display: block;
-  font-weight: 600;
-}
-
-.bridge-checkout-notice-close {
-  appearance: none;
-  border: 0;
-  background: none;
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-  font-size: 1.15rem;
-  line-height: 1;
-  padding: 0 0.2rem;
-  opacity: 0.7;
-}
-
-.bridge-checkout-notice-close:hover,
-.bridge-checkout-notice-close:focus-visible {
-  opacity: 1;
-}
-
-/* ─── WorkspaceSelector ─────────────────────────────────────────────── */
-
-[data-bridge-workspace-selector] {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-[data-bridge-workspace-loading] {
-  display: flex;
-  justify-content: center;
-  padding: 1.5rem 0;
-}
-
-[data-bridge-workspace-list] {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-[data-bridge-workspace-item] {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-  transition: background 0.15s;
-}
-
-[data-bridge-workspace-item]:hover:not(:disabled) {
-  background: var(--bridge-muted-bg, var(--bridge-bg-muted, #f3f4f6));
-}
-
-[data-bridge-workspace-item][data-active="true"] {
-  background: var(--bridge-primary-light, color-mix(in srgb, var(--bridge-primary) 10%, #ffffff));
-  border-color: var(--bridge-primary);
-}
-
-[data-bridge-workspace-item][data-loading="true"] {
-  opacity: 0.7;
-  cursor: wait;
-}
-
-[data-bridge-workspace-item]:disabled {
-  cursor: not-allowed;
-}
-
-[data-bridge-workspace-avatar] {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.375rem;
-  background: var(--bridge-primary);
-  color: var(--bridge-primary-fg, var(--bridge-primary-foreground, #ffffff));
-  font-size: 0.875rem;
-  font-weight: 600;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-[data-bridge-workspace-avatar] img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-[data-bridge-workspace-info] {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  flex: 1;
-  min-width: 0;
-}
-
-[data-bridge-workspace-name] {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--bridge-foreground);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-[data-bridge-workspace-user] {
-  font-size: 0.75rem;
-  color: var(--bridge-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* ─── The cascade layer (TBP-814) ──────────────────────────────────────────
+ *
+ * Every Bridge rule lives in the `bridge` layer, so ANY CSS your app writes
+ * outside a layer wins over it — whatever its specificity, whatever the load
+ * order, no !important. Restyle a Bridge element with plain CSS:
+ *
+ *   .bridge-btn-primary:hover { transform: translate(-2px, -2px); }
+ *   [data-bridge-plan-card] { border-width: 2px; }
+ *
+ * Write those overrides outside any @layer. CSS inside a layer ranks below
+ * `bridge` unless that layer is declared after it.
+ *
+ * The order statement puts `bridge` after the layers Tailwind v4 declares, so
+ * its base reset can never strip Bridge's buttons, whichever stylesheet loads
+ * first. An app without those layers is unaffected: the names stay empty.
+ */
+@layer theme, base, components, utilities, bridge;
+
+/* ─── Text size follows the app (TBP-814) ──────────────────────────────── */
+
+/* Registered so `1em` resolves where it is declared — the <body> — and
+   inherits as a fixed length. Unregistered, `1em` would resolve again at every
+   element that reads it, and sizes would compound inside nested Bridge parts. */
+@property --bridge-text-base {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 16px;
+}
+
+@layer bridge {
+  :where(body) {
+    --bridge-text-base: var(--bridge-font-size, 1em);
+  }
+
+  /* ─── Token defaults — zero specificity, so the app's :root always wins ──── */
+
+  :where(:root) {
+    /* Derived tokens (primary-hover, primary-fg, primary-light, input-focus,
+       muted-bg, paywall-panel-bg) have no value here on purpose: each falls back
+       to its source where it is used, so setting --bridge-primary on a wrapper
+       re-derives them for that wrapper too. */
+    --bridge-primary: #4f46e5;
+    --bridge-bg: #ffffff;
+    --bridge-foreground: #111827;
+    --bridge-muted: #6b7280;
+    --bridge-border: #d1d5db;
+    --bridge-border-radius: 6px;
+    --bridge-overlay: rgba(15, 23, 42, 0.45);
+    --bridge-alert-error-bg: #fef2f2;
+    --bridge-alert-error-fg: #991b1b;
+    --bridge-alert-error-border: #fca5a5;
+    --bridge-alert-success-bg: #f0fdf4;
+    --bridge-alert-success-fg: #166534;
+    --bridge-alert-success-border: #86efac;
+    --bridge-alert-info-bg: #eff6ff;
+    --bridge-alert-info-fg: #1e40af;
+    --bridge-alert-info-border: #bfdbfe;
+    --bridge-alert-warning-bg: #fffbeb;
+    --bridge-alert-warning-fg: #92400e;
+    --bridge-alert-warning-border: #fcd34d;
+
+    --bridge-auth-page-padding: 3rem 1rem;
+    --bridge-billing-page-width: 60rem;
+    --bridge-billing-page-padding: 3rem 1rem;
+    --bridge-paywall-bg: rgba(15, 23, 42, 0.72);
+  }
+
+  /* ─── Input visual defaults ──────────────────────────────────────────────── */
+
+  :where(input[type="text"], input[type="email"], input[type="password"], input[type="tel"],
+         .bridge-input) {
+    border: 1px solid var(--bridge-border);
+    border-radius: var(--bridge-border-radius);
+    outline: none;
+  }
+  :where(input[type="text"]:focus, input[type="email"]:focus,
+         input[type="password"]:focus, input[type="tel"]:focus,
+         .bridge-input:focus) {
+    border-color: var(--bridge-input-focus, var(--bridge-primary));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--bridge-input-focus, var(--bridge-primary)) 20%, transparent);
+  }
+
+  /* ─── Buttons ────────────────────────────────────────────────────────────── */
+
+  .bridge-btn,
+  .bridge-btn-primary,
+  .bridge-btn-secondary,
+  .bridge-btn-outline,
+  .bridge-btn-danger,
+  .bridge-btn-danger-sm {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-button, 500);
+    line-height: 1.25;
+    white-space: nowrap;
+    box-shadow: var(--bridge-button-shadow, none);
+    transition: opacity 0.15s;
+  }
+
+  .bridge-btn:disabled,
+  .bridge-btn-primary:disabled,
+  .bridge-btn-secondary:disabled,
+  .bridge-btn-outline:disabled,
+  .bridge-btn-danger:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .bridge-btn-danger-sm {
+    padding: 0.25rem 0.625rem;
+    font-size: calc(0.75 * var(--bridge-text-base, 1rem));
+    cursor: pointer;
+  }
+
+  /* ─── Button visual defaults ─────────────────────────────────────────────── */
+
+  :where(.bridge-btn-primary) {
+    background-color: var(--bridge-primary);
+    color: var(--bridge-primary-fg, var(--bridge-primary-foreground, #ffffff));
+    border: 1px solid var(--bridge-primary);
+    border-radius: var(--bridge-border-radius);
+  }
+  :where(.bridge-btn-primary:hover:not(:disabled)) {
+    background-color: var(--bridge-primary-hover, color-mix(in srgb, var(--bridge-primary) 85%, #000000));
+    border-color: var(--bridge-primary-hover, color-mix(in srgb, var(--bridge-primary) 85%, #000000));
+  }
+  :where(.bridge-btn-secondary, .bridge-btn-outline) {
+    background-color: transparent;
+    color: inherit;
+    border: 1px solid var(--bridge-border);
+    border-radius: var(--bridge-border-radius);
+  }
+  :where(.bridge-btn-secondary:hover:not(:disabled), .bridge-btn-outline:hover:not(:disabled)) {
+    background-color: color-mix(in srgb, currentColor 5%, transparent);
+  }
+
+  /* ─── Spinner ─────────────────────────────────────────────────────────────── */
+
+  [data-bridge-spinner] {
+    display: inline-block;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: bridge-spin 0.6s linear infinite;
+  }
+
+  @keyframes bridge-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ─── Alert ───────────────────────────────────────────────────────────────── */
+
+  [data-bridge-alert] {
+    padding: 0.625rem 0.875rem;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  :where([data-bridge-alert]) {
+    border-radius: var(--bridge-border-radius);
+    border: 1px solid var(--bridge-border);
+  }
+  :where([data-bridge-alert][data-variant="error"]) {
+    background-color: var(--bridge-alert-error-bg);
+    color: var(--bridge-alert-error-fg);
+    border-color: var(--bridge-alert-error-border);
+  }
+  :where([data-bridge-alert][data-variant="success"]) {
+    background-color: var(--bridge-alert-success-bg);
+    color: var(--bridge-alert-success-fg);
+    border-color: var(--bridge-alert-success-border);
+  }
+
+  /* ─── AuthFormWrapper ─────────────────────────────────────────────────────── */
+
+  [data-bridge-auth-form] {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  [data-bridge-auth-form] label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  [data-bridge-auth-form] input[type="text"],
+  [data-bridge-auth-form] input[type="email"],
+  [data-bridge-auth-form] input[type="password"],
+  [data-bridge-auth-form] input[type="tel"] {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    box-sizing: border-box;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  [data-bridge-auth-form] .bridge-btn,
+  [data-bridge-auth-form] .bridge-btn-primary,
+  [data-bridge-auth-form] .bridge-btn-secondary,
+  [data-bridge-auth-form] [data-bridge-passkey-login] {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    box-sizing: border-box;
+  }
+
+  [data-bridge-auth-form] .bridge-form-group {
+    margin-bottom: 1rem;
+  }
+
+  [data-bridge-auth-form] .bridge-form-footer {
+    margin-top: 1rem;
+    text-align: center;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  [data-bridge-auth-form] .bridge-form-footer a,
+  [data-bridge-auth-form] .bridge-link {
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: inherit;
+    padding: 0;
+    text-decoration: underline;
+  }
+
+  [data-bridge-auth-form] .bridge-divider {
+    display: flex;
+    align-items: center;
+    margin: 1rem 0;
+    font-size: calc(0.75 * var(--bridge-text-base, 1rem));
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  [data-bridge-auth-form] .bridge-divider::before,
+  [data-bridge-auth-form] .bridge-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid;
+  }
+
+  [data-bridge-auth-form] .bridge-divider::before { margin-right: 0.5rem; }
+  [data-bridge-auth-form] .bridge-divider::after  { margin-left: 0.5rem; }
+
+  /* ─── PasskeyLogin ────────────────────────────────────────────────────────── */
+
+  [data-bridge-passkey-login] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  [data-bridge-passkey-login][data-loading="true"] {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  /* ─── SsoButton ──────────────────────────────────────────────────────────── */
+
+  [data-bridge-sso-button] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    padding: 0.5rem 1rem;
+    box-sizing: border-box;
+  }
+
+  /* ─── Password visibility toggle ─────────────────────────────────────────── */
+
+  .bridge-password-wrapper {
+    position: relative;
+  }
+
+  .bridge-password-wrapper input {
+    padding-right: 2.5rem;
+  }
+
+  .bridge-password-toggle {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    color: var(--bridge-muted);
+    line-height: 1;
+  }
+
+  .bridge-password-toggle:hover {
+    color: var(--bridge-foreground);
+  }
+
+  /* ─── Auth form helpers ───────────────────────────────────────────────────── */
+
+  .bridge-sso-row {
+    margin-bottom: 0.5rem;
+  }
+
+  .bridge-sso-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .bridge-sso-btn-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 12rem;
+  }
+
+  .bridge-step-desc {
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    margin: 0 0 1rem;
+  }
+
+  /* TBP-635 — the card between a successful sign-in and the host app navigating. */
+  .bridge-auth-settling {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    /* Roughly the height of the credentials form it replaces, so the card does
+       not collapse and then re-expand under the cursor. */
+    min-height: 8rem;
+    color: var(--bridge-muted);
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  .bridge-mfa-help {
+    font-size: calc(0.8125 * var(--bridge-text-base, 1rem));
+    color: var(--bridge-muted);
+    margin: 0.75rem 0 0.25rem;
+    text-align: center;
+  }
+
+  .bridge-email-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  .bridge-forgot-row {
+    margin-top: 0.5rem;
+    text-align: right;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  .bridge-success-heading {
+    font-size: calc(1.25 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-heading, 600);
+    text-align: center;
+    margin: 0 0 0.5rem;
+  }
+
+  /* ─── MfaSetup backup code ───────────────────────────────────────────────── */
+
+  .bridge-backup-code {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--bridge-muted-bg, var(--bridge-bg-muted, #f3f4f6));
+    border-radius: 0.5rem;
+  }
+
+  .bridge-backup-code code {
+    flex: 1;
+    font-size: calc(1.125 * var(--bridge-text-base, 1rem));
+    font-family: monospace;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  /* ─── TenantSelector ─────────────────────────────────────────────────────── */
+
+  .bridge-tenant-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .bridge-tenant-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    font-family: inherit;
+  }
+
+  .bridge-tenant-item:disabled,
+  .bridge-tenant-item[data-loading="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .bridge-tenant-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    font-weight: 600;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .bridge-tenant-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .bridge-tenant-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .bridge-tenant-name {
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-label, 500);
+  }
+
+  .bridge-tenant-user {
+    font-size: calc(0.75 * var(--bridge-text-base, 1rem));
+  }
+
+  /* ─── TeamManagementPanel ────────────────────────────────────────────────── */
+
+  .bridge-team-tabs {
+    display: flex;
+    margin-bottom: 1.5rem;
+  }
+
+  .bridge-team-tab {
+    padding: 0.75rem 1rem;
+    border: none;
+    background: transparent;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  :where(.bridge-team-tabs) {
+    border-bottom: 1px solid var(--bridge-border);
+  }
+
+  :where(.bridge-team-tab) {
+    color: var(--bridge-muted);
+  }
+
+  :where(.bridge-team-tab[data-active="true"]) {
+    color: var(--bridge-primary);
+    box-shadow: inset 0 -2px 0 var(--bridge-primary);
+  }
+
+  /* ─── TeamUserList ───────────────────────────────────────────────────────── */
+
+  .bridge-team-users-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .bridge-team-users-title {
+    margin: 0;
+    font-size: calc(1.125 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-heading, 600);
+  }
+
+  .bridge-team-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 3rem 1rem;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  .bridge-team-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+  }
+
+  .bridge-team-empty p {
+    margin: 0 0 1rem;
+  }
+
+  .bridge-team-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .bridge-team-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  .bridge-team-table th {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    font-weight: var(--bridge-font-weight-label, 500);
+    font-size: calc(0.75 * var(--bridge-text-base, 1rem));
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .bridge-team-table td {
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+  }
+
+  .bridge-team-user-cell {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .bridge-team-user-name { font-weight: var(--bridge-font-weight-label, 500); }
+
+  .bridge-team-user-email { font-size: calc(0.75 * var(--bridge-text-base, 1rem)); }
+
+  .bridge-team-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    font-size: calc(0.75 * var(--bridge-text-base, 1rem));
+  }
+
+  .bridge-team-status {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    font-size: calc(0.75 * var(--bridge-text-base, 1rem));
+  }
+
+  .bridge-team-actions-cell {
+    width: 48px;
+    text-align: right;
+  }
+
+  /* ─── TeamProfileForm / TeamWorkspaceForm ────────────────────────────────── */
+
+  .bridge-team-section-title {
+    margin: 0 0 1.5rem;
+    font-size: calc(1.125 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-heading, 600);
+  }
+
+  .bridge-team-alert {
+    margin-bottom: 1rem;
+  }
+
+  .bridge-team-form {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .bridge-team-form-group {
+    margin-bottom: 1rem;
+  }
+
+  .bridge-team-form-group label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  .bridge-team-form-group input,
+  .bridge-team-form-group select,
+  .bridge-team-form-group textarea {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+
+  .bridge-team-form-group textarea {
+    resize: vertical;
+  }
+
+  .bridge-team-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .bridge-team-readonly {
+    padding: 0.5rem 0;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  .bridge-team-form-actions {
+    margin-top: 0.5rem;
+  }
+
+  .bridge-team-logo {
+    margin-bottom: 1.5rem;
+  }
+
+  .bridge-team-logo img {
+    max-width: 120px;
+    max-height: 60px;
+    object-fit: contain;
+  }
+
+  .bridge-team-checkbox-label {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+
+  .bridge-team-checkbox-label input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  /* ─── TeamUserActionsMenu ────────────────────────────────────────────────── */
+
+  .bridge-team-actions {
+    position: relative;
+    display: inline-block;
+  }
+
+  .bridge-team-actions-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .bridge-team-actions-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    z-index: 10;
+    min-width: 160px;
+  }
+
+  :where(.bridge-team-actions-menu) {
+    background: var(--bridge-bg);
+    color: var(--bridge-foreground);
+    border: 1px solid var(--bridge-border);
+    border-radius: var(--bridge-border-radius);
+  }
+
+  :where(.bridge-team-table th) {
+    color: var(--bridge-muted);
+    border-bottom: 1px solid var(--bridge-border);
+  }
+
+  :where(.bridge-team-table td) {
+    border-bottom: 1px solid var(--bridge-border);
+  }
+
+  .bridge-team-actions-item {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    background: transparent;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  /* ─── Team Dialogs ───────────────────────────────────────────────────────── */
+
+  /* The team dialogs carry [data-bridge-team-dialog]; the upgrade dialog the class. */
+  .bridge-team-dialog,
+  [data-bridge-team-dialog] {
+    border: none;
+    padding: 0;
+    max-width: 400px;
+    width: 90%;
+  }
+
+  :where(.bridge-team-dialog, [data-bridge-team-dialog]) {
+    background: var(--bridge-bg);
+    color: var(--bridge-foreground);
+    border-radius: var(--bridge-border-radius);
+  }
+
+  .bridge-team-dialog::backdrop,
+  [data-bridge-team-dialog]::backdrop {
+    background: var(--bridge-overlay);
+  }
+
+  .bridge-team-dialog-content {
+    padding: 1.5rem;
+  }
+
+  .bridge-team-dialog-title {
+    margin: 0 0 0.5rem;
+    font-size: calc(1.125 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-heading, 600);
+  }
+
+  .bridge-team-dialog-message,
+  .bridge-team-dialog-subtitle {
+    margin: 0 0 1rem;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  .bridge-team-dialog-error {
+    margin-bottom: 1rem;
+  }
+
+  .bridge-team-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  /* ─── ApiTokenManagement ─────────────────────────────────────────────────── */
+
+  [data-bridge-api-tokens] {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 1rem;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-title {
+    font-size: calc(1.25 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-heading, 600);
+    margin: 0;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-subtitle {
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    margin: 0.25rem 0 0;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-error-banner,
+  [data-bridge-api-tokens] .bridge-api-success-banner {
+    padding: 0.75rem;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  [data-bridge-api-tokens] .bridge-api-new-token-banner {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-new-token-warning {
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-label, 500);
+    margin: 0;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-new-token-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-token-input {
+    font-family: monospace;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    flex: 1;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-empty {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  [data-bridge-api-tokens][data-loading="true"] .bridge-api-empty {
+    opacity: 0.6;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-table {
+    width: 100%;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    border-collapse: collapse;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-th {
+    padding: 0.75rem 1rem;
+    font-size: calc(0.75 * var(--bridge-text-base, 1rem));
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: var(--bridge-font-weight-label, 500);
+    text-align: left;
+    border-bottom: 1px solid var(--bridge-border);
+    color: var(--bridge-muted);
+  }
+
+  [data-bridge-api-tokens] .bridge-api-td,
+  [data-bridge-api-tokens] .bridge-api-td-name,
+  [data-bridge-api-tokens] .bridge-api-td-muted {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--bridge-border);
+  }
+
+  [data-bridge-api-tokens] .bridge-api-td-muted {
+    color: var(--bridge-muted);
+  }
+
+  [data-bridge-api-tokens] .bridge-api-td-actions {
+    padding: 0.75rem 1rem;
+    text-align: right;
+    border-bottom: 1px solid var(--bridge-border);
+  }
+
+  [data-bridge-api-tokens] .bridge-api-privileges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-inline-form {
+    border: 1px solid var(--bridge-border);
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-inline-form-title {
+    font-size: calc(0.9375 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-heading, 600);
+    margin: 0 0 0.875rem;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-inline-form-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-inline-form-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-inline-field {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 160px;
+    min-width: 0;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-inline-field--narrow {
+    flex: 0 1 160px;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-inline-form-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    padding-top: 0.25rem;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-hint {
+    font-size: calc(0.75 * var(--bridge-text-base, 1rem));
+    margin: 0.25rem 0 0;
+  }
+
+  [data-bridge-api-tokens] .bridge-api-required {
+    /* intentionally unstyled — consumer should color this */
+  }
+
+  [data-bridge-api-tokens] .bridge-api-form-error {
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  [data-bridge-api-tokens] .bridge-privilege-picker { position: relative; }
+  [data-bridge-api-tokens] .bridge-privilege-chips { display: flex; flex-wrap: wrap; gap: 0.375rem; min-height: 2.25rem; cursor: pointer; padding: 0.375rem 0.5rem; align-items: center; }
+  [data-bridge-api-tokens] .bridge-privilege-chip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.5rem; font-size: calc(0.75 * var(--bridge-text-base, 1rem)); }
+  [data-bridge-api-tokens] .bridge-privilege-chip button { background: none; border: none; cursor: pointer; padding: 0; line-height: 1; }
+  [data-bridge-api-tokens] .bridge-privilege-placeholder { font-size: calc(0.875 * var(--bridge-text-base, 1rem)); }
+  [data-bridge-api-tokens] .bridge-privilege-dropdown { position: absolute; z-index: 20; width: 100%; max-height: 200px; overflow-y: auto; top: 100%; left: 0; }
+  [data-bridge-api-tokens] .bridge-privilege-search { display: block; width: 100%; padding: 0.375rem 0.5rem; font-size: calc(0.875 * var(--bridge-text-base, 1rem)); font-family: inherit; box-sizing: border-box; border: none; border-bottom: 1px solid; outline: none; }
+  [data-bridge-api-tokens] .bridge-privilege-option { display: flex; flex-direction: column; align-items: flex-start; width: 100%; padding: 0.375rem 0.75rem; background: none; border: none; cursor: pointer; text-align: left; font-family: inherit; }
+  [data-bridge-api-tokens] .bridge-privilege-option-key { font-size: calc(0.875 * var(--bridge-text-base, 1rem)); font-weight: var(--bridge-font-weight-label, 500); }
+  [data-bridge-api-tokens] .bridge-privilege-option-desc { font-size: calc(0.75 * var(--bridge-text-base, 1rem)); }
+  [data-bridge-api-tokens] .bridge-privilege-empty { padding: 0.5rem 0.75rem; font-size: calc(0.875 * var(--bridge-text-base, 1rem)); }
+
+  .bridge-input {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+
+  .bridge-label {
+    display: block;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-label, 500);
+    margin-bottom: 0.375rem;
+  }
+
+  .bridge-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    font-size: calc(0.7 * var(--bridge-text-base, 1rem));
+    font-family: monospace;
+  }
+
+  .bridge-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+  }
+
+  .bridge-dialog {
+    position: fixed;
+    z-index: 51;
+    left: 50%;
+    top: 25%;
+    transform: translateX(-50%);
+    padding: 1.5rem;
+    width: 90vw;
+    max-width: 400px;
+  }
+
+  .bridge-dialog-title {
+    font-size: calc(1.125 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-heading, 600);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .bridge-dialog-body {
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    margin: 0 0 1.25rem 0;
+  }
+
+  .bridge-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  /* ─── PlanSelector ───────────────────────────────────────────────────────── */
+
+  [data-bridge-plan-selector] {
+    position: relative;
+  }
+
+  [data-bridge-plan-selector][data-loading="true"] {
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  .bridge-plan-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+  }
+
+  .bridge-plan-empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  .bridge-plan-payment-failed {
+    margin-bottom: 1.5rem;
+  }
+
+  .bridge-plan-portal-btn {
+    margin-top: 0.75rem;
+  }
+
+  /* TBP-813 — a heading beside the interval switch (`heading` prop). */
+  .bridge-plan-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .bridge-plan-heading {
+    margin: 0;
+    font-size: calc(1.05 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-heading, 600);
+  }
+
+  .bridge-plan-head .bridge-plan-interval-tabs {
+    margin: 0;
+  }
+
+  .bridge-plan-interval-tabs {
+    /* Centered above the plan cards; flex + fit-content (not inline-flex) so
+       auto margins can center it regardless of the host page's text alignment. */
+    display: flex;
+    width: fit-content;
+    margin-inline: auto;
+    gap: 0.25rem;
+    margin-bottom: 1.25rem;
+    padding: 0.25rem;
+    border: 1px solid var(--bridge-border);
+    border-radius: var(--bridge-border-radius);
+    background: var(--bridge-card-bg, var(--bridge-bg));
+  }
+
+  .bridge-plan-interval-tab {
+    appearance: none;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    font-size: calc(0.8125 * var(--bridge-text-base, 1rem));
+    padding: 0.375rem 0.875rem;
+    border-radius: calc(var(--bridge-border-radius) - 0.2rem);
+    color: var(--bridge-muted);
+  }
+
+  .bridge-plan-interval-tab[data-active="true"] {
+    background: var(--bridge-primary);
+    color: var(--bridge-primary-fg, var(--bridge-primary-foreground, #ffffff));
+  }
+
+  .bridge-plan-unavailable {
+    margin: 0;
+    font-size: calc(0.8125 * var(--bridge-text-base, 1rem));
+    color: var(--bridge-muted);
+  }
+
+  /* Plan-change confirmation dialog + success notice (TBP-33) */
+  .bridge-plan-success {
+    margin-bottom: 1rem;
+  }
+
+  .bridge-plan-confirm-backdrop {
+    position: fixed;
+    inset: 0;
+    background: var(--bridge-overlay);
+    display: grid;
+    place-items: center;
+    z-index: 1000;
+    padding: 1.25rem;
+  }
+
+  .bridge-plan-confirm {
+    background: var(--bridge-bg);
+    border: 1px solid var(--bridge-border);
+    border-radius: var(--bridge-border-radius);
+    box-shadow: var(--bridge-card-shadow, 0 24px 60px -12px rgba(0, 0, 0, 0.35));
+    max-width: 26rem;
+    width: 100%;
+    padding: 1.25rem 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .bridge-plan-confirm-title {
+    margin: 0;
+    font-size: calc(1 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-heading, 600);
+  }
+
+  .bridge-plan-confirm-body {
+    margin: 0;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    line-height: 1.5;
+  }
+
+  .bridge-plan-confirm-note {
+    margin: 0;
+    font-size: calc(0.8125 * var(--bridge-text-base, 1rem));
+    color: var(--bridge-muted);
+    line-height: 1.5;
+  }
+
+  .bridge-plan-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .bridge-plan-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  /* TBP-813 — cards, and the current-plan panel, are surfaces of their own, so
+     they read on any app background and take the app's tokens. */
+  [data-bridge-plan-card],
+  .bridge-billing-summary {
+    background: var(--bridge-card-bg, var(--bridge-bg));
+    color: var(--bridge-foreground);
+    border: 1px solid var(--bridge-border);
+    border-radius: calc(var(--bridge-border-radius) * 1.5);
+    box-shadow: var(--bridge-card-shadow, 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.04));
+  }
+
+  .bridge-billing-summary {
+    padding: 1.1rem 1.25rem;
+    background: color-mix(in srgb, var(--bridge-primary) 6%, var(--bridge-card-bg, var(--bridge-bg)));
+  }
+
+  .bridge-billing-summary .bss-plan {
+    font-size: calc(1.2 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-heading, 700);
+  }
+
+  .bridge-billing-summary-meta {
+    font-size: calc(0.85 * var(--bridge-text-base, 1rem));
+    color: var(--bridge-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  [data-bridge-plan-card] {
+    position: relative;
+    padding: 1.35rem 1.25rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  [data-bridge-plan-card][data-current="true"] {
+    border: 2px solid var(--bridge-primary);
+    padding: calc(1.35rem - 1px) calc(1.25rem - 1px) calc(1.25rem - 1px);
+  }
+
+  .bridge-plan-current-flag {
+    position: absolute;
+    top: -0.7rem;
+    left: 1.1rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 9999px;
+    font-size: calc(0.7 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-label, 600);
+    background: var(--bridge-primary);
+    color: var(--bridge-primary-fg, var(--bridge-primary-foreground, #ffffff));
+  }
+
+  .bridge-plan-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .bridge-plan-name {
+    margin: 0;
+    font-size: calc(1 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-heading, 600);
+  }
+
+  .bridge-plan-trial-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    font-size: calc(0.7 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-label, 600);
+    white-space: nowrap;
+    border-radius: 9999px;
+    border: 1px solid var(--bridge-alert-info-border);
+    background: var(--bridge-alert-info-bg);
+    color: var(--bridge-alert-info-fg);
+  }
+
+  .bridge-plan-price {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bridge-plan-price-amount {
+    font-size: calc(1.9 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-heading, 700);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  .bridge-plan-price-interval {
+    font-size: calc(0.85 * var(--bridge-text-base, 1rem));
+    color: var(--bridge-muted);
+  }
+
+  .bridge-plan-description {
+    margin: 0;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    color: var(--bridge-muted);
+  }
+
+  /* TBP-755 — the features a plan includes. */
+  .bridge-plan-features {
+    margin: 0;
+    padding: 0.9rem 0 0;
+    border-top: 1px solid var(--bridge-border);
+    list-style: none;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .bridge-plan-feature {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .bridge-plan-feature-check {
+    flex: none;
+    margin-top: 0.2rem;
+    color: var(--bridge-primary);
+  }
+
+  .bridge-plan-prices {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: auto;
+  }
+
+  .bridge-plan-select-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  [data-bridge-plan-card][data-current="true"] .bridge-plan-select-btn:disabled {
+    background: transparent;
+    color: var(--bridge-muted);
+    opacity: 1;
+  }
+
+  /* ─── BridgeCheckoutNotice (TBP-813) ─────────────────────────────────────── */
+
+  .bridge-checkout-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--bridge-alert-success-border);
+    border-radius: var(--bridge-border-radius);
+    background: var(--bridge-alert-success-bg);
+    color: var(--bridge-alert-success-fg);
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  .bridge-checkout-notice-icon {
+    flex: none;
+    margin-top: 0.1rem;
+  }
+
+  .bridge-checkout-notice-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .bridge-checkout-notice-title {
+    display: block;
+    font-weight: var(--bridge-font-weight-heading, 600);
+  }
+
+  .bridge-checkout-notice-close {
+    appearance: none;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-size: calc(1.15 * var(--bridge-text-base, 1rem));
+    line-height: 1;
+    padding: 0 0.2rem;
+    opacity: 0.7;
+  }
+
+  .bridge-checkout-notice-close:hover,
+  .bridge-checkout-notice-close:focus-visible {
+    opacity: 1;
+  }
+
+  /* ─── WorkspaceSelector ─────────────────────────────────────────────── */
+
+  [data-bridge-workspace-selector] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  [data-bridge-workspace-loading] {
+    display: flex;
+    justify-content: center;
+    padding: 1.5rem 0;
+  }
+
+  [data-bridge-workspace-list] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  [data-bridge-workspace-item] {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+
+  [data-bridge-workspace-item]:hover:not(:disabled) {
+    background: var(--bridge-muted-bg, var(--bridge-bg-muted, #f3f4f6));
+  }
+
+  [data-bridge-workspace-item][data-active="true"] {
+    background: var(--bridge-primary-light, color-mix(in srgb, var(--bridge-primary) 10%, #ffffff));
+    border-color: var(--bridge-primary);
+  }
+
+  [data-bridge-workspace-item][data-loading="true"] {
+    opacity: 0.7;
+    cursor: wait;
+  }
+
+  [data-bridge-workspace-item]:disabled {
+    cursor: not-allowed;
+  }
+
+  [data-bridge-workspace-avatar] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.375rem;
+    background: var(--bridge-primary);
+    color: var(--bridge-primary-fg, var(--bridge-primary-foreground, #ffffff));
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    font-weight: 600;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  [data-bridge-workspace-avatar] img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  [data-bridge-workspace-info] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  [data-bridge-workspace-name] {
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-label, 500);
+    color: var(--bridge-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  [data-bridge-workspace-user] {
+    font-size: calc(0.75 * var(--bridge-text-base, 1rem));
+    color: var(--bridge-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }

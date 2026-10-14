@@ -152,87 +152,90 @@
 {/if}
 
 <style>
-  .bridge-quota-banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    font: inherit;
-    transition: opacity 280ms ease, transform 320ms ease;
-  }
+  /* TBP-814 — in the `bridge` layer with the stylesheet, so any CSS of the app wins. */
+  @layer bridge {
+    .bridge-quota-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font: inherit;
+      transition: opacity 280ms ease, transform 320ms ease;
+    }
 
-  .bqb-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    flex: 1 1 auto;
-  }
+    .bqb-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      flex: 1 1 auto;
+    }
 
-  .bqb-title {
-    font-weight: 600;
-  }
+    .bqb-title {
+      font-weight: var(--bridge-font-weight-heading, 600);
+    }
 
-  .bqb-body {
-    font-size: 0.875rem;
-    opacity: 0.85;
-  }
+    .bqb-body {
+      font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+      opacity: 0.85;
+    }
 
-  .bqb-meter {
-    margin-top: 0.25rem;
-    width: 100%;
-    height: 0.375rem;
-    background: color-mix(in srgb, currentColor 15%, transparent);
-    border-radius: 999px;
-    overflow: hidden;
-  }
+    .bqb-meter {
+      margin-top: 0.25rem;
+      width: 100%;
+      height: 0.375rem;
+      background: color-mix(in srgb, currentColor 15%, transparent);
+      border-radius: 999px;
+      overflow: hidden;
+    }
 
-  .bqb-meter-fill {
-    height: 100%;
-    background: currentColor;
-    border-radius: 999px;
-    transition: width 320ms ease;
-  }
-
-  .bqb-cta {
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
-    border: 1px solid currentColor;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    font-weight: 500;
-    cursor: pointer;
-    flex: 0 0 auto;
-  }
-
-  .bqb-cta:hover {
-    background: currentColor;
-    color: var(--bridge-bg, #ffffff);
-  }
-
-  /* Chassis — rail only for US-11. */
-  .bqb-chassis-rail {
-    border-left: 4px solid currentColor;
-    border-radius: 0 0.5rem 0.5rem 0;
-  }
-
-  /* Severity tokens — mirror BridgeBillingNotice for visual consistency. */
-  .bqb-severity-warn {
-    background: var(--bridge-alert-warning-bg, #fffbeb);
-    color: var(--bridge-alert-warning-fg, #92400e);
-  }
-
-  .bqb-severity-critical {
-    background: var(--bridge-alert-error-bg, #fef2f2);
-    color: var(--bridge-alert-error-fg, #991b1b);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .bridge-quota-banner,
     .bqb-meter-fill {
-      transition: none;
+      height: 100%;
+      background: currentColor;
+      border-radius: 999px;
+      transition: width 320ms ease;
+    }
+
+    .bqb-cta {
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      border: 1px solid currentColor;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      font-weight: var(--bridge-font-weight-button, 500);
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+
+    .bqb-cta:hover {
+      background: currentColor;
+      color: var(--bridge-bg, #ffffff);
+    }
+
+    /* Chassis — rail only for US-11. */
+    .bqb-chassis-rail {
+      border-left: 4px solid currentColor;
+      border-radius: 0 0.5rem 0.5rem 0;
+    }
+
+    /* Severity tokens — mirror BridgeBillingNotice for visual consistency. */
+    .bqb-severity-warn {
+      background: var(--bridge-alert-warning-bg, #fffbeb);
+      color: var(--bridge-alert-warning-fg, #92400e);
+    }
+
+    .bqb-severity-critical {
+      background: var(--bridge-alert-error-bg, #fef2f2);
+      color: var(--bridge-alert-error-fg, #991b1b);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .bridge-quota-banner,
+      .bqb-meter-fill {
+        transition: none;
+      }
     }
   }
 </style>

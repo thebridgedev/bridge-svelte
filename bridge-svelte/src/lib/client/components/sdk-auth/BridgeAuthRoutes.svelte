@@ -192,11 +192,14 @@
 {/if}
 
 <style>
-  /* The default frame — the centred container every guide page used to paste.
-     A `frame` snippet replaces it entirely. */
-  .bridge-auth-page {
-    display: flex;
-    justify-content: center;
-    padding: var(--bridge-auth-page-padding, 3rem 1rem);
+  /* TBP-814 — in the `bridge` layer with the stylesheet, so any CSS of the app wins. */
+  @layer bridge {
+    /* The default frame — the centred container every guide page used to paste.
+       A `frame` snippet replaces it entirely. */
+    .bridge-auth-page {
+      display: flex;
+      justify-content: center;
+      padding: var(--bridge-auth-page-padding, 3rem 1rem);
+    }
   }
 </style>

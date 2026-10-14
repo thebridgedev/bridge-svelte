@@ -77,57 +77,60 @@
 </span>
 
 <style>
-  .bridge-subscription-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    font: inherit;
-  }
+  /* TBP-814 — in the `bridge` layer with the stylesheet, so any CSS of the app wins. */
+  @layer bridge {
+    .bridge-subscription-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font: inherit;
+    }
 
-  .bss-plan {
-    font-weight: 600;
-  }
+    .bss-plan {
+      font-weight: var(--bridge-font-weight-heading, 600);
+    }
 
-  .bss-badge {
-    display: inline-block;
-    padding: 0.125rem 0.5rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    text-transform: lowercase;
-    background: var(--bridge-muted-bg, var(--bridge-bg-muted, #f3f4f6));
-    color: var(--bridge-foreground, #111827);
-  }
+    .bss-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: calc(0.75 * var(--bridge-text-base, 1rem));
+      font-weight: var(--bridge-font-weight-label, 500);
+      text-transform: lowercase;
+      background: var(--bridge-muted-bg, var(--bridge-bg-muted, #f3f4f6));
+      color: var(--bridge-foreground, #111827);
+    }
 
-  .bss-badge-active {
-    background: var(--bridge-alert-success-bg, #f0fdf4);
-    color: var(--bridge-alert-success-fg, #166534);
-  }
+    .bss-badge-active {
+      background: var(--bridge-alert-success-bg, #f0fdf4);
+      color: var(--bridge-alert-success-fg, #166534);
+    }
 
-  .bss-badge-trial {
-    background: var(--bridge-alert-info-bg, #eff6ff);
-    color: var(--bridge-alert-info-fg, #1e40af);
-  }
+    .bss-badge-trial {
+      background: var(--bridge-alert-info-bg, #eff6ff);
+      color: var(--bridge-alert-info-fg, #1e40af);
+    }
 
-  .bss-badge-past_due,
-  .bss-badge-cancel_at_period_end {
-    background: var(--bridge-alert-warning-bg, #fffbeb);
-    color: var(--bridge-alert-warning-fg, #92400e);
-  }
+    .bss-badge-past_due,
+    .bss-badge-cancel_at_period_end {
+      background: var(--bridge-alert-warning-bg, #fffbeb);
+      color: var(--bridge-alert-warning-fg, #92400e);
+    }
 
-  .bss-badge-canceled {
-    background: var(--bridge-alert-error-bg, #fef2f2);
-    color: var(--bridge-alert-error-fg, #991b1b);
-  }
+    .bss-badge-canceled {
+      background: var(--bridge-alert-error-bg, #fef2f2);
+      color: var(--bridge-alert-error-fg, #991b1b);
+    }
 
-  .bss-loading,
-  .bss-empty {
-    color: var(--bridge-muted, #6b7280);
-    font-style: italic;
-  }
+    .bss-loading,
+    .bss-empty {
+      color: var(--bridge-muted, #6b7280);
+      font-style: italic;
+    }
 
-  .bss-error,
-  .bss-error-reason {
-    color: var(--bridge-alert-error-fg, #991b1b);
+    .bss-error,
+    .bss-error-reason {
+      color: var(--bridge-alert-error-fg, #991b1b);
+    }
   }
 </style>

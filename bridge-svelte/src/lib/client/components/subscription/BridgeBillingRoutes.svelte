@@ -172,66 +172,69 @@
 {/if}
 
 <style>
-  /* The default frame. A `frame` snippet replaces it entirely. */
-  .bridge-billing-page {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-    max-width: var(--bridge-billing-page-width, 60rem);
-    margin: 0 auto;
-    padding: var(--bridge-billing-page-padding, 3rem 1rem);
-  }
+  /* TBP-814 — in the `bridge` layer with the stylesheet, so any CSS of the app wins. */
+  @layer bridge {
+    /* The default frame. A `frame` snippet replaces it entirely. */
+    .bridge-billing-page {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      max-width: var(--bridge-billing-page-width, 60rem);
+      margin: 0 auto;
+      padding: var(--bridge-billing-page-padding, 3rem 1rem);
+    }
 
-  .bridge-billing-heading {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 700;
-  }
+    .bridge-billing-heading {
+      margin: 0;
+      font-size: calc(1.5 * var(--bridge-text-base, 1rem));
+      font-weight: var(--bridge-font-weight-heading, 700);
+    }
 
-  .bridge-billing-text {
-    margin: 0;
-    opacity: 0.8;
-  }
+    .bridge-billing-text {
+      margin: 0;
+      opacity: 0.8;
+    }
 
-  /* The subtitle sits with its heading, closer than the page's gap. */
-  .bridge-billing-heading + .bridge-billing-text {
-    margin-top: -0.75rem;
-  }
+    /* The subtitle sits with its heading, closer than the page's gap. */
+    .bridge-billing-heading + .bridge-billing-text {
+      margin-top: -0.75rem;
+    }
 
-  .bridge-billing-current {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.75rem;
-  }
+    .bridge-billing-current {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+    }
 
-  /* The current-plan panel's layout; its surface is in styles.css. */
-  .bridge-billing-summary {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
+    /* The current-plan panel's layout; its surface is in styles.css. */
+    .bridge-billing-summary {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
 
-  .bridge-billing-summary-plan {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-    min-width: 0;
-  }
+    .bridge-billing-summary-plan {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
+      min-width: 0;
+    }
 
-  .bridge-billing-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    opacity: 0.7;
-  }
+    .bridge-billing-label {
+      font-size: calc(0.75 * var(--bridge-text-base, 1rem));
+      font-weight: var(--bridge-font-weight-label, 600);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.7;
+    }
 
-  .bridge-billing-action {
-    align-self: flex-start;
-    text-decoration: none;
+    .bridge-billing-action {
+      align-self: flex-start;
+      text-decoration: none;
+    }
   }
 </style>

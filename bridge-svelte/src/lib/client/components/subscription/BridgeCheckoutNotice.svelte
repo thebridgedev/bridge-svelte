@@ -24,7 +24,7 @@
     /** Show a close button. @default true */
     dismissible?: boolean;
     /** Replaces the banner's text. Receives the result, with the plan name when known. */
-    children?: Snippet<[BridgeCheckoutResult & { planName: string | null }]>;
+    children?: Snippet<[Omit<BridgeCheckoutResult, 'planName'> & { planName: string | null }]>;
   }
 
   let { class: className = '', dismissible = true, children }: Props = $props();

@@ -91,7 +91,7 @@ Customise in-app pages by climbing only as far as you need: `--bridge-*` CSS tok
 
 ## Subscriptions and plan limits
 
-With plans, one more file serves the subscription page, the paywall and both checkout return pages (`/subscription`, `/subscription/plan`, `/subscription/success`, `/subscription/error`):
+With plans, one more file serves the subscription page, the paywall and the checkout return pages (`/subscription`, `/subscription/plan`, `/subscription/success`, `/subscription/error`). A completed checkout comes back to `/subscription` with a confirmation banner; `billing.successRoute` sends it anywhere else:
 
 ```svelte
 <!-- src/routes/subscription/[...bridge]/+page.svelte -->
@@ -136,7 +136,7 @@ A feature a plan sells goes on the plan (`bridge plan feature add pro analytics`
 | Setup | `bridgeBootstrap`, `BridgeBootstrap`, `bridgeFetch` |
 | Sign-in | `BridgeAuthRoutes`, `LoginForm`, `SignupForm`, `ForgotPassword`, `MagicLink`, `PasskeyLogin`, `PasskeySetup`, `PasskeyRequestSetupLink`, `MfaChallenge`, `MfaSetup`, `SsoButton`, `WorkspaceSelector`, `TenantSelector`, `readReturnTo` |
 | State | `auth`, `getBridgeAuth`, `isAuthenticated`, `profileStore`, `tokenStore`, `bridge` (app, tenant, user, usage), `entitlements`, `useQuota` |
-| Billing | `BridgeBillingRoutes`, `BridgePaywallPage`, `BridgePaywall`, `PlanSelector`, `BillingPortalButton`, `BridgeBillingNotice`, `BridgeSubscriptionStatus`, `BridgeQuotaBanner`, `QuotaGate`, `BridgeUpgradeDialog`, `Entitled` (checks the plan without a flag; only when asked for no flag), `onBridgeQuotaExceeded` |
+| Billing | `BridgeBillingRoutes`, `BridgePaywallPage`, `BridgePaywall`, `PlanSelector`, `BillingPortalButton`, `BridgeCheckoutNotice`, `checkoutResult`, `BridgeBillingNotice`, `BridgeSubscriptionStatus`, `BridgeQuotaBanner`, `QuotaGate`, `BridgeUpgradeDialog`, `Entitled` (checks the plan without a flag; only when asked for no flag), `onBridgeQuotaExceeded` |
 | Teams | `TeamManagementPanel`, `TeamUserList`, `TeamProfileForm`, `TeamWorkspaceForm`, `TeamAddUserDialog`, `TeamEditUserDialog`, `TeamConfirmDialog`, `TeamUserActionsMenu` |
 | Developer | `ApiTokenManagement` (a workspace's API tokens), `RealtimeDevBadge`, `realtimeStatus` |
 | Flags (`@nebulr-group/bridge-svelte/flags`) | `useFlag`, `FeatureFlag` |

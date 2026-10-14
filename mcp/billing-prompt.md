@@ -115,16 +115,18 @@ That one file serves every billing page, and Bridge's defaults point at them —
 
 | Address | What it shows | Default of |
 |---|---|---|
-| `/subscription` | Current plan, `<PlanSelector>` to upgrade/downgrade, "Manage billing" (Stripe portal) | `billing.manageRoute` — where the Upgrade/Manage buttons in `<BridgeBillingNotice>` and `<BridgeQuotaBanner>` go |
+| `/subscription` | Current plan, `<PlanSelector>` to upgrade/downgrade, "Manage billing" (Stripe portal). A completed checkout lands here with a confirmation banner | `billing.manageRoute` — where the Upgrade/Manage buttons in `<BridgeBillingNotice>` and `<BridgeQuotaBanner>` go; also `billing.successRoute` |
 | `/subscription/plan` | The paywall: plan picker for a workspace with no plan | `billing.paywallRoute` |
-| `/subscription/success` | Where a completed checkout lands; re-reads the subscription | — |
+| `/subscription/success` | An optional separate confirmation page; used only when `billing.successRoute` points at it | — |
 | `/subscription/error` | Where a checkout that could not be confirmed lands | `billing.paymentErrorRoute` |
 
 An unknown address under `/subscription` gets the app's own 404. `/subscription` is protected by the default route rules — do not mark it public; a signed-out visitor has no plan to show.
 
 **Customising, cheapest first:** `--bridge-*` CSS tokens; a `frame(page, content)` snippet replacing everything around each page and a `heading(page)` snippet replacing each heading; or take over one page by creating it (`src/routes/subscription/+page.svelte` wins over the catch-all, the other pages keep working). Do not recreate the whole set by hand.
 
-**Where Stripe returns.** Stripe sends the user back to your app's `callbackUrl` — the same route as the OAuth callback, which defaults to `<your origin>/auth/oauth-callback` — with `?stripe_success=1&session_id=…` or `?stripe_cancel=1`, plus the destination as `redirect`. `bridgeBootstrap()` in your root `+layout.ts` recognises it there: on success it confirms the checkout with Bridge, refreshes the token so the new plan is in it, and redirects to the success page; on cancel back to the page the checkout started from. If confirmation fails it redirects to `/subscription/error`. So the callback route must exist (the SDK auth and hosted auth guides already provide it) and must be public; no other pages or URL configuration are needed. Only same-origin paths are followed as a destination; anything else falls back to `/subscription`.
+**Where Stripe returns.** Stripe sends the user back to your app's `callbackUrl` — the same route as the OAuth callback, which defaults to `<your origin>/auth/oauth-callback` — with `?stripe_success=1&session_id=…` or `?stripe_cancel=1`, plus the destination as `redirect`. `bridgeBootstrap()` in your root `+layout.ts` recognises it there: on success it confirms the checkout with Bridge, refreshes the token so the new plan is in it, and redirects to `billing.successRoute` (the subscription page, which shows a confirmation banner); on cancel back to the page the checkout started from. If confirmation fails it redirects to `/subscription/error`. So the callback route must exist (the SDK auth and hosted auth guides already provide it) and must be public; no other pages or URL configuration are needed. Only same-origin paths are followed as a destination; anything else falls back to `/subscription`.
+
+**Landing somewhere else after checkout.** If the developer wants users back in the app after paying, set `billing: { successRoute: '/dashboard' }` (their page) in `bridgeBootstrap()`. To confirm it there, render `<BridgeCheckoutNotice />` on that page or in the layout; it shows once, only right after a checkout. For custom copy, read the `checkoutResult` store. Do not build a confirmation page by hand.
 
 **`<PlanSelector>`** is the picker these pages render. Use it directly only for a plan picker somewhere else in the app:
 

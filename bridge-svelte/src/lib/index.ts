@@ -129,6 +129,11 @@ export { default as PlanSelector } from './client/components/subscription/PlanSe
 export { default as BridgeBillingRoutes } from './client/components/subscription/BridgeBillingRoutes.svelte';
 export { default as BridgePaywallPage } from './client/components/subscription/BridgePaywallPage.svelte';
 export { default as BillingPortalButton } from './client/components/subscription/BillingPortalButton.svelte';
+// TBP-813 — a completed checkout lands on `billing.successRoute` (the
+// subscription page by default); this banner, or `checkoutResult`, says so.
+export { default as BridgeCheckoutNotice } from './client/components/subscription/BridgeCheckoutNotice.svelte';
+export { checkoutResult, takeCheckoutResult, clearCheckoutResult } from './client/checkout-result.js';
+export type { BridgeCheckoutResult } from './client/checkout-result.js';
 export { BRIDGE_BILLING_PAGES, BRIDGE_BILLING_DEFAULTS, parseBridgeBillingRoute } from './client/billing-routes.js';
 export type { BridgeBillingPage, BridgeBillingRoute } from './client/billing-routes.js';
 

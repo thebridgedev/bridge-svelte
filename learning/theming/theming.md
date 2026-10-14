@@ -48,9 +48,11 @@ The plugin declares its defaults on `:where(:root)`, which has zero specificity,
 | `--bridge-muted-bg` | `#f3f4f6` | Subtle fills: tab tracks, hovers, the MFA backup code |
 | `--bridge-border` | `#d1d5db` | Input, table, card and secondary button borders |
 | `--bridge-border-radius` | `6px` | Corners of inputs, buttons, alerts, cards and dialogs |
+| `--bridge-card-bg` | `--bridge-bg` | Plan cards and the current-plan panel on the subscription page |
+| `--bridge-card-shadow` | a soft 1–3px shadow | Their shadow. `none` gives a flat look, which suits most dark themes |
 | `--bridge-overlay` | `rgba(15, 23, 42, 0.45)` | Backdrop behind dialogs |
 | `--bridge-alert-error-bg` / `-fg` / `-border` | `#fef2f2` / `#991b1b` / `#fca5a5` | Errors, critical billing notices, cancelled plan badge |
-| `--bridge-alert-success-bg` / `-fg` / `-border` | `#f0fdf4` / `#166534` / `#86efac` | Confirmations, active plan badge |
+| `--bridge-alert-success-bg` / `-fg` / `-border` | `#f0fdf4` / `#166534` / `#86efac` | Confirmations, the checkout banner, active plan badge |
 | `--bridge-alert-info-bg` / `-fg` / `-border` | `#eff6ff` / `#1e40af` / `#bfdbfe` | Info notices, trial badge |
 | `--bridge-alert-warning-bg` / `-fg` / `-border` | `#fffbeb` / `#92400e` / `#fcd34d` | Warnings, a quota nearing its limit, past-due badge |
 

@@ -66,8 +66,17 @@ export interface BridgeBillingRoutes {
   paywallIsDefault: boolean;
   /** Where a failed checkout confirmation lands. */
   paymentErrorRoute: string;
-  /** Where a completed checkout lands by default: `<manageRoute>/success`. */
+  /**
+   * Where a completed checkout (or a Free pick) lands: `billing.successRoute`,
+   * else the subscription page, which shows the confirmation banner (TBP-813).
+   */
   successRoute: string;
+  /**
+   * True when `successRoute` is the default rather than the app's own choice.
+   * `<BridgeBillingRoutes>` then lands on its own subscription page, wherever
+   * its catch-all lives, instead of on `manageRoute`.
+   */
+  successIsDefault: boolean;
 }
 
 /**
@@ -83,7 +92,8 @@ export function resolveBillingRoutes(billing?: BridgeConfig['billing']): BridgeB
     paywallRoute: paywall === false ? null : paywall || BRIDGE_BILLING_DEFAULTS.paywallRoute,
     paywallIsDefault: paywall !== false && !paywall,
     paymentErrorRoute: billing?.paymentErrorRoute || BRIDGE_BILLING_DEFAULTS.paymentErrorRoute,
-    successRoute: `${manageRoute.replace(/\/+$/, '')}/success`,
+    successRoute: billing?.successRoute || manageRoute,
+    successIsDefault: !billing?.successRoute,
   };
 }
 

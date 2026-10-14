@@ -21,14 +21,15 @@ To build the page yourself, take it over by creating `src/routes/subscription/+p
   import { PlanSelector } from '@nebulr-group/bridge-svelte';
 </script>
 
-<PlanSelector successRedirect="/subscription/success" cancelRedirect="/subscription" />
+<PlanSelector successRedirect="/subscription" cancelRedirect="/subscription" />
 ```
 
 **Props:**
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `successRedirect` | `string` | `'/subscription'` | In-app route to land on after successful payment |
+| `heading` | `string` | (none) | A heading above the plans, beside the Monthly/Yearly switch |
+| `successRedirect` | `string` | `'/subscription'` | In-app route to land on after successful payment. Render `<BridgeCheckoutNotice />` there to confirm it |
 | `cancelRedirect` | `string` | `'/subscription'` | In-app route to land on if the user cancels checkout |
 | `onSelect` | `({ plan, price }) => void` | (none) | Called after a free plan is selected or a plan change completes |
 | `planCard` | `Snippet<[{ plan, prices, isCurrent, onPick }]>` | (none) | Override the default plan card layout |
@@ -39,14 +40,14 @@ All standard `HTMLAttributes<HTMLDivElement>` props (`class`, `style`, `data-*`,
 
 **Custom plan card:**
 
-The default plan cards are intentionally plain. If you want them to match your product's design, pass a **`planCard` snippet** and render the cards yourself. You get the plan data and a ready-made pick handler, and Bridge still owns the free-select / checkout / change branching. You only write markup; you never touch the SDK. Here's an example:
+The default plan cards follow your `--bridge-*` tokens (see [Theming](/theming/theming/)). If you want a different card altogether, pass a **`planCard` snippet** and render the cards yourself. You get the plan data and a ready-made pick handler, and Bridge still owns the free-select / checkout / change branching. You only write markup; you never touch the SDK. Here's an example:
 
 ```svelte
 <script lang="ts">
   import { PlanSelector, type Plan, type PriceOfferSdk } from '@nebulr-group/bridge-svelte';
 </script>
 
-<PlanSelector successRedirect="/subscription/success" cancelRedirect="/subscription">
+<PlanSelector successRedirect="/subscription" cancelRedirect="/subscription">
   {#snippet planCard({ plan, prices, isCurrent, onPick })}
     <div class="plan-card" class:current={isCurrent}>
       <h2>{plan.name}</h2>

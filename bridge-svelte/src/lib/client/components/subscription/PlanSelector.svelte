@@ -7,6 +7,8 @@
   import { ensureSubscription, getBridgeAuth, loadSubscription, subscriptionStore } from '../../../core/bridge-instance.js';
   import { refreshBilling } from '../../../core/billing-store.js';
   import { pickPlan } from './plan-pick.js';
+  import { formatAmount, intervalSuffix, minAmount, pickKind, pickLabel } from './plan-format.js';
+  import { markCheckoutComplete } from '../../checkout-result.js';
   import { getConfig } from '../../stores/config.store.js';
   import Alert from '../sdk-auth/shared/Alert.svelte';
   import Spinner from '../sdk-auth/shared/Spinner.svelte';
@@ -14,6 +16,8 @@
   type BillingInterval = PriceOfferSdk['recurrenceInterval'];
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
+    /** A heading above the plans, beside the Monthly/Yearly switch (TBP-813). */
+    heading?: string;
     successRedirect?: string;
     cancelRedirect?: string;
     /**
@@ -36,6 +40,7 @@
   }
 
   let {
+    heading,
     successRedirect = '/subscription',
     cancelRedirect = '/subscription',
     defaultInterval = 'year',
@@ -135,11 +140,6 @@
     return (plan as Plan & { features?: ReadonlyArray<{ key: string; name: string }> }).features ?? [];
   }
 
-  function minAmount(plan: Plan): number {
-    const amounts = (plan.prices ?? []).map((p) => p.amount);
-    return amounts.length > 0 ? Math.min(...amounts) : Number.POSITIVE_INFINITY;
-  }
-
   type UiState = 'idle' | 'payment-failed' | 'setup-payments' | 'select-plan' | 'active' | 'trial';
 
   const uiState = $derived<UiState>((() => {
@@ -187,15 +187,13 @@
   let successNotice = $state<string | null>(null);
   let successTimer: ReturnType<typeof setTimeout> | undefined;
 
-  const currentPlanName = $derived.by(() => {
-    const found = (plans ?? []).find((p) => p.key === currentPlanKey);
-    return found?.name ?? currentPlanKey ?? 'your current plan';
-  });
+  const currentPlan = $derived((plans ?? []).find((p) => p.key === currentPlanKey) ?? null);
+  const currentPlanName = $derived(currentPlan?.name ?? currentPlanKey ?? 'your current plan');
 
   function formatPrice(price: PriceOfferSdk): string {
     return price.amount === 0
       ? 'Free'
-      : `${price.amount} ${price.currency.toUpperCase()} / ${price.recurrenceInterval}`;
+      : `${formatAmount(price.amount, price.currency)} ${intervalSuffix(price)}`;
   }
 
   function showSuccess(message: string): void {
@@ -244,6 +242,7 @@
           leave: (url) => {
             window.location.href = url;
           },
+          complete: (picked) => markCheckoutComplete({ kind: 'plan', planName: picked.name }),
         },
       );
       if (outcome === 'confirm') {
@@ -320,7 +319,7 @@
         </div>
       {/if}
     {:else if plans}
-      {#if showIntervalTabs}
+      {#snippet intervalTabs()}
         <div
           class="bridge-plan-interval-tabs"
           data-bridge-plan-interval-tabs
@@ -339,6 +338,15 @@
             </button>
           {/each}
         </div>
+      {/snippet}
+
+      {#if heading}
+        <div class="bridge-plan-head" data-bridge-plan-head>
+          <h2 class="bridge-plan-heading">{heading}</h2>
+          {#if showIntervalTabs}{@render intervalTabs()}{/if}
+        </div>
+      {:else if showIntervalTabs}
+        {@render intervalTabs()}
       {/if}
 
       <div class="bridge-plan-cards" data-bridge-plan-cards>
@@ -346,6 +354,7 @@
           {@const isCurrent = plan.key === currentPlanKey}
           {@const onPick = (price: PriceOfferSdk) => handlePick(plan, price)}
           {@const visiblePrices = pricesForInterval(plan)}
+          {@const kind = pickKind(plan, currentPlan)}
 
           {#if planCard}
             {@render planCard({ plan, prices: plan.prices, isCurrent, interval: selectedInterval, onPick })}
@@ -354,14 +363,25 @@
               data-bridge-plan-card
               data-current={isCurrent}
               data-trial={plan.trial}
+              data-pick={kind}
               class="bridge-plan-card"
             >
+              {#if isCurrent}
+                <span class="bridge-plan-current-flag" data-bridge-plan-current-flag>Your plan</span>
+              {/if}
               <div class="bridge-plan-card-header">
                 <h3 class="bridge-plan-name">{plan.name}</h3>
                 {#if plan.trial && (plan.trialDays ?? 0) > 0}
                   <span class="bridge-plan-trial-badge">{plan.trialDays}-day trial</span>
                 {/if}
               </div>
+
+              {#if visiblePrices[0]}
+                <div class="bridge-plan-price" data-bridge-plan-price>
+                  <span class="bridge-plan-price-amount">{formatAmount(visiblePrices[0].amount, visiblePrices[0].currency)}</span>
+                  <span class="bridge-plan-price-interval">{intervalSuffix(visiblePrices[0])}</span>
+                </div>
+              {/if}
 
               {#if planDescription}
                 {@render planDescription({ plan, isCurrent })}
@@ -372,7 +392,12 @@
               {#if planFeatures(plan).length > 0}
                 <ul class="bridge-plan-features" data-bridge-plan-features aria-label={`Included in ${plan.name}`}>
                   {#each planFeatures(plan) as feature (feature.key)}
-                    <li class="bridge-plan-feature" data-feature={feature.key}>{feature.name}</li>
+                    <li class="bridge-plan-feature" data-feature={feature.key}>
+                      <svg class="bridge-plan-feature-check" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+                        <path d="M3 8.5l3.2 3L13 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                      <span>{feature.name}</span>
+                    </li>
                   {/each}
                 </ul>
               {/if}
@@ -380,27 +405,21 @@
               <div class="bridge-plan-prices">
                 {#each visiblePrices as price (price.recurrenceInterval + price.currency)}
                   <button
-                    class="bridge-btn-primary bridge-plan-select-btn"
+                    class={`${kind === 'current' || kind === 'switch' ? 'bridge-btn-secondary' : 'bridge-btn-primary'} bridge-plan-select-btn`}
                     disabled={isCurrent || picking}
                     onclick={() => onPick(price)}
                   >
-                    {#if isCurrent}
-                      Current plan
-                    {:else if price.amount === 0}
-                      Select free plan
-                    {:else}
-                      {price.amount} {price.currency.toUpperCase()} / {price.recurrenceInterval}
-                    {/if}
+                    {pickLabel(kind, plan)}{#if visiblePrices.length > 1 && !isCurrent}{` · ${formatAmount(price.amount, price.currency)}`}{/if}
                   </button>
                 {/each}
 
                 {#if plan.prices.length === 0}
                   <button
-                    class="bridge-btn-primary bridge-plan-select-btn"
+                    class={`${kind === 'current' || kind === 'switch' ? 'bridge-btn-secondary' : 'bridge-btn-primary'} bridge-plan-select-btn`}
                     disabled={isCurrent || picking}
                     onclick={() => handlePick(plan, { id: '', amount: 0, currency: 'usd', recurrenceInterval: 'month' })}
                   >
-                    {isCurrent ? 'Current plan' : 'Select plan'}
+                    {pickLabel(kind, plan)}
                   </button>
                 {:else if visiblePrices.length === 0}
                   <p class="bridge-plan-unavailable" data-bridge-plan-unavailable>

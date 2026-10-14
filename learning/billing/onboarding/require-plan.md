@@ -63,7 +63,7 @@ The redirect happens before any page renders, including before `/welcome` has ev
 |------|------|---------|-------------|
 | `heading` | `string` | `'Choose a plan'` | The page heading |
 | `children` | `Snippet` | (none) | Content between the heading and the plans |
-| `successRedirect` | `string` | `'/subscription/success'` | Where a completed checkout lands |
+| `successRedirect` | `string` | `billing.successRoute`, else `'/subscription'` | Where a completed checkout lands |
 | `cancelRedirect` | `string` | this page | Where a cancelled checkout lands |
 | `onSelect` | `({ plan, price }) => void` | (none) | Called after a free-plan selection or direct plan change |
 

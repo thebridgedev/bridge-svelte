@@ -53,12 +53,12 @@ Every billing page your app needs comes from one file:
 
 | Address | What it shows |
 |---|---|
-| `/subscription` | The current plan, the plan picker to upgrade or downgrade, and "Manage billing" (the Stripe portal) |
+| `/subscription` | The current plan, the plan picker to upgrade or downgrade, and "Manage billing" (the Stripe portal). A completed checkout lands here, with a confirmation banner |
 | `/subscription/plan` | The paywall: where a workspace with no plan is sent |
-| `/subscription/success` | Where a completed checkout lands |
+| `/subscription/success` | A separate confirmation page, for apps that set `billing.successRoute` to it |
 | `/subscription/error` | Where a checkout that could not be confirmed lands |
 
-Those are the defaults of the three billing routes, so there is nothing to
+Those are the defaults of the billing routes, so there is nothing to
 configure and nothing Bridge redirects to is a 404:
 
 | Config | Default | Used for |
@@ -66,6 +66,7 @@ configure and nothing Bridge redirects to is a 404:
 | `billing.manageRoute` | `/subscription` | The Upgrade/Manage buttons in `<BridgeBillingNotice>` and `<BridgeQuotaBanner>` |
 | `billing.paywallRoute` | `/subscription/plan` | Where a signed-in workspace (called a *tenant* in the API) with no plan is sent, **before any page renders** |
 | `billing.paymentErrorRoute` | `/subscription/error` | Where a failed checkout confirmation lands |
+| `billing.successRoute` | `/subscription` | Where a completed checkout or a Free plan pick lands |
 
 The default paywall applies only once your app has plans, so an app that
 doesn't use billing is never redirected; a `paywallRoute` you set yourself
@@ -79,6 +80,36 @@ the frame around every page with a `frame(page, content)` snippet and each
 heading with `heading(page)`; or take over one page by creating it
 (`src/routes/subscription/plan/+page.svelte` wins over the catch-all, and the
 others keep working).
+
+### Where a checkout lands
+
+After a paid checkout, or a Free plan pick, the user comes back to the
+subscription page, which shows a "You're on Pro now" banner. There is no
+separate confirmation step. To send them somewhere else, set
+`billing.successRoute` in `bridgeBootstrap()`:
+
+```ts
+bridgeBootstrap({ billing: { successRoute: '/dashboard' } });
+```
+
+To show the same banner there, put `<BridgeCheckoutNotice />` on that page or
+in your layout. It renders nothing until a checkout has just completed, shows
+once, and is gone after a reload. For a message of your own, read the
+`checkoutResult` store instead:
+
+```svelte
+<script lang="ts">
+  import { checkoutResult, clearCheckoutResult } from '@nebulr-group/bridge-svelte';
+</script>
+
+{#if $checkoutResult}
+  <p>Thanks for upgrading! <button onclick={clearCheckoutResult}>OK</button></p>
+{/if}
+```
+
+`$checkoutResult.kind` is `'checkout'` after a paid checkout and `'plan'` after a
+Free pick. The old confirmation page is still served: `successRoute:
+'/subscription/success'` brings it back.
 
 ## Adding billing to your UI
 

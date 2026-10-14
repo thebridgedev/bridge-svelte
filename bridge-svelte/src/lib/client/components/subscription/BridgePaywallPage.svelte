@@ -13,8 +13,8 @@
   page has ever been visited — that is what the config line is for. Mounted
   anywhere else, this page says so in the dev console.
 
-  A completed checkout lands on the subscription success page
-  (`<billing.manageRoute>/success`); a cancelled one comes back here.
+  A completed checkout lands on `billing.successRoute` (the subscription page,
+  with a confirmation banner, by default); a cancelled one comes back here.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
@@ -31,7 +31,7 @@
     heading?: string;
     /** Content between the heading and the plans — a welcome line, a checklist. */
     children?: Snippet;
-    /** Where a completed checkout lands. @default `<billing.manageRoute>/success` */
+    /** Where a completed checkout lands. @default `billing.successRoute`, else the subscription page */
     successRedirect?: string;
     /** Where a cancelled checkout lands. @default this page */
     cancelRedirect?: string;

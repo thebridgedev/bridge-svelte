@@ -6,9 +6,10 @@
     <BridgeBillingRoutes />
 
   Serves, relative to wherever the catch-all lives:
-    /subscription          the current plan, the plan picker and "Manage billing"
+    /subscription          the current plan, the plan picker and "Manage billing";
+                           a completed checkout lands here, with a banner
     /subscription/plan     the paywall: where a plan-less workspace is sent
-    /subscription/success  where a completed checkout lands
+    /subscription/success  the old confirmation page, for `billing.successRoute`
     /subscription/error    where a failed checkout confirmation lands
   An unknown segment gets the app's own 404 (bridgeBootstrap's load throws it —
   a component cannot).
@@ -28,7 +29,9 @@
     4. Headless: `PlanSelector`, `BridgeSubscriptionStatus`, `BillingPortalButton`
        and `subscriptionStore` are the pieces these pages are built from.
 
-  A Free pick (like a paid checkout) lands on /subscription/success (TBP-762).
+  TBP-813 — a paid checkout and a Free pick land on `billing.successRoute`, by
+  default this catch-all's own subscription page, which shows
+  `<BridgeCheckoutNotice>`. Set `billing.successRoute` to land anywhere else.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
@@ -36,10 +39,15 @@
   import { page } from '$app/stores';
   import { ensureSubscription, loadSubscription } from '../../../core/bridge-instance.js';
   import { BRIDGE_AUTH_ROUTE_PARAM, bridgeAuthBase } from '../../auth-routes.js';
-  import { parseBridgeBillingRoute, type BridgeBillingPage } from '../../billing-routes.js';
+  import { onDestroy, onMount } from 'svelte';
+  import { useBridge, type BillingSubscriptionSnapshot } from '@nebulr-group/bridge-auth-core';
+  import { billingRoutes, parseBridgeBillingRoute, type BridgeBillingPage } from '../../billing-routes.js';
+  import { clearCheckoutResult } from '../../checkout-result.js';
   import PlanSelector from './PlanSelector.svelte';
   import BridgeSubscriptionStatus from './BridgeSubscriptionStatus.svelte';
   import BillingPortalButton from './BillingPortalButton.svelte';
+  import BridgeCheckoutNotice from './BridgeCheckoutNotice.svelte';
+  import { subscriptionMeta } from './plan-format.js';
 
   interface Props {
     /** Everything around the content, on every page. Receives the page name and
@@ -49,15 +57,37 @@
     heading?: Snippet<[BridgeBillingPage]>;
     /** Where "Continue" on the success page goes. @default '/' */
     redirectTo?: string;
+    /** The "you're on Pro now" banner on the subscription page after a
+     *  checkout. `false` hides it. @default true */
+    checkoutNotice?: boolean;
   }
 
-  let { frame, heading, redirectTo = '/' }: Props = $props();
+  let { frame, heading, redirectTo = '/', checkoutNotice = true }: Props = $props();
 
   const rest = $derived($page.params[BRIDGE_AUTH_ROUTE_PARAM]);
   const route = $derived(parseBridgeBillingRoute(rest));
   // Links are relative to where the catch-all lives, not hard-coded to /subscription.
   const base = $derived(bridgeAuthBase($page.url.pathname, rest) || '/');
   const at = (sub: string) => (base === '/' ? `/${sub}` : `${base}/${sub}`);
+  // TBP-813 — a checkout lands on `billing.successRoute`; by default on this
+  // catch-all's own subscription page, wherever it lives.
+  const routes = billingRoutes();
+  const successTarget = $derived(routes.successIsDefault ? base : routes.successRoute);
+
+  // The current plan's renewal date and card, for the line under its name.
+  let snapshot = $state<BillingSubscriptionSnapshot | null>(null);
+  let unsubscribe: (() => void) | undefined;
+  onMount(() => {
+    try {
+      const sub = useBridge().subscription;
+      snapshot = sub.snapshot();
+      unsubscribe = sub.subscribe((s) => (snapshot = s));
+    } catch {
+      /* Bridge not initialised: no meta line */
+    }
+  });
+  onDestroy(() => unsubscribe?.());
+  const meta = $derived(subscriptionMeta(snapshot?.state));
 
   const DEFAULT_HEADINGS: Record<BridgeBillingPage, string> = {
     manage: 'Subscription',
@@ -77,11 +107,16 @@
     if (!current) return;
     untrack(() => {
       void (current === 'success' ? loadSubscription() : ensureSubscription());
+      // The old confirmation page says it all; no banner on the next page too.
+      if (current === 'success') clearCheckoutResult();
     });
   });
 </script>
 
 {#snippet body(p: BridgeBillingPage)}
+  {#if p === 'manage' && checkoutNotice}
+    <BridgeCheckoutNotice />
+  {/if}
   {#if heading}
     {@render heading(p)}
   {:else}
@@ -89,15 +124,21 @@
   {/if}
 
   {#if p === 'manage'}
-    <div class="bridge-billing-current">
-      <span class="bridge-billing-label">Current plan</span>
-      <BridgeSubscriptionStatus />
+    <p class="bridge-billing-text">Your plan, what it includes, and billing.</p>
+    <div class="bridge-billing-summary" data-bridge-billing-summary>
+      <div class="bridge-billing-summary-plan">
+        <span class="bridge-billing-label">Current plan</span>
+        <BridgeSubscriptionStatus class="bridge-billing-summary-status" />
+        {#if meta}
+          <span class="bridge-billing-summary-meta" data-bridge-billing-meta>{meta}</span>
+        {/if}
+      </div>
       <BillingPortalButton />
     </div>
-    <PlanSelector successRedirect={at('success')} cancelRedirect={base} />
+    <PlanSelector heading="Change plan" successRedirect={successTarget} cancelRedirect={base} />
   {:else if p === 'plan'}
     <p class="bridge-billing-text">Pick a plan to start using the app.</p>
-    <PlanSelector successRedirect={at('success')} cancelRedirect={at('plan')} />
+    <PlanSelector successRedirect={successTarget} cancelRedirect={at('plan')} />
   {:else if p === 'success'}
     <p class="bridge-billing-text">Your plan is active.</p>
     <div class="bridge-billing-current">
@@ -152,11 +193,33 @@
     opacity: 0.8;
   }
 
+  /* The subtitle sits with its heading, closer than the page's gap. */
+  .bridge-billing-heading + .bridge-billing-text {
+    margin-top: -0.75rem;
+  }
+
   .bridge-billing-current {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.75rem;
+  }
+
+  /* The current-plan panel's layout; its surface is in styles.css. */
+  .bridge-billing-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .bridge-billing-summary-plan {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    min-width: 0;
   }
 
   .bridge-billing-label {

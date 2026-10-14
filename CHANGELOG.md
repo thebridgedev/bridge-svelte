@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2] - 2026-10-14
+
+### Changed
+
+- **After checkout, people land back in the app.** A completed checkout or a Free plan pick now returns to the subscription page with a "You're on Pro now" banner, with no separate confirmation step. Set `billing.successRoute` to land on any page of your app, and put `<BridgeCheckoutNotice />` there for the same banner, or read `checkoutResult` for a message of your own. The old confirmation page at `/subscription/success` still works for apps that point to it.
+- **A subscription page that fits your app.** Plan cards and the current-plan panel have their own surface built from your `--bridge-*` tokens, so they look right on any app background. Prices are shown large and formatted for their currency, buttons say "Upgrade to" or "Switch to", the current plan is marked in your primary colour, and its renewal date and card are shown. Two optional tokens, `--bridge-card-bg` and `--bridge-card-shadow`, tune the cards. Plan buttons no longer read "Select free plan" or "29 USD / month", so tests that match that text need updating.
+
 ## [0.9.0] - 2026-09-30
 
 ### Added

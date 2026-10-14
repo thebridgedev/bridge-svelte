@@ -106,8 +106,9 @@ If you leave `loginRoute` unset, Bridge uses hosted auth instead: unauthenticate
 | `billing.paywallRoute` | `string \| false` | `'/subscription/plan'` | Where a signed-in workspace (called a *tenant* in the API) with no plan is redirected, before any page renders. The default applies only when the app has plans; a value you set always applies. `false` turns the redirect off |
 | `billing.paymentErrorRoute` | `string` | `'/subscription/error'` | Where a failed Stripe checkout confirmation lands |
 | `billing.manageRoute` | `string` | `'/subscription'` | The subscription page; where the Upgrade/Manage buttons in `<BridgeQuotaBanner>` and `<BridgeBillingNotice>` point |
+| `billing.successRoute` | `string` | `billing.manageRoute` | Where a completed checkout or a Free plan pick lands. The subscription page shows a confirmation banner; on any other page, render `<BridgeCheckoutNotice />` for it |
 
-The three billing defaults are pages `<BridgeBillingRoutes />` serves from `src/routes/subscription/[...bridge]/+page.svelte`; see [Add billing to your app](/billing/setup/add-billing-to-your-app/).
+The billing defaults are pages `<BridgeBillingRoutes />` serves from `src/routes/subscription/[...bridge]/+page.svelte`; see [Add billing to your app](/billing/setup/add-billing-to-your-app/).
 | `storage` | `TokenStorage` | `localStorage` (browser) / memory (SSR) | Token storage adapter; implement `get`/`set`/`remove` to bring your own |
 | `debug` | `boolean` | `VITE_BRIDGE_DEBUG === 'true'`, else `false` | Enable debug logging |
 

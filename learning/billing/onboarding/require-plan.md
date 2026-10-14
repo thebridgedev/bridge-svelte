@@ -24,7 +24,7 @@ If your app has the billing catch-all from [Add billing to your app](/billing/se
 <BridgeBillingRoutes />
 ```
 
-the gate is already on. `bridgeBootstrap()` checks the subscription status before any page renders, and a signed-in workspace that still needs to pick a plan is redirected to **`/subscription/plan`**, a plan picker that file serves. A completed checkout lands on `/subscription/success`; one that could not be confirmed lands on `/subscription/error`, which the gate leaves alone so the user can read what happened.
+the gate is already on. `bridgeBootstrap()` checks the subscription status before any page renders, and a signed-in workspace that still needs to pick a plan is redirected to **`/subscription/plan`**, a plan picker that file serves. A completed checkout lands on `/subscription` with a confirmation banner; one that could not be confirmed lands on `/subscription/error`, which the gate leaves alone so the user can read what happened.
 
 It only redirects when all of the following hold, so there's no redirect loop and no gate on exempt workspaces:
 
@@ -63,7 +63,7 @@ The redirect happens before any page renders, including before `/welcome` has ev
 |------|------|---------|-------------|
 | `heading` | `string` | `'Choose a plan'` | The page heading |
 | `children` | `Snippet` | (none) | Content between the heading and the plans |
-| `successRedirect` | `string` | `'/subscription/success'` | Where a completed checkout lands |
+| `successRedirect` | `string` | `billing.successRoute`, else `'/subscription'` | Where a completed checkout lands |
 | `cancelRedirect` | `string` | this page | Where a cancelled checkout lands |
 | `onSelect` | `({ plan, price }) => void` | (none) | Called after a free-plan selection or direct plan change |
 
@@ -117,4 +117,4 @@ All three methods drive the same underlying flow:
 
 This exists so certain workspaces can bypass the forced plan choice, for example accounts provisioned or billed out-of-band, where forcing a plan selection in the app would be wrong. Those workspaces still reach your app normally; you're free to render your own `<PlanSelector>` where it makes sense, but the platform won't block them for you.
 
-`successRedirect` and `cancelRedirect` are independent of this flag; they're simply where the user lands after leaving Stripe Checkout (success or cancel, respectively). They default to `/subscription/success` and the page itself on the paywall pages, and to `'/'` on `<BridgePaywall>`.
+`successRedirect` and `cancelRedirect` are independent of this flag; they're simply where the user lands after leaving Stripe Checkout (success or cancel, respectively). They default to `billing.successRoute` (the subscription page) and the page itself on the paywall pages, and to `'/'` on `<BridgePaywall>`.

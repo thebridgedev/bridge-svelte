@@ -145,7 +145,7 @@ Reach for these before writing an equivalent; each is imported from `@nebulr-gro
 | Component | Does | Guide |
 |---|---|---|
 | `BridgeAuthRoutes`, `LoginForm`, `SignupForm`, `ForgotPassword`, `MagicLink`, `PasskeyLogin`, `PasskeySetup`, `PasskeyRequestSetupLink`, `MfaChallenge`, `MfaSetup`, `SsoButton`, `WorkspaceSelector`, `TenantSelector` | Sign-in pages and their building blocks, matching the app's design, customising them | `bridge guide svelte sdk-auth` |
-| `BridgeBillingRoutes`, `BridgePaywallPage`, `BridgePaywall`, `PlanSelector`, `BillingPortalButton`, `BridgeBillingNotice`, `BridgeSubscriptionStatus` | Subscription pages, paywall, plan picker, portal button, lifecycle notices, a plan/status badge | `bridge guide svelte billing` |
+| `BridgeBillingRoutes`, `BridgePaywallPage`, `BridgePaywall`, `PlanSelector`, `BillingPortalButton`, `BridgeCheckoutNotice`, `BridgeBillingNotice`, `BridgeSubscriptionStatus` | Subscription pages, paywall, plan picker, portal button, the after-checkout banner, lifecycle notices, a plan/status badge | `bridge guide svelte billing` |
 | `QuotaGate`, `BridgeQuotaBanner`, `BridgeUpgradeDialog` | Plan limits in the UI and the upgrade dialog | `bridge guide svelte billing` |
 | `TeamManagementPanel`, `TeamUserList`, `TeamProfileForm`, `TeamWorkspaceForm`, `TeamAddUserDialog`, `TeamEditUserDialog`, `TeamConfirmDialog`, `TeamUserActionsMenu` | Members, roles, workspace settings | `bridge guide svelte team` |
 | `ApiTokenManagement` | Lets a workspace create and revoke its API tokens | — |

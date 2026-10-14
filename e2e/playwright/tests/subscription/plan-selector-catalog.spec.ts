@@ -11,7 +11,7 @@
  * BUG A — `pricesForInterval()` short-circuits on `p.amount === 0`, so *every*
  * zero-amount price survives the interval filter. A free plan that defines a
  * zero price for two intervals therefore renders two identical "Select free
- * plan" buttons under every tab. The intent of the `amount === 0` branch was
+ * plan" buttons under every tab (since TBP-813 the label is "Choose <plan>"). The intent of the `amount === 0` branch was
  * "a free plan stays selectable whichever interval is active" — once, not once
  * per zero price.
  *
@@ -227,19 +227,28 @@ async function renderedPlanOrder(page: Page): Promise<string[]> {
   return names.map((name) => name.trim());
 }
 
-/** The single button label PlanSelector should show for a plan at an interval. */
-function expectedButtonLabel(plan: FixturePlan, interval: BillingInterval): string {
-  const freePrice = plan.prices.find((p) => p.amount === 0);
-  if (freePrice) return 'Select free plan';
+/**
+ * The single button label PlanSelector should show for a plan. TBP-813: the
+ * label names the plan relative to the current one, and SELECT_PLAN_STATUS has
+ * no current plan, so every card offers "Choose <name>". The price moved out of
+ * the button into the card's price block (see `expectedPrice`).
+ */
+function expectedButtonLabel(plan: FixturePlan): string {
+  return `Choose ${plan.name}`;
+}
 
-  const price = plan.prices.find((p) => p.recurrenceInterval === interval);
+/** The price a card shows under the given tab: `€10` and `/ month`, as parts. */
+function expectedPrice(plan: FixturePlan, interval: BillingInterval): { amount: RegExp; suffix: string } {
+  const price =
+    plan.prices.find((p) => p.recurrenceInterval === interval) ?? plan.prices.find((p) => p.amount === 0);
   if (!price) {
     throw new Error(
       `Fixture error: plan "${plan.name}" has no price at interval "${interval}" — ` +
         `this suite's fixtures are meant to price every plan at every tabbed interval.`,
     );
   }
-  return `${price.amount} ${price.currency.toUpperCase()} / ${price.recurrenceInterval}`;
+  // Every fixture is EUR in whole units; the locale decides only where € sits.
+  return { amount: new RegExp(`(€\\s?${price.amount}\\b|\\b${price.amount}\\s?€)`), suffix: `/ ${price.recurrenceInterval}` };
 }
 
 /** Plan names sorted cheapest-first on the given interval; ties broken by name. */
@@ -265,7 +274,7 @@ function cheapestFirst(plans: FixturePlan[], interval: BillingInterval): string[
 
 test.describe('PlanSelector catalog rendering', () => {
   // Regression: a free plan priced 0 for two intervals rendered a duplicate
-  // "Select free plan" button, because pricesForInterval() short-circuits the
+  // select button (then "Select free plan", now "Choose Startup"), because pricesForInterval() short-circuits the
   // interval check on `p.amount === 0` (2026-08-12)
   test('renders exactly one select button per plan card per interval tab', async ({
     authenticatedPage: page,
@@ -291,8 +300,17 @@ test.describe('PlanSelector catalog rendering', () => {
         await expect(
           buttons,
           `plan "${plan.name}" under the "${INTERVAL_TAB_LABELS[interval]}" tab should offer ` +
-            `"${expectedButtonLabel(plan, interval)}"`,
-        ).toHaveText(expectedButtonLabel(plan, interval));
+            `"${expectedButtonLabel(plan)}"`,
+        ).toHaveText(expectedButtonLabel(plan));
+
+        // TBP-813 — the price for the active tab is in the card's price block.
+        const { amount, suffix } = expectedPrice(plan, interval);
+        const priceBlock = card.locator('[data-bridge-plan-price]');
+        await expect(
+          priceBlock,
+          `plan "${plan.name}" under the "${INTERVAL_TAB_LABELS[interval]}" tab should show its price`,
+        ).toHaveText(amount);
+        await expect(priceBlock).toContainText(suffix);
 
         // The zero-price branch exists so a free plan stays pickable whichever
         // interval is active — collapsing the duplicate must not turn the free

@@ -14,6 +14,7 @@ import {
 } from '../core/bridge-instance.js';
 import { installBridgeAuthFetch } from '../core/bridge-runtime.js';
 import { refreshBilling, tokenStaleHandlerOf } from '../core/billing-store.js';
+import { markCheckoutComplete } from './checkout-result.js';
 import { prefetchFlagDefinitions } from '../core/flag-definitions.js';
 import {
   useBridge,
@@ -537,6 +538,9 @@ async function handleCallbackRoute(url: URL, kitFetch?: typeof globalThis.fetch)
           // would fill a store no page sees. Never throws.
           if (typeof window !== 'undefined') {
             try { await refreshBilling(); } catch { /* the landing page re-reads */ }
+            // TBP-813 — the landing page (the subscription page by default)
+            // says the checkout went through; no separate confirmation page.
+            markCheckoutComplete({ kind: 'checkout' });
           }
           redirect(303, redirectTo);
         } catch (err) {

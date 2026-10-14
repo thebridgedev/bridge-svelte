@@ -1,6 +1,7 @@
 /**
  * One file serves the subscription page, the paywall and the checkout return
- * pages (TBP-702).
+ * pages (TBP-702). Since TBP-813 a completed checkout (or Free pick) lands on
+ * the subscription page with a banner; /subscription/success is still served.
  *
  * The demo's `src/routes/subscription/[...bridge]/+page.svelte` is exactly what
  * the billing guide tells an app to write: `<BridgeBillingRoutes />`. Its
@@ -34,6 +35,9 @@ test.describe('BridgeBillingRoutes — every billing page from one file (TBP-702
     await page.goto('/subscription/plan');
     await expect(page.locator(`${served('plan')} [data-bridge-plan-selector]`)).toBeVisible({ timeout: LONG_TIMEOUT });
 
+    // TBP-813 — no checkout lands here by default any more, but the old
+    // confirmation page is still served for an app whose billing.successRoute
+    // points at it.
     await page.goto('/subscription/success');
     await expect(page.locator(served('success')).getByRole('heading', { name: "You're all set" })).toBeVisible({
       timeout: MED_TIMEOUT,
@@ -59,10 +63,61 @@ test.describe('BridgeBillingRoutes — every billing page from one file (TBP-702
   test('a failed checkout confirmation lands on /subscription/error', async ({ authenticatedPage: page }) => {
     // What Stripe's success URL looks like when it comes back — with a session
     // Bridge cannot confirm. bridgeBootstrap's load redirects before any page renders.
-    const redirectTo = encodeURIComponent('/subscription/success');
+    // TBP-813: PlanSelector's success redirect is now the subscription page itself.
+    const redirectTo = encodeURIComponent('/subscription');
     await page.goto(`/auth/oauth-callback?stripe_success=1&session_id=cs_test_not_a_session&redirect=${redirectTo}`);
     await page.waitForURL((url) => url.pathname === '/subscription/error', { timeout: LONG_TIMEOUT });
     await expect(page.locator(served('error'))).toBeVisible({ timeout: MED_TIMEOUT });
+  });
+
+  // TBP-813 — a completed checkout lands on the subscription page with a
+  // banner. A real Stripe return needs a real checkout session (see
+  // welcome-paywall.spec.ts); a Free pick takes the same landing without one.
+  test('a Free pick on the paywall page lands on /subscription with the checkout banner, shown once', async ({
+    authenticatedPage: page,
+    testDataClient,
+  }) => {
+    const planKey = `landing-free-e2e-${Date.now()}`;
+    const planName = `Landing Free ${Date.now()}`;
+    try {
+      await testDataClient.createPlan({
+        key: planKey,
+        name: planName,
+        prices: [{ amount: 0, currency: 'USD', recurrenceInterval: 'month' }],
+      });
+
+      await page.goto('/subscription/plan');
+      const card = page
+        .locator(`${served('plan')} [data-bridge-plan-card]`)
+        .filter({ has: page.getByRole('heading', { name: planName, exact: true }) });
+      await expect(card).toBeVisible({ timeout: LONG_TIMEOUT });
+      await card.getByRole('button', { name: new RegExp(`^(Choose|Switch to|Upgrade to) ${planName}$`) }).click();
+
+      // Straight to the subscription page — no /subscription/success stop.
+      await page.waitForURL((url) => url.pathname === '/subscription', { timeout: LONG_TIMEOUT });
+      const notice = page.locator(`${served('manage')} [data-bridge-checkout-notice]`);
+      await expect(notice).toBeVisible({ timeout: MED_TIMEOUT });
+      await expect(notice).toHaveAttribute('data-kind', 'plan');
+      await expect(notice).toContainText(`You're on ${planName} now`);
+
+      // The banner can be dismissed…
+      await notice.getByRole('button', { name: 'Dismiss' }).click();
+      await expect(notice).toHaveCount(0);
+
+      // …and the signal is in memory only: a reload does not bring it back.
+      await page.reload();
+      await expect(page.locator(`${served('manage')} [data-bridge-plan-selector]`)).toBeVisible({ timeout: LONG_TIMEOUT });
+      await expect(page.locator('[data-bridge-checkout-notice]')).toHaveCount(0);
+    } finally {
+      await testDataClient.deletePlan(planKey).catch(() => {});
+    }
+  });
+
+  test('the subscription page shows no checkout banner when nothing just completed', async ({ authenticatedPage: page }) => {
+    await page.goto('/subscription');
+    await expect(page.locator(`${served('manage')} [data-bridge-plan-selector]`)).toBeVisible({ timeout: LONG_TIMEOUT });
+    await expect(page.locator(`${served('manage')} [data-bridge-billing-summary]`)).toBeVisible();
+    await expect(page.locator('[data-bridge-checkout-notice]')).toHaveCount(0);
   });
 
   test('the billing notice’s Manage button lands on /subscription', async ({ authenticatedPage: page }) => {

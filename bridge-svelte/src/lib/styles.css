@@ -30,6 +30,8 @@
  *   --bridge-muted-bg         subtle fills: tab tracks, hovers, code boxes
  *   --bridge-border           input, table, card and secondary button borders
  *   --bridge-border-radius    corners of inputs, buttons, alerts, cards, dialogs
+ *   --bridge-card-bg          plan cards and the current-plan panel (defaults to --bridge-bg)
+ *   --bridge-card-shadow      their shadow; `none` for a flat look (dark apps often want it)
  *   --bridge-overlay          backdrop behind dialogs
  *   --bridge-alert-error-{bg,fg,border}     errors, critical billing notices
  *   --bridge-alert-success-{bg,fg,border}   confirmations, active plan badge
@@ -1044,6 +1046,26 @@
   margin-top: 0.75rem;
 }
 
+/* TBP-813 — a heading beside the interval switch (`heading` prop). */
+.bridge-plan-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.bridge-plan-heading {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.bridge-plan-head .bridge-plan-interval-tabs {
+  margin: 0;
+}
+
 .bridge-plan-interval-tabs {
   /* Centered above the plan cards; flex + fit-content (not inline-flex) so
      auto margins can center it regardless of the host page's text alignment. */
@@ -1055,7 +1077,7 @@
   padding: 0.25rem;
   border: 1px solid var(--bridge-border);
   border-radius: var(--bridge-border-radius);
-  background: var(--bridge-muted-bg, var(--bridge-bg-muted, #f3f4f6));
+  background: var(--bridge-card-bg, var(--bridge-bg));
 }
 
 .bridge-plan-interval-tab {
@@ -1137,19 +1159,61 @@
 
 .bridge-plan-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 1rem;
+  align-items: stretch;
+}
+
+/* TBP-813 — cards, and the current-plan panel, are surfaces of their own, so
+   they read on any app background and take the app's tokens. */
+[data-bridge-plan-card],
+.bridge-billing-summary {
+  background: var(--bridge-card-bg, var(--bridge-bg));
+  color: var(--bridge-foreground);
+  border: 1px solid var(--bridge-border);
+  border-radius: calc(var(--bridge-border-radius) * 1.5);
+  box-shadow: var(--bridge-card-shadow, 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.04));
+}
+
+.bridge-billing-summary {
+  padding: 1.1rem 1.25rem;
+  background: color-mix(in srgb, var(--bridge-primary) 6%, var(--bridge-card-bg, var(--bridge-bg)));
+}
+
+.bridge-billing-summary .bss-plan {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.bridge-billing-summary-meta {
+  font-size: 0.85rem;
+  color: var(--bridge-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 [data-bridge-plan-card] {
-  padding: 1.25rem;
+  position: relative;
+  padding: 1.35rem 1.25rem 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.9rem;
 }
 
 [data-bridge-plan-card][data-current="true"] {
-  outline: 2px solid currentColor;
+  border: 2px solid var(--bridge-primary);
+  padding: calc(1.35rem - 1px) calc(1.25rem - 1px) calc(1.25rem - 1px);
+}
+
+.bridge-plan-current-flag {
+  position: absolute;
+  top: -0.7rem;
+  left: 1.1rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--bridge-primary);
+  color: var(--bridge-primary-fg, var(--bridge-primary-foreground, #ffffff));
 }
 
 .bridge-plan-card-header {
@@ -1169,22 +1233,62 @@
   display: inline-block;
   padding: 0.125rem 0.5rem;
   font-size: 0.7rem;
+  font-weight: 600;
   white-space: nowrap;
+  border-radius: 9999px;
+  border: 1px solid var(--bridge-alert-info-border);
+  background: var(--bridge-alert-info-bg);
+  color: var(--bridge-alert-info-fg);
+}
+
+.bridge-plan-price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.bridge-plan-price-amount {
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.bridge-plan-price-interval {
+  font-size: 0.85rem;
+  color: var(--bridge-muted);
 }
 
 .bridge-plan-description {
   margin: 0;
   font-size: 0.875rem;
+  color: var(--bridge-muted);
 }
 
 /* TBP-755 — the features a plan includes. */
 .bridge-plan-features {
   margin: 0;
-  padding-left: 1.125rem;
+  padding: 0.9rem 0 0;
+  border-top: 1px solid var(--bridge-border);
+  list-style: none;
   font-size: 0.875rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.45rem;
+}
+
+.bridge-plan-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.bridge-plan-feature-check {
+  flex: none;
+  margin-top: 0.2rem;
+  color: var(--bridge-primary);
 }
 
 .bridge-plan-prices {
@@ -1197,6 +1301,59 @@
 .bridge-plan-select-btn {
   width: 100%;
   text-align: center;
+}
+
+[data-bridge-plan-card][data-current="true"] .bridge-plan-select-btn:disabled {
+  background: transparent;
+  color: var(--bridge-muted);
+  opacity: 1;
+}
+
+/* ─── BridgeCheckoutNotice (TBP-813) ─────────────────────────────────────── */
+
+.bridge-checkout-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--bridge-alert-success-border);
+  border-radius: var(--bridge-border-radius);
+  background: var(--bridge-alert-success-bg);
+  color: var(--bridge-alert-success-fg);
+  font-size: 0.875rem;
+}
+
+.bridge-checkout-notice-icon {
+  flex: none;
+  margin-top: 0.1rem;
+}
+
+.bridge-checkout-notice-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.bridge-checkout-notice-title {
+  display: block;
+  font-weight: 600;
+}
+
+.bridge-checkout-notice-close {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 0 0.2rem;
+  opacity: 0.7;
+}
+
+.bridge-checkout-notice-close:hover,
+.bridge-checkout-notice-close:focus-visible {
+  opacity: 1;
 }
 
 /* ─── WorkspaceSelector ─────────────────────────────────────────────── */

@@ -440,7 +440,7 @@ describe('billing destinations default to the pages <BridgeBillingRoutes> serves
   it('a failed checkout confirmation lands on /subscription/error', async () => {
     const { bridgeBootstrap } = await load();
     h.s.confirmImpl = () => Promise.reject(new Error('confirm failed'));
-    const url = at('/auth/oauth-callback?stripe_success=1&session_id=cs_test_1&redirect=%2Fsubscription%2Fsuccess');
+    const url = at('/auth/oauth-callback?stripe_success=1&session_id=cs_test_1&redirect=%2Fsubscription');
     expect((await redirectOf(bridgeBootstrap(url, SDK_CONFIG, ROUTES))).location).toBe('/subscription/error');
   });
 
@@ -452,27 +452,66 @@ describe('billing destinations default to the pages <BridgeBillingRoutes> serves
     expect((await redirectOf(bridgeBootstrap(url, config, ROUTES))).location).toBe('/oops');
   });
 
-  it('in the browser, a confirmed checkout re-reads the billing store BEFORE redirecting (TBP-762)', async () => {
+  it('in the browser, a confirmed checkout re-reads the billing store BEFORE redirecting (TBP-762) and marks the checkout complete (TBP-813)', async () => {
     const { bridgeBootstrap } = await load();
+    // Same module instance BridgeBootstrap loaded (imported after vi.resetModules()).
+    const { checkoutResult, clearCheckoutResult } = await import('./checkout-result.js');
+    const { get } = await import('svelte/store');
+    clearCheckoutResult();
     billingRefreshes.order.length = 0;
     h.s.confirmImpl = async () => {
       billingRefreshes.order.push('confirm');
     };
     vi.stubGlobal('window', { location: new URL('http://localhost/auth/oauth-callback') });
     try {
-      const url = at('/auth/oauth-callback?stripe_success=1&session_id=cs_test_1&redirect=%2Fsubscription%2Fsuccess');
+      const url = at('/auth/oauth-callback?stripe_success=1&session_id=cs_test_1&redirect=%2Fsubscription');
       const { location } = await redirectOf(bridgeBootstrap(url, SDK_CONFIG, ROUTES));
       billingRefreshes.order.push(`redirect:${location}`);
     } finally {
       vi.unstubAllGlobals();
     }
-    expect(billingRefreshes.order).toEqual(['confirm', 'refreshBilling', 'redirect:/subscription/success']);
+    expect(billingRefreshes.order).toEqual(['confirm', 'refreshBilling', 'redirect:/subscription']);
+    // The landing page (the subscription page by default) shows the banner from this.
+    expect(get(checkoutResult)).toEqual({ kind: 'checkout' });
+    clearCheckoutResult();
   });
 
   it('a confirmed checkout lands where PlanSelector asked', async () => {
     const { bridgeBootstrap } = await load();
-    const url = at('/auth/oauth-callback?stripe_success=1&session_id=cs_test_1&redirect=%2Fsubscription%2Fsuccess');
-    expect((await redirectOf(bridgeBootstrap(url, SDK_CONFIG, ROUTES))).location).toBe('/subscription/success');
+    const url = at('/auth/oauth-callback?stripe_success=1&session_id=cs_test_1&redirect=%2Fsubscription');
+    expect((await redirectOf(bridgeBootstrap(url, SDK_CONFIG, ROUTES))).location).toBe('/subscription');
+  });
+
+  it('a confirmed checkout with no redirect lands on the subscription page (TBP-813)', async () => {
+    const { bridgeBootstrap } = await load();
+    const url = at('/auth/oauth-callback?stripe_success=1&session_id=cs_test_1');
+    expect((await redirectOf(bridgeBootstrap(url, SDK_CONFIG, ROUTES))).location).toBe('/subscription');
+  });
+
+  it('server-side, a confirmed checkout redirects but marks nothing: the signal is browser memory (TBP-813)', async () => {
+    const { bridgeBootstrap } = await load();
+    const { checkoutResult, clearCheckoutResult } = await import('./checkout-result.js');
+    const { get } = await import('svelte/store');
+    clearCheckoutResult();
+    const url = at('/auth/oauth-callback?stripe_success=1&session_id=cs_test_1&redirect=%2Fsubscription');
+    expect((await redirectOf(bridgeBootstrap(url, SDK_CONFIG, ROUTES))).location).toBe('/subscription');
+    expect(get(checkoutResult)).toBeNull();
+  });
+
+  it('a failed checkout confirmation marks nothing (TBP-813)', async () => {
+    const { bridgeBootstrap } = await load();
+    const { checkoutResult, clearCheckoutResult } = await import('./checkout-result.js');
+    const { get } = await import('svelte/store');
+    clearCheckoutResult();
+    h.s.confirmImpl = () => Promise.reject(new Error('confirm failed'));
+    vi.stubGlobal('window', { location: new URL('http://localhost/auth/oauth-callback') });
+    try {
+      const url = at('/auth/oauth-callback?stripe_success=1&session_id=cs_test_1&redirect=%2Fsubscription');
+      expect((await redirectOf(bridgeBootstrap(url, SDK_CONFIG, ROUTES))).location).toBe('/subscription/error');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(get(checkoutResult)).toBeNull();
   });
 });
 

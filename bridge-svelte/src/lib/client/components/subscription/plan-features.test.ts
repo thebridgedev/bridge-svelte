@@ -68,11 +68,12 @@ describe('<PlanSelector> lists each plan\'s features — TBP-755', () => {
     const team = card(html, 'Team');
     expect(team).toContain('data-bridge-plan-features');
     expect(team).toContain('aria-label="Included in Team"');
-    expect(team).toMatch(/<li[^>]*data-feature="analytics"[^>]*>Analytics<\/li>/);
-    expect(team).toMatch(/<li[^>]*data-feature="sso"[^>]*>Single sign-on<\/li>/);
+    // TBP-813 — each feature is a check mark plus its name in a <span>.
+    expect(team).toMatch(/<li[^>]*data-feature="analytics"[^>]*>(?:(?!<\/li>)[\s\S])*<span>Analytics<\/span>/);
+    expect(team).toMatch(/<li[^>]*data-feature="sso"[^>]*>(?:(?!<\/li>)[\s\S])*<span>Single sign-on<\/span>/);
 
     const pro = card(html, 'Pro');
-    expect(pro).toMatch(/>Analytics<\/li>/);
+    expect(pro).toMatch(/<span>Analytics<\/span>/);
     expect(pro).not.toContain('Single sign-on');
 
     expect(card(html, 'Free')).not.toContain('data-bridge-plan-features');

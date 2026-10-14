@@ -2,7 +2,7 @@
 
 This is the self-service billing page most apps need: one place where a user picks their first plan, upgrades, downgrades, or switches billing interval. `<PlanSelector>` is the whole thing in one component. Unlike [`<BridgePaywall>`](/billing/onboarding/require-plan/), which *forces* a choice before the app loads, this is the always-available page a user visits when they choose to.
 
-If your app has the billing catch-all from [Add billing to your app](/billing/setup/add-billing-to-your-app/), this page already exists at `/subscription`: the current plan, `<PlanSelector>`, and "Manage billing". A completed checkout lands on `/subscription/success`, a cancelled one back on `/subscription`.
+If your app has the billing catch-all from [Add billing to your app](/billing/setup/add-billing-to-your-app/), this page already exists at `/subscription`: the current plan, `<PlanSelector>`, and "Manage billing". A completed checkout lands back on `/subscription` with a confirmation banner, and so does a cancelled one (without the banner).
 
 ```svelte
 <!-- src/routes/subscription/[...bridge]/+page.svelte -->
@@ -40,7 +40,7 @@ All standard `HTMLAttributes<HTMLDivElement>` props (`class`, `style`, `data-*`,
 
 **Custom plan card:**
 
-The default plan cards follow your `--bridge-*` tokens (see [Theming](/theming/theming/)). If you want a different card altogether, pass a **`planCard` snippet** and render the cards yourself. You get the plan data and a ready-made pick handler, and Bridge still owns the free-select / checkout / change branching. You only write markup; you never touch the SDK. Here's an example:
+The default plan cards follow your `--bridge-*` tokens (see [Theming](/theming/)). If you want a different card altogether, pass a **`planCard` snippet** and render the cards yourself. You get the plan data and a ready-made pick handler, and Bridge still owns the free-select / checkout / change branching. You only write markup; you never touch the SDK. Here's an example:
 
 ```svelte
 <script lang="ts">

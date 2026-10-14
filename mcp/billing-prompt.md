@@ -188,7 +188,7 @@ export const load = bridgeBootstrap({
 });
 ```
 
-The config line is required: the redirect runs in the root `load` before any page renders — including before `/welcome` has ever been visited — so it must know the address up front. Do not mark `/welcome` public. `<BridgePaywallPage>` takes `heading`, optional `children` (content above the plans), `successRedirect` (default `/subscription/success`) and `cancelRedirect` (default: the page itself).
+The config line is required: the redirect runs in the root `load` before any page renders — including before `/welcome` has ever been visited — so it must know the address up front. Do not mark `/welcome` public. `<BridgePaywallPage>` takes `heading`, optional `children` (content above the plans), `successRedirect` (default `billing.successRoute`, the subscription page) and `cancelRedirect` (default: the page itself).
 
 ### Alternative — in-layout overlay
 
@@ -381,7 +381,7 @@ Before verifying, confirm every item was applied:
 1. Navigate to `/subscription` — plan cards render with correct prices; a tier with monthly + yearly pricing shows both intervals.
 2. Select a free plan — subscription updates immediately, no redirect.
 3. Select a paid plan — Stripe Checkout launches.
-4. Complete payment — redirected to `/subscription/success` with the new plan showing.
+4. Complete payment — redirected to `/subscription` with the new plan showing and a "You're on … now" banner.
 5. Cancel payment — back on `/subscription`.
 6. Paywall: sign in as a new tenant with no plan — you're redirected to `/subscription/plan` (or `/welcome`, if the user opted in) and can't reach the app until a plan is chosen.
 7. `/subscription/nope` shows the app's own 404.

@@ -40,20 +40,42 @@ describe('resolveBillingRoutes', () => {
       paywallRoute: '/subscription/plan',
       paywallIsDefault: true,
       paymentErrorRoute: '/subscription/error',
-      successRoute: '/subscription/success',
+      // TBP-813 — a checkout lands on the subscription page, which shows the banner.
+      successRoute: '/subscription',
+      successIsDefault: true,
     });
     expect(BRIDGE_BILLING_DEFAULTS.manageRoute).toBe('/subscription');
   });
 
-  it('a configured route wins, and the success page follows manageRoute', () => {
+  it('a configured route wins, and a checkout lands on manageRoute when no successRoute is set', () => {
     const r = resolveBillingRoutes({ manageRoute: '/billing/', paywallRoute: '/welcome', paymentErrorRoute: '/oops' });
     expect(r).toEqual({
       manageRoute: '/billing/',
       paywallRoute: '/welcome',
       paywallIsDefault: false,
       paymentErrorRoute: '/oops',
-      successRoute: '/billing/success',
+      successRoute: '/billing/',
+      successIsDefault: true,
     });
+  });
+
+  it('billing.successRoute sends a checkout anywhere in the app (TBP-813)', () => {
+    const r = resolveBillingRoutes({ successRoute: '/dashboard' });
+    expect(r.successRoute).toBe('/dashboard');
+    expect(r.successIsDefault).toBe(false);
+    expect(r.manageRoute).toBe('/subscription');
+  });
+
+  it('the old confirmation page is still reachable as an explicit successRoute (TBP-813)', () => {
+    const r = resolveBillingRoutes({ successRoute: '/subscription/success' });
+    expect(r.successRoute).toBe('/subscription/success');
+    expect(r.successIsDefault).toBe(false);
+  });
+
+  it('an empty successRoute counts as unset (TBP-813)', () => {
+    const r = resolveBillingRoutes({ manageRoute: '/billing', successRoute: '' });
+    expect(r.successRoute).toBe('/billing');
+    expect(r.successIsDefault).toBe(true);
   });
 
   it('paywallRoute: false turns the paywall off', () => {

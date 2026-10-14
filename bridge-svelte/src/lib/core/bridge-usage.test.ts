@@ -79,14 +79,20 @@ describe('bridge.usage — TBP-697', () => {
 
     bridge.usage.report('ai_completions', 3, 'evt-1');
 
+    // In Node the reporter's queue is a file (~/.bridge/usage-queue), shared by
+    // every test run on the machine, so the first ingest POST can carry events
+    // another test left behind. Look for the POST that carries this event.
+    const ingestWith = (key: string) =>
+      fetchMock.mock.calls.find(
+        ([u, init]) => String(u).endsWith('/usage/ingest') && String((init as RequestInit)?.body ?? '').includes(key),
+      ) as [string, RequestInit] | undefined;
     await vi.waitFor(
       () => {
-        const post = fetchMock.mock.calls.find(([u]) => String(u).endsWith('/usage/ingest'));
-        expect(post, 'no ingest POST yet').toBeTruthy();
+        expect(ingestWith('evt-1'), 'no ingest POST carrying evt-1 yet').toBeTruthy();
       },
       { timeout: 4000, interval: 50 },
     );
-    const [, init] = fetchMock.mock.calls.find(([u]) => String(u).endsWith('/usage/ingest')) as [string, RequestInit];
+    const [, init] = ingestWith('evt-1') as [string, RequestInit];
     expect(init.body as string).toContain('ai_completions');
     expect(init.body as string).toContain('evt-1');
   });

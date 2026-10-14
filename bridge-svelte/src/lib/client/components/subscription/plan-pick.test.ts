@@ -4,6 +4,11 @@
 // which /subscription/plan never passed — so the person stayed on the picker as
 // if nothing had happened. The paid path leaves for Stripe and comes back to
 // `successRedirect`. <PlanSelector> runs `pickPlan` as its whole pick flow.
+//
+// TBP-813 — the default `successRedirect` is the subscription page itself
+// (`billing.successRoute`, else `manageRoute`), not `/subscription/success`, and
+// a pick that changed the plan here records it (`complete`) before navigating,
+// so the landing page shows the confirmation banner.
 
 import { describe, expect, it, vi } from 'vitest';
 import type { Plan, PriceOfferSdk } from '@nebulr-group/bridge-auth-core';
@@ -24,10 +29,11 @@ function setup(session: { sessionId: string | null; checkoutUrl?: string | null 
     refresh: vi.fn(async () => { order.push('refresh'); }),
     navigate: vi.fn((url: string) => { order.push(`navigate:${url}`); }),
     leave: vi.fn((url: string) => { order.push(`leave:${url}`); }),
+    complete: vi.fn((plan: Plan) => { order.push(`complete:${plan.key}`); }),
   };
   const opts = {
     paymentsEnabled: false,
-    successRedirect: '/subscription/success',
+    successRedirect: '/subscription',
     cancelRedirect: '/subscription/plan',
     callbackBase: 'http://app/auth/oauth-callback',
   };
@@ -38,7 +44,7 @@ describe('pickPlan — TBP-762', () => {
   it('Free: selects, re-reads the billing store, then goes where a paid checkout returns to', async () => {
     const { order, deps, opts } = setup();
     expect(await pickPlan(FREE, FREE_PRICE, opts, deps)).toBe('selected');
-    expect(order).toEqual(['select', 'refresh', 'navigate:/subscription/success']);
+    expect(order).toEqual(['select', 'refresh', 'complete:free', 'navigate:/subscription']);
   });
 
   it('a page that passes onSelect takes over: no navigation', async () => {
@@ -47,6 +53,8 @@ describe('pickPlan — TBP-762', () => {
     await pickPlan(FREE, FREE_PRICE, { ...opts, onSelect }, deps);
     expect(onSelect).toHaveBeenCalledWith({ plan: FREE, price: FREE_PRICE });
     expect(deps.navigate).not.toHaveBeenCalled();
+    // TBP-813 — the page owns what happens next, so no banner is queued for it.
+    expect(deps.complete).not.toHaveBeenCalled();
   });
 
   it('a paid pick leaves for Stripe with the success page as the return address', async () => {
@@ -54,13 +62,15 @@ describe('pickPlan — TBP-762', () => {
     expect(await pickPlan(PRO, PAID_PRICE, opts, deps)).toBe('checkout');
     expect(deps.leave).toHaveBeenCalledWith('https://stripe/checkout');
     const urls = (deps.auth.startCheckout.mock.calls[0] as unknown[])[2] as { successUrl: string };
-    expect(urls.successUrl).toContain(`redirect=${encodeURIComponent('/subscription/success')}`);
+    expect(urls.successUrl).toContain(`redirect=${encodeURIComponent('/subscription')}`);
+    // The checkout return marks the result (bridgeBootstrap), not the pick.
+    expect(deps.complete).not.toHaveBeenCalled();
   });
 
   it('a paid pick on an app without Stripe (Bridge sets the plan) also re-reads and goes on', async () => {
     const { order, deps, opts } = setup({ sessionId: null });
     expect(await pickPlan(PRO, PAID_PRICE, opts, deps)).toBe('selected');
-    expect(order).toEqual(['refresh', 'navigate:/subscription/success']);
+    expect(order).toEqual(['refresh', 'complete:pro', 'navigate:/subscription']);
   });
 
   it('a workspace that already pays is asked to confirm first; nothing is changed yet', async () => {
@@ -68,6 +78,7 @@ describe('pickPlan — TBP-762', () => {
     expect(await pickPlan(PRO, PAID_PRICE, { ...opts, paymentsEnabled: true }, deps)).toBe('confirm');
     expect(deps.auth.startCheckout).not.toHaveBeenCalled();
     expect(deps.navigate).not.toHaveBeenCalled();
+    expect(deps.complete).not.toHaveBeenCalled();
   });
 
   it('a $0 plan with metered pricing is not Free: it goes through checkout (TBP-275)', async () => {
@@ -75,5 +86,38 @@ describe('pickPlan — TBP-762', () => {
     const metered = { ...FREE, key: 'metered', hasCost: true } as Plan;
     expect(await pickPlan(metered, FREE_PRICE, opts, deps)).toBe('checkout');
     expect(deps.auth.selectFreePlan).not.toHaveBeenCalled();
+  });
+});
+
+describe('pickPlan records the pick for the landing page — TBP-813', () => {
+  it('complete runs with the picked plan BEFORE navigating, so the landing page sees it', async () => {
+    const { deps, opts } = setup();
+    let completedBeforeNavigate = false;
+    deps.navigate.mockImplementation(() => {
+      completedBeforeNavigate = deps.complete.mock.calls.length === 1;
+    });
+    await pickPlan(FREE, FREE_PRICE, opts, deps);
+    expect(deps.complete).toHaveBeenCalledTimes(1);
+    expect(deps.complete).toHaveBeenCalledWith(FREE);
+    expect(completedBeforeNavigate).toBe(true);
+  });
+
+  it('complete does not run when the page passes onSelect, on either selected path', async () => {
+    const onSelect = vi.fn();
+    const free = setup();
+    await pickPlan(FREE, FREE_PRICE, { ...free.opts, onSelect }, free.deps);
+    expect(free.deps.complete).not.toHaveBeenCalled();
+
+    const noStripe = setup({ sessionId: null });
+    expect(await pickPlan(PRO, PAID_PRICE, { ...noStripe.opts, onSelect }, noStripe.deps)).toBe('selected');
+    expect(noStripe.deps.complete).not.toHaveBeenCalled();
+    expect(onSelect).toHaveBeenCalledTimes(2);
+  });
+
+  it('complete is optional: a caller without it still navigates', async () => {
+    const { deps, opts } = setup();
+    const { complete: _omit, ...withoutComplete } = deps;
+    expect(await pickPlan(FREE, FREE_PRICE, opts, withoutComplete)).toBe('selected');
+    expect(deps.navigate).toHaveBeenCalledWith('/subscription');
   });
 });

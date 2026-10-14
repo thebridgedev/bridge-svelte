@@ -8,7 +8,8 @@
  * hit the real API to verify the end-to-end UX.
  *
  * Test scenarios:
- * 1. Select a free plan via the PlanSelector UI
+ * 1. Select a free plan via the PlanSelector UI (lands back on /subscription
+ *    with the checkout banner, TBP-813)
  * 2. Switch from one plan to another via the UI
  * 3. (Optional) Stripe checkout is triggered for a paid plan when Stripe is configured
  */
@@ -50,25 +51,37 @@ test.describe('Subscription Flows', () => {
         timeout: LONG_TIMEOUT,
       });
 
-      // Find the free plan card and click "Select free plan"
-      const selectBtn = page.locator(
-        `[data-bridge-plan-card] button:has-text("Select free plan")`,
-      ).first();
+      // Find the free plan's card and click its button. TBP-813: the label
+      // names the plan relative to the current one — "Choose Free E2E" with no
+      // plan yet, "Switch to Free E2E" from a pricier one (the worker's).
+      const freeCard = page
+        .locator('[data-bridge-plan-card]')
+        .filter({ has: page.getByRole('heading', { name: 'Free E2E', exact: true }) });
+      const selectBtn = freeCard.getByRole('button', { name: /^(Choose|Switch to|Upgrade to) Free E2E$/ });
       await expect(selectBtn).toBeVisible({ timeout: MED_TIMEOUT });
       await selectBtn.click();
+
+      // TBP-813 — a Free pick lands back on the subscription page itself (no
+      // /subscription/success stop) and says so in the checkout banner.
+      const notice = page.locator('[data-bridge-checkout-notice]');
+      await expect(notice).toBeVisible({ timeout: LONG_TIMEOUT });
+      await expect(notice).toHaveAttribute('data-kind', 'plan');
+      await expect(notice).toContainText("You're on Free E2E now");
+      expect(new URL(page.url()).pathname).toBe('/subscription');
 
       // Wait for the plan selector to reload
       await expect(planSelector).not.toHaveAttribute('data-loading', 'true', {
         timeout: LONG_TIMEOUT,
       });
 
-      // After selecting, the button for this plan should now say "Current plan"
-      const currentPlanBtn = page
-        .locator('[data-bridge-plan-card][data-current="true"] button')
-        .first();
-      await expect(currentPlanBtn).toBeVisible({ timeout: MED_TIMEOUT });
-      const btnText = await currentPlanBtn.textContent();
-      expect(btnText?.trim()).toContain('Current plan');
+      // After selecting, this plan's card is the current one: flagged, with
+      // the disabled "Current plan" button.
+      const currentCard = page.locator('[data-bridge-plan-card][data-current="true"]');
+      await expect(currentCard.getByRole('heading', { name: 'Free E2E', exact: true })).toBeVisible({
+        timeout: MED_TIMEOUT,
+      });
+      await expect(currentCard.locator('[data-bridge-plan-current-flag]')).toBeVisible();
+      await expect(currentCard.getByRole('button', { name: 'Current plan' })).toBeDisabled();
     } finally {
       await testDataClient.deletePlan(planKey).catch(() => {});
     }

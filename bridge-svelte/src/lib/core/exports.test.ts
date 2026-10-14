@@ -57,6 +57,22 @@ describe('package root exports (TBP-697)', () => {
     expect(pkg.parseQuotaRefusal({ code: 'QUOTA_EXCEEDED', metric: 'tickets' })?.metric).toBe('tickets');
   });
 
+  it('exports the checkout landing (TBP-813): BridgeCheckoutNotice, checkoutResult, takeCheckoutResult, clearCheckoutResult', () => {
+    expect(typeof pkg.BridgeCheckoutNotice).toBe('function');
+    expect(typeof pkg.checkoutResult.subscribe).toBe('function');
+    expect(typeof pkg.takeCheckoutResult).toBe('function');
+    expect(typeof pkg.clearCheckoutResult).toBe('function');
+    // Apps read the signal; only the plugin marks it.
+    expect((pkg as Record<string, unknown>).markCheckoutComplete).toBeUndefined();
+  });
+
+  it('BridgeCheckoutNotice renders nothing when no checkout has just completed (TBP-813)', async () => {
+    pkg.clearCheckoutResult();
+    const html = await render(pkg.BridgeCheckoutNotice);
+    expect(html).not.toContain('data-bridge-checkout-notice');
+    expect(html.replace(/<!--[\s\S]*?-->/g, '').trim()).toBe('');
+  });
+
   it('BridgeProvider is kept, deprecated, as the same component as BridgeBootstrap', () => {
     expect(pkg.BridgeProvider).toBe(pkg.BridgeBootstrap);
   });

@@ -175,18 +175,23 @@ test.describe('Welcome Paywall — first-time user flow', () => {
       //         which bootstrap recognises (stripe_success=1 + session_id) and
       //         resolves by POSTing /v1/account/stripe/confirm-checkout, refreshing
       //         tokens, and 303-ing to the success redirect (<BridgePaywallPage>
-      //         default: /subscription/success, served by <BridgeBillingRoutes>,
-      //         TBP-702). Wait until we're back on the demo origin.
+      //         default: billing.successRoute, else the subscription page,
+      //         /subscription, served by <BridgeBillingRoutes> — TBP-813; it was
+      //         /subscription/success before). Wait until we're back on the demo origin.
       await page.waitForURL(
         (url) => !url.hostname.includes('stripe.com'),
         { timeout: 60_000 } // Stripe processing can take a while
       );
-      // Wait for the success page to show the plan just bought. networkidle is
-      // unreliable here because the demo keeps a persistent Centrifugo
-      // WebSocket open — the network never goes idle.
-      const success = page.locator('[data-bridge-billing-route="success"]');
-      await expect(success).toBeVisible({ timeout: LONG_TIMEOUT });
-      await expect(success.locator('.bss-plan')).toHaveText('Paywall Pro', { timeout: LONG_TIMEOUT });
+      // Wait for the subscription page to say the checkout went through and show
+      // the plan just bought. networkidle is unreliable here because the demo
+      // keeps a persistent Centrifugo WebSocket open — the network never goes idle.
+      const manage = page.locator('[data-bridge-billing-route="manage"]');
+      await expect(manage).toBeVisible({ timeout: LONG_TIMEOUT });
+      expect(new URL(page.url()).pathname).toBe('/subscription');
+      const notice = manage.locator('[data-bridge-checkout-notice]');
+      await expect(notice).toBeVisible({ timeout: LONG_TIMEOUT });
+      await expect(notice).toHaveAttribute('data-kind', 'checkout');
+      await expect(manage.locator('.bss-plan')).toHaveText('Paywall Pro', { timeout: LONG_TIMEOUT });
 
       const postCheckoutUrl = page.url();
       const postCheckoutPath = new URL(postCheckoutUrl).pathname;

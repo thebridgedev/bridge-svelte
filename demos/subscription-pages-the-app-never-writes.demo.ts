@@ -13,8 +13,9 @@ import type { Page } from '@playwright/test';
  * has ONE billing file, `src/routes/subscription/[...bridge]/+page.svelte` =
  * `<BridgeBillingRoutes />`, and no billing configuration at all. On stage, a
  * workspace with no plan is sent to /subscription/plan before any page renders,
- * pays for a plan through a real Stripe test-mode checkout, lands on
- * /subscription/success, and /subscription then shows the current plan. A
+ * pays for a plan through a real Stripe test-mode checkout, and lands back on
+ * /subscription, which says so in a banner and shows the current plan (TBP-813:
+ * no /subscription/success stop any more; the banner shows once). A
  * checkout Bridge cannot confirm lands on /subscription/error. Finally the same
  * app is pointed at a stage app that has no plans, and its plan-less workspace
  * is left alone.
@@ -289,21 +290,25 @@ test('Subscription and paywall pages the app never has to write', async ({ demo 
 			if (await zip.isVisible().catch(() => false)) await zip.fill('12345');
 		});
 
-		await step('After paying, Stripe sends them back to /subscription/success, which shows the plan they just bought', async () => {
+		await step('After paying, Stripe sends them back to /subscription, where a banner says the plan they just bought is active', async () => {
 			await click(page.locator('button[type="submit"], .SubmitButton').first());
-			await page.waitForURL((u) => u.origin === LOCAL, { timeout: 90_000 });
-			const success = page.locator('[data-bridge-billing-route="success"]');
-			await expect(success).toBeVisible({ timeout: 60_000 });
-			await expect(success.locator('.bss-plan')).toHaveText('Pro', { timeout: 60_000 });
+			await page.waitForURL((u) => u.origin === LOCAL && u.pathname === '/subscription', { timeout: 90_000 });
+			const manage = page.locator('[data-bridge-billing-route="manage"]');
+			const notice = manage.locator('[data-bridge-checkout-notice]');
+			await expect(notice).toBeVisible({ timeout: 60_000 });
+			await expect(notice).toHaveAttribute('data-kind', 'checkout');
+			await expect(notice).toContainText("You're on Pro now", { timeout: 60_000 });
+			await expect(manage.locator('.bss-plan')).toHaveText('Pro', { timeout: 60_000 });
 			await showAddress(page);
-			await show(success.getByRole('heading', { name: "You're all set" }));
+			await show(notice);
 		});
 
-		await step('/subscription shows the current plan, a button to manage billing, and the plans to change to', async () => {
+		await step('/subscription shows the current plan, a button to manage billing, and the plans to change to; the banner was a one-off', async () => {
 			await page.goto(`${LOCAL}/subscription`);
 			const manage = page.locator('[data-bridge-billing-route="manage"]');
 			await expect(manage.locator('.bss-plan')).toHaveText('Pro', { timeout: 30_000 });
 			await expect(manage.locator('[data-bridge-plan-selector]')).toBeVisible({ timeout: 30_000 });
+			await expect(manage.locator('[data-bridge-checkout-notice]')).toHaveCount(0);
 			await showAddress(page);
 			await show(manage.locator('.bss-plan'));
 		});
@@ -317,7 +322,7 @@ test('Subscription and paywall pages the app never has to write', async ({ demo 
 		});
 
 		await step("If Stripe sends someone back with a payment Bridge can't confirm, they land on /subscription/error, a real page", async () => {
-			const back = encodeURIComponent('/subscription/success');
+			const back = encodeURIComponent('/subscription');
 			await page.goto(`${LOCAL}/auth/oauth-callback?stripe_success=1&session_id=cs_test_not_a_real_session&redirect=${back}`);
 			await page.waitForURL((u) => u.pathname === '/subscription/error', { timeout: 60_000 });
 			const error = page.locator('[data-bridge-billing-route="error"]');

@@ -513,7 +513,7 @@
       {@render footer()}
     {:else if effectiveShowSignupLink}
       <div class="bridge-form-footer">
-        {t('login.signupPrompt')} <a href={effectiveSignupHref}>{t('login.signupLink')}</a>
+        {t('login.signupPrompt')} <a href={effectiveSignupHref} class="bridge-link">{t('login.signupLink')}</a>
       </div>
     {/if}
   </AuthFormWrapper>

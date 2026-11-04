@@ -296,14 +296,21 @@
     font-size: calc(0.875 * var(--bridge-text-base, 1rem));
   }
 
+  /* TBP-899 — every text link on the sign-in pages ("Sign up", "Forgot password?",
+     "Back to sign in") takes the form's own text colour and font, not the
+     browser's default blue. */
   [data-bridge-auth-form] .bridge-form-footer a,
   [data-bridge-auth-form] .bridge-link {
     cursor: pointer;
     background: none;
     border: none;
+    color: inherit;
+    font-family: inherit;
     font-size: inherit;
+    font-weight: inherit;
     padding: 0;
     text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 
   [data-bridge-auth-form] .bridge-divider {
@@ -401,11 +408,31 @@
     box-sizing: border-box;
   }
 
+  /* TBP-899 — a sign-in method drawn as a link (the magic-link button) looks
+     like the other method buttons: no underline, no link colour. */
+  a.bridge-btn,
+  a.bridge-btn:hover,
+  a.bridge-btn:visited {
+    text-decoration: none;
+  }
+
+  a.bridge-sso-btn,
+  a.bridge-sso-btn:visited {
+    color: inherit;
+  }
+
   .bridge-sso-btn-inner {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     width: 12rem;
+    /* TBP-899 — grows past 12rem when the app's button text is larger, instead
+       of squeezing the method icon to nothing. */
+    min-width: max-content;
+  }
+
+  .bridge-sso-btn-inner > :not(:last-child) {
+    flex-shrink: 0;
   }
 
   .bridge-step-desc {

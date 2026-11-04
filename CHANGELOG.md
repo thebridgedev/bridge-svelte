@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.4] - 2026-11-04
+
+### Fixed
+
+- **Sign-in links match your app.** "Sign up", "Log in" and the other text links on the sign-in pages take the form's text colour and font, instead of the browser's default blue.
+- **Sign-in method icons stay visible.** When your app's buttons use larger text, the passkey and magic-link buttons grow to fit their label instead of shrinking the icon out of view.
+
 ## [0.9.3] - 2026-10-14
 
 ### Changed

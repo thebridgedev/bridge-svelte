@@ -1,4 +1,4 @@
-import { expect, signIn, test } from '../../support/fixtures';
+import { expect, expectTokenGone, recordRequests, signIn, test } from '../../support/fixtures';
 
 const NEW_PASSWORD = 'a brand new passphrase';
 
@@ -10,8 +10,11 @@ test.describe('password recovery', () => {
 		await expect(page.locator('[data-bridge-forgot-password="sent"] [data-bridge-alert]')).toHaveText('Check your email for a password reset link.');
 
 		const token = await issuer.lastLink(person.email, 'reset-password');
+		const requests = recordRequests(page);
 		await page.goto(`/auth#bridge=reset-password&token=${token}`);
 		await expect(page).toHaveURL(/\/auth\/set-password$/);
+		await expect(page.locator('[data-bridge-set-password="form"]')).toBeVisible();
+		expect(page.url()).not.toContain(token);
 
 		await page.locator('#set-password').fill(NEW_PASSWORD);
 		await page.locator('#set-password-confirm').fill('something else');
@@ -21,6 +24,7 @@ test.describe('password recovery', () => {
 		await page.locator('#set-password-confirm').fill(NEW_PASSWORD);
 		await page.locator('[data-bridge-set-password="form"] button[type="submit"]').click();
 		await expect(page.locator('[data-bridge-set-password="done"]')).toBeVisible();
+		await expectTokenGone(page, token, requests);
 
 		await signIn(page, person.email, NEW_PASSWORD);
 		await expect(page.getByTestId('home-signed-in')).toContainText(person.email);

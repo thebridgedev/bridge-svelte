@@ -14,8 +14,8 @@ A new major version, built on `@nebulr-group/bridge-auth-core` 1.0 and the new B
 
 ### Added
 
-- **Server helpers** in `@nebulr-group/bridge-svelte/server`: `bridgeHandle` for `hooks.server.ts` checks tokens against your app's revocation list, `requireActor`, `meter` ("count this") and `flagsFor`. The entry refuses to load in a browser.
-- **Hand-off mode** for a sign-in page that signs a person in for a command-line tool and returns the code to its loopback address.
+- **Server helpers** in `@nebulr-group/bridge-svelte/server`: `bridgeHandle` for `hooks.server.ts` checks Bridge tokens and keys against your app's revocation list (other `Authorization` headers are left to your app, and `skip` leaves routes out), `requireActor`, `meter` ("count this") and `flagsFor`. The entry refuses to load in a browser.
+- **Hand-off mode** for a sign-in page that signs a person in for a command-line tool and returns the code, `state` and `iss` to its loopback callback (`http://127.0.0.1:<port>/callback`).
 - **Live updates** through auth-core's Live client: flags, billing, the team and the session refresh within a second of a change.
 
 ### Removed

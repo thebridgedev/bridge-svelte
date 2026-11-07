@@ -5,8 +5,8 @@ Hand-off mode turns a sign-in page into one that signs a person in for a program
 1. The program makes a PKCE verifier and challenge, listens on a loopback port, and opens the page:
    `https://app.example.com/auth/handoff?code_challenge=…&code_challenge_method=S256&redirect_uri=http://127.0.0.1:53123/callback&state=…`
 2. The person signs in there (and picks a workspace if they have several).
-3. The page sends the browser to `http://127.0.0.1:53123/callback?code=…&state=…`.
-4. The program checks `state` and trades the code for tokens with its own verifier.
+3. The page sends the browser to `http://127.0.0.1:53123/callback?code=…&state=…&iss=…`, where `iss` is the issuer the page signed in with (RFC 9207).
+4. The program checks `state` and `iss`, and trades the code for tokens with its own verifier.
 
 Only the program holds the verifier, so only it can use the code. The page never trades the code, never receives a token, and its own session is not touched.
 
@@ -24,7 +24,7 @@ bridgeBootstrap({
 
 ## Where the code may go
 
-The return address must be `http://127.0.0.1:<port>/…` or `http://[::1]:<port>/…`, with no user name and no fragment. `localhost`, any other host, and `https` are refused, so a crafted link cannot send a code off the person's machine. A request that fails these checks, or has no S256 challenge or a short `state`, shows "This sign-in link is not valid" and signs nobody in.
+The return address must be `http://127.0.0.1:<port>/callback` or `http://[::1]:<port>/callback`, with no user name and no fragment. `localhost`, any other host, any other path, and `https` are refused, so a crafted link cannot send a code off the person's machine or to another service on it. A request that fails these checks, gives a parameter twice, or has no S256 challenge or a short `state`, shows "This sign-in link is not valid" and signs nobody in.
 
 ## Building your own hand-off page
 

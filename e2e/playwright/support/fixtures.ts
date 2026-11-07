@@ -43,3 +43,25 @@ export const test = base.extend<Fixtures>({
 });
 
 export { expect };
+
+/** Records every request URL the page makes, to prove a secret never travels in one. */
+export function recordRequests(page: Page): string[] {
+	const urls: string[] = [];
+	page.on('request', (request) => urls.push(request.url()));
+	return urls;
+}
+
+/**
+ * Proves an email link's token left the address bar and the history, and
+ * never went into a request URL.
+ */
+export async function expectTokenGone(page: Page, token: string, requests: readonly string[]) {
+	expect(page.url()).not.toContain(token);
+	expect(await page.evaluate(() => window.location.href)).not.toContain(token);
+	expect(requests.filter((url) => url.includes(token))).toEqual([]);
+	const here = page.url();
+	await page.goBack();
+	expect(page.url(), 'the entry before the link page').not.toContain(token);
+	await page.goForward();
+	expect(page.url(), 'the link page in history').toBe(here);
+}

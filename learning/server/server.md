@@ -27,7 +27,9 @@ declare global {
 export {};
 ```
 
-- A request carrying a token (or an `x-api-key`) is checked before any route runs. A bad or ended one is answered 401. While Bridge cannot be checked, the answer is 503, never yes.
+- A request carrying a Bridge credential (a bearer token your issuer issued, or a Bridge key in `x-api-key`) is checked before any route runs. A bad or ended one is answered 401. While Bridge cannot be checked, the answer is 503, never yes.
+- Any other `Authorization` header is yours: basic auth in front of a staging site, or a webhook's own bearer secret, goes on unchecked with `actor: null`.
+- Routes with credentials of their own can be left out entirely: `bridgeHandle({ issuer, skip: (event) => event.url.pathname.startsWith('/api/cron') })`.
 - Checks follow your app's revocation list, so a session that ended or a member who was removed is refused within seconds, not when the token expires. Writes (`POST`, `PUT`, `PATCH`, `DELETE`) are checked against a list at most 30 seconds old.
 - A request with no credential goes on with `actor: null`.
 

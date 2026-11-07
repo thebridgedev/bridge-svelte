@@ -50,7 +50,7 @@ import { bridgeFetch } from '@nebulr-group/bridge-svelte';
 const response = await bridgeFetch('/api/tickets', { method: 'POST' });
 ```
 
-The dialog opens for a 402 that says a limit was reached (`{ code: 'QUOTA_EXCEEDED', metric, used, limit }`, or problem details of type `quota-exceeded`) or a plan feature is missing (`plan-required`, with `entitlement`). Any other 402, such as a declined card, leaves it shut. Open it yourself with `openUpgrade({ kind: 'feature', entitlement })`, replace it with `billing: { upgradeDialog: MyDialog }`, or turn it off with `false`.
+The dialog opens for a 402 that says a limit was reached (`{ code: 'QUOTA_EXCEEDED', metric, used, limit }`, or problem details of type `quota-exceeded`) or a plan feature is missing (`plan-required`, with `entitlement`). Any other 402, such as a declined card, leaves it shut, and so does a 402 that came through a redirect or from a host other than your page, your `tokenOrigins` or Bridge. A link in the refusal is followed only when it is a path on your site. Open it yourself with `openUpgrade({ kind: 'feature', entitlement })`, replace it with `billing: { upgradeDialog: MyDialog }`, or turn it off with `false`.
 
 `bridgeFetch` adds the person's token and refreshes it once after a 401. It sends the token only to your page's own origin, Bridge, and the origins you list:
 

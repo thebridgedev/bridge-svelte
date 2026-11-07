@@ -6,6 +6,7 @@
 -->
 <script lang="ts">
   import type { HTMLDialogAttributes } from 'svelte/elements';
+  import { sanitizeReturnTo } from '@nebulr-group/bridge-auth-core';
   import type { UpgradeDialogProps } from '../../core/upgrade.js';
 
   interface Props extends UpgradeDialogProps, Omit<HTMLDialogAttributes, 'onclose'> {}
@@ -19,7 +20,8 @@
   });
 
   const hasNumbers = $derived(typeof request.used === 'number' && typeof request.limit === 'number');
-  const href = $derived(request.upgradeHref ?? upgradeHref);
+  // A link from the request is used only when it is a path on this site.
+  const href = $derived(sanitizeReturnTo(request.upgradeHref) ?? upgradeHref);
 </script>
 
 <dialog

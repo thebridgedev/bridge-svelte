@@ -25,14 +25,34 @@ test.describe('hand-off mode', () => {
 		await expect.poll(() => returned?.searchParams.get('state')).toBe('state-12345');
 		expect(returned!.searchParams.get('code')).toBeTruthy();
 		expect(returned!.pathname).toBe('/callback');
+		// RFC 9207: the program learns which issuer answered.
+		expect(returned!.searchParams.get('iss')).toBe(issuer.issuer);
 	});
 
-	test('refuses a return address that is not a loopback IP', async ({ page }) => {
-		await page.goto(request('http://localhost:53123/callback'));
-		await expect(page.locator('[data-bridge-handoff="invalid"] [data-bridge-alert]')).toContainText('This sign-in link is not valid.');
-		await page.goto(request('https://evil.test/callback'));
-		await expect(page.locator('[data-bridge-handoff="invalid"]')).toBeVisible();
-	});
+	for (const [name, query] of [
+		['localhost', request('http://localhost:53123/callback')],
+		['https to evil.test', request('https://evil.test/callback')],
+		['https loopback', request('https://127.0.0.1:53123/callback')],
+		['a host that starts with 127.0.0.1', request('http://127.0.0.1.evil.com:53123/callback')],
+		['userinfo before another host', request('http://127.0.0.1@evil.com/callback')],
+		['no port', request('http://127.0.0.1/callback')],
+		['a fragment', request('http://127.0.0.1:53123/callback#x')],
+		['another path', request('http://127.0.0.1:53123/other')],
+		['a plain challenge', request('http://127.0.0.1:53123/callback').replace('code_challenge_method=S256', 'code_challenge_method=plain')],
+		['redirect_uri twice', `${request('http://127.0.0.1:53123/callback')}&redirect_uri=${encodeURIComponent('https://evil.test/callback')}`],
+	] as const) {
+		test(`refuses ${name}, and signs nobody in`, async ({ page }) => {
+			const signIns: string[] = [];
+			page.on('request', (r) => {
+				if (r.url().includes('/sign-in') && r.method() === 'POST') signIns.push(r.url());
+			});
+			await page.goto(query);
+			await expect(page.locator('[data-bridge-handoff="invalid"] [data-bridge-alert]')).toContainText('This sign-in link is not valid.');
+			await expect(page.locator('#handoff-email')).toHaveCount(0);
+			expect(new URL(page.url()).pathname).toBe('/auth/handoff');
+			expect(signIns).toEqual([]);
+		});
+	}
 
 	test('never signs this page in', async ({ page, issuer }) => {
 		const email = uniqueEmail('dev');

@@ -1,4 +1,4 @@
-import { expect, PASSWORD, test, uniqueEmail } from '../../support/fixtures';
+import { expect, expectTokenGone, PASSWORD, recordRequests, test, uniqueEmail } from '../../support/fixtures';
 
 async function signUp(page: import('@playwright/test').Page, email: string) {
 	await page.goto('/auth/sign-up');
@@ -14,10 +14,11 @@ test.describe('sign-up', () => {
 		const email = uniqueEmail('sam');
 		await signUp(page, email);
 		const token = await issuer.lastLink(email, 'verify-sign-up');
+		const requests = recordRequests(page);
 		// Bridge's email links land on the app's email-links address with the token in the fragment.
 		await page.goto(`/auth#bridge=verify-email&token=${token}`);
 		await expect(page.getByTestId('home-signed-in')).toContainText(email);
-		expect(page.url()).not.toContain(token);
+		await expectTokenGone(page, token, requests);
 	});
 
 	test('opened on another device, the link says so and stays usable', async ({ page, browser, issuer }) => {

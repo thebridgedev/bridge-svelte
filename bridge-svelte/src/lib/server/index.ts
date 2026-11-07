@@ -35,6 +35,7 @@ import {
 	type BridgeServerOptions,
 	type Hint,
 } from '@nebulr-group/bridge-auth-core/server';
+import { readCredentials } from '@nebulr-group/bridge-auth-core/verifier';
 
 export type { Actor, BridgeServerOptions };
 export { FlagSet };
@@ -57,19 +58,29 @@ export interface BridgeHandleOptions extends BridgeServerOptions {
 	 * seconds behind. @default true for POST, PUT, PATCH and DELETE
 	 */
 	readonly strictWrites?: boolean;
+	/**
+	 * Routes Bridge does not check, such as a webhook or cron route with a
+	 * secret of its own. They go on with `actor: null`, whatever they carry.
+	 *
+	 * ```ts
+	 * bridgeHandle({ issuer, skip: (event) => event.url.pathname.startsWith('/api/cron') });
+	 * ```
+	 */
+	readonly skip?: (event: RequestEvent) => boolean;
 }
 
-const servers = new Map<string, BridgeServer>();
+const servers = new Map<string, { server: BridgeServer; fetch: unknown }>();
 
 /** One server client per issuer and key, for the life of the process. */
 function serverFor(options: BridgeServerOptions): BridgeServer {
 	const id = `${options.issuer}|${options.appKey ?? ''}`;
-	let server = servers.get(id);
+	const known = servers.get(id);
+	let server = known !== undefined && known.fetch === options.fetch ? known.server : undefined;
 	if (server === undefined) {
 		server = createBridgeServer(options);
 		// A failed first start is retried by the client; never an unhandled rejection.
 		server.ready.catch(() => undefined);
-		servers.set(id, server);
+		servers.set(id, { server, fetch: options.fetch });
 		const proc = (globalThis as { process?: { once?: (event: string, fn: () => void) => void } }).process;
 		const closing = server;
 		proc?.once?.('sveltekit:shutdown', () => void closing.close());
@@ -79,8 +90,27 @@ function serverFor(options: BridgeServerOptions): BridgeServer {
 
 const WRITES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
-function carriesCredential(request: Request): boolean {
-	return request.headers.has('authorization') || request.headers.has('x-api-key');
+/** The `iss` of a JWT, read without checking it, or null for anything that is not one. */
+function issuerOf(token: string): string | null {
+	const payload = token.split('.')[1];
+	if (payload === undefined || token.split('.').length !== 3) return null;
+	try {
+		const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '='));
+		const iss = (JSON.parse(json) as { iss?: unknown }).iss;
+		return typeof iss === 'string' ? iss : null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Whether a request carries a Bridge credential: a bearer token this issuer
+ * issued, or a Bridge key in `x-api-key`. Anything else in `Authorization`,
+ * such as basic auth in front of a staging site or a cron route's own bearer
+ * secret, is the app's, and passes through unchecked.
+ */
+function carriesBridgeCredential(request: Request, issuer: string): boolean {
+	return readCredentials(request.headers).some((credential) => credential.type === 'key' || issuerOf(credential.value) === issuer);
 }
 
 function refusal(status: number, detail: string): Response {
@@ -91,17 +121,19 @@ function refusal(status: number, detail: string): Response {
 }
 
 /**
- * The `handle` for `hooks.server.ts`. A request that carries a credential is
- * checked before any route runs: a bad or ended one is answered 401, and one
- * that cannot be checked right now 503. A request with none goes on with
- * `actor: null`; protect a route with `requireActor`.
+ * The `handle` for `hooks.server.ts`. A request that carries a Bridge
+ * credential (a token this issuer issued, or a Bridge key) is checked before
+ * any route runs: a bad or ended one is answered 401, and one that cannot be
+ * checked right now 503. Any other request goes on with `actor: null`,
+ * including one with an `Authorization` header that is not Bridge's; protect
+ * a route with `requireActor`, and leave routes out with `skip`.
  */
 export function bridgeHandle(options: BridgeHandleOptions): Handle {
-	const { strictWrites = true, ...serverOptions } = options;
+	const { strictWrites = true, skip, ...serverOptions } = options;
 	const server = serverFor(serverOptions);
 	return async ({ event, resolve }) => {
 		let actor: Actor | null = null;
-		if (carriesCredential(event.request)) {
+		if (skip?.(event) !== true && carriesBridgeCredential(event.request, options.issuer)) {
 			const strict = strictWrites && WRITES.has(event.request.method);
 			const checked = await server.check(event.request, { strict });
 			if (!checked.ok) return refusal(checked.error.status === 503 ? 503 : 401, checked.error.message);

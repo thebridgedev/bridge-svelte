@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionState } from '@nebulr-group/bridge-auth-core';
 import { checkIssuer, resolveConfig, type BridgeConfig } from './config.js';
-import { decide, flagsAllow, type FlagReader } from './guard.js';
+import { decide, flagsAllow, normalizePath, type FlagReader } from './guard.js';
 
 const ISSUER = 'https://bridge.example.com/identity-access/apps/app-1';
 const signedIn: SessionState = { status: 'signed-in', user: { id: 'u1', email: 'a@x.test', emailVerified: true }, workspace: { id: 'w1', standing: 'active' } };
@@ -82,6 +82,29 @@ describe('decide', () => {
 		expect(run({}, '/subscription', signedIn, on())).toEqual({ type: 'allow' });
 		expect(run({ billing: { paywall: false } }, '/reports', signedIn, on())).toEqual({ type: 'allow' });
 		expect(run({ rules: [{ match: '/', public: true }] }, '/', signedIn, on())).toEqual({ type: 'allow' });
+	});
+});
+
+describe('paths, as the router resolves them', () => {
+	it('decodes once and drops a trailing slash', () => {
+		expect(normalizePath('/reports/')).toBe('/reports');
+		expect(normalizePath('/reports//')).toBe('/reports');
+		expect(normalizePath('/%72eports')).toBe('/reports');
+		expect(normalizePath('/%72eports/')).toBe('/reports');
+		expect(normalizePath('/')).toBe('/');
+		// Decoded once, as SvelteKit does: a double encoding is not this route for the router either.
+		expect(normalizePath('/%2572eports')).toBe('/%2572eports');
+		expect(normalizePath('/a%2Fb')).toBe('/a%2Fb');
+		expect(normalizePath('/%E0%A4%A')).toBe('/%E0%A4%A');
+	});
+
+	it('keeps a page behind a flag closed however its address is written', () => {
+		const rules = [{ match: '/reports', featureFlag: 'reports', redirectTo: '/' }];
+		for (const path of ['/reports', '/reports/', '/%72eports', '/%72eports/', '/%72%65ports']) {
+			expect(run({ rules }, path, signedIn), path).toEqual({ type: 'redirect', to: '/', reason: 'flag' });
+		}
+		const open = [{ match: '/account/*', public: false }];
+		expect(run({ rules: open, defaultAccess: 'public' }, '/%61ccount/x', signedOut).type).toBe('sign-in');
 	});
 });
 

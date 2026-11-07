@@ -59,5 +59,9 @@ describe('readPaymentRequired', () => {
 	it('follows only a same-origin link from the refusal', () => {
 		expect(readPaymentRequired({ code: 'QUOTA_EXCEEDED', fix: 'https://evil.test' })?.upgradeHref).toBeNull();
 		expect(readPaymentRequired({ code: 'QUOTA_EXCEEDED', fix: '//evil.test' })?.upgradeHref).toBeNull();
+		expect(readPaymentRequired({ code: 'QUOTA_EXCEEDED', fix: '/\t/evil.test' })?.upgradeHref).toBeNull();
+		expect(readPaymentRequired({ code: 'QUOTA_EXCEEDED', fix: '/\n/evil.test' })?.upgradeHref).toBeNull();
+		expect(readPaymentRequired({ code: 'QUOTA_EXCEEDED', fix: '/\\evil.test' })?.upgradeHref).toBeNull();
+		expect(readPaymentRequired({ code: 'QUOTA_EXCEEDED', fix: '/subscription?from=exports' })?.upgradeHref).toBe('/subscription?from=exports');
 	});
 });

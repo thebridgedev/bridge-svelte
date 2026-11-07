@@ -8,13 +8,15 @@
  *   …/auth/handoff?code_challenge=…&code_challenge_method=S256&redirect_uri=http://127.0.0.1:53123/callback&state=…
  *
  * The page signs in with the program's challenge, never trades the code, and
- * sends the browser to the loopback address with the code. Only the program
+ * sends the browser to the program's callback with `code`, `state` and `iss`
+ * (the issuer it signed in with). Only the program
  * holds the verifier, so only it can trade the code for tokens. The page's
  * own session is never touched.
  *
- * The return address must be `http://127.0.0.1:<port>/…` or
- * `http://[::1]:<port>/…`: never `localhost` or another host, so a crafted
- * link cannot send a code off the person's machine.
+ * The return address must be `http://127.0.0.1:<port>/callback` or
+ * `http://[::1]:<port>/callback`: never `localhost`, another host or another
+ * path, so a crafted link cannot send a code off the person's machine or to
+ * another service on it.
  */
 import {
 	handoffReturnUrl,
@@ -41,13 +43,13 @@ export function readHandoff(search: string | URLSearchParams): HandoffState {
 	}
 }
 
-function settle(request: HandoffRequest, step: HandoffStep): HandoffState {
-	if (step.done) return { status: 'done', request, returnUrl: handoffReturnUrl(request, step.code) };
+function settle(issuer: string, request: HandoffRequest, step: HandoffStep): HandoffState {
+	if (step.done) return { status: 'done', request, returnUrl: handoffReturnUrl(request, step.code, issuer) };
 	return {
 		status: 'workspace',
 		request,
 		workspaces: step.workspaces,
-		choose: async (id) => settle(request, await step.choose(id)),
+		choose: async (id) => settle(issuer, request, await step.choose(id)),
 	};
 }
 
@@ -66,7 +68,7 @@ export async function handoffSignIn(
 		codeChallenge: request.codeChallenge,
 		...(credentials.workspace === undefined ? {} : { workspace: credentials.workspace }),
 	});
-	return settle(request, step);
+	return settle(bridge.issuer, request, step);
 }
 
 /** Sends the browser back to the program. The address was checked when the request was read. */

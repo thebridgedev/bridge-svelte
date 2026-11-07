@@ -28,6 +28,25 @@ function toRegExp(match: string | RegExp): RegExp {
 	return new RegExp(`^${escaped.replace(/\*/g, '.*')}$`);
 }
 
+/**
+ * The path as SvelteKit resolves the route: decoded the way SvelteKit decodes
+ * it (`%25` kept, so nothing is decoded twice), without a trailing slash
+ * (`/` itself stays). The guard matches rules against this, so `/reports/`
+ * and `/%72eports` are the same page as `/reports`, as they are for the router.
+ * A path that cannot be decoded is kept as given; no rule matches it and
+ * `defaultAccess` decides.
+ */
+export function normalizePath(pathname: string): string {
+	let path = pathname;
+	try {
+		path = pathname.split('%25').map(decodeURI).join('%25');
+	} catch {
+		path = pathname;
+	}
+	if (path.length > 1 && path.endsWith('/')) path = path.replace(/\/+$/, '') || '/';
+	return path;
+}
+
 /** The first rule that matches `path`, or null. */
 export function findRule(path: string, rules: readonly RouteRule[]): RouteRule | null {
 	for (const rule of rules) {
@@ -59,7 +78,8 @@ export interface GuardInput {
 }
 
 /** Decides one navigation. */
-export function decide(config: ResolvedConfig, input: GuardInput): GuardDecision {
+export function decide(config: ResolvedConfig, given: GuardInput): GuardDecision {
+	const input = { ...given, path: normalizePath(given.path) };
 	const signedIn = input.session.status === 'signed-in';
 	const authPage = authPageAt(input.path, config.authBase);
 	if (authPage !== null) {

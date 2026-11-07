@@ -16,7 +16,7 @@ import { readEmailLink, readReturnTo, type Bridge } from '@nebulr-group/bridge-a
 import { get } from 'svelte/store';
 import { startClient } from './core/client.js';
 import { resolveConfig, type BridgeConfig, type ResolvedConfig } from './core/config.js';
-import { decide, type GuardDecision } from './core/guard.js';
+import { decide, normalizePath, type GuardDecision } from './core/guard.js';
 import { authPageAt, isCatchAll, isUnder, pageForLink, parseBillingPage, ROUTE_PARAM } from './core/routes.js';
 
 /** What the root layout's load gives every page. */
@@ -63,17 +63,17 @@ function followLink(config: ResolvedConfig, url: URL): void {
 	const link = readEmailLink(hash);
 	if (link === null) return;
 	const page = `${config.authBase}/${pageForLink(link)}`;
-	if (url.pathname === page) return;
+	if (normalizePath(url.pathname) === page) return;
 	redirect(307, `${page}${hash}`);
 }
 
 async function guard(client: Bridge, config: ResolvedConfig, url: URL): Promise<GuardDecision> {
 	await within(client.ready, READY_WAIT_MS);
-	const flagsNeeded = authPageAt(url.pathname, config.authBase) === null;
+	const flagsNeeded = authPageAt(normalizePath(url.pathname), config.authBase) === null;
 	if (flagsNeeded && get(client.flags.status) !== 'ready') await within(client.flags.load(), READY_WAIT_MS);
 	return decide(config, {
 		path: url.pathname,
-		target: `${url.pathname}${url.search}`,
+		target: `${normalizePath(url.pathname)}${url.search}`,
 		session: client.session.get(),
 		flags: client.flags,
 		returnTo: readReturnTo(url, config.returnToParam),
@@ -93,16 +93,18 @@ export function bridgeBootstrap(options: BridgeConfig = {}) {
 		const config = resolveConfig(options, env.PUBLIC_BRIDGE_ISSUER);
 		const client = startClient(config);
 		const { url } = event;
+		// Matched as the router resolves the route: decoded, without a trailing slash.
+		const path = normalizePath(url.pathname);
 
 		// An email link lands on the email-links address with its token in the fragment: on to its page.
 		followLink(config, url);
-		if (config.authBase !== '' && (url.pathname === config.authBase || url.pathname === `${config.authBase}/`)) redirect(307, `${config.authBase}/sign-in${url.search}`);
+		if (config.authBase !== '' && path === config.authBase) redirect(307, `${config.authBase}/sign-in${url.search}`);
 
 		// A catch-all route under the auth or billing base answers an unknown page with the app's own 404.
 		if (isCatchAll(event.route.id)) {
 			const rest = event.params[ROUTE_PARAM];
-			if (isUnder(url.pathname, config.authBase) && authPageAt(url.pathname, config.authBase) === null) error(404, 'Not found');
-			if (isUnder(url.pathname, config.billingBase) && parseBillingPage(rest) === null) error(404, 'Not found');
+			if (isUnder(path, config.authBase) && authPageAt(path, config.authBase) === null) error(404, 'Not found');
+			if (isUnder(path, config.billingBase) && parseBillingPage(rest) === null) error(404, 'Not found');
 		}
 
 		const decision = await guard(client, config, url);

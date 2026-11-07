@@ -12,6 +12,8 @@ import { flag } from './flags.js';
 import { handoffSignIn, readHandoff } from './handoff.js';
 import { session, signedIn, workspace, workspaces } from './stores.js';
 import { bridgeBootstrap } from '../bootstrap.js';
+import { bridgeFetch } from './fetch.js';
+import { closeUpgrade, upgradeRequest } from './upgrade.js';
 
 const PASSWORD = 'correct horse battery';
 
@@ -81,12 +83,29 @@ describe('hand-off', () => {
 	const request = (redirect: string) =>
 		new URLSearchParams({ code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM', code_challenge_method: 'S256', redirect_uri: redirect, state: 'state-0001' });
 
-	it('refuses any return address but a loopback IP with a port', () => {
+	it('refuses any return address but a loopback IP with a port, at /callback', () => {
 		expect(readHandoff(request('http://127.0.0.1:53123/callback')).status).toBe('ready');
 		expect(readHandoff(request('http://[::1]:53123/callback')).status).toBe('ready');
-		expect(readHandoff(request('http://localhost:53123/callback')).status).toBe('invalid');
-		expect(readHandoff(request('https://evil.test/callback')).status).toBe('invalid');
-		expect(readHandoff(request('http://127.0.0.1@evil.test:53123/')).status).toBe('invalid');
+		for (const address of [
+			'http://localhost:53123/callback',
+			'https://evil.test/callback',
+			'https://127.0.0.1:53123/callback',
+			'http://127.0.0.1.evil.com:53123/callback',
+			'http://127.0.0.1@evil.com/callback',
+			'http://127.0.0.1@evil.test:53123/callback',
+			'http://127.0.0.1/callback',
+			'http://127.0.0.1:53123/callback#frag',
+			'http://127.0.0.1:53123/',
+			'http://127.0.0.1:53123/other',
+		]) {
+			expect(readHandoff(request(address)).status, address).toBe('invalid');
+		}
+		const plain = request('http://127.0.0.1:53123/callback');
+		plain.set('code_challenge_method', 'plain');
+		expect(readHandoff(plain).status).toBe('invalid');
+		const twice = request('http://127.0.0.1:53123/callback');
+		twice.append('redirect_uri', 'https://evil.test/callback');
+		expect(readHandoff(twice).status).toBe('invalid');
 		expect(readHandoff(new URLSearchParams()).status).toBe('invalid');
 	});
 
@@ -101,7 +120,9 @@ describe('hand-off', () => {
 		if (done.status !== 'done') throw new Error('expected done');
 		const back = new URL(done.returnUrl);
 		expect(back.origin).toBe('http://127.0.0.1:53123');
+		expect(back.pathname).toBe('/callback');
 		expect(back.searchParams.get('state')).toBe('state-0001');
+		expect(back.searchParams.get('iss')).toBe(client.issuer);
 		expect(back.searchParams.get('code')).toBeTruthy();
 		expect(get(session).status).toBe('signed-out');
 	});
@@ -155,5 +176,53 @@ describe('bridgeBootstrap', () => {
 		} finally {
 			delete (globalThis as { window?: unknown }).window;
 		}
+	});
+});
+
+describe('bridgeFetch and the upgrade dialog', () => {
+	const API = 'https://api.example.test';
+	const limit = { code: 'QUOTA_EXCEEDED', metric: 'tickets', used: 3, limit: 3, fix: '/subscription' };
+
+	async function withApi(answer: (url: string) => Response) {
+		const fake = createFakeIssuer();
+		fake.addPerson({ email: 'alice@acme.test', password: PASSWORD, workspaces: [{ id: 'ws-acme', name: 'Acme' }] });
+		const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = new Request(input, init).url;
+			return url.startsWith(API) ? answer(url) : fake.fetch(input, init);
+		}) as typeof fetch;
+		const resolved = resolveConfig({ issuer: fake.issuer, tokenOrigins: [API] }, undefined);
+		const client = startClient(resolved, { fetch: fetchFn, storage: memoryStorage(), autoRefresh: false, locks: null, tabChannel: null, live: false });
+		await client.signIn.start({ email: 'alice@acme.test', password: PASSWORD });
+		return fake;
+	}
+
+	const redirectedFrom = (url: string, body: unknown) => {
+		const response = Response.json(body, { status: 402 });
+		Object.defineProperty(response, 'redirected', { value: true });
+		Object.defineProperty(response, 'url', { value: url });
+		return response;
+	};
+
+	afterEach(() => closeUpgrade());
+
+	it('opens for a plan limit your API refused', async () => {
+		await withApi(() => Response.json(limit, { status: 402 }));
+		const response = await bridgeFetch(`${API}/tickets`, { method: 'POST' });
+		expect(response.status).toBe(402);
+		expect(get(upgradeRequest)).toMatchObject({ kind: 'limit', metric: 'tickets', upgradeHref: '/subscription' });
+	});
+
+	it('stays shut for a 402 that came through a redirect, or from another host', async () => {
+		await withApi((url) => (url.endsWith('/redirect') ? redirectedFrom('https://evil.test/402', limit) : Response.json(limit, { status: 402 })));
+		expect((await bridgeFetch(`${API}/redirect`)).status).toBe(402);
+		expect(get(upgradeRequest)).toBeNull();
+		resetClient();
+		await withApi(() => {
+			const response = Response.json(limit, { status: 402 });
+			Object.defineProperty(response, 'url', { value: 'https://evil.test/402' });
+			return response;
+		});
+		await bridgeFetch(`${API}/other`);
+		expect(get(upgradeRequest)).toBeNull();
 	});
 });

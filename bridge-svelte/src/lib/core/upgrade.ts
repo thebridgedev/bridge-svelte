@@ -3,6 +3,7 @@
  * `bridgeFetch`) or by an upgrade prompt on a feature that is off because of
  * the plan. `<BridgeBootstrap>` renders it.
  */
+import { sanitizeReturnTo } from '@nebulr-group/bridge-auth-core';
 import { writable, type Readable } from 'svelte/store';
 
 /** Why the dialog is open. */
@@ -49,11 +50,9 @@ export function closeUpgrade(): void {
 const num = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) ? value : null);
 const str = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
 
-/** A same-origin path only: a refusal's link never sends the person elsewhere. */
+/** A same-origin path only, through the same check as return addresses: a refusal's link never sends the person elsewhere. */
 function samePath(value: unknown): string | null {
-	const path = str(value);
-	if (path === null || !path.startsWith('/') || path.startsWith('//') || path.startsWith('/\\')) return null;
-	return path;
+	return typeof value === 'string' ? sanitizeReturnTo(value) : null;
 }
 
 /**

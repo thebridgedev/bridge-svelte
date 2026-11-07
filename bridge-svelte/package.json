@@ -1,104 +1,93 @@
 {
-  "name": "@nebulr-group/bridge-svelte",
-  "version": "0.9.4",
-  "description": "The Bridge for SvelteKit: sign-in, workspaces and roles, feature flags, Stripe subscriptions and plan limits in one .env line and three files.",
-  "author": "Iman Pouya",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/thebridgedev/bridge-svelte.git"
-  },
-  "bugs": {
-    "url": "https://github.com/thebridgedev/bridge-svelte/issues"
-  },
-  "homepage": "https://thebridge.dev/docs/quickstart/svelte/",
-  "scripts": {
-    "dev": "vite dev",
-    "build": "bun run prepack",
-    "preview": "vite preview",
-    "prepare": "svelte-kit sync || echo ''",
-    "prepack": "svelte-kit sync && svelte-package",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "test:unit": "vitest run",
-    "package": "bun run prepack && bun pm pack --destination ../",
-    "publish:local": "bun run prepack && node -e \"const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json','utf8')),v=p.version.match(/^(\\d+\\.\\d+\\.\\d+)-alpha\\.(\\d+)$/);if(v){p.version=v[1]+'-alpha.'+(+v[2]+1);}else{p.version=p.version+'-alpha.0';}fs.writeFileSync('package.json',JSON.stringify(p,null,'\t')+'\\n');console.log('Version bumped to '+p.version);\" && npm publish --registry http://host.docker.internal:4873 --no-git-checks --ignore-scripts && npm dist-tag add @nebulr-group/bridge-svelte@$(node -p \"require('./package.json').version\") alpha --registry http://host.docker.internal:4873"
-  },
-  "files": [
-    "dist",
-    "!dist/**/*.test.*",
-    "!dist/**/*.spec.*",
-    "README.md",
-    "LICENSE"
-  ],
-  "sideEffects": [
-    "**/*.css"
-  ],
-  "type": "module",
-  "svelte": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "svelte": "./dist/index.js",
-      "import": "./dist/index.js"
-    },
-    "./flags": {
-      "types": "./dist/flags/index.d.ts",
-      "svelte": "./dist/flags/index.js",
-      "import": "./dist/flags/index.js"
-    },
-    "./styles": {
-      "types": "./dist/styles.d.ts",
-      "import": "./dist/styles.css",
-      "default": "./dist/styles.css"
-    }
-  },
-  "peerDependencies": {
-    "svelte": "^5.0.0",
-    "@sveltejs/kit": "^2.0.0",
-    "@stripe/stripe-js": ">=4.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@stripe/stripe-js": {
-      "optional": true
-    }
-  },
-  "dependencies": {
-    "@nebulr-group/bridge-auth-core": "^0.8.0",
-    "@simplewebauthn/browser": "^13.0.0"
-  },
-  "devDependencies": {
-    "@sveltejs/kit": "^2.16.0",
-    "@sveltejs/package": "^2.0.0",
-    "@sveltejs/vite-plugin-svelte": "^5.0.0",
-    "@stripe/stripe-js": "^5.0.0",
-    "publint": "^0.3.2",
-    "svelte": "^5.0.0",
-    "svelte-check": "^4.0.0",
-    "typescript": "^6.0.0",
-    "vite": "^6.2.6",
-    "vitest": "^4.1.4"
-  },
-  "keywords": [
-    "svelte",
-    "sveltekit",
-    "svelte5",
-    "passkeys",
-    "magic-link",
-    "the-bridge",
-    "bridge",
-    "authentication",
-    "auth",
-    "login",
-    "sso",
-    "feature-flags",
-    "stripe",
-    "subscriptions",
-    "billing",
-    "plan-limits",
-    "multi-tenant",
-    "rbac",
-    "saas"
-  ]
+	"name": "@nebulr-group/bridge-svelte",
+	"version": "1.0.0-alpha.0",
+	"description": "The Bridge for SvelteKit: sign-in in your own pages, workspaces, flag-based route guards, plans and checkout, the team panel and live updates, on one setting: the issuer.",
+	"author": "Iman Pouya",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/thebridgedev/bridge-svelte.git"
+	},
+	"bugs": {
+		"url": "https://github.com/thebridgedev/bridge-svelte/issues"
+	},
+	"homepage": "https://thebridge.dev/docs/quickstart/svelte/",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "bun run prepack",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"prepack": "svelte-kit sync && svelte-package",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"test:unit": "vitest run",
+		"package": "bun run prepack && bun pm pack --destination ../",
+		"publish:local": "bun run prepack && node -e \"const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json','utf8')),v=p.version.match(/^(\\d+\\.\\d+\\.\\d+)-alpha\\.(\\d+)$/);if(v){p.version=v[1]+'-alpha.'+(+v[2]+1);}else{p.version=p.version+'-alpha.0';}fs.writeFileSync('package.json',JSON.stringify(p,null,'\t')+'\\n');console.log('Version bumped to '+p.version);\" && npm publish --registry http://host.docker.internal:4873 --no-git-checks --ignore-scripts && npm dist-tag add @nebulr-group/bridge-svelte@$(node -p \"require('./package.json').version\") alpha --registry http://host.docker.internal:4873"
+	},
+	"files": [
+		"dist",
+		"!dist/**/*.test.*",
+		"!dist/**/*.spec.*",
+		"README.md",
+		"LICENSE"
+	],
+	"sideEffects": [
+		"**/*.css"
+	],
+	"type": "module",
+	"svelte": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"svelte": "./dist/index.js",
+			"import": "./dist/index.js"
+		},
+		"./server": {
+			"types": "./dist/server/index.d.ts",
+			"browser": "./dist/server/browser.js",
+			"import": "./dist/server/index.js",
+			"default": "./dist/server/index.js"
+		},
+		"./styles": {
+			"types": "./dist/styles.d.ts",
+			"import": "./dist/styles.css",
+			"default": "./dist/styles.css"
+		}
+	},
+	"peerDependencies": {
+		"svelte": "^5.0.0",
+		"@sveltejs/kit": "^2.0.0"
+	},
+	"dependencies": {
+		"@nebulr-group/bridge-auth-core": "1.0.0-alpha.0"
+	},
+	"devDependencies": {
+		"@sveltejs/kit": "^2.16.0",
+		"@sveltejs/package": "^2.0.0",
+		"@sveltejs/vite-plugin-svelte": "^5.0.0",
+		"publint": "^0.3.2",
+		"svelte": "^5.0.0",
+		"svelte-check": "^4.0.0",
+		"typescript": "^6.0.0",
+		"vite": "^6.2.6",
+		"vitest": "^4.1.4"
+	},
+	"keywords": [
+		"svelte",
+		"sveltekit",
+		"svelte5",
+		"the-bridge",
+		"bridge",
+		"authentication",
+		"auth",
+		"sign-in",
+		"feature-flags",
+		"stripe",
+		"subscriptions",
+		"billing",
+		"multi-tenant",
+		"workspaces",
+		"saas"
+	]
 }

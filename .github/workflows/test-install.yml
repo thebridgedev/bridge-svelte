@@ -3,7 +3,7 @@ name: Test install
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, v1]
   push:
     branches: [main]
 

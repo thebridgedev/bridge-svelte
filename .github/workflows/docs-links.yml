@@ -5,7 +5,7 @@ name: Docs links
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, v1]
     paths:
       - "learning/**"
       - "scripts/check-docs-links.mjs"

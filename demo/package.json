@@ -14,9 +14,7 @@
 		"lint": "prettier --check . && eslint ."
 	},
 	"dependencies": {
-		"@nebulr-group/bridge-svelte": "workspace:*",
-		"@simplewebauthn/browser": ">=10.0.0",
-		"jose": "^5.2.0"
+		"@nebulr-group/bridge-svelte": "workspace:*"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",

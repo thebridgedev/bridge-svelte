@@ -1,14 +1,11 @@
-// See https://svelte.dev/docs/kit/types#app.d.ts
-// for information about bridgese interfaces
+import type { BridgeLocals } from '@nebulr-group/bridge-svelte/server';
+
 declare global {
 	namespace App {
-		// interface Error {}
-		// interface Locals {}
-		// interface PageData {}
-		// interface PageState {}
-		// interface Platform {}
+		interface Locals {
+			bridge: BridgeLocals;
+		}
 	}
 }
 
-export { };
-
+export {};

@@ -15,15 +15,10 @@ const config = {
 		alias: {
 			// The demo imports the plugin by its published name, exactly as an app
 			// does, but from source: no build step between an edit and the page.
-			// `/styles` first — it points at a file, the bare name at the folder
-			// (index.ts, and flags/index.ts for `/flags`).
+			// The subpaths first: they point at files, the bare name at the folder.
 			'@nebulr-group/bridge-svelte/styles': '../bridge-svelte/src/lib/styles.css',
-			'@nebulr-group/bridge-svelte': '../bridge-svelte/src/lib',
-			// Deep imports into the plugin, used by the test fixtures only.
-			'@bridge-svelte': '../bridge-svelte/src',
-			// Single source of truth for doc content — same `/learning` tree the
-			// public Astro docs hub renders via the sync-docs action.
-			$learning: '../learning'
+			'@nebulr-group/bridge-svelte/server': '../bridge-svelte/src/lib/server/index.ts',
+			'@nebulr-group/bridge-svelte': '../bridge-svelte/src/lib'
 		}
 	}
 };

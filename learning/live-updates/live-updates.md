@@ -1,156 +1,37 @@
-# Live updates and the `bridge` object
+# Live updates
 
-Every Bridge app holds one **live channel** to the platform: a persistent realtime connection the SDK maintains for you. On connect (and on every reconnect) the server pushes a `session.snapshot` with everything your UI needs (branding, workspace, subscription, entitlements, user), and after that, targeted pushes keep it current: flag changes, plan changes, payment events, quota updates. No polling, no refresh.
+Bridge tells the page within about a second when something it shows has changed: a flag's rule, the team, the workspace, the plan. The plugin fetches it again, so screens stay current without a reload. It is on by default; `bridgeBootstrap({ live: false })` turns it off.
 
-The **`bridge` object** is the single object that exposes all of it, grouped by scope:
+## What refreshes by itself
 
-```svelte
-<script lang="ts">
-  import { bridge } from '@nebulr-group/bridge-svelte';
+- **Flag results**, and with them `<FeatureFlag>`, `useFlag` and the route guard: a page whose flag was turned off closes.
+- **The workspace list and profile** (`workspaces`, `me`).
+- **Billing facts and plans** (`billing`, `plans`, `usage`), after a checkout, a plan change or a renewal.
+- **The team panel**, when a member joins, changes or leaves.
+- **The session**: a session ended from another device is noticed at once.
 
-  const branding = bridge.app.branding;
-  const workspace = bridge.tenant.name;
-  const subscription = bridge.tenant.subscription;
-  const user = bridge.user;
-</script>
+A notice never carries the data itself, only what changed. The page reads the data through the API, which checks who is asking.
 
-{#if $branding}<img src={$branding.logo} alt={$branding.name} />{/if}
-<p>Workspace: {$workspace}</p>
-<p>Plan: {$subscription?.plan.name}</p>
-<p>Signed in as {$user?.email}</p>
-```
-
-Every field is a Svelte readable store. They are `null` until the channel delivers the first snapshot; gate on null for skeletons, or fall back to defaults. The `bridge` object's identity is stable; destructure and pass sub-references freely.
-
-A note on naming: a workspace is called a *tenant* in the API, which is why the identifiers below say `tenant`.
-
-### The scopes
-
-| Path | Type | What it holds |
-|------|------|---------------|
-| `bridge.app.branding` | `Readable<BrandingSnapshot \| null>` | Whitelabel branding: `logo`, `name`, colors, font |
-| `bridge.app.plans` | fetched on first access and cached | Full plan catalog: `await bridge.app.plans` fetches it the first time you read it |
-| `bridge.tenant.id` / `.name` | `Readable<string \| null>` | Current workspace identity |
-| `bridge.tenant.subscription` | `Readable<SubscriptionSnapshot \| null>` | Canonical plan + status + endsAt (see [How billing works](/billing/how-it-works/)) |
-| `bridge.tenant.entitlements` | `snapshot` store + `can(key)` | Plan-granted capabilities, replaced live on change |
-| `bridge.user` | `Readable<UserSnapshot \| null>` | Authenticated user: `id`, `email`, `role`, `tenantId` |
-| `bridge.attributes` | write surface | Publish your own attributes into flag targeting (below) |
-| `bridge.events` | dispatcher | Subscribe to every live channel event (below) |
-
-### Handling live events
-
-`bridge.events.handle({...})` is the one API for reacting to channel events. Use it for side effects like analytics, audit logging, or alerting (UI state updates automatically through the stores above and the drop-in components):
+## Your own screens
 
 ```ts
-import { bridge } from '@nebulr-group/bridge-svelte';
+import { getBridge } from '@nebulr-group/bridge-svelte';
 
-const unsubscribe = bridge.events.handle({
-  'flag.updated':              (m) => console.log('flag changed:', m.flag.key),
-  'subscription.plan_changed': (m) => analytics.track('plan_changed', m),
-  // m.policy ('hard' | 'metered'); for metered also m.unitAmount / m.currency /
-  // m.overageEstimate / m.overcap (TBP-275) for live in-app cost display.
-  'quota.updated':             (m) => updateMeter(m.metric, m.remaining),
-  'session.snapshot':          (m) => analytics.track('hydrated'),
-  '*':                         (m) => debugLog(m.kind, m),
-});
-
-// later: one call removes every handler registered above
-unsubscribe();
+const stop = getBridge().live.on('accounts.member_updated', () => reloadMyList());
 ```
 
-Event kinds:
+`live.on('*', …)` receives every notice. `bridge.live.many_changed` means several things changed or some notices were missed: fetch what you show again.
 
-- **Flags:** `flag.updated`, `flag.removed`
-- **Session:** `session.snapshot`, `user.state_changed`
-- **Subscription:** `subscription.plan_changed`, `subscription.created` / `updated` / `canceled` / `reactivated`, `subscription.trial_started` / `trial_ending_soon` / `trial_converted` / `trial_expired`
-- **Payments:** `payment.succeeded`, `payment.failed`, `dunning.entered` / `retry_scheduled` / `recovered` / `exhausted` (dunning is the automated payment-retry process that follows a failed charge)
-- **Quotas & entitlements:** `quota.updated`, `entitlements.changed`
-
-Semantics worth knowing:
-
-- **Multiple handlers per kind**: every registered handler fires; registering is additive across your app.
-- **`'*'` is a fallback**, not a firehose: it fires only for kinds that have no specific handler registered (so you never double-handle).
-- **Errors are isolated**: one throwing handler doesn't block the others or break the dispatch loop.
-
-### Publishing your own attributes
-
-`bridge.attributes` is the write surface for feeding your own data into feature-flag targeting. Keys you publish here are usable in flag rules immediately and win over Bridge-managed attributes on collision:
+For data you keep in a store, `resource(load, notices)` does this for you:
 
 ```ts
-import { bridge } from '@nebulr-group/bridge-svelte';
+import { resource } from '@nebulr-group/bridge-svelte';
 
-// Static value
-bridge.attributes.set('beta_cohort', true);
-
-// Live-bound: the getter re-runs on every flag evaluation
-bridge.attributes.bind('cart_size', () => cart.items.length);
-
-// Bulk: one getter returning a whole map
-bridge.attributes.bindMany(() => ({
-  theme: currentTheme,
-  locale: navigator.language,
-}));
-
-// Read the merged map / remove keys
-bridge.attributes.get();
-bridge.attributes.unset('beta_cohort');
+export const projects = resource((bridge) => bridge.fetch('/api/projects').then((r) => r.json()), ['accounts.']);
 ```
 
-The `bridge:` namespace is reserved for Bridge-managed attributes; writes to it are rejected with a console warning. Pass `{ observed: false }` to `set`/`bind`/`bindMany` to keep a key out of attribute-discovery telemetry.
+It fetches when first shown, again when the person or workspace changes, and again on a matching notice.
 
-### Connection status
+## The connection
 
-The live channel's connection state is exposed as a store, from the package root or the flags entry point:
-
-```svelte
-<script lang="ts">
-  import { realtimeStatus } from '@nebulr-group/bridge-svelte';
-</script>
-
-{#if $realtimeStatus !== 'open'}
-  <span class="badge">reconnecting…</span>
-{/if}
-```
-
-While the channel is down, everything keeps working from the last known state: flags evaluate from cache, stores hold their last snapshot. On reconnect the server re-sends a full `session.snapshot`, so every scope updates atomically and nothing is missed.
-
-### When live updates are off
-
-`realtimeStatus` is just the state (`'idle'`, `'connecting'`, `'open'`, `'closed'`, `'unauthorized'`, `'degraded'`). `realtimeStatusDetail` adds why:
-
-| Field | Meaning |
-|-------|---------|
-| `state` | Same value as `realtimeStatus` |
-| `reason` | Machine-readable reason when live updates are not working, e.g. `expired` |
-| `side` | Whose move it is: `app` (your app's session/token handling), `config` (your Bridge settings — `apiBaseUrl`, `appId` or the app's configuration in Bridge — don't match), `bridge` (nothing to change in your app) or `network` (transient; the client is retrying) |
-| `retrying` | `true` while the client keeps trying on its own |
-| `docsUrl` | Troubleshooting page for this `reason` |
-| `ref` | Support reference for this run of trouble |
-
-Every `reason` has an entry in [Live Updates Troubleshooting](/live-updates/troubleshooting/): what it means, whose side it is on, and the exact fix. The console message, `docsUrl` and the dev badge all link straight to it.
-
-```svelte
-<script lang="ts">
-  import { realtimeStatusDetail } from '@nebulr-group/bridge-svelte';
-</script>
-
-{#if $realtimeStatusDetail.state === 'unauthorized'}
-  <p>Live updates are off ({$realtimeStatusDetail.reason}). <a href={$realtimeStatusDetail.docsUrl}>Why?</a></p>
-{/if}
-```
-
-For side effects (logging, alerting) subscribe instead; it returns an unsubscribe function:
-
-```ts
-import { onBridgeRealtimeStatus } from '@nebulr-group/bridge-svelte';
-
-const stop = onBridgeRealtimeStatus((status) => {
-  if (status.reason) console.warn('live updates:', status.reason, status.side);
-});
-```
-
-**Dev badge.** In development builds, `<BridgeBootstrap>` mounts a small "Live updates off — why?" badge in the corner whenever live updates are refused (`unauthorized`), connected but receiving nothing (`degraded`), or still retrying after 30 seconds. It shows the reason, whose side it is, a docs link and the support reference, and can be dismissed until a different problem appears. It never renders in production builds. Turn it off in development too with `devBadge: false` in the config you pass to `bridgeBootstrap`. If you render your own bootstrap instead of `<BridgeBootstrap>`, the badge is exported as `RealtimeDevBadge`.
-
-### Relationship to the module-level stores
-
-The `bridge` object and the original module-level stores (`appConfigStore`, `subscriptionStore`, `profileStore`, `isAuthenticated`, ...) are both supported and fed by the same internal state. The `bridge` object is the newer, scoped way to read live platform state; the module-level stores remain the API for auth state and the classic checkout flow, covered in the [Auth](/auth/) and [How billing works](/billing/how-it-works/) guides. Use whichever fits; they don't conflict.
+`liveStatus` is `open`, `polling` (no socket; it checks every few seconds instead), `connecting`, `closed` or `off`. `<LiveStatusBadge />` shows it, for development builds.

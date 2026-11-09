@@ -3,15 +3,21 @@
   the address: Bridge emails a link to the app's verify-email page, which
   finishes the sign-up on this device. The answer is the same whether or not
   the address already has an account, so the form never says which.
+
+  With `invite`, it signs the person up from an invite instead: the invite's
+  link proved the address, so there is no email field and no email to wait
+  for, and the person lands signed in, in the inviting workspace.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
+  import { goto } from '$app/navigation';
   import type { SignInOptions } from '@nebulr-group/bridge-auth-core';
   import { getBridge, peekConfig } from '../../core/client.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
+  import { takeSignUpLinks } from '../../core/link-relay.js';
   import AuthFormWrapper from '../shared/AuthFormWrapper.svelte';
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
@@ -27,8 +33,13 @@
      * `'ask'` asks for its name, `false` makes none. @default true
      */
     workspace?: boolean | 'ask';
-    /** An invite to accept once the address is proved. */
+    /**
+     * An invite's token: sign the person up from the invite. The address is
+     * the invite's, so no email field is shown and no email is sent.
+     */
     invite?: string;
+    /** With `invite`: called once signed in. Without it, the page goes to `auth.afterSignIn`. */
+    onSignIn?: () => void;
     showLoginLink?: boolean;
     loginHref?: string;
     /** Called once the email is sent. */
@@ -44,6 +55,7 @@
     showNameFields = true,
     workspace = true,
     invite = undefined,
+    onSignIn,
     showLoginLink = true,
     loginHref = undefined,
     onSent,
@@ -56,7 +68,8 @@
   }: Props = $props();
 
   const t = $derived(translator(messages));
-  const authBase = peekConfig()?.authBase ?? '/auth';
+  const config = peekConfig();
+  const authBase = config?.authBase ?? '/auth';
 
   let email = $state('');
   let password = $state('');
@@ -69,7 +82,10 @@
   let options = $state<SignInOptions | null>(null);
 
   const minLength = $derived(options?.password.minLength ?? 8);
-  const closed = $derived(options !== null && !options.signUp);
+  // An invite is its own way in, whether or not the app takes sign-ups.
+  const closed = $derived(!invite && options !== null && !options.signUp);
+  let stopRelay: (() => void) | null = null;
+  onDestroy(() => stopRelay?.());
 
   onMount(() => {
     getBridge()
@@ -88,17 +104,30 @@
     }
     loading = true;
     const address = email.trim();
+    const names = {
+      ...(firstName.trim() ? { firstName: firstName.trim() } : {}),
+      ...(lastName.trim() ? { lastName: lastName.trim() } : {}),
+    };
     try {
+      if (invite) {
+        // Signed in at once, in the inviting workspace: the invite's link proved the address.
+        await getBridge().invites.signUp({ token: invite, password, ...names });
+        if (onSignIn) onSignIn();
+        else void goto(config?.afterSignIn ?? '/', { invalidateAll: true });
+        return;
+      }
       await getBridge().signUp.start({
         email: address,
         password,
-        ...(firstName.trim() ? { firstName: firstName.trim() } : {}),
-        ...(lastName.trim() ? { lastName: lastName.trim() } : {}),
+        ...names,
         ...(workspace === 'ask' ? { workspace: workspaceName.trim() || true } : workspace ? { workspace: true } : {}),
-        ...(invite ? { invite } : {}),
       });
       sentTo = address;
       onSent?.(address);
+      // Memory only: this tab holds the sign-up's verifier, and the email link opens in a new tab, which hands it here.
+      if (config?.storage === 'memory' && stopRelay === null) {
+        stopRelay = takeSignUpLinks(config.issuer, () => void goto(`${authBase}/verify-email`));
+      }
     } catch (error) {
       failure = errorMessage(error, t, 'signup.error.create');
       onError?.(error);
@@ -137,10 +166,12 @@
           </div>
         </div>
       {/if}
-      <div class="bridge-form-group">
-        <label for="signup-email">{t('field.email')}</label>
-        <input id="signup-email" type="email" autocomplete="email" placeholder={t('placeholder.email')} required bind:value={email} disabled={loading} />
-      </div>
+      {#if !invite}
+        <div class="bridge-form-group">
+          <label for="signup-email">{t('field.email')}</label>
+          <input id="signup-email" type="email" autocomplete="email" placeholder={t('placeholder.email')} required bind:value={email} disabled={loading} />
+        </div>
+      {/if}
       <div class="bridge-form-group">
         <label for="signup-password">{t('field.password')}</label>
         <PasswordInput
@@ -155,13 +186,13 @@
           hideLabel={t('action.hidePassword')}
         />
       </div>
-      {#if workspace === 'ask'}
+      {#if workspace === 'ask' && !invite}
         <div class="bridge-form-group">
           <label for="signup-workspace">{t('field.workspaceName')}</label>
           <input id="signup-workspace" type="text" autocomplete="organization" bind:value={workspaceName} disabled={loading} />
         </div>
       {/if}
-      <button type="submit" class="bridge-btn bridge-btn-primary" disabled={loading || !email.trim() || !password}>
+      <button type="submit" class="bridge-btn bridge-btn-primary" disabled={loading || (!invite && !email.trim()) || !password}>
         {#if loading}<Spinner size={16} />{:else}{t('signup.submit')}{/if}
       </button>
     </form>

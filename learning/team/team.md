@@ -18,11 +18,11 @@ Everyone sees the member list and their own profile. Inviting, changing roles, r
 | Tab | What it does |
 |---|---|
 | Members | The workspace's members, with search; edit a member's role or disable them; remove a member after showing what that removes |
-| Invites | Pending invites; send one again (the old link stops working) or revoke it |
+| Invites | Pending invites; send one again (the old link stops working) or revoke it. An invite lasts 30 days |
 | Workspace | The workspace's name and logo |
 | Profile | The person's own name and phone number |
 
-The roles offered when inviting or editing are the ones the person may give. There is no seat check in the browser: a workspace at its member limit gets Bridge's refusal, with an upgrade path if the plan allows more.
+The roles offered when inviting or editing are the ones the person may give. Bridge emails the invite's link to your app's email-links address, where `/auth/invite` takes it (see [Sign-in pages](../sign-in/sign-in.md)). Without an email-links address in your app's settings, sending is refused with a message saying so, and nothing is sent. A workspace can send 50 invites an hour and 200 a day. There is no seat check in the browser: a workspace at its member limit gets Bridge's refusal, with an upgrade path if the plan allows more.
 
 ## The pieces
 

@@ -82,9 +82,23 @@ bridgeBootstrap({
   locale, messages,       // the language, and your own wording
   tokenOrigins,           // other origins your API runs on, for bridgeFetch
   live,                   // true
+  storage,                // 'local' (default) or 'memory': see below
   hints,                  // values flag rules may read, such as a country
   flags: { billingManage, teamManage, appActive }, // the flags Bridge's own screens gate on
   billing: { base, paywall, upgradeDialog },       // '/subscription', its plan page, true
   handoff,                // off; see Hand-off mode
 });
 ```
+
+## Keeping nothing in the browser's storage
+
+By default the session is kept in `localStorage`, so a reload and a new tab stay signed in. With `storage: 'memory'`, nothing of Bridge's is written to `localStorage` or `sessionStorage`: the session, a sign-up in progress and the visitor id stay in the page's memory. A reload signs in again. A new tab is signed in by another open tab of the app, passed in memory only; with no other tab open, it signs in again.
+
+```ts
+export const load = bridgeBootstrap({ storage: 'memory' });
+```
+
+A sign-up's email link opens in a new tab. In memory mode that tab hands the link to the tab that started the sign-up, which finishes there, and the new tab says to go on in the other window. If that tab was closed, the link says to open it where the sign-up started; it stays usable.
+
+SvelteKit itself keeps scroll positions in `sessionStorage` (`sveltekit:*`). Those hold nothing of Bridge's.
+

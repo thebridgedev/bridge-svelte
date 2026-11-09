@@ -2,6 +2,10 @@
   Finishes a sign-up from its email link, on the device that started it, and
   signs the person in. Opened on another device it says so, and the link
   still works on the right one.
+
+  With `storage: 'memory'` the sign-up's verifier lives only in the tab that
+  started it, so this page first hands the link to that tab; when one takes
+  it, this page says to go on there.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
@@ -12,6 +16,7 @@
   import { getBridge, peekConfig } from '../../core/client.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
+  import { offerSignUpLink, takeRelayedLink } from '../../core/link-relay.js';
   import AuthFormWrapper from '../shared/AuthFormWrapper.svelte';
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
@@ -36,6 +41,7 @@
 
   type State =
     | { step: 'working' }
+    | { step: 'continued' }
     | { step: 'workspace'; workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> }
     | { step: 'failed'; message: string; kind: string | null };
   let view = $state<State>({ step: 'working' });
@@ -56,9 +62,19 @@
   }
 
   onMount(() => {
-    const found = token ?? takeEmailLink('verify-email');
+    // A link another tab handed here (memory only), the token given, or the page's own address.
+    const relayed = token === undefined ? takeRelayedLink() : null;
+    const found = token ?? relayed ?? takeEmailLink('verify-email');
     if (found === null) {
       view = { step: 'failed', message: t('verify.missingLink'), kind: null };
+      return;
+    }
+    if (relayed === null && config?.storage === 'memory') {
+      // The verifier is in the tab that started the sign-up: offer it the link first.
+      void offerSignUpLink(config.issuer, found).then((taken) => {
+        if (taken) view = { step: 'continued' };
+        else getBridge().signUp.finish(found).then(follow, fail);
+      });
       return;
     }
     getBridge().signUp.finish(found).then(follow, fail);
@@ -80,6 +96,10 @@
       <Spinner size={24} />
       <span>{t('verify.finishing')}</span>
     </div>
+  </AuthFormWrapper>
+{:else if view.step === 'continued'}
+  <AuthFormWrapper heading={t('signup.heading')} {headingSnippet} class={className} {style} data-bridge-verify-email="continued" {...rest}>
+    <Alert variant="info">{t('verify.continuedElsewhere')}</Alert>
   </AuthFormWrapper>
 {:else if view.step === 'workspace'}
   <AuthFormWrapper heading={t('workspace.chooseHeading')} {headingSnippet} class={className} {style} data-bridge-verify-email="workspace" {...rest}>

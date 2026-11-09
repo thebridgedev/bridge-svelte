@@ -56,6 +56,14 @@ async function control(path: string, request: Request, url: URL): Promise<Respon
 			const person = fake.addPerson(body as never);
 			return json({ id: person.id, email: person.email });
 		}
+		case '/invite': {
+			// As a member who may invite would: the link's token, as Bridge emails it.
+			const workspace = body['workspace'] as { id: string; name: string };
+			return json({ token: fake.invite(String(body['email'] ?? ''), workspace, (body['role'] as string | undefined) ?? 'MEMBER') });
+		}
+		case '/expire-invites':
+			fake.expireInvites(String(body['email'] ?? ''));
+			return json({ ok: true });
 		case '/link': {
 			const token = fake.lastLink(url.searchParams.get('to') ?? '', url.searchParams.get('purpose') ?? '');
 			return token === null ? json({ token: null }, 404) : json({ token });

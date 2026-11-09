@@ -1,4 +1,5 @@
 import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
+import { env } from '$env/dynamic/public';
 
 export const ssr = false;
 
@@ -14,5 +15,7 @@ export const load = bridgeBootstrap({
 		{ match: '/reports', featureFlag: 'reports', redirectTo: '/' }
 	],
 	// Bridge's own sign-in page turns this on to sign people in for the CLI.
-	handoff: { loopback: true, program: 'the Bridge CLI' }
+	handoff: { loopback: true, program: 'the Bridge CLI' },
+	// PUBLIC_DEMO_STORAGE=memory keeps the session in the page's memory only: nothing in the browser's storage.
+	storage: env.PUBLIC_DEMO_STORAGE === 'memory' ? 'memory' : 'local'
 });

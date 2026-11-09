@@ -68,8 +68,9 @@ export interface BridgeConfig {
 	 *   stay signed in.
 	 * - `'memory'`: in this page's memory only. Nothing of Bridge's is
 	 *   written to localStorage or sessionStorage: not the refresh token, not
-	 *   a sign-up's verifier, not the visitor id. A reload or a new tab signs
-	 *   in again. A sign-up's email link, which opens in a new tab, is handed
+	 *   a sign-up's verifier, not the visitor id. A reload signs in again. A new
+	 *   tab is signed in by another open tab of the app, passed in memory
+	 *   only; with no other tab open, it signs in again. A sign-up's email link, which opens in a new tab, is handed
 	 *   to the tab that started the sign-up and finishes there.
 	 *
 	 * @default 'local'

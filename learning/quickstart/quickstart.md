@@ -92,7 +92,7 @@ bridgeBootstrap({
 
 ## Keeping nothing in the browser's storage
 
-By default the session is kept in `localStorage`, so a reload and a new tab stay signed in. With `storage: 'memory'`, nothing of Bridge's is written to `localStorage` or `sessionStorage`: the session, a sign-up in progress and the visitor id stay in the page's memory. A reload or a new tab signs in again.
+By default the session is kept in `localStorage`, so a reload and a new tab stay signed in. With `storage: 'memory'`, nothing of Bridge's is written to `localStorage` or `sessionStorage`: the session, a sign-up in progress and the visitor id stay in the page's memory. A reload signs in again. A new tab is signed in by another open tab of the app, passed in memory only; with no other tab open, it signs in again.
 
 ```ts
 export const load = bridgeBootstrap({ storage: 'memory' });

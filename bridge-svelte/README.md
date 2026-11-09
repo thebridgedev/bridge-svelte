@@ -17,79 +17,67 @@
 
 # The Bridge for SvelteKit
 
-`@nebulr-group/bridge-svelte` adds sign-in, workspaces and roles, feature flags, Stripe subscriptions and plan limits to a SvelteKit 2 + Svelte 5 app, with one `.env` line and three files.
+`@nebulr-group/bridge-svelte` adds sign-in in your own pages, workspaces, flag-based route guards, plans and checkout, the team panel and live updates to a SvelteKit 2 + Svelte 5 app, with one `.env` line and three files.
 
-**[The Bridge](https://thebridge.dev/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)** is a hosted backend for SaaS apps. It gives you sign-in (passwords, magic links, passkeys, social login and SSO), multi-tenant workspaces with roles, Stripe subscriptions with plan limits, and feature flags, all managed from one dashboard. Your AI coding assistant can set it up for you through the [Bridge MCP server](https://thebridge.dev/docs/ai-assistants/mcp/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte).
+> **This is the 1.0 alpha**, built on `@nebulr-group/bridge-auth-core` 1.0 and the new Bridge API. It installs from the `alpha` tag; `latest` stays on 0.x until 1.0.0. It runs in the browser (`ssr = false`) and signs people in with email and password.
 
-> **Let your AI assistant set it up.** Connect the [Bridge MCP server](https://thebridge.dev/docs/ai-assistants/mcp/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte) to Claude, Cursor, Copilot or Gemini CLI and ask it to add Bridge to your app. Not using MCP? Run `npx @nebulr-group/bridge-cli guide add-login` in your project: it detects your framework from `package.json` and prints the steps for your assistant to follow. `npx @nebulr-group/bridge-cli doctor` checks the result.
+**[The Bridge](https://thebridge.dev/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)** is a hosted backend for SaaS apps: sign-in, multi-tenant workspaces, Stripe subscriptions with plan limits, and feature flags, managed from one dashboard.
 
 ## Install
 
-```bash
-npm i @nebulr-group/bridge-svelte
+```sh
+bun add @nebulr-group/bridge-svelte@alpha
 ```
 
-## Usage
+## The whole integration
 
-The whole integration is one `.env` line and three files:
-
-```env
-# .env
-VITE_BRIDGE_APP_ID=your-app-id
+```sh
+# .env: the issuer from your app's settings in Bridge
+PUBLIC_BRIDGE_ISSUER=https://…/identity-access/apps/<your app id>
 ```
 
 ```ts
 // src/routes/+layout.ts
 import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
 export const ssr = false;
-export const load = bridgeBootstrap({ rules: [{ match: new RegExp('^/auth($|/)'), public: true }] });
+export const load = bridgeBootstrap({ rules: [{ match: '/', public: true }] });
 ```
 
 ```svelte
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
   import '@nebulr-group/bridge-svelte/styles';
+  import { BridgeBootstrap } from '@nebulr-group/bridge-svelte';
   let { children } = $props();
 </script>
-<BridgeBootstrap>
-  {@render children()}
-</BridgeBootstrap>
+
+<BridgeBootstrap>{@render children()}</BridgeBootstrap>
 ```
 
 ```svelte
-<!-- src/routes/auth/[...bridge]/+page.svelte — every sign-in page -->
+<!-- src/routes/auth/[...bridge]/+page.svelte -->
 <script lang="ts">
   import { BridgeAuthRoutes } from '@nebulr-group/bridge-svelte';
 </script>
+
 <BridgeAuthRoutes />
 ```
 
-A stage or local app also sets `VITE_BRIDGE_API_BASE_URL`. Add `loginRoute: '/auth/login'` for sign-in inside the app, and `src/routes/subscription/[...bridge]/+page.svelte` rendering `<BridgeBillingRoutes />` for subscriptions.
+In your app's settings in Bridge, add your app's address as a browser address and `https://<your app>/auth` as its email-links address. See the [Quickstart](https://github.com/thebridgedev/bridge-svelte/blob/v1/learning/quickstart/quickstart.md).
 
-[How Bridge works](https://github.com/thebridgedev/bridge-svelte/blob/main/learning/mechanisms.md) explains plan limits, the three UI levels and the four customisation levels; the [learning docs](https://github.com/thebridgedev/bridge-svelte/tree/main/learning) cover everything else. Coding agents: `npx @nebulr-group/bridge-cli guide svelte`.
+## What it gives you
 
-## Learn more
-
-- [Quickstart](https://thebridge.dev/docs/quickstart/svelte/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)
-- [Authentication](https://thebridge.dev/docs/auth/svelte/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)
-- [Sign-in inside your app](https://thebridge.dev/docs/sdk-auth/svelte/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)
-- [Feature flags](https://thebridge.dev/docs/feature-flags/svelte/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)
-- [Branding](https://thebridge.dev/docs/branding/svelte/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)
-- [Live updates](https://thebridge.dev/docs/live-updates/svelte/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)
-- [Subscriptions and plan limits](https://thebridge.dev/docs/billing/how-it-works/?utm_source=npm&utm_medium=readme&utm_campaign=bridge-svelte)
-
-## Other Bridge packages
-
-| Package | For |
+| Area | Pieces |
 |---|---|
-| [`@nebulr-group/bridge-react`](https://www.npmjs.com/package/@nebulr-group/bridge-react) | React |
-| [`@nebulr-group/bridge-nextjs`](https://www.npmjs.com/package/@nebulr-group/bridge-nextjs) | Next.js |
-| [`@nebulr-group/bridge-angular`](https://www.npmjs.com/package/@nebulr-group/bridge-angular) | Angular |
-| [`@nebulr-group/bridge-nestjs`](https://www.npmjs.com/package/@nebulr-group/bridge-nestjs) | NestJS |
-| [`@nebulr-group/bridge-express`](https://www.npmjs.com/package/@nebulr-group/bridge-express) | Express |
-| [`@nebulr-group/bridge-cli`](https://www.npmjs.com/package/@nebulr-group/bridge-cli) | CLI for people and AI agents |
-| [`@nebulr-group/bridge-auth-core`](https://www.npmjs.com/package/@nebulr-group/bridge-auth-core) | Any JavaScript app (core) |
+| Sign-in | `BridgeAuthRoutes` (sign-in, sign-up, verify-email, forgot-password, set-password, invite, workspaces, handoff), `SignInForm`, `SignUpForm`, `VerifyEmail`, `ForgotPassword`, `SetPassword`, `InviteLanding`, `WorkspaceChooser`, `SignOutButton`, `ProfileName` |
+| Gates | route `rules`, `FeatureFlag`, `useFlag`, `flag`, `requireFlag`, the paywall: all on flag results, never a role or the plan |
+| Billing | `BridgeBillingRoutes`, `PlanPicker`, `BillingPortalButton`, `SubscriptionStatus`, `BillingNotice`, `QuotaBanner`, `CheckoutNotice`, `UpgradeDialog`, `bridgeFetch` |
+| Team | `TeamPanel`, `MemberList`, `InviteDialog`, `InviteList`, `EditMemberDialog`, `WorkspaceForm`, `ProfileForm` |
+| State | `session`, `user`, `workspace`, `workspaces`, `me`, `flags`, `billing`, `plans`, `usage`, `liveStatus`, `getBridge()` |
+| Server | `@nebulr-group/bridge-svelte/server`: `bridgeHandle`, `requireActor`, `meter`, `flagsFor` |
+| Hand-off | `HandoffSignIn`, `readHandoff`, `handoffSignIn`: a sign-in page for a command-line tool |
+
+All the guides: [the learning docs](https://github.com/thebridgedev/bridge-svelte/tree/v1/learning).
 
 ## License
 

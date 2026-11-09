@@ -34,7 +34,7 @@
  *   --bridge-card-shadow      their shadow, and the plan-change dialog's; `none` for a flat look
  *   --bridge-button-shadow    every Bridge button's shadow, e.g. `4px 4px 0 #000` (default none)
  *
- * Type (TBP-814). Bridge text follows your app: every size is relative to the
+ * Type. Bridge text follows your app: every size is relative to the
  * text size of your page's <body>, and the font family is inherited.
  *   --bridge-font-size              the base all Bridge text sizes scale from
  *                                   (default: your <body> text size)
@@ -72,7 +72,7 @@
  *   [data-variant="danger"] — danger variant
  */
 
-/* ─── The cascade layer (TBP-814) ──────────────────────────────────────────
+/* ─── The cascade layer ──────────────────────────────────────────
  *
  * Every Bridge rule lives in the `bridge` layer, so ANY CSS your app writes
  * outside a layer wins over it — whatever its specificity, whatever the load
@@ -90,7 +90,7 @@
  */
 @layer theme, base, components, utilities, bridge;
 
-/* ─── Text size follows the app (TBP-814) ──────────────────────────────── */
+/* ─── Text size follows the app ──────────────────────────────── */
 
 /* Registered so `1em` resolves where it is declared — the <body> — and
    inherits as a fixed length. Unregistered, `1em` would resolve again at every
@@ -296,7 +296,7 @@
     font-size: calc(0.875 * var(--bridge-text-base, 1rem));
   }
 
-  /* TBP-899 — every text link on the sign-in pages ("Sign up", "Forgot password?",
+  /* every text link on the sign-in pages ("Sign up", "Forgot password?",
      "Back to sign in") takes the form's own text colour and font, not the
      browser's default blue. */
   [data-bridge-auth-form] .bridge-form-footer a,
@@ -408,7 +408,7 @@
     box-sizing: border-box;
   }
 
-  /* TBP-899 — a sign-in method drawn as a link (the magic-link button) looks
+  /* a sign-in method drawn as a link (the magic-link button) looks
      like the other method buttons: no underline, no link colour. */
   a.bridge-btn,
   a.bridge-btn:hover,
@@ -426,7 +426,7 @@
     align-items: center;
     gap: 0.75rem;
     width: 12rem;
-    /* TBP-899 — grows past 12rem when the app's button text is larger, instead
+    /* grows past 12rem when the app's button text is larger, instead
        of squeezing the method icon to nothing. */
     min-width: max-content;
   }
@@ -440,7 +440,7 @@
     margin: 0 0 1rem;
   }
 
-  /* TBP-635 — the card between a successful sign-in and the host app navigating. */
+  /* the card between a successful sign-in and the host app navigating. */
   .bridge-auth-settling {
     display: flex;
     align-items: center;
@@ -1117,7 +1117,7 @@
     margin-top: 0.75rem;
   }
 
-  /* TBP-813 — a heading beside the interval switch (`heading` prop). */
+  /* a heading beside the interval switch (`heading` prop). */
   .bridge-plan-head {
     display: flex;
     flex-wrap: wrap;
@@ -1174,7 +1174,7 @@
     color: var(--bridge-muted);
   }
 
-  /* Plan-change confirmation dialog + success notice (TBP-33) */
+  /* Plan-change confirmation dialog + success notice */
   .bridge-plan-success {
     margin-bottom: 1rem;
   }
@@ -1235,7 +1235,7 @@
     align-items: stretch;
   }
 
-  /* TBP-813 — cards, and the current-plan panel, are surfaces of their own, so
+  /* cards, and the current-plan panel, are surfaces of their own, so
      they read on any app background and take the app's tokens. */
   [data-bridge-plan-card],
   .bridge-billing-summary {
@@ -1338,7 +1338,7 @@
     color: var(--bridge-muted);
   }
 
-  /* TBP-755 — the features a plan includes. */
+  /* the features a plan includes. */
   .bridge-plan-features {
     margin: 0;
     padding: 0.9rem 0 0;
@@ -1380,7 +1380,7 @@
     opacity: 1;
   }
 
-  /* ─── BridgeCheckoutNotice (TBP-813) ─────────────────────────────────────── */
+  /* ─── BridgeCheckoutNotice ─────────────────────────────────────── */
 
   .bridge-checkout-notice {
     display: flex;
@@ -1524,5 +1524,302 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* ─── Billing pages, status, notices and quota (1.0) ─────────────────── */
+  /* Paste inside `@layer bridge { ... }` in src/lib/styles.css, after the
+     BridgeCheckoutNotice section. Ported from the 0.x component <style>
+     blocks; class modifiers turned into data-attribute selectors. */
+
+  /* ─── Billing pages (BridgeBillingRoutes) ─────────────────────────────── */
+
+  .bridge-billing-heading {
+    margin: 0;
+    font-size: calc(1.5 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-heading, 700);
+  }
+
+  .bridge-billing-text {
+    margin: 0;
+    opacity: 0.8;
+  }
+
+  /* The subtitle sits with its heading, closer than the page's gap. */
+  .bridge-billing-heading + .bridge-billing-text {
+    margin-top: -0.75rem;
+  }
+
+  .bridge-billing-current {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* Layout of the current-plan panel; its surface is defined above. */
+  .bridge-billing-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .bridge-billing-summary-plan {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .bridge-billing-label {
+    font-size: calc(0.75 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-label, 600);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.7;
+  }
+
+  .bridge-billing-action {
+    align-self: flex-start;
+    text-decoration: none;
+  }
+
+  /* PlanPicker: the note for a person who may not choose. */
+  [data-bridge-plan-manage-note] {
+    margin: 0 0 1rem;
+    text-align: center;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    color: var(--bridge-muted);
+  }
+
+  /* CheckoutNotice outcomes besides success. */
+  [data-bridge-checkout-notice][data-state="confirming"] {
+    border-color: var(--bridge-alert-info-border);
+    background: var(--bridge-alert-info-bg);
+    color: var(--bridge-alert-info-fg);
+  }
+
+  [data-bridge-checkout-notice][data-state="failed"] {
+    border-color: var(--bridge-alert-error-border);
+    background: var(--bridge-alert-error-bg);
+    color: var(--bridge-alert-error-fg);
+  }
+
+  /* ─── SubscriptionStatus ──────────────────────────────────────────────── */
+
+  .bridge-subscription-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font: inherit;
+  }
+
+  .bss-plan {
+    font-weight: var(--bridge-font-weight-heading, 600);
+  }
+
+  .bss-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: calc(0.75 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-label, 500);
+    text-transform: lowercase;
+    background: var(--bridge-muted-bg, var(--bridge-bg-muted, #f3f4f6));
+    color: var(--bridge-foreground, #111827);
+  }
+
+  .bss-badge[data-status="active"] {
+    background: var(--bridge-alert-success-bg, #f0fdf4);
+    color: var(--bridge-alert-success-fg, #166534);
+  }
+
+  .bss-badge[data-status="trialing"] {
+    background: var(--bridge-alert-info-bg, #eff6ff);
+    color: var(--bridge-alert-info-fg, #1e40af);
+  }
+
+  .bss-badge[data-status="past_due"],
+  .bss-badge[data-status="ending"] {
+    background: var(--bridge-alert-warning-bg, #fffbeb);
+    color: var(--bridge-alert-warning-fg, #92400e);
+  }
+
+  .bss-badge[data-status="canceled"] {
+    background: var(--bridge-alert-error-bg, #fef2f2);
+    color: var(--bridge-alert-error-fg, #991b1b);
+  }
+
+  .bss-loading,
+  .bss-empty {
+    color: var(--bridge-muted, #6b7280);
+    font-style: italic;
+  }
+
+  .bss-error {
+    color: var(--bridge-alert-error-fg, #991b1b);
+  }
+
+  /* ─── BillingNotice ───────────────────────────────────────────────────── */
+
+  [data-bridge-billing-notice] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font: inherit;
+    transition: opacity 280ms ease, transform 320ms ease;
+  }
+
+  .bbn-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    flex: 1 1 auto;
+  }
+
+  .bbn-title {
+    font-weight: var(--bridge-font-weight-heading, 600);
+  }
+
+  .bbn-body {
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    opacity: 0.85;
+  }
+
+  .bbn-cta,
+  .bqb-cta {
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    border: 1px solid currentColor;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: var(--bridge-font-weight-button, 500);
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    flex: 0 0 auto;
+  }
+
+  .bbn-cta:hover,
+  .bqb-cta:hover {
+    background: currentColor;
+  }
+
+  .bbn-cta:hover {
+    color: var(--bridge-bg, #ffffff);
+  }
+
+  [data-bridge-billing-notice][data-chassis="bar"] {
+    border-radius: 0;
+    width: 100%;
+  }
+
+  [data-bridge-billing-notice][data-chassis="rail"] {
+    border-left: 4px solid currentColor;
+    border-radius: 0 0.5rem 0.5rem 0;
+  }
+
+  [data-bridge-billing-notice][data-chassis="card"] {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--bridge-border, #d1d5db);
+  }
+
+  [data-bridge-billing-notice][data-severity="info"] {
+    background: var(--bridge-alert-info-bg, #eff6ff);
+    color: var(--bridge-alert-info-fg, #1e40af);
+  }
+
+  [data-bridge-billing-notice][data-severity="warn"] {
+    background: var(--bridge-alert-warning-bg, #fffbeb);
+    color: var(--bridge-alert-warning-fg, #92400e);
+  }
+
+  [data-bridge-billing-notice][data-severity="critical"] {
+    background: var(--bridge-alert-error-bg, #fef2f2);
+    color: var(--bridge-alert-error-fg, #991b1b);
+  }
+
+  /* Locked inverts the surface: foreground as background, and back. */
+  [data-bridge-billing-notice][data-severity="locked"] {
+    background: var(--bridge-foreground, #111827);
+    color: var(--bridge-bg, #ffffff);
+  }
+
+  [data-bridge-billing-notice][data-severity="locked"] .bbn-cta:hover {
+    color: var(--bridge-foreground, #111827);
+  }
+
+  /* ─── QuotaBanner ─────────────────────────────────────────────────────── */
+
+  [data-bridge-quota-banner] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-left: 4px solid currentColor;
+    border-radius: 0 0.5rem 0.5rem 0;
+    font: inherit;
+    transition: opacity 280ms ease, transform 320ms ease;
+  }
+
+  [data-bridge-quota-banner][data-state="near"] {
+    background: var(--bridge-alert-warning-bg, #fffbeb);
+    color: var(--bridge-alert-warning-fg, #92400e);
+  }
+
+  [data-bridge-quota-banner][data-state="over"] {
+    background: var(--bridge-alert-error-bg, #fef2f2);
+    color: var(--bridge-alert-error-fg, #991b1b);
+  }
+
+  .bqb-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1 1 auto;
+  }
+
+  .bqb-title {
+    font-weight: var(--bridge-font-weight-heading, 600);
+  }
+
+  .bqb-body {
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    opacity: 0.85;
+  }
+
+  .bqb-meter {
+    margin-top: 0.25rem;
+    width: 100%;
+    height: 0.375rem;
+    background: color-mix(in srgb, currentColor 15%, transparent);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .bqb-meter-fill {
+    height: 100%;
+    background: currentColor;
+    border-radius: 999px;
+    transition: width 320ms ease;
+  }
+
+  .bqb-cta:hover {
+    color: var(--bridge-bg, #ffffff);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-bridge-billing-notice],
+    [data-bridge-quota-banner],
+    .bqb-meter-fill {
+      transition: none;
+    }
   }
 }

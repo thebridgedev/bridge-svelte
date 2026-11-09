@@ -1,17 +1,14 @@
 <script lang="ts">
-  import '@nebulr-group/bridge-svelte/styles';
-  import '../app.css';
-  import { BridgeBootstrap, BridgeBillingNotice } from '@nebulr-group/bridge-svelte';
-  import Nav from '$lib/Nav.svelte';
-  // Demo-only: hooks the e2e suite reads in DEBUG builds.
-  import TestHooks, { testBootstrapProps } from '$lib/test-fixtures/TestHooks.svelte';
+	import '@nebulr-group/bridge-svelte/styles';
+	import '../app.css';
+	import { BridgeBootstrap, BillingNotice } from '@nebulr-group/bridge-svelte';
+	import Nav from '$lib/Nav.svelte';
 
-  let { children } = $props();
+	let { children } = $props();
 </script>
 
-<BridgeBootstrap {...testBootstrapProps}>
-  <Nav />
-  <BridgeBillingNotice />
-  <main>{@render children()}</main>
+<BridgeBootstrap>
+	<Nav />
+	<BillingNotice />
+	<main>{@render children()}</main>
 </BridgeBootstrap>
-<TestHooks />

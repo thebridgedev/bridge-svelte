@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { TeamManagementPanel } from '@nebulr-group/bridge-svelte';
+	import { TeamPanel } from '@nebulr-group/bridge-svelte';
 </script>
 
-<TeamManagementPanel defaultTab="users" />
+<h1>Team</h1>
+<TeamPanel />

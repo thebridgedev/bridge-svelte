@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.0.0-alpha.0] - unreleased
+
+A new major version, built on `@nebulr-group/bridge-auth-core` 1.0 and the new Bridge API. It is an alpha: it runs in the browser (`ssr = false`) and signs people in with email and password.
+
+### Changed
+
+- **One setting.** `PUBLIC_BRIDGE_ISSUER` replaces `VITE_BRIDGE_APP_ID`, `VITE_BRIDGE_API_BASE_URL` and `VITE_BRIDGE_HOSTED_URL`. Every endpoint is read from the issuer. The issuer must be `https`, except `http://localhost` on your own machine.
+- **Sign-in pages in your app.** `<BridgeAuthRoutes>` serves `sign-in`, `sign-up`, `verify-email`, `forgot-password`, `set-password`, `invite`, `workspaces` and `handoff`. Email links land on your email-links address with the token in the fragment. `LoginForm` is now `SignInForm`; `SignupForm` is `SignUpForm` plus `VerifyEmail`; `ForgotPassword` and `SetPassword` are two components; `TenantSelector` and `WorkspaceSelector` are one `WorkspaceChooser`.
+- **Gates are flags only.** Route rules, `<FeatureFlag>`, the paywall, the plan picker, the billing portal and the team panel read flag results, including the standard flags `bridge-billing-manage`, `bridge-team-manage` and `bridge-app-active`. Nothing reads a role, a privilege or the plan.
+- **`bridgeFetch` only.** The global `fetch` patch is gone. `bridgeFetch` sends the person's token only to your page's origin, Bridge and the `tokenOrigins` you list.
+- **Stores** are `session`, `user`, `workspace`, `workspaces`, `me`, `flags`, `billing`, `plans`, `usage` and `liveStatus`.
+
+### Added
+
+- **Server helpers** in `@nebulr-group/bridge-svelte/server`: `bridgeHandle` for `hooks.server.ts` checks Bridge tokens and keys against your app's revocation list (other `Authorization` headers are left to your app, and `skip` leaves routes out), `requireActor`, `meter` ("count this") and `flagsFor`. The entry refuses to load in a browser.
+- **Hand-off mode** for a sign-in page that signs a person in for a command-line tool and returns the code, `state` and `iss` to its loopback callback (`http://127.0.0.1:<port>/callback`).
+- **Live updates** through auth-core's Live client: flags, billing, the team and the session refresh within a second of a change.
+
+### Removed
+
+- Hosted sign-in, MFA, magic links, passkeys and company sign-in, for now. They return as sign-in steps.
+- `QuotaGate`, `Entitled`, the entitlements store and every direct plan or role check: gate on a flag whose rule names the plan feature.
+- Usage counted from the browser, the tracking helpers, and the re-exports of auth-core.
+- API token management, for now.
+
 ## [0.9.4] - 2026-11-04
 
 ### Fixed

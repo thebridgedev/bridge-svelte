@@ -108,3 +108,6 @@ test-reports/
 # commit by `git add -A`. If we ever decide to track a lockfile, remove this
 # line and commit a freshly generated one from a clean install.
 bun.lock
+
+# Playwright output
+test-results/

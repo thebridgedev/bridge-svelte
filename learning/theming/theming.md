@@ -66,7 +66,7 @@ The `--bridge-*` variables below are the supported way to restyle every Bridge p
 }
 ```
 
-Bridge's defaults sit in its cascade layer, so your `:root` wins whatever order the two stylesheets load in. Set a token on a wrapper instead of `:root` to theme one area (`<div style="--bridge-primary: #7c3aed">`). Tokens are rung 1 of the customisation rungs in [How Bridge works](../mechanisms.md): rung 0 is your layout around every Bridge page, then the `frame` / `heading` snippets (2), taking over one page (3) and headless (4).
+Bridge's defaults sit in its cascade layer, so your `:root` wins whatever order the two stylesheets load in. Set a token on a wrapper instead of `:root` to theme one area (`<div style="--bridge-primary: #7c3aed">`). Tokens are rung 1 of the customisation rungs: rung 0 is your layout around every Bridge page, then the `frame` / `heading` snippets (2), taking over one page (3) and headless (4). See [Customisation rungs](#customisation-rungs).
 
 ### Colour
 
@@ -112,10 +112,8 @@ A weight token sets every element it covers to the same weight.
 | Token | Default | Styles |
 |---|---|---|
 | `--bridge-auth-page-padding` | `3rem 1rem` | The default container of the sign-in pages (`<BridgeAuthRoutes>`) |
-| `--bridge-billing-page-width` | `60rem` | The subscription pages (`<BridgeBillingRoutes>`, `<BridgePaywallPage>`) |
+| `--bridge-billing-page-width` | `60rem` | The subscription pages (`<BridgeBillingRoutes>`) |
 | `--bridge-billing-page-padding` | `3rem 1rem` | The subscription pages |
-| `--bridge-paywall-bg` | `rgba(15, 23, 42, 0.72)` | Backdrop of the `<BridgePaywall>` overlay and the billing lockscreen |
-| `--bridge-paywall-panel-bg` | `--bridge-bg` | Panel of the `<BridgePaywall>` overlay |
 
 ### Not tokens
 
@@ -195,7 +193,7 @@ The one exception is CSS you put in a layer of your own. A layer declared before
 All components forward `class` and `style` props to their root element, so you can target them directly:
 
 ```svelte
-<LoginForm class="my-login-form" />
+<SignInForm class="my-login-form" />
 ```
 
 ```css
@@ -207,7 +205,7 @@ All components forward `class` and `style` props to their root element, so you c
 Plain CSS like this wins over Bridge's styles; Tailwind utilities in `class` follow the rule in [Tailwind](#tailwind). You can also use the `style` prop for inline overrides:
 
 ```svelte
-<LoginForm style="--bridge-primary: #7c3aed;" />
+<SignInForm style="--bridge-primary: #7c3aed;" />
 ```
 
 ## Data attributes for state-based styling
@@ -229,11 +227,8 @@ Bridge components expose data attributes that you can use as CSS selectors for s
 | `[data-current="true"]` | `"true"` / `"false"` | Current plan card |
 | `[data-bridge-alert]` | (none) | Alert component |
 | `[data-bridge-auth-form]` | (none) | Auth form wrapper |
-| `[data-bridge-passkey-login]` | (none) | Passkey login button |
-| `[data-bridge-sso-button]` | (none) | SSO button |
 | `[data-bridge-spinner]` | (none) | Loading spinner |
-| `[data-bridge-api-tokens]` | (none) | API token management root |
-| `[data-bridge-workspace-selector]` | (none) | Workspace selector root |
+| `[data-bridge-workspace-selector]` | (none) | Workspace chooser root |
 | `[data-bridge-workspace-item]` | (none) | Individual workspace item |
 
 Example: style the active workspace differently.
@@ -258,3 +253,25 @@ If you would rather style every component from scratch, skip the import entirely
 ```
 
 Components render as plain, unstyled HTML. Use the `class` prop and the data attributes listed above to apply your own styles. The structural layout (flexbox, grid) is embedded in the stylesheet, so without it you have full control over how components are laid out.
+
+## Customisation rungs
+
+Each rung keeps everything the rung below it gives you.
+
+0. **Your layout.** Bridge's pages render inside your `+layout.svelte`, with your navigation, fonts and text colour.
+1. **Tokens.** Set `--bridge-*` tokens in your CSS (see [The token contract](#the-token-contract)).
+2. **Frame and headings.** `<BridgeAuthRoutes>` and `<BridgeBillingRoutes>` take a `frame(page, content)` snippet that replaces everything around the form on every page, and a `heading(page)` snippet per page:
+
+   ```svelte
+   <BridgeAuthRoutes>
+     {#snippet frame(page, form)}
+       <div class="split"><aside>Acme</aside>{@render form()}</div>
+     {/snippet}
+     {#snippet heading(page)}
+       <h2>{page === 'sign-in' ? 'Welcome back' : 'Acme'}</h2>
+     {/snippet}
+   </BridgeAuthRoutes>
+   ```
+
+3. **Take over one page.** Create `src/routes/auth/sign-in/+page.svelte` with your own words and `<SignInForm heading={null} />` inside. SvelteKit prefers the specific route over `[...bridge]`, and the other pages keep working.
+4. **Headless.** Build the screen yourself on `getBridge()`, with `errorMessage()` for Bridge's own words for what went wrong.

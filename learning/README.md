@@ -1,18 +1,13 @@
-# Learning Documentation
+# Learning documentation
 
-This directory contains the Bridge Svelte learning docs.
+The guides for `@nebulr-group/bridge-svelte` 1.0, for the developer integrating it.
 
-## Guide sections
-
-- **[auth/](auth/)**: authentication end to end. Sign-in methods, UI components (login, signup, MFA, passkeys, magic link, SSO, team management, tokens), the user token, roles and privileges, route guards, API tokens, multi-tenancy, and the configuration reference.
-- **[billing/](billing/)**: subscriptions and payments. How billing works, Stripe setup, plan definition, onboarding users onto plans, plan limits and entitlements, subscription status, and lifecycle (trials, failed payments, billing events, billing portal).
-- **[feature-flags/](feature-flags/)**: feature flags. How flags work, getting started, using flags in UI/logic/routes, and targeting.
-
-## Top-level guides
-
-- **[How Bridge works](mechanisms.md)**: the mechanisms every other page builds on. The smallest integration, counting a plan limit once where the action happens, every gate as a flag, a POST incrementing the limit, counter vs gauge, the three ways to show a limit in the UI, self-reported usage, and the four levels of customising Bridge's pages with the `--bridge-*` token contract.
-- **[Hosted auth quickstart](quickstart/hosted-quickstart.md)**: fastest path, Bridge handles the login UI on a hosted page.
-- **[SDK auth quickstart](sdk-auth/sdk-quickstart.md)**: in-app login/signup forms using SDK components.
-- **[Live updates and the `bridge` object](live-updates/live-updates.md)**: the unified `bridge` object (branding, workspace, subscription, entitlements, user), live channel events, and app-wide flag attributes.
-- **[Theming & Styles](theming/theming.md)**: CSS variable theming, matching your app's type and shadows, overriding with plain CSS, and headless usage.
-- **[Branding](branding/branding.md)**: per-workspace white-labeling with the live branding snapshot.
+- **[Quickstart](quickstart/quickstart.md)**: install, the issuer, and the three files.
+- **[Sign-in pages](sign-in/sign-in.md)**: sign-in, sign-up, email links, password recovery, invites, workspaces, sign-out, and the language.
+- **[Flags and route guards](flags/flags.md)**: every gate as a flag, route rules, `<FeatureFlag>`, and the standard flags.
+- **[Billing](billing/billing.md)**: plans, checkout, the billing portal, notices and plan limits.
+- **[The team panel](team/team.md)**: members, invites, roles and workspace settings.
+- **[Your server](server/server.md)**: token checks, flags and counting usage in SvelteKit server code.
+- **[Live updates](live-updates/live-updates.md)**: screens that refresh within a second of a change.
+- **[Theming](theming/theming.md)**: tokens, your own CSS, and the four customisation rungs.
+- **[Hand-off mode](handoff/handoff.md)**: a sign-in page for a command-line tool.

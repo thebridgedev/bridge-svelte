@@ -1,368 +1,78 @@
-// Core stores and setup
-import BridgeBootstrapComponent from './client/BridgeBootstrap.svelte';
-export * from './client/BridgeBootstrap.js';
-export * from './client/stores/config.store.js';
-
-// Bridge instance (singleton accessors + reactive stores).
-//
-// `auth` is the recommended way to call BridgeAuth methods imperatively
-// (it's a lazy proxy to the singleton — `auth.logout()`, `auth.signup()`,
-// `auth.getProfile()`, etc.). The unified `bridge` surface below is the
-// recommended way to *read* live state reactively.
-export {
-  initBridge,
-  markReady,
-  waitForBridge,
-  getBridgeAuth,
-  auth,
-  tokenStore,
-  isAuthenticated,
-  isLoading,
-  authError,
-  authState,
-  isOnboarded,
-  hasMultiTenantAccess,
-  tenantUsersStore,
-  profileStore,
-  bridgeReadyStore,
-  appConfigStore,
-  ensureAppConfig,
-  subscriptionStore,
-  loadSubscription,
-} from './core/bridge-instance.js';
-export type { SubscriptionState } from './core/bridge-instance.js';
-
-// Phase 4 (TBP-288/319) — unified read surface. Single `bridge` aggregate
-// with scoped slices (`bridge.app` / `bridge.tenant` / `bridge.user`) fed
-// by session.snapshot. Coexists with the legacy module-level stores above.
-// TBP-697 adds `bridge.usage` (report / set from the browser, self-reported).
-export { bridge } from './core/bridge.js';
-export type {
-  BridgeSurface,
-  BridgeAppSurface,
-  BridgeTenantSurface,
-  BridgeUsageSurface,
-  UsageQueueStatus,
-} from './core/bridge.js';
-
-// TBP-697 — everything the guides say not to rebuild, importable from here:
-//   useBridge()       the `bridge` surface for this component (or a test override)
-//   useQuota(metric)  one quota's live numbers; `loading`, never a fake 0
-//   entitlements      `$entitlements.can('key')`, with `.ready` to tell
-//                     "not loaded yet" from "this plan cannot"
-export { useBridge, setBridgeContext } from './core/use-bridge.js';
-export { useQuota } from './core/use-quota.js';
-export type { QuotaState } from './core/use-quota.js';
-export { entitlements } from './core/entitlements.js';
-// TBP-697 — `fetch` for calls to your own backend, with the user's token and a
-// one-time refresh on 401. Replaces the `fetchWithAuth` the guides had you write.
-export { bridgeFetch } from './core/bridge-fetch.js';
-export type { EntitlementsState } from './core/entitlements.js';
-export type {
-  BrandingSnapshot,
-  SubscriptionSnapshot,
-  UserSnapshot,
-  SessionSnapshotData,
-} from './core/snapshot-stores.js';
-
-// Phase 5 (TBP-331) — bridge.events.handle() handler-table type + dispatcher
-// type (the type of `bridge.events`, for consumers typing a reference to it).
-export type { BridgeEventHandlers, BridgeEventsDispatcher } from './core/events.js';
-
-// Components (Svelte components must have `export default`)
-export { default as BridgeBootstrap } from './client/BridgeBootstrap.svelte';
 /**
- * @deprecated Use `BridgeBootstrap` — this is the same component under an old
- * name, and will be removed in the next minor release.
+ * @nebulr-group/bridge-svelte
+ *
+ * The Bridge for SvelteKit: sign-in in your own pages, workspaces, flags and
+ * route guards, plans and checkout, the team panel and Live updates, on one
+ * setting, the issuer. Server helpers are in `@nebulr-group/bridge-svelte/server`,
+ * the default look in `@nebulr-group/bridge-svelte/styles`.
  */
-export const BridgeProvider: typeof BridgeBootstrapComponent = BridgeBootstrapComponent;
-export { default as ApiTokenManagement } from './client/components/developer/ApiTokenManagement.svelte';
-// TBP-644 — dev-only live-updates badge. <BridgeBootstrap /> already mounts it;
-// exported for apps that render their own bootstrap.
-export { default as RealtimeDevBadge } from './client/components/developer/RealtimeDevBadge.svelte';
 
-// TBP-644 — realtime status. `realtimeStatus` is the plain state string;
-// `realtimeStatusDetail` adds the reason, whose side it is and whether it is
-// still retrying. `onBridgeRealtimeStatus` is the event-style subscription.
-export { realtimeStatus, realtimeStatusDetail } from './core/realtime-status.js';
-export { onBridgeRealtimeStatus } from './core/bridge-runtime.js';
-export type { RealtimeStatus } from '@nebulr-group/bridge-auth-core';
-export { default as FeatureFlag } from './flags/FeatureFlag.svelte';
-export { default as ProfileName } from './client/components/ProfileName.svelte';
-export { default as TeamManagementPanel } from './client/components/team/TeamManagementPanel.svelte';
-export { default as TeamUserList } from './client/components/team/TeamUserList.svelte';
-export { default as TeamProfileForm } from './client/components/team/TeamProfileForm.svelte';
-export { default as TeamWorkspaceForm } from './client/components/team/TeamWorkspaceForm.svelte';
-// TBP-697 — the dialogs `<TeamUserList>` is built from, for a page that lays
-// out its own team UI: invite, edit role / enable, confirm, and the row menu.
-export { default as TeamAddUserDialog } from './client/components/team/TeamAddUserDialog.svelte';
-export { default as TeamEditUserDialog } from './client/components/team/TeamEditUserDialog.svelte';
-export { default as TeamConfirmDialog } from './client/components/team/TeamConfirmDialog.svelte';
-export { default as TeamUserActionsMenu } from './client/components/team/TeamUserActionsMenu.svelte';
+// Setting up
+export { bridgeBootstrap, FLAGS_DEPENDENCY, SESSION_DEPENDENCY } from './bootstrap.js';
+export type { BridgeLayoutData, BridgeLoadEvent } from './bootstrap.js';
+export type { BridgeConfig, BridgeMessages, FlagRequirement, ResolvedConfig, RouteRule } from './core/config.js';
+export { bridgeClient, bridgeConfig, getBridge, getConfig } from './core/client.js';
+export { AUTH_PAGES, BILLING_PAGES } from './core/routes.js';
+export type { AuthPage, BillingPage } from './core/routes.js';
+export { decide, findRule, flagsAllow } from './core/guard.js';
+export type { GuardDecision, GuardInput } from './core/guard.js';
 
-// SDK Auth Components
-export { default as LoginForm } from './client/components/sdk-auth/LoginForm.svelte';
-export { default as MfaChallenge } from './client/components/sdk-auth/MfaChallenge.svelte';
-export { default as MfaSetup } from './client/components/sdk-auth/MfaSetup.svelte';
-export { default as TenantSelector } from './client/components/sdk-auth/TenantSelector.svelte';
-export { default as WorkspaceSelector } from './client/components/sdk-auth/WorkspaceSelector.svelte';
-export { default as SsoButton } from './client/components/sdk-auth/SsoButton.svelte';
-export { default as SignupForm } from './client/components/sdk-auth/SignupForm.svelte';
-export { default as ForgotPassword } from './client/components/sdk-auth/ForgotPassword.svelte';
-export { default as MagicLink } from './client/components/sdk-auth/MagicLink.svelte';
-export { default as PasskeyLogin } from './client/components/sdk-auth/PasskeyLogin.svelte';
-export { default as PasskeyRequestSetupLink } from './client/components/sdk-auth/PasskeyRequestSetupLink.svelte';
-export { default as PasskeySetup } from './client/components/sdk-auth/PasskeySetup.svelte';
+// State
+export { billing, flags, flagsStatus, liveStatus, me, plans, resource, session, signedIn, usage, user, workspace, workspaces } from './core/stores.js';
+export type { Resource, ResourceStore } from './core/stores.js';
 
-// TBP-696 — every auth page from one file:
-//   src/routes/auth/[...bridge]/+page.svelte  →  <BridgeAuthRoutes />
-export { default as BridgeAuthRoutes } from './client/components/sdk-auth/BridgeAuthRoutes.svelte';
-export { BRIDGE_AUTH_PAGES, parseBridgeAuthRoute } from './client/auth-routes.js';
-export type { BridgeAuthPage, BridgeAuthRoute } from './client/auth-routes.js';
+// Flags
+export { canManageBilling, canManageTeam, flag, flagReason, requireFlag, useFlag } from './core/flags.js';
 
-// Subscription components
-export { default as PlanSelector } from './client/components/subscription/PlanSelector.svelte';
+// Calling your API
+export { bridgeFetch } from './core/fetch.js';
+export { closeUpgrade, openUpgrade, readPaymentRequired, upgradeRequest } from './core/upgrade.js';
+export type { UpgradeDialogProps, UpgradeRequest } from './core/upgrade.js';
 
-// TBP-702 — the subscription page, the paywall and the checkout return pages
-// from one file:
-//   src/routes/subscription/[...bridge]/+page.svelte  →  <BridgeBillingRoutes />
-export { default as BridgeBillingRoutes } from './client/components/subscription/BridgeBillingRoutes.svelte';
-export { default as BridgePaywallPage } from './client/components/subscription/BridgePaywallPage.svelte';
-export { default as BillingPortalButton } from './client/components/subscription/BillingPortalButton.svelte';
-// TBP-813 — a completed checkout lands on `billing.successRoute` (the
-// subscription page by default); this banner, or `checkoutResult`, says so.
-export { default as BridgeCheckoutNotice } from './client/components/subscription/BridgeCheckoutNotice.svelte';
-export { checkoutResult, takeCheckoutResult, clearCheckoutResult } from './client/checkout-result.js';
-export type { BridgeCheckoutResult } from './client/checkout-result.js';
-export { BRIDGE_BILLING_PAGES, BRIDGE_BILLING_DEFAULTS, parseBridgeBillingRoute } from './client/billing-routes.js';
-export type { BridgeBillingPage, BridgeBillingRoute } from './client/billing-routes.js';
+// Hand-off mode
+export { handoffSignIn, readHandoff, returnToProgram } from './core/handoff.js';
+export type { HandoffState } from './core/handoff.js';
 
-// Billing 2.0 (Phase A / US-2) — canonical-model drop-in.
-// Parallel to PlanSelector (which consumes the Stripe-direct path); these
-// coexist until REF-1 (post-feature) consolidates them.
-export { default as BridgeSubscriptionStatus } from './client/components/subscription/BridgeSubscriptionStatus.svelte';
+// Copy
+export { errorMessage, translator } from './core/i18n.js';
+export type { BridgeMessageKey, BridgeTranslator } from './core/i18n.js';
+export type { PluginMessageKey } from './core/messages.js';
 
-// Billing 2.0 (Phase B / US-5+) — unified notice banner. Multi-state
-// (past_due / cancel / trial / dunning). One drop-in, all lifecycle copy.
-export { default as BridgeBillingNotice } from './client/components/subscription/BridgeBillingNotice.svelte';
+// The few auth-core names app code needs to use this package
+export { BridgeError, isBridgeError, STANDARD_FLAGS } from '@nebulr-group/bridge-auth-core';
+export type { Bridge, BridgeErrorKind, SessionState, SessionUser, SessionWorkspace } from '@nebulr-group/bridge-auth-core';
 
-// Fullscreen plan-selection paywall. Drop into the root layout to gate
-// unauthenticated/unsubscribed users before they reach the app.
-export { default as BridgePaywall } from './client/components/subscription/BridgePaywall.svelte';
-
-// Billing 2.0 (Phase C / US-11) — live quota counter banner.
-export { default as BridgeQuotaBanner } from './client/components/subscription/BridgeQuotaBanner.svelte';
-
-// TBP-703 — plan limits in the UI, three levels:
-//   0  nothing: a 402 QUOTA_EXCEEDED from your backend opens the upgrade dialog
-//      <BridgeBootstrap> mounts (billing.upgradeDialog: false | Component)
-//   1  <QuotaGate metric> disables its children at the cap;
-//      <Entitled to> shows them only when the plan grants the key
-//   2  useQuota(metric) / $entitlements for your own UI
-// All decoration: the backend's @RequireQuota / @RequireEntitlement enforce.
-export { default as QuotaGate } from './client/components/subscription/QuotaGate.svelte';
-export { default as Entitled } from './client/components/subscription/Entitled.svelte';
-export { default as BridgeUpgradeDialog } from './client/components/subscription/BridgeUpgradeDialog.svelte';
-export { onBridgeQuotaExceeded, parseQuotaRefusal } from './core/quota-refusal.js';
-// TBP-756 — the upgrade dialog's feature variant: a plan-gated route, a
-// <FeatureFlag> upgrade click, or a backend's 402 FEATURE_NOT_IN_PLAN.
-export {
-  openFeatureUpgrade,
-  dismissFeatureUpgrade,
-  featureUpgrade,
-  parseFeatureRefusal,
-} from './core/feature-upgrade.js';
-export type { BridgeFeatureUpgrade, BridgeFeatureOffReason } from './core/feature-upgrade.js';
-export type { BridgeQuotaRefusal } from './core/quota-refusal.js';
-
-// Auth route guards
-export * from './auth/route-guard.js';
-
-// Types
-export * from './shared/profile.js';
-export * from './shared/types/config.js';
-
-// Logger
-export { logger, setLoggerDebug } from './shared/logger.js';
-
-// Conversion tracking (Reddit / GA4 via GTM dataLayer)
-export {
-	pushConversionEvent,
-	pushRedditEvent,
-	configureRedditTracking,
-} from './client/tracking/reddit-tracking.js';
-export type {
-	RedditConversionEvent,
-	RedditEcommerce,
-	RedditEcommerceItem,
-	RedditUserData,
-	PushConversionEventOptions,
-	RedditTrackingGate,
-} from './client/tracking/reddit-tracking.js';
-export { sha256Email } from './client/tracking/pii-hashing.js';
-
-// Auth-core type re-exports for advanced consumers
-export type {
-  AuthConfigResponse,
-  AuthResult,
-  AuthState,
-  BridgeAuthConfig,
-  BridgeAuthEventName,
-  BridgeAuthEvents,
-  FederationConnection,
-  MagicLinkResult,
-  MfaResult,
-  PasskeyAuthOptions,
-  PasskeyRegistrationOptions,
-  PasskeyVerificationResult,
-  SignupResult,
-  SsoOptions,
-  SsoResult,
-  TenantUser,
-} from '@nebulr-group/bridge-auth-core';
-export { BridgeAuth, BridgeAuthError, HttpError, TeamService, ApiTokenService } from '@nebulr-group/bridge-auth-core';
-export type { SessionStalePayload } from '@nebulr-group/bridge-auth-core';
-
-// Billing 2.0 quota shape — `useQuota(metric).snapshot` and
-// `<BridgeQuotaBanner onActionClick>` hand you one, so a TypeScript consumer
-// needs to be able to NAME it without reaching into
-// @nebulr-group/bridge-auth-core or hand-copying the interface.
-export type { QuotaSnapshot } from '@nebulr-group/bridge-auth-core';
-export type {
-  ApiToken,
-  CreateApiTokenInput,
-  CreateApiTokenResponse,
-} from '@nebulr-group/bridge-auth-core';
-export type {
-  TeamProfile,
-  TeamProfileUpdateInput,
-  TeamUser,
-  TeamUserListResult,
-  TeamUserUpdateInput,
-  TeamWorkspace,
-  TeamWorkspaceUpdateInput,
-} from '@nebulr-group/bridge-auth-core';
-export type {
-  Plan,
-  PriceOfferSdk,
-  SubscriptionStatus,
-  CheckoutSession,
-  Workspace,
-} from '@nebulr-group/bridge-auth-core';
-
-// ----------------------------------------------------------------------------
-// Feature Flags 2.0 (re-exported from auth-core)
-// ----------------------------------------------------------------------------
-// Evaluator / operator runtime values
-export {
-  OPERATORS,
-  OPERATOR_VERSION,
-  CONDITIONS_PER_RULE_MAX,
-  isOperator,
-  isOperatorValidForType,
-  validOperatorsForType,
-  evaluateCondition,
-  validateConditions,
-  bucket,
-  evaluateBranch,
-  evaluateRule,
-  validateRule,
-  resolveAttribute,
-} from '@nebulr-group/bridge-auth-core';
-
-// FF 2.0 SDK runtime values
-export {
-  BridgeFlags,
-  BridgeIdentity,
-  MemoryIdentityStorage,
-  attachIdentity,
-  generateAnonymousId,
-  AttributeProviderRegistry,
-  AuthAttributeProvider,
-  BillingAttributeProvider,
-  TelemetryBatcher,
-  RealtimeClient,
-  BRIDGE_CONTEXT_HEADER,
-  serializeContext,
-  deserializeContext,
-  serverInstanceId,
-} from '@nebulr-group/bridge-auth-core';
-
-// FF 2.0 evaluator / SDK types
-export type {
-  Operator,
-  AttributeType,
-  Condition,
-  ConditionValue,
-  ValidationError,
-  Branch,
-  Rule,
-  FlagState,
-  EvalContext,
-  EvalResult,
-  RuleValidationError,
-  CachedFlag,
-  FlagValueType,
-  EvalTelemetry,
-  DiscoveryTelemetry,
-  BridgeFlagsHooks,
-  DeclaredAttributeType,
-  AttributeDeclaration,
-  BridgeFlagsMode,
-  AnonymousTrackingMode,
-  IdentityStorage,
-  AttributeProvider,
-  BillingSnapshot,
-  BillingProviderConfig,
-  TelemetryBatcherConfig,
-  RealtimeClientConfig,
-  RealtimeMessage,
-  FlagUpdateMessage,
-  FlagRemovedMessage,
-  UserStateMessage,
-  ConnectionState,
-  WebSocketLike,
-} from '@nebulr-group/bridge-auth-core';
-
-// FF 2.0 management types
-export type {
-  FlagResponse,
-  CreateFlagInput,
-  UpdateFlagInput,
-  FlagSchedule,
-} from '@nebulr-group/bridge-auth-core';
-
-// TBP-629 — deep-link preservation. Re-exported from auth-core so a SvelteKit
-// login page can import the reader (and its open-redirect validation) from the
-// same package it already depends on, instead of reaching past bridge-svelte.
-export {
-  DEFAULT_RETURN_TO_PARAM,
-  readReturnTo,
-  sanitizeReturnTo,
-  withReturnTo,
-} from '@nebulr-group/bridge-auth-core';
-export type { ReturnToConfig } from '@nebulr-group/bridge-auth-core';
-
-// TBP-630 — SDK auth copy / translations. Re-exported from auth-core for the
-// same reason as the return-to helpers above: a consumer building its own
-// locale catalogue should import from the package it already depends on rather
-// than reaching past bridge-svelte to a peer dependency it never declared —
-// which pnpm's default layout and Yarn PnP refuse outright.
-//
-// bridge-react, -angular and -nextjs already export this surface; svelte was
-// the odd one out.
-export {
-  createTranslator,
-  en,
-  hasLocale,
-  interpolate,
-  LOCALES,
-  normalizeLocale,
-  sv,
-} from '@nebulr-group/bridge-auth-core';
-export type {
-  MessageKey,
-  MessageOverrides,
-  Messages,
-  Translator,
-} from '@nebulr-group/bridge-auth-core';
+// Components
+export { default as BridgeBootstrap } from './components/BridgeBootstrap.svelte';
+export { default as BridgeAuthRoutes } from './components/auth/BridgeAuthRoutes.svelte';
+export { default as SignInForm } from './components/auth/SignInForm.svelte';
+export { default as SignUpForm } from './components/auth/SignUpForm.svelte';
+export { default as VerifyEmail } from './components/auth/VerifyEmail.svelte';
+export { default as ForgotPassword } from './components/auth/ForgotPassword.svelte';
+export { default as SetPassword } from './components/auth/SetPassword.svelte';
+export { default as InviteLanding } from './components/auth/InviteLanding.svelte';
+export { default as WorkspaceChooser } from './components/auth/WorkspaceChooser.svelte';
+export { default as HandoffSignIn } from './components/auth/HandoffSignIn.svelte';
+export { default as SignOutButton } from './components/auth/SignOutButton.svelte';
+export { default as ProfileName } from './components/auth/ProfileName.svelte';
+export { default as FeatureFlag } from './components/flags/FeatureFlag.svelte';
+export type { FeatureFlagOffInfo } from './components/flags/FeatureFlag.svelte';
+export { default as UpgradeDialog } from './components/billing/UpgradeDialog.svelte';
+export { default as LiveStatusBadge } from './components/live/LiveStatusBadge.svelte';
+export { default as TeamPanel } from './components/team/TeamPanel.svelte';
+export { default as MemberList } from './components/team/MemberList.svelte';
+export { default as InviteList } from './components/team/InviteList.svelte';
+export { default as InviteDialog } from './components/team/InviteDialog.svelte';
+export { default as EditMemberDialog } from './components/team/EditMemberDialog.svelte';
+export { default as ConfirmDialog } from './components/team/ConfirmDialog.svelte';
+export { default as WorkspaceForm } from './components/team/WorkspaceForm.svelte';
+export { default as ProfileForm } from './components/team/ProfileForm.svelte';
+export { default as BridgeBillingRoutes } from './components/billing/BridgeBillingRoutes.svelte';
+export { default as PlanPicker } from './components/billing/PlanPicker.svelte';
+export { default as BillingPortalButton } from './components/billing/BillingPortalButton.svelte';
+export { default as SubscriptionStatus } from './components/billing/SubscriptionStatus.svelte';
+export { default as BillingNotice } from './components/billing/BillingNotice.svelte';
+export { default as QuotaBanner } from './components/billing/QuotaBanner.svelte';
+export { default as CheckoutNotice } from './components/billing/CheckoutNotice.svelte';
+export { useQuota } from './components/billing/quota.js';
+export type { Quota, QuotaState } from './components/billing/quota.js';

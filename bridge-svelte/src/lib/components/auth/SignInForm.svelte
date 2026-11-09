@@ -37,8 +37,6 @@
     forgotPasswordHref?: string;
     /** Sign straight in to this workspace. */
     workspace?: string;
-    /** An invite to accept on the way in. */
-    invite?: string;
     /** Called once signed in. Without it, the form goes to the return address. */
     onSignIn?: () => void;
     onError?: (error: unknown) => void;
@@ -55,7 +53,6 @@
     showForgotPassword = true,
     forgotPasswordHref = undefined,
     workspace = undefined,
-    invite = undefined,
     onSignIn,
     onError,
     footer,
@@ -123,7 +120,7 @@
     notice = null;
     loading = true;
     try {
-      await follow(await getBridge().signIn.start({ email: email.trim(), password, ...(workspace ? { workspace } : {}), ...(invite ? { invite } : {}) }));
+      await follow(await getBridge().signIn.start({ email: email.trim(), password, ...(workspace ? { workspace } : {}) }));
     } catch (error) {
       fail(error);
     } finally {

@@ -9,7 +9,7 @@
 | `/auth/verify-email` | Where the sign-up link lands: it finishes the sign-up and signs the person in |
 | `/auth/forgot-password` | Asks for a reset link |
 | `/auth/set-password` | Where the reset link lands: sets a new password, then goes on to sign-in |
-| `/auth/invite` | Where an invite link lands: shows the workspace and accepts the invite |
+| `/auth/invite` | Where an invite link lands: shows the workspace, then signs the person up or in and accepts the invite |
 | `/auth/workspaces` | Switches workspace while signed in |
 | `/auth/handoff` | Hand-off mode only: signs in for a program on the person's machine |
 
@@ -26,6 +26,16 @@ An unknown page under `/auth` gets your app's own 404.
 ## Email links
 
 Bridge's emails link to your email-links address with the token in the fragment: `https://app.example.com/auth#bridge=verify-email&token=…`. The fragment never reaches a server log or a `Referer` header. `bridgeBootstrap` sends the browser to the matching page, and that page takes the token and clears it from the address bar.
+
+## Invites
+
+An invite's email lands on `/auth/invite`, which shows the workspace the invite is for and then:
+
+- **A person with no account** chooses a password (and their name). The invite's link proved the address, so there is no email to wait for: they land signed in, in that workspace, with the role they were invited with.
+- **A person with an account** signs in, and the invite is accepted on the way. With several workspaces, they may be asked which to open first; the invite then moves them into the new one.
+- **Someone signed in already** sees "Join Acme" and accepts with one button.
+
+An invite that no longer works says why: revoked or expired (ask for a new one), or used already (sign in). An invite sent to another address says so and offers to sign out, and a member already is told so and goes on. Invites last 30 days, and sending one again stops the old link working. Invites are sent from the [team panel](../team/team.md).
 
 ## Signing out and switching workspace
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.0-alpha.1] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.2.
+
+### Added
+
+- **Invites.** `/auth/invite` (`InviteLanding`) shows the workspace an invite is for, then signs a new person up from the invite (no email to verify; they land signed in, in the workspace), signs a person with an account in and accepts on the way, or accepts with one button for someone signed in already. Revoked, used and expired invites, an invite for another address and a member already each say so. The invite's token is cleared from the address bar and the history.
+- **`storage: 'memory'`** in `bridgeBootstrap`: nothing of Bridge's is written to `localStorage` or `sessionStorage`. A sign-up's email link, which opens in a new tab, is handed to the tab that started the sign-up and finishes there.
+- `SignUpForm` takes `invite` (sign up from an invite: no email field, signed in at once) and `onSignIn`.
+
+### Changed
+
+- `SignInForm` no longer takes `invite`: `InviteLanding` signs in, then accepts.
+
 ## [1.0.0-alpha.0] - unreleased
 
 A new major version, built on `@nebulr-group/bridge-auth-core` 1.0 and the new Bridge API. It is an alpha: it runs in the browser (`ssr = false`) and signs people in with email and password.

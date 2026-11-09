@@ -61,6 +61,20 @@ export interface BridgeConfig {
 	readonly tokenOrigins?: readonly string[];
 	/** Live updates: flags, team and billing refresh within a second of a change. @default true */
 	readonly live?: boolean;
+	/**
+	 * Where the session is kept between page loads.
+	 *
+	 * - `'local'`: in the browser's localStorage, so a reload and a new tab
+	 *   stay signed in.
+	 * - `'memory'`: in this page's memory only. Nothing of Bridge's is
+	 *   written to localStorage or sessionStorage: not the refresh token, not
+	 *   a sign-up's verifier, not the visitor id. A reload or a new tab signs
+	 *   in again. A sign-up's email link, which opens in a new tab, is handed
+	 *   to the tab that started the sign-up and finishes there.
+	 *
+	 * @default 'local'
+	 */
+	readonly storage?: 'local' | 'memory';
 	/** Hints flag rules may read, such as a country or a page. Who the person is always comes from their token. */
 	readonly hints?: Readonly<Record<string, Hint>>;
 	/**
@@ -114,6 +128,7 @@ export interface ResolvedConfig {
 	readonly messages: BridgeMessages;
 	readonly tokenOrigins: readonly string[];
 	readonly live: boolean;
+	readonly storage: 'local' | 'memory';
 	readonly hints: Readonly<Record<string, Hint>> | undefined;
 	readonly flagKeys: { readonly billingManage: string; readonly teamManage: string; readonly appActive: string };
 	readonly billingBase: string;
@@ -158,6 +173,11 @@ export function checkIssuer(issuer: string | undefined): string {
 	return issuer.trim();
 }
 
+function storageOf(value: BridgeConfig['storage']): 'local' | 'memory' {
+	if (value === undefined || value === 'local' || value === 'memory') return value ?? 'local';
+	throw new Error(`[bridge] storage is 'local' or 'memory'; got "${String(value)}".`);
+}
+
 export function resolveConfig(config: BridgeConfig, envIssuer: string | undefined): ResolvedConfig {
 	const authBase = base(config.auth?.base, '/auth');
 	const billingBase = base(config.billing?.base, '/subscription');
@@ -174,6 +194,7 @@ export function resolveConfig(config: BridgeConfig, envIssuer: string | undefine
 		messages: config.messages ?? {},
 		tokenOrigins: config.tokenOrigins ?? [],
 		live: config.live ?? true,
+		storage: storageOf(config.storage),
 		hints: config.hints,
 		flagKeys: {
 			billingManage: config.flags?.billingManage ?? STANDARD_FLAGS.billingManage,

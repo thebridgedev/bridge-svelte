@@ -19,8 +19,12 @@ export interface TestIssuer {
 	readonly issuer: string;
 	reset(): Promise<void>;
 	addPerson(person: Person): Promise<void>;
-	/** The token of the last link emailed to `email` for `purpose`. */
-	lastLink(email: string, purpose: 'verify-sign-up' | 'reset-password'): Promise<string>;
+	/** The token of the last link emailed to `email` for `purpose` (`invite` for either invite email). */
+	lastLink(email: string, purpose: 'verify-sign-up' | 'reset-password' | 'invite'): Promise<string>;
+	/** Invites `email` into a workspace, as a member who may invite would, and returns the link's token. */
+	invite(email: string, workspace: { readonly id: string; readonly name: string }, role?: string): Promise<string>;
+	/** Makes an address's invites out of date, as if their 30 days had passed. */
+	expireInvites(email: string): Promise<void>;
 	/** Flag results for signed-in people (on top of the standard flags) and for visitors. */
 	setFlags(signedIn: Record<string, unknown>, visitor?: Record<string, unknown>): Promise<void>;
 	setFacts(facts: Record<string, unknown>): Promise<void>;
@@ -55,6 +59,12 @@ class LocalIssuer implements TestIssuer {
 		const query = new URLSearchParams({ to: email, purpose });
 		return ((await this.call(`/link?${query}`)) as { token: string }).token;
 	}
+	async invite(email: string, workspace: { readonly id: string; readonly name: string }, role?: string) {
+		return ((await this.call('/invite', { email, workspace, ...(role === undefined ? {} : { role }) })) as { token: string }).token;
+	}
+	async expireInvites(email: string) {
+		await this.call('/expire-invites', { email });
+	}
 	async setFlags(signedIn: Record<string, unknown>, visitor: Record<string, unknown> = {}) {
 		await this.call('/flags', { signedIn, visitor });
 	}
@@ -78,6 +88,12 @@ class RealIssuer implements TestIssuer {
 	}
 	async lastLink(): Promise<string> {
 		this.missing('read an emailed link');
+	}
+	async invite(): Promise<string> {
+		this.missing('send an invite and read its link');
+	}
+	async expireInvites(): Promise<void> {
+		this.missing('expire an invite');
 	}
 	async setFlags(): Promise<void> {
 		this.missing('set flags');

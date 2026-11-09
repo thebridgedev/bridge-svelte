@@ -25,6 +25,41 @@ test.describe('team panel', () => {
 		await expect(invites.locator('[data-invite-id]')).toHaveCount(0);
 	});
 
+	test('sending again stops the old link; a revoked link says so', async ({ page, browser, issuer, person }) => {
+		test.skip(issuer.kind === 'real', 'Reading an invite link needs the issuer\'s test seams.');
+		await signIn(page, person.email);
+		await page.goto('/settings/team');
+		const invitee = uniqueEmail('eve');
+		await page.getByRole('button', { name: 'Add Member' }).click();
+		const dialog = page.locator('[data-bridge-team-dialog][open]');
+		await dialog.locator('#bridge-add-emails').fill(invitee);
+		await dialog.getByRole('button', { name: 'Send Invite' }).click();
+		await expect(dialog).toHaveCount(0);
+		const first = await issuer.lastLink(invitee, 'invite');
+
+		await page.locator('.bridge-team-tab', { hasText: 'Invites' }).click();
+		const invites = page.locator('[data-bridge-team-invites]');
+		await invites.getByRole('button', { name: 'Resend' }).first().click();
+		await expect(invites).toContainText(`Invite sent again to ${invitee}.`);
+		const second = await issuer.lastLink(invitee, 'invite');
+		expect(second).not.toBe(first);
+
+		const visitor = await browser.newContext();
+		const tab = await visitor.newPage();
+		await tab.goto(`/auth#bridge=invite&token=${first}`);
+		await expect(tab.locator('[data-bridge-invite="closed"]')).toHaveAttribute('data-invite-state', 'expired');
+		await tab.goto(`/auth#bridge=invite&token=${second}`);
+		await expect(tab.locator('[data-bridge-invite="sign-up"]')).toContainText('Join Acme');
+
+		await invites.getByRole('button', { name: 'Revoke' }).first().click();
+		await expect(invites).toContainText(`Invite to ${invitee} revoked.`);
+		await tab.goto('/');
+		await tab.goto(`/auth#bridge=invite&token=${second}`);
+		await expect(tab.locator('[data-bridge-invite="closed"]')).toHaveAttribute('data-invite-state', 'revoked');
+		await expect(tab.locator('[data-bridge-alert]')).toHaveText('This invite was revoked. Ask the person who invited you for a new one.');
+		await visitor.close();
+	});
+
 	test('without the team flag, the panel only shows', async ({ page, issuer, person }) => {
 		await issuer.setFlags({ 'bridge-team-manage': false });
 		await signIn(page, person.email);

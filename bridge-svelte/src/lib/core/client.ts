@@ -3,7 +3,7 @@
  * browser, and every store and component reads it from here. Nothing is made
  * on a server: the server side has its own helpers (`/server`), per request.
  */
-import { createBridge, type Bridge, type BridgeOptions, type SignedOutReason } from '@nebulr-group/bridge-auth-core';
+import { createBridge, memoryStorage, type Bridge, type BridgeOptions, type SignedOutReason } from '@nebulr-group/bridge-auth-core';
 import { get, writable, type Readable } from 'svelte/store';
 import type { ResolvedConfig } from './config.js';
 import { setAppCopy } from './i18n.js';
@@ -53,19 +53,21 @@ export function takeEndedReason(): SignedOutReason | null {
 
 /**
  * Makes the page's client, or returns the one already made for the same
- * issuer. A new issuer replaces it.
+ * issuer and storage. A new issuer or storage replaces it.
  */
 export function startClient(config: ResolvedConfig, extra?: Partial<BridgeOptions>): Bridge {
 	const current = get(clientStore);
 	const previous = get(configStore);
 	setAppCopy(config.locale, config.messages);
 	configStore.set(config);
-	if (current !== null && previous?.issuer === config.issuer) return current;
+	if (current !== null && previous?.issuer === config.issuer && previous.storage === config.storage) return current;
 	current?.destroy();
 	const client = createBridge({
 		issuer: config.issuer,
 		tokenOrigins: config.tokenOrigins,
 		...(config.live ? {} : { live: false as const }),
+		// Memory only: the refresh token, a sign-up's verifier and the visitor id stay in this page.
+		...(config.storage === 'memory' ? { storage: memoryStorage() } : {}),
 		...extra,
 	});
 	client.on('signed-out', ({ reason }) => {

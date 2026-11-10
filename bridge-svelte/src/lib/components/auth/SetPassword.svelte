@@ -44,7 +44,7 @@
     checked = true;
     getBridge()
       .signIn.options()
-      .then((found) => (minLength = found.password.minLength))
+      .then((found) => (minLength = found.password?.minLength ?? minLength))
       .catch(() => undefined);
   });
 

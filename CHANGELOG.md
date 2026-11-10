@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0-alpha.4] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.4.
+
+### Added
+
+- **Sign-in links (magic links).** When the app offers them, `SignInForm` shows "Email me a sign-in link" under the password fields, or on its own when the app offers no passwords. The link lands on the new `/auth/magic-link` page (`MagicLinkLanding`), which signs the person in on the device that asked. Each link works once, for 15 minutes; on another device the page says to open it where it was asked for. With `storage: 'memory'`, only the link's PKCE verifier waits in `localStorage`, for the link's 15 minutes at most.  Like the sign-up link page, it never waits without end: finishing fails after 30 seconds, and once signed in it goes on again if a navigation cancels it.
+
 ## [1.0.0-alpha.3] - unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.3.

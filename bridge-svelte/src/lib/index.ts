@@ -48,6 +48,7 @@ export { default as BridgeAuthRoutes } from './components/auth/BridgeAuthRoutes.
 export { default as SignInForm } from './components/auth/SignInForm.svelte';
 export { default as SignUpForm } from './components/auth/SignUpForm.svelte';
 export { default as VerifyEmail } from './components/auth/VerifyEmail.svelte';
+export { default as MagicLinkLanding } from './components/auth/MagicLinkLanding.svelte';
 export { default as ForgotPassword } from './components/auth/ForgotPassword.svelte';
 export { default as SetPassword } from './components/auth/SetPassword.svelte';
 export { default as InviteLanding } from './components/auth/InviteLanding.svelte';

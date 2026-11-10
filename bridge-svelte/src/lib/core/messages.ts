@@ -30,7 +30,12 @@ export type PluginMessageKey =
 	| 'workspace.empty'
 	| 'workspace.current'
 	| 'password.tooShort'
-	| 'feature.upgrade';
+	| 'feature.upgrade'
+	| 'magicLink.send'
+	| 'magicLink.sent'
+	| 'magicLink.finishing'
+	| 'magicLink.wrongDevice'
+	| 'magicLink.or';
 
 export type PluginMessages = Record<PluginMessageKey, string>;
 
@@ -61,6 +66,11 @@ const en: PluginMessages = {
 	'workspace.current': 'Current',
 	'password.tooShort': 'Use at least {count} characters.',
 	'feature.upgrade': 'Upgrade to use this',
+	'magicLink.send': 'Email me a sign-in link',
+	'magicLink.sent': 'If this address has an account, a sign-in link is on its way. Open it on this device.',
+	'magicLink.finishing': 'Signing you in…',
+	'magicLink.wrongDevice': 'Open the link on the device where you asked for it.',
+	'magicLink.or': 'or',
 };
 
 const sv: PluginMessages = {
@@ -90,6 +100,11 @@ const sv: PluginMessages = {
 	'workspace.current': 'Aktuell',
 	'password.tooShort': 'Använd minst {count} tecken.',
 	'feature.upgrade': 'Uppgradera för att använda detta',
+	'magicLink.send': 'Mejla mig en inloggningslänk',
+	'magicLink.sent': 'Om adressen har ett konto är en inloggningslänk på väg. Öppna den på den här enheten.',
+	'magicLink.finishing': 'Loggar in dig…',
+	'magicLink.wrongDevice': 'Öppna länken på enheten där du bad om den.',
+	'magicLink.or': 'eller',
 };
 
 const da: PluginMessages = {
@@ -119,6 +134,11 @@ const da: PluginMessages = {
 	'workspace.current': 'Aktuel',
 	'password.tooShort': 'Brug mindst {count} tegn.',
 	'feature.upgrade': 'Opgrader for at bruge dette',
+	'magicLink.send': 'Send mig et login-link',
+	'magicLink.sent': 'Hvis adressen har en konto, er et login-link på vej. Åbn det på denne enhed.',
+	'magicLink.finishing': 'Logger dig ind…',
+	'magicLink.wrongDevice': 'Åbn linket på den enhed, hvor du bad om det.',
+	'magicLink.or': 'eller',
 };
 
 const nb: PluginMessages = {
@@ -148,6 +168,11 @@ const nb: PluginMessages = {
 	'workspace.current': 'Gjeldende',
 	'password.tooShort': 'Bruk minst {count} tegn.',
 	'feature.upgrade': 'Oppgrader for å bruke dette',
+	'magicLink.send': 'Send meg en innloggingslenke',
+	'magicLink.sent': 'Hvis adressen har en konto, er en innloggingslenke på vei. Åpne den på denne enheten.',
+	'magicLink.finishing': 'Logger deg inn…',
+	'magicLink.wrongDevice': 'Åpne lenken på enheten der du ba om den.',
+	'magicLink.or': 'eller',
 };
 
 const nl: PluginMessages = {
@@ -177,6 +202,11 @@ const nl: PluginMessages = {
 	'workspace.current': 'Huidig',
 	'password.tooShort': 'Gebruik minstens {count} tekens.',
 	'feature.upgrade': 'Upgrade om dit te gebruiken',
+	'magicLink.send': 'Mail me een inloglink',
+	'magicLink.sent': 'Als dit adres een account heeft, is er een inloglink onderweg. Open hem op dit apparaat.',
+	'magicLink.finishing': 'Je wordt ingelogd…',
+	'magicLink.wrongDevice': 'Open de link op het apparaat waarop je hem hebt aangevraagd.',
+	'magicLink.or': 'of',
 };
 
 const de: PluginMessages = {
@@ -206,6 +236,11 @@ const de: PluginMessages = {
 	'workspace.current': 'Aktuell',
 	'password.tooShort': 'Verwende mindestens {count} Zeichen.',
 	'feature.upgrade': 'Upgrade, um das zu nutzen',
+	'magicLink.send': 'Schick mir einen Anmeldelink',
+	'magicLink.sent': 'Wenn diese Adresse ein Konto hat, ist ein Anmeldelink unterwegs. Öffne ihn auf diesem Gerät.',
+	'magicLink.finishing': 'Du wirst angemeldet…',
+	'magicLink.wrongDevice': 'Öffne den Link auf dem Gerät, auf dem du ihn angefordert hast.',
+	'magicLink.or': 'oder',
 };
 
 const fi: PluginMessages = {
@@ -235,6 +270,11 @@ const fi: PluginMessages = {
 	'workspace.current': 'Nykyinen',
 	'password.tooShort': 'Käytä vähintään {count} merkkiä.',
 	'feature.upgrade': 'Päivitä käyttääksesi tätä',
+	'magicLink.send': 'Lähetä minulle kirjautumislinkki',
+	'magicLink.sent': 'Jos osoitteella on tili, kirjautumislinkki on matkalla. Avaa se tällä laitteella.',
+	'magicLink.finishing': 'Kirjaudutaan sisään…',
+	'magicLink.wrongDevice': 'Avaa linkki laitteella, jolla pyysit sitä.',
+	'magicLink.or': 'tai',
 };
 
 const fr: PluginMessages = {
@@ -264,6 +304,11 @@ const fr: PluginMessages = {
 	'workspace.current': 'Actuel',
 	'password.tooShort': 'Utilise au moins {count} caractères.',
 	'feature.upgrade': 'Passe à l\'offre supérieure pour l\'utiliser',
+	'magicLink.send': 'Envoie-moi un lien de connexion',
+	'magicLink.sent': 'Si cette adresse a un compte, un lien de connexion est en route. Ouvre-le sur cet appareil.',
+	'magicLink.finishing': 'Connexion en cours…',
+	'magicLink.wrongDevice': 'Ouvre le lien sur l\'appareil où tu l\'as demandé.',
+	'magicLink.or': 'ou',
 };
 
 const es: PluginMessages = {
@@ -293,6 +338,11 @@ const es: PluginMessages = {
 	'workspace.current': 'Actual',
 	'password.tooShort': 'Usa al menos {count} caracteres.',
 	'feature.upgrade': 'Mejora tu plan para usar esto',
+	'magicLink.send': 'Envíame un enlace para iniciar sesión',
+	'magicLink.sent': 'Si esta dirección tiene una cuenta, hay un enlace para iniciar sesión en camino. Ábrelo en este dispositivo.',
+	'magicLink.finishing': 'Iniciando sesión…',
+	'magicLink.wrongDevice': 'Abre el enlace en el dispositivo donde lo pediste.',
+	'magicLink.or': 'o',
 };
 
 const it: PluginMessages = {
@@ -322,6 +372,11 @@ const it: PluginMessages = {
 	'workspace.current': 'Attuale',
 	'password.tooShort': 'Usa almeno {count} caratteri.',
 	'feature.upgrade': 'Passa a un piano superiore per usarlo',
+	'magicLink.send': 'Inviami un link di accesso',
+	'magicLink.sent': 'Se questo indirizzo ha un account, un link di accesso è in arrivo. Aprilo su questo dispositivo.',
+	'magicLink.finishing': 'Accesso in corso…',
+	'magicLink.wrongDevice': 'Apri il link sul dispositivo da cui l\'hai richiesto.',
+	'magicLink.or': 'oppure',
 };
 
 const pt: PluginMessages = {
@@ -351,6 +406,11 @@ const pt: PluginMessages = {
 	'workspace.current': 'Atual',
 	'password.tooShort': 'Usa pelo menos {count} caracteres.',
 	'feature.upgrade': 'Faz upgrade para usar isto',
+	'magicLink.send': 'Envia-me um link para iniciar sessão',
+	'magicLink.sent': 'Se este endereço tiver uma conta, um link para iniciar sessão está a caminho. Abre-o neste dispositivo.',
+	'magicLink.finishing': 'A iniciar sessão…',
+	'magicLink.wrongDevice': 'Abre o link no dispositivo onde o pediste.',
+	'magicLink.or': 'ou',
 };
 
 const pl: PluginMessages = {
@@ -380,6 +440,11 @@ const pl: PluginMessages = {
 	'workspace.current': 'Bieżąca',
 	'password.tooShort': 'Użyj co najmniej {count} znaków.',
 	'feature.upgrade': 'Zmień plan, by z tego korzystać',
+	'magicLink.send': 'Wyślij mi link do logowania',
+	'magicLink.sent': 'Jeśli ten adres ma konto, link do logowania jest w drodze. Otwórz go na tym urządzeniu.',
+	'magicLink.finishing': 'Logowanie…',
+	'magicLink.wrongDevice': 'Otwórz link na urządzeniu, na którym o niego poproszono.',
+	'magicLink.or': 'lub',
 };
 
 /** The plugin's copy by primary language subtag. */

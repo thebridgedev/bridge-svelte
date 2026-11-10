@@ -4,13 +4,14 @@
 
 | Page | What it does |
 |---|---|
-| `/auth/sign-in` | Email and password, then the workspace choice when the person belongs to several |
+| `/auth/sign-in` | Email and password, or a sign-in link by email when your app offers it, then the workspace choice when the person belongs to several |
 | `/auth/sign-up` | Email, password and name. Bridge emails a link to prove the address; nothing is made before that |
 | `/auth/verify-email` | Where the sign-up link lands: it finishes the sign-up and signs the person in |
 | `/auth/forgot-password` | Asks for a reset link |
 | `/auth/set-password` | Where the reset link lands: sets a new password, then goes on to sign-in |
 | `/auth/invite` | Where an invite link lands: shows the workspace, then signs the person up or in and accepts the invite |
 | `/auth/workspaces` | Switches workspace while signed in |
+| `/auth/magic-link` | Where a sign-in link lands: signs the person in on the device that asked for it |
 | `/auth/handoff` | Hand-off mode only: signs in for a program on the person's machine |
 
 An unknown page under `/auth` gets your app's own 404.
@@ -20,12 +21,26 @@ An unknown page under `/auth` gets your app's own 404.
 - **A wrong email or password** says "Invalid email or password." whether or not the address has an account. Sign-up and password recovery also answer the same way for both, so the pages never reveal who has an account.
 - **The workspace choice** appears after the password when the person belongs to several workspaces. Pick one and they are in.
 - **The sign-up link** finishes the sign-up only in the browser that started it. Opened on another device, it says to open it where they signed up, and the link still works there.
+- **A sign-in link** ("Email me a sign-in link") works once, for 15 minutes, and only in the browser that asked for it. Opened on another device, it says to open it where they asked, and the link still works there. The page answers the same whether or not the address has an account.
 - **Setting a new password** signs nobody in and ends every session of the account, so the page sends the person to sign in with the new password.
 - **When Bridge ends a session** (a password reset elsewhere, or removal from the workspace), the person is sent to sign in again with a short note saying why.
 
 ## Email links
 
 Bridge's emails link to your email-links address with the token in the fragment: `https://app.example.com/auth#bridge=verify-email&token=…`. The fragment never reaches a server log or a `Referer` header. `bridgeBootstrap` sends the browser to the matching page, and that page takes the token and clears it from the address bar.
+
+## Sign-in links
+
+Switch sign-in links on in your app's sign-in settings in Bridge. The sign-in form then shows "Email me a sign-in link" under the password fields, or on its own when your app offers no passwords. The person types their email and gets a link; it lands on `/auth/magic-link`, which signs them in.
+
+Each link works once, for 15 minutes, and only in the browser that asked for it: the SDK keeps a one-time key (a PKCE verifier) for it until the link is opened, at most 15 minutes. With `storage: 'memory'`, that key alone waits in `localStorage`, so the link can open in a new tab; the session stays in memory. A link opened in another browser is refused, and still works in the right one. Asking again sends a new link; only the newest one works in this browser.
+
+Headless:
+
+```ts
+await getBridge().magicLink.start(email);        // always the same answer
+const step = await getBridge().magicLink.finish(token); // on /auth/magic-link
+```
 
 ## Invites
 
@@ -108,4 +123,4 @@ A form's own `messages` prop changes wording on that form only.
 
 ## What comes later
 
-Email and password is the sign-in method in this alpha. Passkeys, email codes, company sign-in and a second step arrive as new sign-in steps, and the forms show them when your app's sign-in options in Bridge list them.
+Email and password, and sign-in links, are the sign-in methods in this alpha. Passkeys, email codes, company sign-in and a second step arrive as new sign-in steps, and the forms show them when your app's sign-in options in Bridge list them.

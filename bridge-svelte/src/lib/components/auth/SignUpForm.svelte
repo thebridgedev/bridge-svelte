@@ -81,7 +81,9 @@
   let sentTo = $state<string | null>(null);
   let options = $state<SignInOptions | null>(null);
 
-  const minLength = $derived(options?.password.minLength ?? 8);
+  const minLength = $derived(options?.password?.minLength ?? 8);
+  /** An app that offers sign-in links only takes no password: the person signs in by link. */
+  const passwordOffered = $derived(options === null || options.methods.includes('password'));
   // An invite is its own way in, whether or not the app takes sign-ups.
   const closed = $derived(!invite && options !== null && !options.signUp);
   let stopRelay: (() => void) | null = null;
@@ -98,11 +100,12 @@
     event.preventDefault();
     if (loading) return;
     failure = null;
-    if (password.length < minLength) {
+    if (passwordOffered && password.length < minLength) {
       failure = t('password.tooShort', { count: minLength });
       return;
     }
     loading = true;
+    const secret = passwordOffered ? { password } : {};
     const address = email.trim();
     const names = {
       ...(firstName.trim() ? { firstName: firstName.trim() } : {}),
@@ -111,14 +114,14 @@
     try {
       if (invite) {
         // Signed in at once, in the inviting workspace: the invite's link proved the address.
-        await getBridge().invites.signUp({ token: invite, password, ...names });
+        await getBridge().invites.signUp({ token: invite, ...secret, ...names });
         if (onSignIn) onSignIn();
         else void goto(config?.afterSignIn ?? '/', { invalidateAll: true });
         return;
       }
       await getBridge().signUp.start({
         email: address,
-        password,
+        ...secret,
         ...names,
         ...(workspace === 'ask' ? { workspace: workspaceName.trim() || true } : workspace ? { workspace: true } : {}),
       });
@@ -172,6 +175,7 @@
           <input id="signup-email" type="email" autocomplete="email" placeholder={t('placeholder.email')} required bind:value={email} disabled={loading} />
         </div>
       {/if}
+      {#if passwordOffered}
       <div class="bridge-form-group">
         <label for="signup-password">{t('field.password')}</label>
         <PasswordInput
@@ -186,13 +190,14 @@
           hideLabel={t('action.hidePassword')}
         />
       </div>
+      {/if}
       {#if workspace === 'ask' && !invite}
         <div class="bridge-form-group">
           <label for="signup-workspace">{t('field.workspaceName')}</label>
           <input id="signup-workspace" type="text" autocomplete="organization" bind:value={workspaceName} disabled={loading} />
         </div>
       {/if}
-      <button type="submit" class="bridge-btn bridge-btn-primary" disabled={loading || (!invite && !email.trim()) || !password}>
+      <button type="submit" class="bridge-btn bridge-btn-primary" disabled={loading || (!invite && !email.trim()) || (passwordOffered && !password)}>
         {#if loading}<Spinner size={16} />{:else}{t('signup.submit')}{/if}
       </button>
     </form>

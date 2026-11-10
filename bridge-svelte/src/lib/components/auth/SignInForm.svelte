@@ -1,11 +1,13 @@
 <!--
-  Sign in with email and password, then pick a workspace when the person has
-  several. On success it calls `onSignIn`, or goes to the page the person was
-  sent here from (else `auth.afterSignIn`).
+  Sign in with email and password, or with a sign-in link sent by email (a
+  magic link), then pick a workspace when the person has several. On success
+  it calls `onSignIn`, or goes to the page the person was sent here from
+  (else `auth.afterSignIn`).
 
-  Today's method is password. Other methods (email codes, passkeys, company
-  login, a second step) arrive as new sign-in steps; this form shows the
-  methods the app's sign-in options list, so they join without a new API.
+  The form shows the methods the app's sign-in options list: the password
+  fields when it offers passwords, "Email me a sign-in link" when it offers
+  links. Other methods (email codes, passkeys, company login, a second step)
+  arrive as new sign-in steps and join the same way, without a new API.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
@@ -71,12 +73,14 @@
   let loading = $state(false);
   let failure = $state<string | null>(null);
   let notice = $state<string | null>(null);
+  let linkSent = $state(false);
   let options = $state<SignInOptions | null>(null);
   let choice = $state<{ workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> } | null>(null);
   let settled = $state(false);
 
   const signUpShown = $derived(showSignupLink ?? options?.signUp ?? true);
   const passwordOffered = $derived(options === null || options.methods.includes('password'));
+  const linkOffered = $derived(options !== null && options.methods.includes('magicLink'));
 
   onMount(() => {
     // Why the last session ended: told by the client as it happened, or read from the session on a fresh page.
@@ -128,6 +132,23 @@
     }
   }
 
+  /** Asks for a sign-in link to the address typed. The answer is the same whether or not it has an account. */
+  async function sendLink(event?: Event) {
+    event?.preventDefault();
+    if (loading || !email.trim()) return;
+    failure = null;
+    notice = null;
+    loading = true;
+    try {
+      await getBridge().magicLink.start(email.trim());
+      linkSent = true;
+    } catch (error) {
+      fail(error);
+    } finally {
+      loading = false;
+    }
+  }
+
   async function choose(id: string) {
     if (choice === null) return;
     try {
@@ -161,7 +182,9 @@
   >
     {#if notice}<Alert variant="info">{notice}</Alert>{/if}
     {#if failure}<Alert variant="error">{failure}</Alert>{/if}
-    {#if passwordOffered}
+    {#if linkSent}
+      <Alert variant="info">{t('magicLink.sent')}</Alert>
+    {:else if passwordOffered}
       <form onsubmit={submit}>
         <div class="bridge-form-group">
           <label for="login-email">{t('field.email')}</label>
@@ -196,6 +219,30 @@
             <a href={forgotPasswordHref ?? `${authBase}/forgot-password`} class="bridge-link">{t('login.forgotPassword')}</a>
           </div>
         {/if}
+        {#if linkOffered}
+          <div class="bridge-divider" data-bridge-sign-in-or>{t('magicLink.or')}</div>
+          <button type="button" class="bridge-btn bridge-btn-secondary" data-bridge-magic-link-send onclick={sendLink} disabled={loading || !email.trim()}>
+            {t('magicLink.send')}
+          </button>
+        {/if}
+      </form>
+    {:else if linkOffered}
+      <form onsubmit={sendLink} data-bridge-magic-link-form>
+        <div class="bridge-form-group">
+          <label for="login-email">{t('field.email')}</label>
+          <input
+            id="login-email"
+            type="email"
+            autocomplete="username"
+            placeholder={t('placeholder.email')}
+            required
+            bind:value={email}
+            disabled={loading}
+          />
+        </div>
+        <button type="submit" class="bridge-btn bridge-btn-primary" data-bridge-magic-link-send disabled={loading || !email.trim()}>
+          {#if loading}<Spinner size={16} />{/if} {t('magicLink.send')}
+        </button>
       </form>
     {/if}
 

@@ -21,6 +21,7 @@
   import Spinner from '../shared/Spinner.svelte';
   import WorkspaceChooser from './WorkspaceChooser.svelte';
   import { takeEmailLink } from './email-link.js';
+  import { bounded, leave } from './finish-link.js';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** The link's token. @default read from the page's address */
@@ -40,13 +41,20 @@
 
   type State =
     | { step: 'working' }
+    | { step: 'signed-in'; to: string }
     | { step: 'workspace'; workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> }
     | { step: 'failed'; message: string; kind: string | null };
   let view = $state<State>({ step: 'working' });
 
-  function finish() {
-    if (onSignIn) onSignIn();
-    else void goto(config?.afterSignIn ?? '/', { invalidateAll: true });
+  async function finish() {
+    if (onSignIn) {
+      onSignIn();
+      return;
+    }
+    // Signing in runs the route guard again, and that newer navigation can cancel this one: go again, then offer a link.
+    const to = config?.afterSignIn ?? '/';
+    const here = location.pathname;
+    if (!(await leave(() => goto(to, { invalidateAll: true }), () => location.pathname !== here))) view = { step: 'signed-in', to };
   }
 
   function fail(error: unknown) {
@@ -56,7 +64,7 @@
   }
 
   async function follow(step: SignInStep) {
-    if (step.done) finish();
+    if (step.done) await finish();
     else view = { step: 'workspace', workspaces: step.workspaces, choose: step.choose };
   }
 
@@ -66,7 +74,7 @@
       view = { step: 'failed', message: t('verify.missingLink'), kind: null };
       return;
     }
-    getBridge().magicLink.finish(found).then(follow, fail);
+    bounded(getBridge().magicLink.finish(found)).then(follow).catch(fail);
   });
 
   async function choose(id: string) {
@@ -84,6 +92,12 @@
     <div class="bridge-auth-settling" data-bridge-auth-settling>
       <Spinner size={24} />
       <span>{t('magicLink.finishing')}</span>
+    </div>
+  </AuthFormWrapper>
+{:else if view.step === 'signed-in'}
+  <AuthFormWrapper heading={t('login.heading')} {headingSnippet} class={className} {style} data-bridge-magic-link="signed-in" {...rest}>
+    <div class="bridge-form-footer">
+      <a href={view.to} class="bridge-link">{t('invite.continue')}</a>
     </div>
   </AuthFormWrapper>
 {:else if view.step === 'workspace'}

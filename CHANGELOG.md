@@ -1,12 +1,21 @@
 # Changelog
 
-## [1.0.0-alpha.3] - unreleased
+## [1.0.0-alpha.4] - unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.4.
 
 ### Added
 
-- **Sign-in links (magic links).** When the app offers them, `SignInForm` shows "Email me a sign-in link" under the password fields, or on its own when the app offers no passwords. The link lands on the new `/auth/magic-link` page (`MagicLinkLanding`), which signs the person in on the device that asked. Each link works once, for 15 minutes; on another device the page says to open it where it was asked for. With `storage: 'memory'`, only the link's PKCE verifier waits in `localStorage`, for the link's 15 minutes at most.
+- **Sign-in links (magic links).** When the app offers them, `SignInForm` shows "Email me a sign-in link" under the password fields, or on its own when the app offers no passwords. The link lands on the new `/auth/magic-link` page (`MagicLinkLanding`), which signs the person in on the device that asked. Each link works once, for 15 minutes; on another device the page says to open it where it was asked for. With `storage: 'memory'`, only the link's PKCE verifier waits in `localStorage`, for the link's 15 minutes at most.  Like the sign-up link page, it never waits without end: finishing fails after 30 seconds, and once signed in it goes on again if a navigation cancels it.
+
+## [1.0.0-alpha.3] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.3.
+
+### Fixed
+
+- **A sign-up's email link no longer stays on "Finishing sign-up…"** after it has signed the person in. Signing in makes the route guard run again as the session and the flags settle, and that navigation could cancel the page's own way on to `auth.afterSignIn`, so the page stayed put with its spinner. The page now goes again when that happens, and after three tries shows a link to go on.
+- **The email-link page never waits without end.** Finishing the link fails with an error after 30 seconds, and an error anywhere on the way is shown instead of leaving the spinner.
 
 ## [1.0.0-alpha.2] - unreleased
 

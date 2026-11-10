@@ -1,5 +1,7 @@
 /**
- * `storage: 'memory'`: nothing of Bridge's reaches the browser's storage.
+ * `storage: 'memory'`: the session and the visitor id never reach the
+ * browser's storage; only a sign-up's verifier waits in localStorage for its
+ * email link, and is removed once used.
  * `'local'` (the default) keeps the session in localStorage, so a reload
  * stays signed in.
  */
@@ -60,12 +62,30 @@ afterEach(() => {
 });
 
 describe('where the session is kept', () => {
-	it("'memory' writes nothing to localStorage or sessionStorage: session, sign-up or visitor", async () => {
+	it("'memory' keeps the session and the visitor id out of localStorage and sessionStorage; only the sign-up's verifier waits in localStorage", async () => {
 		const { local, session, config } = await signInAndStartSignUp('memory');
 		expect(config.storage).toBe('memory');
 		expect(getBridge().session.get()).toMatchObject({ status: 'signed-in' });
-		expect([...local.written]).toEqual([]);
+		expect([...local.written]).toEqual([`bridge:${config.issuer}:sign-up`]);
 		expect([...session.written]).toEqual([]);
+	});
+
+	it("'memory': a new page of the same browser finishes the sign-up from its link, and the verifier is then gone", async () => {
+		const local = new RecordingStorage();
+		vi.stubGlobal('window', {});
+		vi.stubGlobal('localStorage', local);
+		vi.stubGlobal('sessionStorage', new RecordingStorage());
+		const fake = createFakeIssuer();
+		const options = { fetch: fake.fetch, autoRefresh: false, locks: null, tabChannel: null, live: false as const };
+		const config = resolveConfig({ issuer: fake.issuer, storage: 'memory' }, undefined);
+		await startClient(config, options).ready;
+		await getBridge().signUp.start({ email: 'new@acme.test', password: PASSWORD });
+		// The tab that started the sign-up is closed: its memory is gone, the browser's localStorage is not.
+		resetClient();
+		await startClient(config, options).ready;
+		await expect(getBridge().signUp.finish(fake.lastLink('new@acme.test', 'verify-sign-up')!)).resolves.toEqual({ done: true });
+		expect(getBridge().session.get()).toMatchObject({ status: 'signed-in' });
+		expect(local.length).toBe(0);
 	});
 
 	it("'local' is the default, and keeps the session and the sign-up's verifier in localStorage", async () => {

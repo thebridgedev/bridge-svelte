@@ -1,6 +1,6 @@
 {
 	"name": "@nebulr-group/bridge-svelte",
-	"version": "1.0.0-alpha.1",
+	"version": "1.0.0-alpha.2",
 	"description": "The Bridge for SvelteKit: sign-in in your own pages, workspaces, flag-based route guards, plans and checkout, the team panel and live updates, on one setting: the issuer.",
 	"author": "Iman Pouya",
 	"license": "MIT",
@@ -60,7 +60,7 @@
 		"@sveltejs/kit": "^2.0.0"
 	},
 	"dependencies": {
-		"@nebulr-group/bridge-auth-core": "1.0.0-alpha.2"
+		"@nebulr-group/bridge-auth-core": "1.0.0-alpha.3"
 	},
 	"devDependencies": {
 		"@sveltejs/kit": "^2.16.0",

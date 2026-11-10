@@ -2,9 +2,11 @@ import type { Page } from '@playwright/test';
 import { expect, PASSWORD, signIn, test, uniqueEmail } from '../../support/fixtures';
 
 /**
- * The demo with `storage: 'memory'`: nothing of Bridge's in the browser's
+ * The demo with `storage: 'memory'`: the session never reaches the browser's
  * storage, a reload signs in again, and a sign-up's email link, which opens
- * in a new tab, finishes in the tab that started it.
+ * in a new tab, finishes in the tab that started it, or in the new tab when
+ * that one was closed. Only the sign-up's verifier waits in localStorage, and
+ * it is gone once used.
  *
  * SvelteKit itself keeps scroll positions in sessionStorage (`sveltekit:*`);
  * those hold nothing of Bridge's and are left out of the check.
@@ -51,7 +53,27 @@ test.describe('storage: memory', () => {
 		expect(await storageOf(page)).toEqual({});
 	});
 
-	test('with the starting tab gone, the link says to open it on the device that started it', async ({ browser, issuer }) => {
+	test('with the starting tab closed, the link opened in a new tab of the same browser finishes the sign-up there', async ({ context, issuer }) => {
+		const email = uniqueEmail('rae');
+		const start = await context.newPage();
+		await start.goto('/auth/sign-up');
+		await start.locator('#signup-email').fill(email);
+		await start.locator('#signup-password').fill(PASSWORD);
+		await start.locator('[data-bridge-sign-up-step="form"] button[type="submit"]').click();
+		await expect(start.locator('[data-bridge-sign-up-sent]')).toContainText(email);
+		// Only the sign-up's verifier is kept, in localStorage, while the link is on the way.
+		expect.soft(Object.keys(await storageOf(start))).toEqual([expect.stringMatching(/^bridge:.*:sign-up$/)]);
+		const token = await issuer.lastLink(email, 'verify-sign-up');
+		await start.close();
+
+		const linkTab = await context.newPage();
+		await linkTab.goto(`/auth#bridge=verify-email&token=${token}`);
+		await expect(linkTab.getByTestId('home-signed-in')).toContainText(email);
+		expect(linkTab.url()).not.toContain(token);
+		expect(await storageOf(linkTab)).toEqual({});
+	});
+
+	test('on another device, the link says to open it on the device that started it', async ({ browser, issuer }) => {
 		const email = uniqueEmail('tess');
 		const first = await browser.newContext();
 		const start = await first.newPage();

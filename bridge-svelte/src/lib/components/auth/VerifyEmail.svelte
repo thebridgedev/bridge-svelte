@@ -3,9 +3,9 @@
   signs the person in. Opened on another device it says so, and the link
   still works on the right one.
 
-  With `storage: 'memory'` the sign-up's verifier lives only in the tab that
-  started it, so this page first hands the link to that tab; when one takes
-  it, this page says to go on there.
+  With `storage: 'memory'` the session lives only in the tab that started the
+  sign-up, so this page first hands the link to that tab; when one takes it,
+  this page says to go on there. When none does, this page finishes itself.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
@@ -70,7 +70,7 @@
       return;
     }
     if (relayed === null && config?.storage === 'memory') {
-      // The verifier is in the tab that started the sign-up: offer it the link first.
+      // The session belongs in the tab that started the sign-up: offer it the link first.
       void offerSignUpLink(config.issuer, found).then((taken) => {
         if (taken) view = { step: 'continued' };
         else getBridge().signUp.finish(found).then(follow, fail);

@@ -6,6 +6,9 @@
   With `storage: 'memory'` the session lives only in the tab that started the
   sign-up, so this page first hands the link to that tab; when one takes it,
   this page says to go on there. When none does, this page finishes itself.
+
+  Every wait has a bound: finishing fails with an error after a while, and
+  once signed in the page goes on, or offers a link when it cannot.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
@@ -22,6 +25,7 @@
   import Spinner from '../shared/Spinner.svelte';
   import WorkspaceChooser from './WorkspaceChooser.svelte';
   import { takeEmailLink } from './email-link.js';
+  import { bounded, leave } from './finish-link.js';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** The link's token. @default read from the page's address */
@@ -42,13 +46,20 @@
   type State =
     | { step: 'working' }
     | { step: 'continued' }
+    | { step: 'signed-in'; to: string }
     | { step: 'workspace'; workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> }
     | { step: 'failed'; message: string; kind: string | null };
   let view = $state<State>({ step: 'working' });
 
-  function finish() {
-    if (onSignIn) onSignIn();
-    else void goto(config?.afterSignIn ?? '/', { invalidateAll: true });
+  async function finish() {
+    if (onSignIn) {
+      onSignIn();
+      return;
+    }
+    // Signing in runs the route guard again, and that newer navigation can cancel this one: go again, then offer a link.
+    const to = config?.afterSignIn ?? '/';
+    const here = location.pathname;
+    if (!(await leave(() => goto(to, { invalidateAll: true }), () => location.pathname !== here))) view = { step: 'signed-in', to };
   }
 
   function fail(error: unknown) {
@@ -57,7 +68,7 @@
   }
 
   async function follow(step: SignInStep) {
-    if (step.done) finish();
+    if (step.done) await finish();
     else view = { step: 'workspace', workspaces: step.workspaces, choose: step.choose };
   }
 
@@ -69,16 +80,21 @@
       view = { step: 'failed', message: t('verify.missingLink'), kind: null };
       return;
     }
-    if (relayed === null && config?.storage === 'memory') {
-      // The session belongs in the tab that started the sign-up: offer it the link first.
-      void offerSignUpLink(config.issuer, found).then((taken) => {
-        if (taken) view = { step: 'continued' };
-        else getBridge().signUp.finish(found).then(follow, fail);
-      });
-      return;
-    }
-    getBridge().signUp.finish(found).then(follow, fail);
+    void start(found, relayed !== null);
   });
+
+  async function start(found: string, relayed: boolean) {
+    try {
+      // The session belongs in the tab that started the sign-up (memory only): offer it the link first.
+      if (!relayed && config?.storage === 'memory' && (await offerSignUpLink(config.issuer, found))) {
+        view = { step: 'continued' };
+        return;
+      }
+      await follow(await bounded(getBridge().signUp.finish(found)));
+    } catch (error) {
+      fail(error);
+    }
+  }
 
   async function choose(id: string) {
     if (view.step !== 'workspace') return;
@@ -100,6 +116,12 @@
 {:else if view.step === 'continued'}
   <AuthFormWrapper heading={t('signup.heading')} {headingSnippet} class={className} {style} data-bridge-verify-email="continued" {...rest}>
     <Alert variant="info">{t('verify.continuedElsewhere')}</Alert>
+  </AuthFormWrapper>
+{:else if view.step === 'signed-in'}
+  <AuthFormWrapper heading={t('signup.heading')} {headingSnippet} class={className} {style} data-bridge-verify-email="signed-in" {...rest}>
+    <div class="bridge-form-footer">
+      <a href={view.to} class="bridge-link">{t('invite.continue')}</a>
+    </div>
   </AuthFormWrapper>
 {:else if view.step === 'workspace'}
   <AuthFormWrapper heading={t('workspace.chooseHeading')} {headingSnippet} class={className} {style} data-bridge-verify-email="workspace" {...rest}>

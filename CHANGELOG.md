@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.0-alpha.3] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.3.
+
+### Fixed
+
+- **A sign-up's email link no longer stays on "Finishing sign-up…"** after it has signed the person in. Signing in makes the route guard run again as the session and the flags settle, and that navigation could cancel the page's own way on to `auth.afterSignIn`, so the page stayed put with its spinner. The page now goes again when that happens, and after three tries shows a link to go on.
+- **The email-link page never waits without end.** Finishing the link fails with an error after 30 seconds, and an error anywhere on the way is shown instead of leaving the spinner.
+
 ## [1.0.0-alpha.2] - unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.3.

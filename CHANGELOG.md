@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0-alpha.2] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.3.
+
+### Fixed
+
+- **`storage: 'memory'`: a sign-up's email link works in a new tab of the same browser**, also after the tab that started the sign-up is closed. Memory mode now keeps the sign-up's PKCE verifier, and only that, in `localStorage` while the email link is on the way: for the link's 15 minutes at most, removed once used. The session and the visitor id stay in memory. When the tab that started the sign-up is still open, the link is still handed to it. On another device the link is still refused (`wrong-device`).
+
 ## [1.0.0-alpha.1] - unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.2.

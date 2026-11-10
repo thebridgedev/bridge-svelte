@@ -66,12 +66,17 @@ export interface BridgeConfig {
 	 *
 	 * - `'local'`: in the browser's localStorage, so a reload and a new tab
 	 *   stay signed in.
-	 * - `'memory'`: in this page's memory only. Nothing of Bridge's is
-	 *   written to localStorage or sessionStorage: not the refresh token, not
-	 *   a sign-up's verifier, not the visitor id. A reload signs in again. A new
-	 *   tab is signed in by another open tab of the app, passed in memory
-	 *   only; with no other tab open, it signs in again. A sign-up's email link, which opens in a new tab, is handed
-	 *   to the tab that started the sign-up and finishes there.
+	 * - `'memory'`: in this page's memory only. The refresh token and the
+	 *   visitor id are never written to localStorage or sessionStorage. A
+	 *   reload signs in again. A new tab is signed in by another open tab of
+	 *   the app, passed in memory only; with no other tab open, it signs in
+	 *   again. The one exception is a sign-up waiting for its email link: its
+	 *   PKCE verifier is kept in localStorage, so the link, which opens in a
+	 *   new tab, finishes the sign-up in this browser even after the tab that
+	 *   started it is closed. It is kept for the link's 15 minutes at most and
+	 *   removed once used; on another device the link is refused. When the
+	 *   tab that started the sign-up is still open, the link is handed to it
+	 *   and finishes there.
 	 *
 	 * @default 'local'
 	 */

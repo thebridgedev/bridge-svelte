@@ -3,13 +3,15 @@
  * apps that keep the session in memory (`storage: 'memory'`).
  *
  * A sign-up finishes only on the device that started it, with the PKCE
- * verifier that tab kept. In memory mode the verifier lives in that tab
- * alone, and the email link opens in a new one. The new tab offers the link
- * on a BroadcastChannel of the page's own origin; the tab that started the
- * sign-up takes it and finishes there, and the new tab says so. When no tab
- * takes it within a moment, the new tab tries itself, and Bridge answers
- * that the link belongs to the device that started the sign-up. The link
- * stays usable either way.
+ * verifier it kept in localStorage. In memory mode the session lives in the
+ * tab that started the sign-up, and the email link opens in a new one. The
+ * new tab offers the link on a BroadcastChannel of the page's own origin;
+ * the tab that started the sign-up takes it and finishes there, and the new
+ * tab says so. When no tab takes it within a moment (it was closed, or the
+ * browser put it to sleep), the new tab finishes itself with the stored
+ * verifier. On another device there is none, and Bridge answers that the
+ * link belongs to the device that started the sign-up; the link stays
+ * usable there.
  *
  * Only the token crosses, only between tabs of the same origin, and never
  * through storage or an address.

@@ -73,6 +73,28 @@ test.describe('storage: memory', () => {
 		expect(await storageOf(linkTab)).toEqual({});
 	});
 
+	test('with the starting tab closed and a slow flags answer, the link still signs in and leaves the page', async ({ context, issuer }) => {
+		const email = uniqueEmail('rhea');
+		const start = await context.newPage();
+		await start.goto('/auth/sign-up');
+		await start.locator('#signup-email').fill(email);
+		await start.locator('#signup-password').fill(PASSWORD);
+		await start.locator('[data-bridge-sign-up-step="form"] button[type="submit"]').click();
+		await expect(start.locator('[data-bridge-sign-up-sent]')).toContainText(email);
+		const token = await issuer.lastLink(email, 'verify-sign-up');
+		await start.close();
+
+		const linkTab = await context.newPage();
+		// Signed in, the flags answer takes a while (a cold server): the way on from the link must not be lost meanwhile.
+		await linkTab.route('**/ofrep/v1/evaluate/flags', async (route) => {
+			if (route.request().headers()['authorization'] !== undefined) await new Promise((wait) => setTimeout(wait, 1_000));
+			await route.continue();
+		});
+		await linkTab.goto(`/auth#bridge=verify-email&token=${token}`);
+		await expect(linkTab.getByTestId('home-signed-in')).toContainText(email);
+		expect(await storageOf(linkTab)).toEqual({});
+	});
+
 	test('on another device, the link says to open it on the device that started it', async ({ browser, issuer }) => {
 		const email = uniqueEmail('tess');
 		const first = await browser.newContext();

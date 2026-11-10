@@ -41,6 +41,7 @@ import {
 } from '../core/bridge-runtime.js';
 import { getConfig } from '../client/stores/config.store.js';
 import { takePrefetchedFlagDefinitions } from '../core/flag-definitions.js';
+import { coalesceUsageReports, type CoalescedUsageReporter } from './evaluation-count.js';
 
 /** A storage implementation that uses `localStorage` (persistent) or `sessionStorage` (per-tab). */
 export class BrowserIdentityStorage implements IdentityStorage {
@@ -194,9 +195,14 @@ export function createBridgeFlags(config: CreateBridgeFlagsConfig = {}): BridgeF
 
   // Billing 2.0 US-11 — self-report `bridge.flag_evaluations` to the usage
   // pipeline. Best-effort: in SSR test harnesses without BridgeAuth, skip.
+  // Summed per second before it is queued (port of TBP-942): one event per
+  // evaluation used to fill the shared usage queue, so the app's own
+  // `bridge.usage.report()` reached Bridge seconds late.
+  let evaluationCounter: CoalescedUsageReporter | undefined;
   try {
     const auth = getBridgeAuth();
-    bridge.setUsageReporter(auth.usage);
+    evaluationCounter = coalesceUsageReports(auth.usage);
+    bridge.setUsageReporter(evaluationCounter);
   } catch {
     // No BridgeAuth instance yet — flags can still operate without usage reporting.
   }
@@ -366,6 +372,7 @@ export function createBridgeFlags(config: CreateBridgeFlagsConfig = {}): BridgeF
     unsubscribeAuth();
     for (const off of unsubscribeBilling) off();
     unsubscribeOpen();
+    evaluationCounter?.stop();
     await telemetry.stop();
   };
 

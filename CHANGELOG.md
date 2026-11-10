@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.9.5] - 2026-11-10
+
+### Fixed
+
+- **A usage report reaches Bridge straight away.** The SDK counted every flag check as its own usage event, in the same queue as your app's `bridge.usage.report()`. That queue sends 10 events a second, so on a page that reads a few flags your report waited behind hundreds of flag-check events, and a `<QuotaGate>` or `useQuota()` caught up about 10 seconds later. Flag checks are now added up and sent once a second; Bridge counts exactly as many as before. Same fix as bridge-react and bridge-nextjs 0.8.2 (TBP-942).
+
 ## [0.9.4] - 2026-11-04
 
 ### Fixed

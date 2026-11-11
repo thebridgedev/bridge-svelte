@@ -74,7 +74,10 @@ export function startClient(config: ResolvedConfig, extra?: Partial<BridgeOption
 	});
 	// A page that signs in for other apps' sign-in requests takes the request from its address, before any form.
 	const request = config.signInRequests && typeof location !== 'undefined' ? new URLSearchParams(location.search).get('request') : null;
-	if (request !== null) void client.request.use(request).catch(() => undefined);
+	if (request !== null) {
+		void client.request.use(request).catch(() => undefined);
+		dropRequestFromAddress();
+	}
 	client.on('signed-out', ({ reason }) => {
 		if (reason === 'session-ended' || reason === 'access-removed') lastEnded = reason;
 	});
@@ -85,6 +88,19 @@ export function startClient(config: ResolvedConfig, extra?: Partial<BridgeOption
 	}
 	clientStore.set(client);
 	return client;
+}
+
+/**
+ * Removes `request` from the address bar and the history entry once read:
+ * while the request is unspent, anyone who reads it there could sign in on
+ * it as themselves and plant the result in this browser.
+ */
+export function dropRequestFromAddress(): void {
+	if (typeof window === 'undefined') return;
+	const url = new URL(window.location.href);
+	if (!url.searchParams.has('request')) return;
+	url.searchParams.delete('request');
+	window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
 }
 
 /** For tests: forget the client. */

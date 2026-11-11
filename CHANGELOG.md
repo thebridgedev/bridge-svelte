@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.0-alpha.7] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.7.
+
+### Changed
+
+- **A sign-in request leaves the address once read.** With `handoff.requests`, the bootstrap takes `?request=` and loads the same page without it, and the client removes it from the address bar with `replaceState`: while the request is unspent, anyone who reads it could sign in on it.
+- **A sign-in link sent on a sign-in request opens only in the browser that asked for it** (auth-core 1.0.0-alpha.7), in any of its tabs: its verifier waits in localStorage, as a sign-up link's does with `storage: 'memory'`.
+
 ## [1.0.0-alpha.6] - unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.6.

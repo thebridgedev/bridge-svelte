@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { get } from 'svelte/store';
 import { memoryStorage } from '@nebulr-group/bridge-auth-core';
 import { createFakeIssuer } from '@nebulr-group/bridge-auth-core/testing';
-import { getBridge, resetClient, startClient } from './client.js';
+import { dropRequestFromAddress, getBridge, resetClient, startClient } from './client.js';
 import { resolveConfig, type BridgeConfig } from './config.js';
 import { flag } from './flags.js';
 import { handoffSignIn, readHandoff } from './handoff.js';
@@ -173,6 +173,59 @@ describe('bridgeBootstrap', () => {
 			expect(await outcome(bridgeBootstrap(config), '/auth', '/auth/[...bridge]', { bridge: '' })).toBe(`307 /auth/set-password${hash}`);
 			(globalThis as { window?: { location: { hash: string } } }).window = { location: { hash: '' } };
 			expect(await outcome(bridgeBootstrap(config), '/auth', '/auth/[...bridge]', { bridge: '' })).toBe('307 /auth/sign-in');
+		} finally {
+			delete (globalThis as { window?: unknown }).window;
+		}
+	});
+});
+
+describe('a sign-in request in the address', () => {
+	const REQUEST = 'r'.repeat(43);
+	const event = (path: string) => ({ url: new URL(`http://localhost${path}`), params: { bridge: 'sign-in' }, route: { id: '/auth/[...bridge]' }, depends: () => undefined });
+	async function outcome(load: ReturnType<typeof bridgeBootstrap>, path: string) {
+		try {
+			await load(event(path));
+			return 'allow';
+		} catch (thrown) {
+			const t = thrown as { status?: number; location?: string };
+			return `${t.status} ${t.location}`;
+		}
+	}
+
+	it('is taken once, and the same page is loaded without it, so the address never keeps it', async () => {
+		(globalThis as { window?: unknown }).window = { location: { hash: '' } };
+		try {
+			const { client, config } = setup({ handoff: { requests: true } });
+			expect(await outcome(bridgeBootstrap(config), `/auth/sign-in?request=${REQUEST}&lang=sv`)).toBe('307 /auth/sign-in?lang=sv');
+			expect(await client.request.current()).toBe(REQUEST);
+			expect(await outcome(bridgeBootstrap(config), '/auth/sign-in')).toBe('allow');
+			expect(await client.request.current()).toBe(REQUEST);
+		} finally {
+			delete (globalThis as { window?: unknown }).window;
+		}
+	});
+
+	it('is left alone on a page that does not sign in for requests', async () => {
+		(globalThis as { window?: unknown }).window = { location: { hash: '' } };
+		try {
+			const { client, config } = setup();
+			expect(await outcome(bridgeBootstrap(config), `/auth/sign-in?request=${REQUEST}`)).toBe('allow');
+			expect(await client.request.current()).toBeNull();
+		} finally {
+			delete (globalThis as { window?: unknown }).window;
+		}
+	});
+
+	it('is removed from the address bar and the history entry, keeping the rest of the address', () => {
+		const replaced: unknown[][] = [];
+		const state = { kept: true };
+		(globalThis as { window?: unknown }).window = {
+			location: { href: `https://bridge.test/sign-in/app/auth/sign-in/?request=${REQUEST}&lang=sv#x` },
+			history: { state, replaceState: (...args: unknown[]) => replaced.push(args) },
+		};
+		try {
+			dropRequestFromAddress();
+			expect(replaced).toEqual([[state, '', '/sign-in/app/auth/sign-in/?lang=sv#x']]);
 		} finally {
 			delete (globalThis as { window?: unknown }).window;
 		}

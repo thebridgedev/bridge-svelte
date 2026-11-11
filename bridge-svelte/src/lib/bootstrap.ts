@@ -96,6 +96,15 @@ export function bridgeBootstrap(options: BridgeConfig = {}) {
 		// Matched as the router resolves the route: decoded, without a trailing slash.
 		const path = normalizePath(url.pathname);
 
+		// A sign-in request in the address is taken once, then the same page is loaded without it, so the address the
+		// navigation ends on never shows it: while it is unspent, anyone holding it could sign in on it.
+		if (config.signInRequests && url.searchParams.has('request')) {
+			await client.request.use(url.searchParams.get('request') ?? '').catch(() => undefined);
+			const clean = new URL(url);
+			clean.searchParams.delete('request');
+			redirect(307, `${clean.pathname}${clean.search}${clean.hash}`);
+		}
+
 		// An email link lands on the email-links address with its token in the fragment: on to its page.
 		followLink(config, url);
 		if (config.authBase !== '' && path === config.authBase) redirect(307, `${config.authBase}/sign-in${url.search}`);

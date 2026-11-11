@@ -5,7 +5,7 @@
     <BridgeAuthRoutes />
 
   Serves sign-in, sign-up, verify-email, forgot-password, set-password,
-  invite, workspaces, handoff and magic-link (a sign-in link's landing). An unknown page gets the app's own 404.
+  invite, workspaces, handoff, magic-link (a sign-in link's landing) and passkey-setup (a passkey setup link's landing). An unknown page gets the app's own 404.
 
   Customising, in rungs:
     1. `--bridge-*` CSS tokens restyle the forms.
@@ -35,6 +35,7 @@
   import WorkspaceChooser from './WorkspaceChooser.svelte';
   import HandoffSignIn from './HandoffSignIn.svelte';
   import MagicLinkLanding from './MagicLinkLanding.svelte';
+  import PasskeySetupLanding from './PasskeySetupLanding.svelte';
 
   interface Props {
     /** Replaces everything around the form, on every page. */
@@ -74,6 +75,8 @@
     <InviteLanding headingSnippet={pageHeading} {messages} />
   {:else if p === 'magic-link'}
     <MagicLinkLanding headingSnippet={pageHeading} {messages} />
+  {:else if p === 'passkey-setup'}
+    <PasskeySetupLanding headingSnippet={pageHeading} {messages} />
   {:else if p === 'handoff'}
     <HandoffSignIn headingSnippet={pageHeading} {messages} />
   {:else if p === 'workspaces'}

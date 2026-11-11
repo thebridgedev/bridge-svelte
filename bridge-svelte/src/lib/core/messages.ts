@@ -35,7 +35,26 @@ export type PluginMessageKey =
 	| 'magicLink.sent'
 	| 'magicLink.finishing'
 	| 'magicLink.wrongDevice'
-	| 'magicLink.or';
+	| 'magicLink.or'
+	| 'passkey.signIn'
+	| 'passkey.cancelled'
+	| 'passkey.unsupported'
+	| 'passkey.setupLinkSend'
+	| 'passkey.setupLinkSent'
+	| 'passkey.setupHeading'
+	| 'passkey.setupPrompt'
+	| 'passkey.create'
+	| 'passkey.manageHeading'
+	| 'passkey.add'
+	| 'passkey.remove'
+	| 'passkey.empty'
+	| 'passkey.lastUsed'
+	| 'passkey.added'
+	| 'passkey.synced'
+	| 'passkey.lastMethod'
+	| 'passkey.exists'
+	| 'passkey.reauthenticate'
+	| 'passkey.namePlaceholder';
 
 export type PluginMessages = Record<PluginMessageKey, string>;
 
@@ -71,6 +90,25 @@ const en: PluginMessages = {
 	'magicLink.finishing': 'Signing you in…',
 	'magicLink.wrongDevice': 'Open the link on the device where you asked for it.',
 	'magicLink.or': 'or',
+	'passkey.signIn': 'Sign in with a passkey',
+	'passkey.cancelled': 'No passkey was used. Try again, or sign in another way.',
+	'passkey.unsupported': 'This browser cannot use passkeys.',
+	'passkey.setupLinkSend': 'Email me a link to set up a passkey',
+	'passkey.setupLinkSent': 'If this address has an account, a link to set up a passkey is on its way. Open it on this device.',
+	'passkey.setupHeading': 'Set up a passkey',
+	'passkey.setupPrompt': 'Next time, sign in with your fingerprint, face or screen lock.',
+	'passkey.create': 'Create a passkey',
+	'passkey.manageHeading': 'Passkeys',
+	'passkey.add': 'Add a passkey',
+	'passkey.remove': 'Remove',
+	'passkey.empty': 'No passkeys yet.',
+	'passkey.lastUsed': 'Last used {date}',
+	'passkey.added': 'Added {date}',
+	'passkey.synced': 'Syncs across your devices',
+	'passkey.lastMethod': 'This passkey is your only way to sign in. Add another one first.',
+	'passkey.exists': 'This device has a passkey already.',
+	'passkey.reauthenticate': 'Sign in again to change your passkeys.',
+	'passkey.namePlaceholder': 'Name (optional)',
 };
 
 const sv: PluginMessages = {
@@ -105,6 +143,25 @@ const sv: PluginMessages = {
 	'magicLink.finishing': 'Loggar in dig…',
 	'magicLink.wrongDevice': 'Öppna länken på enheten där du bad om den.',
 	'magicLink.or': 'eller',
+	'passkey.signIn': 'Logga in med en passkey',
+	'passkey.cancelled': 'Ingen passkey användes. Försök igen eller logga in på annat sätt.',
+	'passkey.unsupported': 'Den här webbläsaren kan inte använda passkeys.',
+	'passkey.setupLinkSend': 'Mejla mig en länk för att skapa en passkey',
+	'passkey.setupLinkSent': 'Om adressen har ett konto är en länk för att skapa en passkey på väg. Öppna den på den här enheten.',
+	'passkey.setupHeading': 'Skapa en passkey',
+	'passkey.setupPrompt': 'Nästa gång loggar du in med fingeravtryck, ansikte eller skärmlås.',
+	'passkey.create': 'Skapa passkey',
+	'passkey.manageHeading': 'Passkeys',
+	'passkey.add': 'Lägg till en passkey',
+	'passkey.remove': 'Ta bort',
+	'passkey.empty': 'Inga passkeys än.',
+	'passkey.lastUsed': 'Senast använd {date}',
+	'passkey.added': 'Tillagd {date}',
+	'passkey.synced': 'Synkas mellan dina enheter',
+	'passkey.lastMethod': 'Den här passkeyn är ditt enda sätt att logga in. Lägg till en till först.',
+	'passkey.exists': 'Den här enheten har redan en passkey.',
+	'passkey.reauthenticate': 'Logga in igen för att ändra dina passkeys.',
+	'passkey.namePlaceholder': 'Namn (valfritt)',
 };
 
 const da: PluginMessages = {
@@ -139,6 +196,25 @@ const da: PluginMessages = {
 	'magicLink.finishing': 'Logger dig ind…',
 	'magicLink.wrongDevice': 'Åbn linket på den enhed, hvor du bad om det.',
 	'magicLink.or': 'eller',
+	'passkey.signIn': 'Log ind med en adgangsnøgle',
+	'passkey.cancelled': 'Der blev ikke brugt en adgangsnøgle. Prøv igen, eller log ind på en anden måde.',
+	'passkey.unsupported': 'Denne browser kan ikke bruge adgangsnøgler.',
+	'passkey.setupLinkSend': 'Send mig et link til at oprette en adgangsnøgle',
+	'passkey.setupLinkSent': 'Hvis adressen har en konto, er et link til at oprette en adgangsnøgle på vej. Åbn det på denne enhed.',
+	'passkey.setupHeading': 'Opret en adgangsnøgle',
+	'passkey.setupPrompt': 'Næste gang logger du ind med fingeraftryk, ansigt eller skærmlås.',
+	'passkey.create': 'Opret adgangsnøgle',
+	'passkey.manageHeading': 'Adgangsnøgler',
+	'passkey.add': 'Tilføj en adgangsnøgle',
+	'passkey.remove': 'Fjern',
+	'passkey.empty': 'Ingen adgangsnøgler endnu.',
+	'passkey.lastUsed': 'Sidst brugt {date}',
+	'passkey.added': 'Tilføjet {date}',
+	'passkey.synced': 'Synkroniseres mellem dine enheder',
+	'passkey.lastMethod': 'Denne adgangsnøgle er din eneste måde at logge ind på. Tilføj en anden først.',
+	'passkey.exists': 'Denne enhed har allerede en adgangsnøgle.',
+	'passkey.reauthenticate': 'Log ind igen for at ændre dine adgangsnøgler.',
+	'passkey.namePlaceholder': 'Navn (valgfrit)',
 };
 
 const nb: PluginMessages = {
@@ -173,6 +249,25 @@ const nb: PluginMessages = {
 	'magicLink.finishing': 'Logger deg inn…',
 	'magicLink.wrongDevice': 'Åpne lenken på enheten der du ba om den.',
 	'magicLink.or': 'eller',
+	'passkey.signIn': 'Logg inn med en passnøkkel',
+	'passkey.cancelled': 'Ingen passnøkkel ble brukt. Prøv igjen, eller logg inn på en annen måte.',
+	'passkey.unsupported': 'Denne nettleseren kan ikke bruke passnøkler.',
+	'passkey.setupLinkSend': 'Send meg en lenke for å opprette en passnøkkel',
+	'passkey.setupLinkSent': 'Hvis adressen har en konto, er en lenke for å opprette en passnøkkel på vei. Åpne den på denne enheten.',
+	'passkey.setupHeading': 'Opprett en passnøkkel',
+	'passkey.setupPrompt': 'Neste gang logger du inn med fingeravtrykk, ansikt eller skjermlås.',
+	'passkey.create': 'Opprett passnøkkel',
+	'passkey.manageHeading': 'Passnøkler',
+	'passkey.add': 'Legg til en passnøkkel',
+	'passkey.remove': 'Fjern',
+	'passkey.empty': 'Ingen passnøkler ennå.',
+	'passkey.lastUsed': 'Sist brukt {date}',
+	'passkey.added': 'Lagt til {date}',
+	'passkey.synced': 'Synkroniseres mellom enhetene dine',
+	'passkey.lastMethod': 'Denne passnøkkelen er din eneste måte å logge inn på. Legg til en annen først.',
+	'passkey.exists': 'Denne enheten har allerede en passnøkkel.',
+	'passkey.reauthenticate': 'Logg inn på nytt for å endre passnøklene dine.',
+	'passkey.namePlaceholder': 'Navn (valgfritt)',
 };
 
 const nl: PluginMessages = {
@@ -207,6 +302,25 @@ const nl: PluginMessages = {
 	'magicLink.finishing': 'Je wordt ingelogd…',
 	'magicLink.wrongDevice': 'Open de link op het apparaat waarop je hem hebt aangevraagd.',
 	'magicLink.or': 'of',
+	'passkey.signIn': 'Inloggen met een passkey',
+	'passkey.cancelled': 'Er is geen passkey gebruikt. Probeer het opnieuw of log op een andere manier in.',
+	'passkey.unsupported': 'Deze browser kan geen passkeys gebruiken.',
+	'passkey.setupLinkSend': 'Mail me een link om een passkey in te stellen',
+	'passkey.setupLinkSent': 'Als dit adres een account heeft, is er een link onderweg om een passkey in te stellen. Open hem op dit apparaat.',
+	'passkey.setupHeading': 'Een passkey instellen',
+	'passkey.setupPrompt': 'Log de volgende keer in met je vingerafdruk, gezicht of schermvergrendeling.',
+	'passkey.create': 'Passkey maken',
+	'passkey.manageHeading': 'Passkeys',
+	'passkey.add': 'Passkey toevoegen',
+	'passkey.remove': 'Verwijderen',
+	'passkey.empty': 'Nog geen passkeys.',
+	'passkey.lastUsed': 'Laatst gebruikt {date}',
+	'passkey.added': 'Toegevoegd {date}',
+	'passkey.synced': 'Wordt gesynchroniseerd tussen je apparaten',
+	'passkey.lastMethod': 'Deze passkey is je enige manier om in te loggen. Voeg eerst een andere toe.',
+	'passkey.exists': 'Dit apparaat heeft al een passkey.',
+	'passkey.reauthenticate': 'Log opnieuw in om je passkeys te wijzigen.',
+	'passkey.namePlaceholder': 'Naam (optioneel)',
 };
 
 const de: PluginMessages = {
@@ -241,6 +355,25 @@ const de: PluginMessages = {
 	'magicLink.finishing': 'Du wirst angemeldet…',
 	'magicLink.wrongDevice': 'Öffne den Link auf dem Gerät, auf dem du ihn angefordert hast.',
 	'magicLink.or': 'oder',
+	'passkey.signIn': 'Mit einem Passkey anmelden',
+	'passkey.cancelled': 'Es wurde kein Passkey verwendet. Versuche es erneut oder melde dich anders an.',
+	'passkey.unsupported': 'Dieser Browser kann keine Passkeys verwenden.',
+	'passkey.setupLinkSend': 'Link zum Einrichten eines Passkeys mailen',
+	'passkey.setupLinkSent': 'Wenn diese Adresse ein Konto hat, ist ein Link zum Einrichten eines Passkeys unterwegs. Öffne ihn auf diesem Gerät.',
+	'passkey.setupHeading': 'Passkey einrichten',
+	'passkey.setupPrompt': 'Melde dich nächstes Mal mit Fingerabdruck, Gesicht oder Bildschirmsperre an.',
+	'passkey.create': 'Passkey erstellen',
+	'passkey.manageHeading': 'Passkeys',
+	'passkey.add': 'Passkey hinzufügen',
+	'passkey.remove': 'Entfernen',
+	'passkey.empty': 'Noch keine Passkeys.',
+	'passkey.lastUsed': 'Zuletzt verwendet {date}',
+	'passkey.added': 'Hinzugefügt {date}',
+	'passkey.synced': 'Wird zwischen deinen Geräten synchronisiert',
+	'passkey.lastMethod': 'Dieser Passkey ist deine einzige Möglichkeit, dich anzumelden. Füge zuerst einen weiteren hinzu.',
+	'passkey.exists': 'Dieses Gerät hat bereits einen Passkey.',
+	'passkey.reauthenticate': 'Melde dich erneut an, um deine Passkeys zu ändern.',
+	'passkey.namePlaceholder': 'Name (optional)',
 };
 
 const fi: PluginMessages = {
@@ -275,6 +408,25 @@ const fi: PluginMessages = {
 	'magicLink.finishing': 'Kirjaudutaan sisään…',
 	'magicLink.wrongDevice': 'Avaa linkki laitteella, jolla pyysit sitä.',
 	'magicLink.or': 'tai',
+	'passkey.signIn': 'Kirjaudu sisään pääsyavaimella',
+	'passkey.cancelled': 'Pääsyavainta ei käytetty. Yritä uudelleen tai kirjaudu toisella tavalla.',
+	'passkey.unsupported': 'Tämä selain ei voi käyttää pääsyavaimia.',
+	'passkey.setupLinkSend': 'Lähetä minulle linkki pääsyavaimen luomiseen',
+	'passkey.setupLinkSent': 'Jos osoitteella on tili, linkki pääsyavaimen luomiseen on matkalla. Avaa se tällä laitteella.',
+	'passkey.setupHeading': 'Luo pääsyavain',
+	'passkey.setupPrompt': 'Kirjaudu ensi kerralla sormenjäljellä, kasvoilla tai näytön lukituksella.',
+	'passkey.create': 'Luo pääsyavain',
+	'passkey.manageHeading': 'Pääsyavaimet',
+	'passkey.add': 'Lisää pääsyavain',
+	'passkey.remove': 'Poista',
+	'passkey.empty': 'Ei vielä pääsyavaimia.',
+	'passkey.lastUsed': 'Viimeksi käytetty {date}',
+	'passkey.added': 'Lisätty {date}',
+	'passkey.synced': 'Synkronoidaan laitteidesi välillä',
+	'passkey.lastMethod': 'Tämä pääsyavain on ainoa tapasi kirjautua. Lisää ensin toinen.',
+	'passkey.exists': 'Tällä laitteella on jo pääsyavain.',
+	'passkey.reauthenticate': 'Kirjaudu uudelleen muuttaaksesi pääsyavaimiasi.',
+	'passkey.namePlaceholder': 'Nimi (valinnainen)',
 };
 
 const fr: PluginMessages = {
@@ -309,6 +461,25 @@ const fr: PluginMessages = {
 	'magicLink.finishing': 'Connexion en cours…',
 	'magicLink.wrongDevice': 'Ouvre le lien sur l\'appareil où tu l\'as demandé.',
 	'magicLink.or': 'ou',
+	'passkey.signIn': "Se connecter avec une clé d'accès",
+	'passkey.cancelled': "Aucune clé d'accès n'a été utilisée. Réessayez ou connectez-vous autrement.",
+	'passkey.unsupported': "Ce navigateur ne peut pas utiliser de clés d'accès.",
+	'passkey.setupLinkSend': "M'envoyer un lien pour créer une clé d'accès",
+	'passkey.setupLinkSent': "Si cette adresse a un compte, un lien pour créer une clé d'accès est en route. Ouvrez-le sur cet appareil.",
+	'passkey.setupHeading': "Créer une clé d'accès",
+	'passkey.setupPrompt': "La prochaine fois, connectez-vous avec votre empreinte, votre visage ou le verrouillage de l'écran.",
+	'passkey.create': "Créer une clé d'accès",
+	'passkey.manageHeading': "Clés d'accès",
+	'passkey.add': "Ajouter une clé d'accès",
+	'passkey.remove': 'Supprimer',
+	'passkey.empty': "Aucune clé d'accès pour l'instant.",
+	'passkey.lastUsed': 'Dernière utilisation {date}',
+	'passkey.added': 'Ajoutée {date}',
+	'passkey.synced': 'Synchronisée entre vos appareils',
+	'passkey.lastMethod': "Cette clé d'accès est votre seul moyen de connexion. Ajoutez-en une autre d'abord.",
+	'passkey.exists': "Cet appareil a déjà une clé d'accès.",
+	'passkey.reauthenticate': "Reconnectez-vous pour modifier vos clés d'accès.",
+	'passkey.namePlaceholder': 'Nom (facultatif)',
 };
 
 const es: PluginMessages = {
@@ -343,6 +514,25 @@ const es: PluginMessages = {
 	'magicLink.finishing': 'Iniciando sesión…',
 	'magicLink.wrongDevice': 'Abre el enlace en el dispositivo donde lo pediste.',
 	'magicLink.or': 'o',
+	'passkey.signIn': 'Iniciar sesión con una llave de acceso',
+	'passkey.cancelled': 'No se usó ninguna llave de acceso. Inténtalo de nuevo o inicia sesión de otra forma.',
+	'passkey.unsupported': 'Este navegador no puede usar llaves de acceso.',
+	'passkey.setupLinkSend': 'Envíame un enlace para crear una llave de acceso',
+	'passkey.setupLinkSent': 'Si esta dirección tiene una cuenta, va de camino un enlace para crear una llave de acceso. Ábrelo en este dispositivo.',
+	'passkey.setupHeading': 'Crear una llave de acceso',
+	'passkey.setupPrompt': 'La próxima vez, inicia sesión con tu huella, tu cara o el bloqueo de pantalla.',
+	'passkey.create': 'Crear llave de acceso',
+	'passkey.manageHeading': 'Llaves de acceso',
+	'passkey.add': 'Añadir una llave de acceso',
+	'passkey.remove': 'Quitar',
+	'passkey.empty': 'Aún no hay llaves de acceso.',
+	'passkey.lastUsed': 'Último uso {date}',
+	'passkey.added': 'Añadida {date}',
+	'passkey.synced': 'Se sincroniza entre tus dispositivos',
+	'passkey.lastMethod': 'Esta llave de acceso es tu única forma de iniciar sesión. Añade otra primero.',
+	'passkey.exists': 'Este dispositivo ya tiene una llave de acceso.',
+	'passkey.reauthenticate': 'Vuelve a iniciar sesión para cambiar tus llaves de acceso.',
+	'passkey.namePlaceholder': 'Nombre (opcional)',
 };
 
 const it: PluginMessages = {
@@ -377,6 +567,25 @@ const it: PluginMessages = {
 	'magicLink.finishing': 'Accesso in corso…',
 	'magicLink.wrongDevice': 'Apri il link sul dispositivo da cui l\'hai richiesto.',
 	'magicLink.or': 'oppure',
+	'passkey.signIn': 'Accedi con una passkey',
+	'passkey.cancelled': 'Non è stata usata nessuna passkey. Riprova o accedi in un altro modo.',
+	'passkey.unsupported': 'Questo browser non può usare le passkey.',
+	'passkey.setupLinkSend': 'Inviami un link per creare una passkey',
+	'passkey.setupLinkSent': 'Se questo indirizzo ha un account, è in arrivo un link per creare una passkey. Aprilo su questo dispositivo.',
+	'passkey.setupHeading': 'Crea una passkey',
+	'passkey.setupPrompt': 'La prossima volta accedi con impronta, volto o blocco schermo.',
+	'passkey.create': 'Crea passkey',
+	'passkey.manageHeading': 'Passkey',
+	'passkey.add': 'Aggiungi una passkey',
+	'passkey.remove': 'Rimuovi',
+	'passkey.empty': 'Ancora nessuna passkey.',
+	'passkey.lastUsed': 'Ultimo uso {date}',
+	'passkey.added': 'Aggiunta {date}',
+	'passkey.synced': 'Sincronizzata tra i tuoi dispositivi',
+	'passkey.lastMethod': "Questa passkey è il tuo unico modo per accedere. Aggiungine prima un'altra.",
+	'passkey.exists': 'Questo dispositivo ha già una passkey.',
+	'passkey.reauthenticate': 'Accedi di nuovo per modificare le tue passkey.',
+	'passkey.namePlaceholder': 'Nome (facoltativo)',
 };
 
 const pt: PluginMessages = {
@@ -411,6 +620,25 @@ const pt: PluginMessages = {
 	'magicLink.finishing': 'A iniciar sessão…',
 	'magicLink.wrongDevice': 'Abre o link no dispositivo onde o pediste.',
 	'magicLink.or': 'ou',
+	'passkey.signIn': 'Entrar com uma chave de acesso',
+	'passkey.cancelled': 'Nenhuma chave de acesso foi usada. Tente novamente ou entre de outra forma.',
+	'passkey.unsupported': 'Este navegador não pode usar chaves de acesso.',
+	'passkey.setupLinkSend': 'Enviar-me um link para criar uma chave de acesso',
+	'passkey.setupLinkSent': 'Se este endereço tiver uma conta, um link para criar uma chave de acesso está a caminho. Abra-o neste dispositivo.',
+	'passkey.setupHeading': 'Criar uma chave de acesso',
+	'passkey.setupPrompt': 'Da próxima vez, entre com a sua impressão digital, rosto ou bloqueio de ecrã.',
+	'passkey.create': 'Criar chave de acesso',
+	'passkey.manageHeading': 'Chaves de acesso',
+	'passkey.add': 'Adicionar uma chave de acesso',
+	'passkey.remove': 'Remover',
+	'passkey.empty': 'Ainda não há chaves de acesso.',
+	'passkey.lastUsed': 'Última utilização {date}',
+	'passkey.added': 'Adicionada {date}',
+	'passkey.synced': 'Sincronizada entre os seus dispositivos',
+	'passkey.lastMethod': 'Esta chave de acesso é a sua única forma de entrar. Adicione outra primeiro.',
+	'passkey.exists': 'Este dispositivo já tem uma chave de acesso.',
+	'passkey.reauthenticate': 'Entre novamente para alterar as suas chaves de acesso.',
+	'passkey.namePlaceholder': 'Nome (opcional)',
 };
 
 const pl: PluginMessages = {
@@ -445,6 +673,25 @@ const pl: PluginMessages = {
 	'magicLink.finishing': 'Logowanie…',
 	'magicLink.wrongDevice': 'Otwórz link na urządzeniu, na którym o niego poproszono.',
 	'magicLink.or': 'lub',
+	'passkey.signIn': 'Zaloguj się kluczem dostępu',
+	'passkey.cancelled': 'Nie użyto klucza dostępu. Spróbuj ponownie lub zaloguj się inaczej.',
+	'passkey.unsupported': 'Ta przeglądarka nie obsługuje kluczy dostępu.',
+	'passkey.setupLinkSend': 'Wyślij mi link do utworzenia klucza dostępu',
+	'passkey.setupLinkSent': 'Jeśli ten adres ma konto, link do utworzenia klucza dostępu jest w drodze. Otwórz go na tym urządzeniu.',
+	'passkey.setupHeading': 'Utwórz klucz dostępu',
+	'passkey.setupPrompt': 'Następnym razem zaloguj się odciskiem palca, twarzą lub blokadą ekranu.',
+	'passkey.create': 'Utwórz klucz dostępu',
+	'passkey.manageHeading': 'Klucze dostępu',
+	'passkey.add': 'Dodaj klucz dostępu',
+	'passkey.remove': 'Usuń',
+	'passkey.empty': 'Brak kluczy dostępu.',
+	'passkey.lastUsed': 'Ostatnio użyty {date}',
+	'passkey.added': 'Dodany {date}',
+	'passkey.synced': 'Synchronizowany między Twoimi urządzeniami',
+	'passkey.lastMethod': 'Ten klucz dostępu to Twój jedyny sposób logowania. Najpierw dodaj inny.',
+	'passkey.exists': 'To urządzenie ma już klucz dostępu.',
+	'passkey.reauthenticate': 'Zaloguj się ponownie, aby zmienić klucze dostępu.',
+	'passkey.namePlaceholder': 'Nazwa (opcjonalnie)',
 };
 
 /** The plugin's copy by primary language subtag. */

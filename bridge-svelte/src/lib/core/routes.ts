@@ -16,6 +16,7 @@ export const AUTH_PAGES = [
 	'workspaces',
 	'handoff',
 	'magic-link',
+	'passkey-setup',
 ] as const;
 
 export type AuthPage = (typeof AUTH_PAGES)[number];
@@ -58,6 +59,8 @@ export function pageForLink(link: EmailLink): AuthPage {
 			return 'invite';
 		case 'magic-link':
 			return 'magic-link';
+		case 'passkey-setup':
+			return 'passkey-setup';
 	}
 }
 

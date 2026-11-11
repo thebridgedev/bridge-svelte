@@ -17,6 +17,7 @@ export const AUTH_PAGES = [
 	'handoff',
 	'magic-link',
 	'passkey-setup',
+	'callback',
 ] as const;
 
 export type AuthPage = (typeof AUTH_PAGES)[number];

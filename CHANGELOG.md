@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.0-alpha.6] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.6.
+
+### Added
+
+- **Hosted mode.** `hosted: { redirectUri?, linkAddress? }` in the config: `/auth/sign-in` (`HostedSignIn`) starts a sign-in request and sends the browser to the page Bridge hosts for the app; `/auth/callback` (`HostedCallback`) checks the return and trades the code, then goes on to where the person was going. `redirectUri` defaults to `<origin><auth base>/callback`, which must be one of the app's registered sign-in returns.
+- **Signing in for other apps' sign-in requests.** `handoff: { requests: true }`: opened with `?request=<id>`, every form signs in on the request, and a finished sign-in (password, sign-in link, passkey, workspace step, or a sign-up's email link) sends the browser to the app's return with the code, making no session here. For a page that signs people in for other apps.
+- **`linkAddress`** in the config: which of the app's registered email-links addresses sign-up, sign-in link and recovery emails link to, for an app with several sign-in pages.
+
+### Changed
+
+- `handoff.loopback` is optional, so a page can take sign-in requests only.
+
 ## [1.0.0-alpha.5] - unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.5.

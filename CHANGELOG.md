@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.0-alpha.5] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.5.
+
+### Added
+
+- **Passkeys.** When the app offers them and the browser can use them, `SignInForm` shows "Sign in with a passkey", and its email field offers the person's passkeys in the browser's autofill list (`autocomplete="username webauthn"`) where the browser supports it; the button stays for a phone or a security key. A closed dialog leaves the form as it was, with a short note. Under the button, "Email me a link to set up a passkey" sends a link that lands on the new `/auth/passkey-setup` page (`PasskeySetupLanding`): on the device that asked, a click opens the browser's dialog, the passkey is made and the person is signed in. With `storage: 'memory'`, only that link's PKCE verifier waits in `localStorage`, as long as the link works (24 hours).
+- **`PasskeyManager`**, for a settings page: the signed-in person's passkeys with their name, when each was added and last used and whether it syncs to their other devices; adding one from this device and removing one. Adding or removing needs a recent sign-in, and the last way to sign in cannot be removed.
+
 ## [1.0.0-alpha.4] - unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.4.

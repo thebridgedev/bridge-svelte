@@ -56,6 +56,8 @@ export { default as SetPassword } from './components/auth/SetPassword.svelte';
 export { default as InviteLanding } from './components/auth/InviteLanding.svelte';
 export { default as WorkspaceChooser } from './components/auth/WorkspaceChooser.svelte';
 export { default as HandoffSignIn } from './components/auth/HandoffSignIn.svelte';
+export { default as HostedSignIn } from './components/auth/HostedSignIn.svelte';
+export { default as HostedCallback } from './components/auth/HostedCallback.svelte';
 export { default as SignOutButton } from './components/auth/SignOutButton.svelte';
 export { default as ProfileName } from './components/auth/ProfileName.svelte';
 export { default as FeatureFlag } from './components/flags/FeatureFlag.svelte';

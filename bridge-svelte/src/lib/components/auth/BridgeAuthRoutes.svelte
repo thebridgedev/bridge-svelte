@@ -5,7 +5,8 @@
     <BridgeAuthRoutes />
 
   Serves sign-in, sign-up, verify-email, forgot-password, set-password,
-  invite, workspaces, handoff, magic-link (a sign-in link's landing) and passkey-setup (a passkey setup link's landing). An unknown page gets the app's own 404.
+  invite, workspaces, handoff, magic-link (a sign-in link's landing), passkey-setup (a passkey setup link's landing)
+  and callback (hosted mode's return from Bridge's page). An unknown page gets the app's own 404.
 
   Customising, in rungs:
     1. `--bridge-*` CSS tokens restyle the forms.
@@ -36,6 +37,8 @@
   import HandoffSignIn from './HandoffSignIn.svelte';
   import MagicLinkLanding from './MagicLinkLanding.svelte';
   import PasskeySetupLanding from './PasskeySetupLanding.svelte';
+  import HostedSignIn from './HostedSignIn.svelte';
+  import HostedCallback from './HostedCallback.svelte';
 
   interface Props {
     /** Replaces everything around the form, on every page. */
@@ -61,8 +64,12 @@
     {@render heading?.(p)}
   {/snippet}
   {@const pageHeading = heading ? boundHeading : undefined}
-  {#if p === 'sign-in'}
+  {#if p === 'sign-in' && config?.hosted}
+    <HostedSignIn headingSnippet={pageHeading} {messages} />
+  {:else if p === 'sign-in'}
     <SignInForm headingSnippet={pageHeading} {messages} />
+  {:else if p === 'callback'}
+    <HostedCallback headingSnippet={pageHeading} {messages} />
   {:else if p === 'sign-up'}
     <SignUpForm headingSnippet={pageHeading} {messages} />
   {:else if p === 'verify-email'}

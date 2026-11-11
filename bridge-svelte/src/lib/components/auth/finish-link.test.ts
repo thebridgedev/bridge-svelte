@@ -4,7 +4,7 @@
  */
 import { isBridgeError } from '@nebulr-group/bridge-auth-core';
 import { describe, expect, it } from 'vitest';
-import { bounded, leave } from './finish-link.js';
+import { bounded, handOff, leave } from './finish-link.js';
 
 describe('finishing an email link', () => {
 	it('gives the answer when it comes in time', async () => {
@@ -51,5 +51,16 @@ describe('going on once signed in', () => {
 		};
 		await expect(leave(go, () => false, 3)).resolves.toBe(false);
 		expect(calls).toBe(3);
+	});
+});
+
+describe('a sign-in finished for another app\'s sign-in request', () => {
+	it('sends the browser to the app\'s return, and only for a finished step that names one', () => {
+		const went: string[] = [];
+		const go = (url: string) => void went.push(url);
+		expect(handOff({ done: true }, go)).toBe(false);
+		expect(handOff({ done: false, handoff: 'https://app.test/callback?code=x' }, go)).toBe(false);
+		expect(handOff({ done: true, handoff: 'https://app.test/callback?code=x&state=s&iss=i' }, go)).toBe(true);
+		expect(went).toEqual(['https://app.test/callback?code=x&state=s&iss=i']);
 	});
 });

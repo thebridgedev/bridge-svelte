@@ -69,8 +69,12 @@ export function startClient(config: ResolvedConfig, extra?: Partial<BridgeOption
 		// Memory: the refresh token and the visitor id stay in this page. A sign-up's verifier waits in localStorage
 		// for its email link, which opens in a new tab, for the link's 15 minutes at most, and is removed once used.
 		...(config.storage === 'memory' ? { storage: memoryStorage(), signUpStorage: localStorageAdapter() } : {}),
+		...(config.linkAddress === undefined ? {} : { linkAddress: config.linkAddress }),
 		...extra,
 	});
+	// A page that signs in for other apps' sign-in requests takes the request from its address, before any form.
+	const request = config.signInRequests && typeof location !== 'undefined' ? new URLSearchParams(location.search).get('request') : null;
+	if (request !== null) void client.request.use(request).catch(() => undefined);
 	client.on('signed-out', ({ reason }) => {
 		if (reason === 'session-ended' || reason === 'access-removed') lastEnded = reason;
 	});

@@ -76,6 +76,8 @@ In your app's settings in Bridge, add your app's address as a browser address an
 | State | `session`, `user`, `workspace`, `workspaces`, `me`, `flags`, `billing`, `plans`, `usage`, `liveStatus`, `getBridge()` |
 | Server | `@nebulr-group/bridge-svelte/server`: `bridgeHandle`, `requireActor`, `meter`, `flagsFor` |
 | Hand-off | `HandoffSignIn`, `readHandoff`, `handoffSignIn`: a sign-in page for a command-line tool |
+| Hosted mode | `hosted: {}` in the config: `/auth/sign-in` sends people to the page Bridge hosts for the app, and `/auth/callback` (`HostedCallback`) finishes the sign-in when they come back. Register the page's origin as a browser address and `https://<your app>/auth/callback` as a sign-in return |
+| Several sign-in pages | `linkAddress` in the config: which of the app's registered email-links addresses its emails link to |
 
 All the guides: [the learning docs](https://github.com/thebridgedev/bridge-svelte/tree/v1/learning).
 

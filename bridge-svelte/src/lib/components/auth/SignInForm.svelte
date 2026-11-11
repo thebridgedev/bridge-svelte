@@ -16,6 +16,7 @@
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
   import { onDestroy, onMount } from 'svelte';
+  import { handOff } from './finish-link.js';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { isBridgeError, readReturnTo, type SignInOptions, type SignInStep, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
@@ -172,7 +173,9 @@
   }
 
   async function follow(step: SignInStep) {
-    if (step.done) {
+    if (handOff(step)) {
+      settled = true;
+    } else if (step.done) {
       finish();
     } else {
       choice = { workspaces: step.workspaces, choose: step.choose };

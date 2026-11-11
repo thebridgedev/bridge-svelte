@@ -115,9 +115,37 @@ export interface BridgeConfig {
 	 */
 	readonly handoff?: {
 		/** Return the code to the program's loopback address (`http://127.0.0.1:<port>`). */
-		readonly loopback: true;
+		readonly loopback?: true;
+		/**
+		 * Sign in for another app's sign-in request: opened with `?request=<id>`,
+		 * the page signs in on the request and sends the browser to the app's
+		 * registered return with the code. For a page that signs people in for
+		 * other apps, such as Bridge's hosted page.
+		 */
+		readonly requests?: true;
 		/** The program's name, for the page's copy. @default 'the command-line tool' */
 		readonly program?: string;
+	};
+	/**
+	 * Where the links in sign-up, sign-in link and recovery emails go: one of
+	 * the app's registered email-links addresses, exactly, usually the address
+	 * of these sign-in pages. Needed when the app has several sign-in pages.
+	 * @default the app's first email-links address
+	 */
+	readonly linkAddress?: string;
+	/**
+	 * Hosted mode: sign in on the page Bridge hosts for the app instead of the
+	 * app's own forms. The sign-in page sends the browser there, and
+	 * `<auth base>/callback` finishes the sign-in when it comes back.
+	 */
+	readonly hosted?: {
+		/**
+		 * Where Bridge's page sends the person back: one of the app's registered
+		 * sign-in returns, exactly. @default `<origin><auth base>/callback`
+		 */
+		readonly redirectUri?: string;
+		/** Where an email link sent on the way goes. @default Bridge's hosted page */
+		readonly linkAddress?: string;
 	};
 }
 
@@ -141,6 +169,10 @@ export interface ResolvedConfig {
 	readonly paywall: string | null;
 	readonly upgradeDialog: boolean | Component<UpgradeDialogProps>;
 	readonly handoff: { readonly program: string } | null;
+	/** Whether the page signs in for other apps' sign-in requests (`?request=<id>`). */
+	readonly signInRequests: boolean;
+	readonly linkAddress: string | undefined;
+	readonly hosted: { readonly redirectUri?: string; readonly linkAddress?: string } | null;
 }
 
 /** A path without a trailing slash, `''` for the root. */
@@ -211,5 +243,8 @@ export function resolveConfig(config: BridgeConfig, envIssuer: string | undefine
 		paywall: paywall === false ? null : (paywall ?? `${billingBase}/plan`),
 		upgradeDialog: config.billing?.upgradeDialog ?? true,
 		handoff: config.handoff?.loopback === true ? { program: config.handoff.program ?? 'the command-line tool' } : null,
+		signInRequests: config.handoff?.requests === true,
+		linkAddress: config.linkAddress,
+		hosted: config.hosted ?? null,
 	};
 }

@@ -48,3 +48,14 @@ export async function leave(go: () => Promise<unknown>, left: () => boolean, tri
 	}
 	return false;
 }
+
+/**
+ * A sign-in finished for another app's sign-in request: the browser goes to
+ * the app's registered return with the code, and this page makes no session.
+ * True when it went.
+ */
+export function handOff(step: { readonly done: boolean; readonly handoff?: string }, go: (url: string) => void = (url) => location.assign(url)): boolean {
+	if (!step.done || step.handoff === undefined) return false;
+	go(step.handoff);
+	return true;
+}

@@ -25,7 +25,7 @@
   import Spinner from '../shared/Spinner.svelte';
   import WorkspaceChooser from './WorkspaceChooser.svelte';
   import { takeEmailLink } from './email-link.js';
-  import { bounded, leave } from './finish-link.js';
+  import { bounded, handOff, leave } from './finish-link.js';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** The link's token. @default read from the page's address */
@@ -68,7 +68,8 @@
   }
 
   async function follow(step: SignInStep) {
-    if (step.done) await finish();
+    if (handOff(step)) view = { step: 'working' };
+    else if (step.done) await finish();
     else view = { step: 'workspace', workspaces: step.workspaces, choose: step.choose };
   }
 

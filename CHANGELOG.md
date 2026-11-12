@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0-alpha.8] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.8.
+
+### Changed
+
+- **A paused sign-in says how long to wait.** When Bridge refuses a try because of too many wrong passwords, every screen that shows a failure (sign-in, sign-up, sign-in link, passkey, set password and the rest) shows "Too many attempts. Try again in N minutes." ("1 minute" when it is one), in the app's language. A locked account shows that it is locked and that the password must be reset, with no wait time. Any other rate limit keeps the general message.
+
 ## [1.0.0-alpha.7] - unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.7.

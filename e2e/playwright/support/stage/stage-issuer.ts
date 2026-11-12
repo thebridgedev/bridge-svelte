@@ -182,6 +182,10 @@ export class StageIssuer implements TestIssuer {
 		}
 	}
 
+	async signedInLongAgo(): Promise<void> {
+		throw new NotSettable('A real server has no way to make a sign-in older: it asks again only after an hour.');
+	}
+
 	async endSessions(email: string): Promise<void> {
 		const user = this.users.get(email);
 		if (user === undefined) throw new Error(`${email} was not made by this test.`);

@@ -38,6 +38,8 @@ export interface TestIssuer {
 	setFacts(facts: Record<string, unknown>): Promise<void>;
 	/** Ends every session of a person, as Bridge does after a password reset or a removal. */
 	endSessions(email: string): Promise<void>;
+	/** Makes every session's last sign-in an hour old, so actions that want a recent sign-in ask the person to confirm it is them. */
+	signedInLongAgo(): Promise<void>;
 }
 
 class LocalIssuer implements TestIssuer {
@@ -85,6 +87,9 @@ class LocalIssuer implements TestIssuer {
 	}
 	async endSessions(email: string) {
 		await this.call('/end-sessions', { email });
+	}
+	async signedInLongAgo() {
+		await this.call('/signed-in-long-ago', {});
 	}
 }
 

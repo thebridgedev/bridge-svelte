@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.0.0-alpha.10] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.9.
+
+### Fixed
+
+- **A sign-in's own redirect is no longer lost.** The route guard runs again after a sign-in, a sign-out, a workspace switch or a flag change; it now waits for a navigation under way to end instead of replacing it, so the page a sign-in sends the person to is the page they land on.
+- **Hosted sign-in says the service is unavailable when it cannot start**, instead of showing a wrong-password message.
+
+## [1.0.0-alpha.9] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.9.
+
+### Added
+
+- **Confirm it is you, instead of signing out.** Some actions want a recent sign-in. Called later, Bridge refuses them with `reauthenticate`; the page no longer sends the person to sign in again. `withRecheck(action)` runs the action and, when Bridge says so, opens the `RecheckDialog` over the page, then runs the action once more. `confirmItIsYou()` opens the dialog yourself: it resolves once the person confirmed and rejects with `BridgeError` kind `cancelled` when they cancel. `<BridgeBootstrap>` renders the dialog, so apps get it with the bootstrap they already have; `RecheckDialog` is exported to place it yourself.
+- **The dialog offers the ways the app offers.** The person's password, one of their own passkeys, or a link sent to their address, which the dialog waits for in the page. A wrong password, a paused sign-in (with the minutes to wait), a locked account and a person without a passkey each show plainly, and the other ways stay on offer. It is an overlay, never a navigation: a form the person was filling is untouched, and nothing is retried when they cancel.
+- **A confirmation link says to go back.** `MagicLinkLanding` opened from a link sent to confirm it is you shows "Confirmed. You can close this tab and go back." and signs nobody in. New copy keys `recheck.*` in all 12 languages.
+- `needsRecheck` and the `RecheckMethod` type are re-exported from auth-core.
+
 ## [1.0.0-alpha.8] - unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.8.

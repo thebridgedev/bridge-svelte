@@ -33,7 +33,7 @@
       stashReturnTo(readReturnTo(page.url, config?.returnToParam));
       location.assign(await getBridge().hosted.start({ redirectUri, ...(hosted.linkAddress === undefined ? {} : { linkAddress: hosted.linkAddress }) }));
     } catch (error) {
-      failure = errorMessage(error, t, 'login.error.invalidCredentials');
+      failure = errorMessage(error, t, 'error.unavailable');
     }
   });
 </script>

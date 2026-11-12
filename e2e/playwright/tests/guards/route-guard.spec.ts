@@ -24,6 +24,7 @@ test.describe('route guard', () => {
 	});
 
 	test('while the app is not active for the workspace, the plan page is the way in', async ({ page, issuer, person }) => {
+		test.skip(issuer.kind === 'real', 'Bridge decides this from the workspace’s plan and lock; the stage adapter does not lock a workspace yet.');
 		await issuer.setFlags({ 'bridge-app-active': false });
 		await signIn(page, person.email);
 		await page.goto('/tickets');

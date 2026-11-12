@@ -111,3 +111,7 @@ bun.lock
 
 # Playwright output
 test-results/
+
+# The stage run's manifest and reports (scripts/stage-e2e.sh)
+.stage/
+test-reports/

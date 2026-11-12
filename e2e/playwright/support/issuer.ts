@@ -3,10 +3,14 @@
  * the links Bridge emails.
  *
  * Against the local issuer this is its `/__test` control API. Against a real
- * issuer (E2E_ISSUER) the same steps need the issuer's own test seams: a way
- * to read the links it emails, and an app key with which to make people and
- * set flags. Until those are wired in here, those steps say so and fail.
+ * Bridge server (stage) it is `stage/stage-issuer.ts`: the app's own key for
+ * people, flags and plans, and the test inbox for the links.
  */
+import { stageIssuer } from './stage/stage-issuer';
+
+/** The emails whose link a test reads: `invite` for either invite email. */
+export type LinkPurpose = 'verify-sign-up' | 'reset-password' | 'invite' | 'magic-link' | 'passkey-setup';
+
 export interface Person {
 	readonly email: string;
 	readonly password: string;
@@ -17,10 +21,14 @@ export interface Person {
 export interface TestIssuer {
 	readonly kind: 'local' | 'real';
 	readonly issuer: string;
+	/** The plans the app offers, as a test names them. */
+	readonly plans: { readonly free: string; readonly pro: string; readonly count: number };
 	reset(): Promise<void>;
+	/** The server's id for a workspace the spec named (the local issuer keeps the spec's own). */
+	workspaceId(spec: string): string;
 	addPerson(person: Person): Promise<void>;
 	/** The token of the last link emailed to `email` for `purpose` (`invite` for either invite email). */
-	lastLink(email: string, purpose: 'verify-sign-up' | 'reset-password' | 'invite'): Promise<string>;
+	lastLink(email: string, purpose: LinkPurpose): Promise<string>;
 	/** Invites `email` into a workspace, as a member who may invite would, and returns the link's token. */
 	invite(email: string, workspace: { readonly id: string; readonly name: string }, role?: string): Promise<string>;
 	/** Makes an address's invites out of date, as if their 30 days had passed. */
@@ -34,6 +42,7 @@ export interface TestIssuer {
 
 class LocalIssuer implements TestIssuer {
 	readonly kind = 'local' as const;
+	readonly plans = { free: 'free', pro: 'pro', count: 2 };
 	constructor(
 		readonly issuer: string,
 		private readonly control: string,
@@ -51,6 +60,9 @@ class LocalIssuer implements TestIssuer {
 
 	async reset() {
 		await this.call('/reset', {});
+	}
+	workspaceId(spec: string) {
+		return spec;
 	}
 	async addPerson(person: Person) {
 		await this.call('/people', person);
@@ -76,38 +88,13 @@ class LocalIssuer implements TestIssuer {
 	}
 }
 
-class RealIssuer implements TestIssuer {
-	readonly kind = 'real' as const;
-	constructor(readonly issuer: string) {}
-	private missing(step: string): never {
-		throw new Error(`Against a real issuer, "${step}" needs the issuer's test seams wired into e2e/playwright/support/issuer.ts.`);
-	}
-	async reset() {}
-	async addPerson(): Promise<void> {
-		this.missing('make a person');
-	}
-	async lastLink(): Promise<string> {
-		this.missing('read an emailed link');
-	}
-	async invite(): Promise<string> {
-		this.missing('send an invite and read its link');
-	}
-	async expireInvites(): Promise<void> {
-		this.missing('expire an invite');
-	}
-	async setFlags(): Promise<void> {
-		this.missing('set flags');
-	}
-	async setFacts(): Promise<void> {
-		this.missing('set billing facts');
-	}
-	async endSessions(): Promise<void> {
-		this.missing('end sessions');
-	}
-}
+let stage: TestIssuer | null | undefined;
 
+/** The local issuer by default; the run's real Bridge server (stage) when E2E_PARITY_MANIFEST names its manifest. */
 export function testIssuer(): TestIssuer {
-	const issuer = process.env.E2E_ISSUER_RESOLVED ?? '';
 	const control = process.env.E2E_FAKE_CONTROL ?? '';
-	return control !== '' ? new LocalIssuer(issuer, control) : new RealIssuer(issuer);
+	if (control !== '') return new LocalIssuer(process.env.E2E_ISSUER_RESOLVED ?? '', control);
+	stage ??= stageIssuer();
+	if (stage === null) throw new Error('Set E2E_PARITY_MANIFEST (a real Bridge server) or run with the local issuer.');
+	return stage;
 }

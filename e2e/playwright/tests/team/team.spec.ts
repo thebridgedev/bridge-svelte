@@ -26,7 +26,6 @@ test.describe('team panel', () => {
 	});
 
 	test('sending again stops the old link; a revoked link says so', async ({ page, browser, issuer, person }) => {
-		test.skip(issuer.kind === 'real', 'Reading an invite link needs the issuer\'s test seams.');
 		await signIn(page, person.email);
 		await page.goto('/settings/team');
 		const invitee = uniqueEmail('eve');
@@ -61,10 +60,15 @@ test.describe('team panel', () => {
 	});
 
 	test('without the team flag, the panel only shows', async ({ page, issuer, person }) => {
-		await issuer.setFlags({ 'bridge-team-manage': false });
-		await signIn(page, person.email);
+		// Bridge decides the team flag from the person's privileges: a person who may read the members and not change them.
+		let who = person.email;
+		if (issuer.kind === 'real') {
+			who = uniqueEmail('mem');
+			await issuer.addPerson({ email: who, password: PASSWORD, workspaces: [{ id: 'ws-acme', name: 'Acme', role: 'READER' }] });
+		} else await issuer.setFlags({ 'bridge-team-manage': false });
+		await signIn(page, who);
 		await page.goto('/settings/team');
-		await expect(page.locator('.bridge-team-table')).toContainText(person.email);
+		await expect(page.locator('.bridge-team-table')).toContainText(who);
 		await expect(page.getByRole('button', { name: 'Add Member' })).toHaveCount(0);
 		await expect(page.locator('[data-bridge-team-actions]')).toHaveCount(0);
 	});

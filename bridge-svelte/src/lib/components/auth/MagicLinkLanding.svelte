@@ -3,6 +3,9 @@
   it. Opened on another device it says so, and the link still works on the
   right one. The link works once: opened again, it says the link is no
   longer valid.
+  A link sent to confirm it is you (`bridge.recheck.email`) signs nobody in:
+  it renews the session the page that asked is waiting in, and this page says
+  to close the tab and go back.
   With `storage: 'memory'` the verifier waited in localStorage, which every
   tab of the origin shares, so the tab the link opens in signs in itself and
   holds the session in its own memory.
@@ -42,6 +45,7 @@
   type State =
     | { step: 'working' }
     | { step: 'signed-in'; to: string }
+    | { step: 'rechecked' }
     | { step: 'workspace'; workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> }
     | { step: 'failed'; message: string; kind: string | null };
   let view = $state<State>({ step: 'working' });
@@ -64,7 +68,8 @@
   }
 
   async function follow(step: SignInStep) {
-    if (handOff(step)) view = { step: 'working' };
+    if (step.done && step.rechecked === true) view = { step: 'rechecked' };
+    else if (handOff(step)) view = { step: 'working' };
     else if (step.done) await finish();
     else view = { step: 'workspace', workspaces: step.workspaces, choose: step.choose };
   }
@@ -94,6 +99,10 @@
       <Spinner size={24} />
       <span>{t('magicLink.finishing')}</span>
     </div>
+  </AuthFormWrapper>
+{:else if view.step === 'rechecked'}
+  <AuthFormWrapper heading={t('recheck.heading')} {headingSnippet} class={className} {style} data-bridge-magic-link="rechecked" {...rest}>
+    <Alert variant="success">{t('recheck.confirmed')}</Alert>
   </AuthFormWrapper>
 {:else if view.step === 'signed-in'}
   <AuthFormWrapper heading={t('login.heading')} {headingSnippet} class={className} {style} data-bridge-magic-link="signed-in" {...rest}>

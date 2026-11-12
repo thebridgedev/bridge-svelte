@@ -26,7 +26,8 @@ const PLANS = [
 let fake: FakeIssuer = fresh();
 
 function fresh(): FakeIssuer {
-	const made = createFakeIssuer({ origin: ORIGIN, appId: APP_ID });
+	// Renaming yourself wants a sign-in within 5 minutes, as Bridge's own recent-sign-in routes do.
+	const made = createFakeIssuer({ origin: ORIGIN, appId: APP_ID, recheck: { routes: ['PATCH /v2/accounts/me'], maxAgeSeconds: 300 } });
 	made.withoutLiveConnection();
 	made.setFlags(STANDARD_FLAGS);
 	made.setPlans(PLANS);
@@ -85,6 +86,9 @@ async function control(path: string, request: Request, url: URL): Promise<Respon
 			for (const session of fake.sessions()) if (person !== undefined && session.user === person.id && !session.ended) fake.endSession(session.id);
 			return json({ ok: true });
 		}
+		case '/signed-in-long-ago':
+			fake.signedInLongAgo();
+			return json({ ok: true });
 		case '/requests':
 			return json(fake.requests.map((r) => ({ method: r.method, path: r.path })));
 		default:

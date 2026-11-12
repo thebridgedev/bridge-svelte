@@ -29,6 +29,10 @@ export { bridgeFetch } from './core/fetch.js';
 export { closeUpgrade, openUpgrade, readPaymentRequired, upgradeRequest } from './core/upgrade.js';
 export type { UpgradeDialogProps, UpgradeRequest } from './core/upgrade.js';
 
+// Confirming it is you
+export { cancelRecheck, confirmItIsYou, recheckRequest, withRecheck } from './core/recheck.js';
+export type { RecheckRequest } from './core/recheck.js';
+
 // Hand-off mode
 export { handoffSignIn, readHandoff, returnToProgram } from './core/handoff.js';
 export type { HandoffState } from './core/handoff.js';
@@ -39,8 +43,8 @@ export type { BridgeMessageKey, BridgeTranslator } from './core/i18n.js';
 export type { PluginMessageKey } from './core/messages.js';
 
 // The few auth-core names app code needs to use this package
-export { BridgeError, isBridgeError, STANDARD_FLAGS } from '@nebulr-group/bridge-auth-core';
-export type { Bridge, BridgeErrorKind, SessionState, SessionUser, SessionWorkspace } from '@nebulr-group/bridge-auth-core';
+export { BridgeError, isBridgeError, needsRecheck, STANDARD_FLAGS } from '@nebulr-group/bridge-auth-core';
+export type { Bridge, BridgeErrorKind, RecheckMethod, SessionState, SessionUser, SessionWorkspace } from '@nebulr-group/bridge-auth-core';
 
 // Components
 export { default as BridgeBootstrap } from './components/BridgeBootstrap.svelte';
@@ -48,6 +52,7 @@ export { default as BridgeAuthRoutes } from './components/auth/BridgeAuthRoutes.
 export { default as SignInForm } from './components/auth/SignInForm.svelte';
 export { default as SignUpForm } from './components/auth/SignUpForm.svelte';
 export { default as VerifyEmail } from './components/auth/VerifyEmail.svelte';
+export { default as RecheckDialog } from './components/auth/RecheckDialog.svelte';
 export { default as MagicLinkLanding } from './components/auth/MagicLinkLanding.svelte';
 export { default as PasskeySetupLanding } from './components/auth/PasskeySetupLanding.svelte';
 export { default as PasskeyManager } from './components/auth/PasskeyManager.svelte';

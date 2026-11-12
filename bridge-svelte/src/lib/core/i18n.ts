@@ -8,6 +8,7 @@ import {
 	interpolate,
 	isBridgeError,
 	normalizeLocale,
+	waitMinutes,
 	type BridgeError,
 	type MessageKey,
 } from '@nebulr-group/bridge-auth-core';
@@ -70,8 +71,13 @@ export function errorMessage(error: unknown, t: BridgeTranslator, fallback: Brid
 			return t('error.unavailable');
 		case 'network':
 			return t('error.network');
-		case 'rate-limited':
-			return t('error.rateLimited');
+		case 'rate-limited': {
+			// A locked account has no time to wait: the owner resets the password.
+			if (e.code === 'account_locked') return t('login.error.accountLocked');
+			const minutes = e.code === 'too_many_attempts' ? waitMinutes(e) : null;
+			if (minutes === null) return t('error.rateLimited');
+			return minutes === 1 ? t('login.error.tooManyAttemptsOneMinute') : t('login.error.tooManyAttempts', { minutes });
+		}
 		case 'signed-out':
 		case 'reauthenticate':
 			return t('session.ended');

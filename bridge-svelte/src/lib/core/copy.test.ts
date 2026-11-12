@@ -36,6 +36,21 @@ describe('the plugin copy', () => {
 		expect(errorMessage(new BridgeError('not-offered', 'x'), t, 'workspace.error.switch')).toBe('Failed to switch workspace.');
 		expect(errorMessage(new Error('boom'), t)).toBe('Something went wrong. Please try again.');
 	});
+
+	it('says how long to wait when sign-in is paused, and that a locked account needs a reset', () => {
+		const t = translator();
+		const paused = (retryAfterSeconds: number) =>
+			new BridgeError('rate-limited', 'Too many attempts.', { code: 'too_many_attempts', retryAfterSeconds });
+		expect(errorMessage(paused(900), t)).toBe('Too many attempts. Try again in 15 minutes.');
+		expect(errorMessage(paused(61), t)).toBe('Too many attempts. Try again in 2 minutes.');
+		expect(errorMessage(paused(30), t)).toBe('Too many attempts. Try again in 1 minute.');
+		expect(errorMessage(new BridgeError('rate-limited', 'x', { code: 'account_locked' }), t)).toBe(
+			t('login.error.accountLocked'),
+		);
+		// No wait time known, or a limit of another kind: the generic message.
+		expect(errorMessage(new BridgeError('rate-limited', 'x'), t)).toBe(t('error.rateLimited'));
+		expect(errorMessage(new BridgeError('rate-limited', 'x', { code: 'too_many_attempts' }), t)).toBe(t('error.rateLimited'));
+	});
 });
 
 describe('readPaymentRequired', () => {

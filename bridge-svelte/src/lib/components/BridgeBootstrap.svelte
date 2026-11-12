@@ -5,7 +5,9 @@
 
   It runs the route guard again when the session or the flags change (a
   sign-out in another tab, a workspace switch, a flag turned off), and
-  renders the upgrade dialog a plan limit opens.
+  renders the dialogs the page opens: the upgrade dialog a plan limit opens,
+  and the "confirm it is you" dialog `withRecheck()` and `confirmItIsYou()`
+  open.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
@@ -13,9 +15,11 @@
   import { invalidate } from '$app/navigation';
   import { bridgeClient, bridgeConfig } from '../core/client.js';
   import { closeUpgrade, upgradeRequest } from '../core/upgrade.js';
+  import { cancelRecheck, recheckRequest } from '../core/recheck.js';
   import { canManageBilling } from '../core/flags.js';
   import { FLAGS_DEPENDENCY, SESSION_DEPENDENCY } from '../bootstrap.js';
   import UpgradeDialog from './billing/UpgradeDialog.svelte';
+  import RecheckDialog from './auth/RecheckDialog.svelte';
 
   let { children }: { children?: Snippet } = $props();
 
@@ -34,6 +38,8 @@
     if (client === null) return;
     const again = () => void invalidate(SESSION_DEPENDENCY);
     stops.push(client.on('signed-in', again), client.on('signed-out', again), client.on('workspace-changed', again));
+    // Nobody is left to confirm it is them: the waiting action fails as cancelled.
+    stops.push(client.on('signed-out', cancelRecheck));
     // Flag results change in bursts (a reload after a notice); guard once they settle.
     let first = true;
     stops.push(
@@ -58,4 +64,8 @@
 
 {#if dialogOn && $upgradeRequest}
   <Dialog request={$upgradeRequest} {upgradeHref} canUpgrade={$mayUpgrade} onclose={closeUpgrade} />
+{/if}
+
+{#if $recheckRequest}
+  <RecheckDialog onconfirm={$recheckRequest.confirmed} oncancel={$recheckRequest.cancelled} />
 {/if}

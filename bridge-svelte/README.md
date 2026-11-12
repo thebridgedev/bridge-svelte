@@ -69,7 +69,7 @@ In your app's settings in Bridge, add your app's address as a browser address an
 
 | Area | Pieces |
 |---|---|
-| Sign-in | `BridgeAuthRoutes` (sign-in, sign-up, verify-email, forgot-password, set-password, invite, workspaces, handoff), `SignInForm`, `SignUpForm`, `VerifyEmail`, `ForgotPassword`, `SetPassword`, `InviteLanding`, `WorkspaceChooser`, `SignOutButton`, `ProfileName` |
+| Sign-in | `BridgeAuthRoutes` (sign-in, sign-up, verify-email, forgot-password, set-password, invite, workspaces, handoff), `SignInForm`, `SignUpForm`, `VerifyEmail`, `ForgotPassword`, `SetPassword`, `InviteLanding`, `WorkspaceChooser`, `SignOutButton`, `ProfileName`, `RecheckDialog` with `withRecheck` and `confirmItIsYou` ("confirm it is you" instead of a sign-out) |
 | Gates | route `rules`, `FeatureFlag`, `useFlag`, `flag`, `requireFlag`, the paywall: all on flag results, never a role or the plan |
 | Billing | `BridgeBillingRoutes`, `PlanPicker`, `BillingPortalButton`, `SubscriptionStatus`, `BillingNotice`, `QuotaBanner`, `CheckoutNotice`, `UpgradeDialog`, `bridgeFetch` |
 | Team | `TeamPanel`, `MemberList`, `InviteDialog`, `InviteList`, `EditMemberDialog`, `WorkspaceForm`, `ProfileForm` |

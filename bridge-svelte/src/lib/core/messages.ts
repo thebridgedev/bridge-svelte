@@ -54,7 +54,21 @@ export type PluginMessageKey =
 	| 'passkey.lastMethod'
 	| 'passkey.exists'
 	| 'passkey.reauthenticate'
-	| 'passkey.namePlaceholder';
+	| 'passkey.namePlaceholder'
+	| 'recheck.heading'
+	| 'recheck.intro'
+	| 'recheck.submit'
+	| 'recheck.submitting'
+	| 'recheck.passkey'
+	| 'recheck.email'
+	| 'recheck.emailWaiting'
+	| 'recheck.noPasskey'
+	| 'recheck.passkeyCancelled'
+	| 'recheck.cancel'
+	| 'recheck.anotherWay'
+	| 'recheck.noMethods'
+	| 'recheck.wrongPassword'
+	| 'recheck.confirmed';
 
 export type PluginMessages = Record<PluginMessageKey, string>;
 
@@ -109,6 +123,20 @@ const en: PluginMessages = {
 	'passkey.exists': 'This device has a passkey already.',
 	'passkey.reauthenticate': 'Sign in again to change your passkeys.',
 	'passkey.namePlaceholder': 'Name (optional)',
+	'recheck.heading': 'Confirm it is you',
+	'recheck.intro': 'This needs a recent sign-in. Confirm it is you to go on.',
+	'recheck.submit': 'Confirm',
+	'recheck.submitting': 'Confirming…',
+	'recheck.passkey': 'Use a passkey',
+	'recheck.email': 'Email me a link',
+	'recheck.emailWaiting': 'A link is on its way to your email address. Open it on this device and this page goes on by itself.',
+	'recheck.noPasskey': 'You have no passkey for this app yet. Confirm it another way.',
+	'recheck.passkeyCancelled': 'No passkey was used. Try again, or confirm another way.',
+	'recheck.cancel': 'Cancel',
+	'recheck.anotherWay': 'Use another way',
+	'recheck.noMethods': 'There is no way to confirm it is you here. Sign in again.',
+	'recheck.wrongPassword': 'That password is not right.',
+	'recheck.confirmed': 'Confirmed. You can close this tab and go back.',
 };
 
 const sv: PluginMessages = {
@@ -162,6 +190,20 @@ const sv: PluginMessages = {
 	'passkey.exists': 'Den här enheten har redan en passkey.',
 	'passkey.reauthenticate': 'Logga in igen för att ändra dina passkeys.',
 	'passkey.namePlaceholder': 'Namn (valfritt)',
+	'recheck.heading': 'Bekräfta att det är du',
+	'recheck.intro': 'Det här kräver en nyligen genomförd inloggning. Bekräfta att det är du för att gå vidare.',
+	'recheck.submit': 'Bekräfta',
+	'recheck.submitting': 'Bekräftar…',
+	'recheck.passkey': 'Använd en passkey',
+	'recheck.email': 'Skicka en länk till min e-post',
+	'recheck.emailWaiting': 'En länk är på väg till din e-postadress. Öppna den på den här enheten så går sidan vidare av sig själv.',
+	'recheck.noPasskey': 'Du har ännu ingen passkey för den här appen. Bekräfta på något annat sätt.',
+	'recheck.passkeyCancelled': 'Ingen passkey användes. Försök igen eller bekräfta på något annat sätt.',
+	'recheck.cancel': 'Avbryt',
+	'recheck.anotherWay': 'Använd ett annat sätt',
+	'recheck.noMethods': 'Det finns inget sätt att bekräfta att det är du här. Logga in igen.',
+	'recheck.wrongPassword': 'Det lösenordet stämmer inte.',
+	'recheck.confirmed': 'Bekräftat. Du kan stänga den här fliken och gå tillbaka.',
 };
 
 const da: PluginMessages = {
@@ -215,6 +257,20 @@ const da: PluginMessages = {
 	'passkey.exists': 'Denne enhed har allerede en adgangsnøgle.',
 	'passkey.reauthenticate': 'Log ind igen for at ændre dine adgangsnøgler.',
 	'passkey.namePlaceholder': 'Navn (valgfrit)',
+	'recheck.heading': 'Bekræft at det er dig',
+	'recheck.intro': 'Det kræver et nyligt login. Bekræft at det er dig for at fortsætte.',
+	'recheck.submit': 'Bekræft',
+	'recheck.submitting': 'Bekræfter…',
+	'recheck.passkey': 'Brug en adgangsnøgle',
+	'recheck.email': 'Send mig et link på e-mail',
+	'recheck.emailWaiting': 'Et link er på vej til din e-mailadresse. Åbn det på denne enhed, så fortsætter siden af sig selv.',
+	'recheck.noPasskey': 'Du har endnu ingen adgangsnøgle til denne app. Bekræft på en anden måde.',
+	'recheck.passkeyCancelled': 'Ingen adgangsnøgle blev brugt. Prøv igen, eller bekræft på en anden måde.',
+	'recheck.cancel': 'Annuller',
+	'recheck.anotherWay': 'Brug en anden måde',
+	'recheck.noMethods': 'Der er ingen måde at bekræfte, at det er dig, her. Log ind igen.',
+	'recheck.wrongPassword': 'Den adgangskode er ikke korrekt.',
+	'recheck.confirmed': 'Bekræftet. Du kan lukke denne fane og gå tilbage.',
 };
 
 const nb: PluginMessages = {
@@ -268,6 +324,20 @@ const nb: PluginMessages = {
 	'passkey.exists': 'Denne enheten har allerede en passnøkkel.',
 	'passkey.reauthenticate': 'Logg inn på nytt for å endre passnøklene dine.',
 	'passkey.namePlaceholder': 'Navn (valgfritt)',
+	'recheck.heading': 'Bekreft at det er deg',
+	'recheck.intro': 'Dette krever en nylig pålogging. Bekreft at det er deg for å gå videre.',
+	'recheck.submit': 'Bekreft',
+	'recheck.submitting': 'Bekrefter…',
+	'recheck.passkey': 'Bruk en passnøkkel',
+	'recheck.email': 'Send meg en lenke på e-post',
+	'recheck.emailWaiting': 'En lenke er på vei til e-postadressen din. Åpne den på denne enheten, så går siden videre av seg selv.',
+	'recheck.noPasskey': 'Du har ingen passnøkkel for denne appen ennå. Bekreft på en annen måte.',
+	'recheck.passkeyCancelled': 'Ingen passnøkkel ble brukt. Prøv igjen, eller bekreft på en annen måte.',
+	'recheck.cancel': 'Avbryt',
+	'recheck.anotherWay': 'Bruk en annen måte',
+	'recheck.noMethods': 'Det finnes ingen måte å bekrefte at det er deg her. Logg inn på nytt.',
+	'recheck.wrongPassword': 'Det passordet er ikke riktig.',
+	'recheck.confirmed': 'Bekreftet. Du kan lukke denne fanen og gå tilbake.',
 };
 
 const nl: PluginMessages = {
@@ -321,6 +391,20 @@ const nl: PluginMessages = {
 	'passkey.exists': 'Dit apparaat heeft al een passkey.',
 	'passkey.reauthenticate': 'Log opnieuw in om je passkeys te wijzigen.',
 	'passkey.namePlaceholder': 'Naam (optioneel)',
+	'recheck.heading': 'Bevestig dat jij het bent',
+	'recheck.intro': 'Hiervoor is een recente aanmelding nodig. Bevestig dat jij het bent om verder te gaan.',
+	'recheck.submit': 'Bevestigen',
+	'recheck.submitting': 'Bevestigen…',
+	'recheck.passkey': 'Gebruik een passkey',
+	'recheck.email': 'Mail me een link',
+	'recheck.emailWaiting': 'Er is een link onderweg naar je e-mailadres. Open hem op dit apparaat, dan gaat deze pagina vanzelf verder.',
+	'recheck.noPasskey': 'Je hebt nog geen passkey voor deze app. Bevestig op een andere manier.',
+	'recheck.passkeyCancelled': 'Er is geen passkey gebruikt. Probeer het opnieuw of bevestig op een andere manier.',
+	'recheck.cancel': 'Annuleren',
+	'recheck.anotherWay': 'Gebruik een andere manier',
+	'recheck.noMethods': 'Hier is geen manier om te bevestigen dat jij het bent. Meld je opnieuw aan.',
+	'recheck.wrongPassword': 'Dat wachtwoord klopt niet.',
+	'recheck.confirmed': 'Bevestigd. Je kunt dit tabblad sluiten en teruggaan.',
 };
 
 const de: PluginMessages = {
@@ -374,6 +458,20 @@ const de: PluginMessages = {
 	'passkey.exists': 'Dieses Gerät hat bereits einen Passkey.',
 	'passkey.reauthenticate': 'Melde dich erneut an, um deine Passkeys zu ändern.',
 	'passkey.namePlaceholder': 'Name (optional)',
+	'recheck.heading': 'Bestätige, dass du es bist',
+	'recheck.intro': 'Dafür ist eine kürzliche Anmeldung nötig. Bestätige, dass du es bist, um fortzufahren.',
+	'recheck.submit': 'Bestätigen',
+	'recheck.submitting': 'Wird bestätigt…',
+	'recheck.passkey': 'Passkey verwenden',
+	'recheck.email': 'Link per E-Mail senden',
+	'recheck.emailWaiting': 'Ein Link ist unterwegs an deine E-Mail-Adresse. Öffne ihn auf diesem Gerät, dann geht diese Seite von selbst weiter.',
+	'recheck.noPasskey': 'Du hast für diese App noch keinen Passkey. Bestätige auf andere Weise.',
+	'recheck.passkeyCancelled': 'Es wurde kein Passkey verwendet. Versuche es erneut oder bestätige auf andere Weise.',
+	'recheck.cancel': 'Abbrechen',
+	'recheck.anotherWay': 'Andere Möglichkeit nutzen',
+	'recheck.noMethods': 'Hier gibt es keine Möglichkeit zu bestätigen, dass du es bist. Melde dich erneut an.',
+	'recheck.wrongPassword': 'Dieses Passwort ist nicht richtig.',
+	'recheck.confirmed': 'Bestätigt. Du kannst diesen Tab schließen und zurückgehen.',
 };
 
 const fi: PluginMessages = {
@@ -427,6 +525,20 @@ const fi: PluginMessages = {
 	'passkey.exists': 'Tällä laitteella on jo pääsyavain.',
 	'passkey.reauthenticate': 'Kirjaudu uudelleen muuttaaksesi pääsyavaimiasi.',
 	'passkey.namePlaceholder': 'Nimi (valinnainen)',
+	'recheck.heading': 'Vahvista, että se olet sinä',
+	'recheck.intro': 'Tämä vaatii tuoreen kirjautumisen. Vahvista, että se olet sinä, jatkaaksesi.',
+	'recheck.submit': 'Vahvista',
+	'recheck.submitting': 'Vahvistetaan…',
+	'recheck.passkey': 'Käytä pääsyavainta',
+	'recheck.email': 'Lähetä minulle linkki sähköpostilla',
+	'recheck.emailWaiting': 'Linkki on matkalla sähköpostiosoitteeseesi. Avaa se tällä laitteella, niin tämä sivu jatkaa itsestään.',
+	'recheck.noPasskey': 'Sinulla ei ole vielä pääsyavainta tähän sovellukseen. Vahvista toisella tavalla.',
+	'recheck.passkeyCancelled': 'Pääsyavainta ei käytetty. Yritä uudelleen tai vahvista toisella tavalla.',
+	'recheck.cancel': 'Peruuta',
+	'recheck.anotherWay': 'Käytä toista tapaa',
+	'recheck.noMethods': 'Täällä ei ole tapaa vahvistaa, että se olet sinä. Kirjaudu uudelleen.',
+	'recheck.wrongPassword': 'Salasana ei ole oikea.',
+	'recheck.confirmed': 'Vahvistettu. Voit sulkea tämän välilehden ja palata takaisin.',
 };
 
 const fr: PluginMessages = {
@@ -480,6 +592,20 @@ const fr: PluginMessages = {
 	'passkey.exists': "Cet appareil a déjà une clé d'accès.",
 	'passkey.reauthenticate': "Reconnectez-vous pour modifier vos clés d'accès.",
 	'passkey.namePlaceholder': 'Nom (facultatif)',
+	'recheck.heading': "Confirmez que c'est vous",
+	'recheck.intro': "Cette action demande une connexion récente. Confirmez que c'est vous pour continuer.",
+	'recheck.submit': 'Confirmer',
+	'recheck.submitting': 'Confirmation…',
+	'recheck.passkey': "Utiliser une clé d'accès",
+	'recheck.email': "M'envoyer un lien par e-mail",
+	'recheck.emailWaiting': "Un lien est en route vers votre adresse e-mail. Ouvrez-le sur cet appareil et cette page continuera d'elle-même.",
+	'recheck.noPasskey': "Vous n'avez pas encore de clé d'accès pour cette application. Confirmez autrement.",
+	'recheck.passkeyCancelled': "Aucune clé d'accès n'a été utilisée. Réessayez ou confirmez autrement.",
+	'recheck.cancel': 'Annuler',
+	'recheck.anotherWay': 'Utiliser un autre moyen',
+	'recheck.noMethods': "Il n'y a aucun moyen de confirmer ici que c'est vous. Reconnectez-vous.",
+	'recheck.wrongPassword': "Ce mot de passe n'est pas correct.",
+	'recheck.confirmed': 'Confirmé. Vous pouvez fermer cet onglet et revenir en arrière.',
 };
 
 const es: PluginMessages = {
@@ -533,6 +659,20 @@ const es: PluginMessages = {
 	'passkey.exists': 'Este dispositivo ya tiene una llave de acceso.',
 	'passkey.reauthenticate': 'Vuelve a iniciar sesión para cambiar tus llaves de acceso.',
 	'passkey.namePlaceholder': 'Nombre (opcional)',
+	'recheck.heading': 'Confirma que eres tú',
+	'recheck.intro': 'Esto requiere un inicio de sesión reciente. Confirma que eres tú para continuar.',
+	'recheck.submit': 'Confirmar',
+	'recheck.submitting': 'Confirmando…',
+	'recheck.passkey': 'Usar una llave de acceso',
+	'recheck.email': 'Enviarme un enlace por correo',
+	'recheck.emailWaiting': 'Un enlace va de camino a tu correo electrónico. Ábrelo en este dispositivo y esta página continuará sola.',
+	'recheck.noPasskey': 'Aún no tienes una llave de acceso para esta aplicación. Confirma de otra forma.',
+	'recheck.passkeyCancelled': 'No se usó ninguna llave de acceso. Inténtalo de nuevo o confirma de otra forma.',
+	'recheck.cancel': 'Cancelar',
+	'recheck.anotherWay': 'Usar otra forma',
+	'recheck.noMethods': 'Aquí no hay forma de confirmar que eres tú. Vuelve a iniciar sesión.',
+	'recheck.wrongPassword': 'Esa contraseña no es correcta.',
+	'recheck.confirmed': 'Confirmado. Puedes cerrar esta pestaña y volver.',
 };
 
 const it: PluginMessages = {
@@ -586,6 +726,20 @@ const it: PluginMessages = {
 	'passkey.exists': 'Questo dispositivo ha già una passkey.',
 	'passkey.reauthenticate': 'Accedi di nuovo per modificare le tue passkey.',
 	'passkey.namePlaceholder': 'Nome (facoltativo)',
+	'recheck.heading': 'Conferma che sei tu',
+	'recheck.intro': 'Serve un accesso recente. Conferma che sei tu per continuare.',
+	'recheck.submit': 'Conferma',
+	'recheck.submitting': 'Conferma in corso…',
+	'recheck.passkey': 'Usa una passkey',
+	'recheck.email': 'Inviami un link via email',
+	'recheck.emailWaiting': 'Un link sta arrivando al tuo indirizzo email. Aprilo su questo dispositivo e questa pagina proseguirà da sola.',
+	'recheck.noPasskey': 'Non hai ancora una passkey per questa app. Conferma in un altro modo.',
+	'recheck.passkeyCancelled': 'Non è stata usata nessuna passkey. Riprova o conferma in un altro modo.',
+	'recheck.cancel': 'Annulla',
+	'recheck.anotherWay': 'Usa un altro modo',
+	'recheck.noMethods': "Qui non c'è modo di confermare che sei tu. Accedi di nuovo.",
+	'recheck.wrongPassword': 'Quella password non è corretta.',
+	'recheck.confirmed': 'Confermato. Puoi chiudere questa scheda e tornare indietro.',
 };
 
 const pt: PluginMessages = {
@@ -639,6 +793,20 @@ const pt: PluginMessages = {
 	'passkey.exists': 'Este dispositivo já tem uma chave de acesso.',
 	'passkey.reauthenticate': 'Entre novamente para alterar as suas chaves de acesso.',
 	'passkey.namePlaceholder': 'Nome (opcional)',
+	'recheck.heading': 'Confirme que é você',
+	'recheck.intro': 'Isto exige um início de sessão recente. Confirme que é você para continuar.',
+	'recheck.submit': 'Confirmar',
+	'recheck.submitting': 'A confirmar…',
+	'recheck.passkey': 'Usar uma chave de acesso',
+	'recheck.email': 'Enviar-me um link por e-mail',
+	'recheck.emailWaiting': 'Um link está a caminho do seu endereço de e-mail. Abra-o neste dispositivo e esta página continua sozinha.',
+	'recheck.noPasskey': 'Ainda não tem uma chave de acesso para esta aplicação. Confirme de outra forma.',
+	'recheck.passkeyCancelled': 'Nenhuma chave de acesso foi usada. Tente de novo ou confirme de outra forma.',
+	'recheck.cancel': 'Cancelar',
+	'recheck.anotherWay': 'Usar outra forma',
+	'recheck.noMethods': 'Aqui não há forma de confirmar que é você. Inicie sessão novamente.',
+	'recheck.wrongPassword': 'Essa palavra-passe não está correta.',
+	'recheck.confirmed': 'Confirmado. Pode fechar este separador e voltar.',
 };
 
 const pl: PluginMessages = {
@@ -692,6 +860,20 @@ const pl: PluginMessages = {
 	'passkey.exists': 'To urządzenie ma już klucz dostępu.',
 	'passkey.reauthenticate': 'Zaloguj się ponownie, aby zmienić klucze dostępu.',
 	'passkey.namePlaceholder': 'Nazwa (opcjonalnie)',
+	'recheck.heading': 'Potwierdź, że to ty',
+	'recheck.intro': 'Wymaga to niedawnego zalogowania. Potwierdź, że to ty, aby przejść dalej.',
+	'recheck.submit': 'Potwierdź',
+	'recheck.submitting': 'Potwierdzanie…',
+	'recheck.passkey': 'Użyj klucza dostępu',
+	'recheck.email': 'Wyślij mi link e-mailem',
+	'recheck.emailWaiting': 'Link jest w drodze na Twój adres e-mail. Otwórz go na tym urządzeniu, a ta strona przejdzie dalej sama.',
+	'recheck.noPasskey': 'Nie masz jeszcze klucza dostępu do tej aplikacji. Potwierdź w inny sposób.',
+	'recheck.passkeyCancelled': 'Nie użyto klucza dostępu. Spróbuj ponownie lub potwierdź w inny sposób.',
+	'recheck.cancel': 'Anuluj',
+	'recheck.anotherWay': 'Użyj innego sposobu',
+	'recheck.noMethods': 'Nie ma tu sposobu, by potwierdzić, że to ty. Zaloguj się ponownie.',
+	'recheck.wrongPassword': 'To hasło jest nieprawidłowe.',
+	'recheck.confirmed': 'Potwierdzono. Możesz zamknąć tę kartę i wrócić.',
 };
 
 /** The plugin's copy by primary language subtag. */

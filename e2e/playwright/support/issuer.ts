@@ -20,7 +20,7 @@ export interface TestIssuer {
 	reset(): Promise<void>;
 	addPerson(person: Person): Promise<void>;
 	/** The token of the last link emailed to `email` for `purpose` (`invite` for either invite email). */
-	lastLink(email: string, purpose: 'verify-sign-up' | 'reset-password' | 'invite'): Promise<string>;
+	lastLink(email: string, purpose: 'verify-sign-up' | 'reset-password' | 'invite' | 'magic-link'): Promise<string>;
 	/** Invites `email` into a workspace, as a member who may invite would, and returns the link's token. */
 	invite(email: string, workspace: { readonly id: string; readonly name: string }, role?: string): Promise<string>;
 	/** Makes an address's invites out of date, as if their 30 days had passed. */
@@ -30,6 +30,8 @@ export interface TestIssuer {
 	setFacts(facts: Record<string, unknown>): Promise<void>;
 	/** Ends every session of a person, as Bridge does after a password reset or a removal. */
 	endSessions(email: string): Promise<void>;
+	/** Makes every session's last sign-in an hour old, so actions that want a recent sign-in ask the person to confirm it is them. */
+	signedInLongAgo(): Promise<void>;
 }
 
 class LocalIssuer implements TestIssuer {
@@ -74,6 +76,9 @@ class LocalIssuer implements TestIssuer {
 	async endSessions(email: string) {
 		await this.call('/end-sessions', { email });
 	}
+	async signedInLongAgo() {
+		await this.call('/signed-in-long-ago', {});
+	}
 }
 
 class RealIssuer implements TestIssuer {
@@ -103,6 +108,9 @@ class RealIssuer implements TestIssuer {
 	}
 	async endSessions(): Promise<void> {
 		this.missing('end sessions');
+	}
+	async signedInLongAgo(): Promise<void> {
+		this.missing('age a sign-in');
 	}
 }
 

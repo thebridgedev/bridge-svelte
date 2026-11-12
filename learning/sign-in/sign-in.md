@@ -72,6 +72,22 @@ const next = await getBridge().passkeys.setupLink.finish(token); // on /auth/pas
 
 A closed dialog fails with `cancelled`; a browser without passkeys with `not-supported`; a passkey your app does not know with `wrong-credentials` (code `unknown_passkey`).
 
+## Confirming it is you
+
+Some actions want a recent sign-in: making a key, changing sign-in settings, removing a workspace. When one is called later, Bridge refuses it with `reauthenticate`. Do not send the person to sign in again: wrap the action in `withRecheck`.
+
+```ts
+import { withRecheck } from '@nebulr-group/bridge-svelte';
+
+await withRecheck(() => createKey(form)); // asks once if Bridge says so, then runs createKey again
+```
+
+The "Confirm it is you" dialog opens over the page, so a form the person was filling stays as it was. It is rendered by `<BridgeBootstrap>`, which your root layout already has. It offers only the ways your app's sign-in options list: the person's password, one of their own passkeys, or a link sent to their address, which the dialog waits for. A wrong password, a paused sign-in (with the minutes to wait) and a locked account are said plainly.
+
+`withRecheck` resolves with the action's answer. When the person cancels (the Cancel button or Escape), it rejects with `BridgeError` kind `cancelled` and the action is not run again. `confirmItIsYou()` opens the dialog on its own, and resolves once they confirmed, if you want to ask before the action.
+
+A link sent to confirm it is you opens on the sign-in link page (`MagicLinkLanding`), which says "Confirmed. You can close this tab and go back." and signs nobody in.
+
 ## Invites
 
 An invite's email lands on `/auth/invite`, which shows the workspace the invite is for and then:

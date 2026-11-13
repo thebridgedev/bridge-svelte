@@ -4,8 +4,6 @@ const ACME = { id: 'ws-acme', name: 'Acme' };
 const INITECH = { id: 'ws-initech', name: 'Initech' };
 
 test.describe('invite landing', () => {
-	test.skip(({ issuer }) => issuer.kind === 'real', 'Sending an invite and reading its link needs the issuer\'s test seams.');
-
 	test('a new person signs up from the invite and lands signed in, in the workspace, with no email to verify', async ({ page, issuer }) => {
 		const email = uniqueEmail('nina');
 		const token = await issuer.invite(email, ACME);
@@ -54,7 +52,8 @@ test.describe('invite landing', () => {
 		const other = uniqueEmail('pia');
 		await issuer.addPerson({ email: other, password: PASSWORD, workspaces: [INITECH] });
 		await signIn(page, person.email);
-		const token = await issuer.invite(other, INITECH);
+		// A workspace the other person is not in: a real server refuses an invite for a member.
+		const token = await issuer.invite(other, ACME);
 		await page.goto(`/auth#bridge=invite&token=${token}`);
 		const landing = page.locator('[data-bridge-invite="accept"]');
 		await landing.getByRole('button', { name: 'Accept invite' }).click();
@@ -64,9 +63,13 @@ test.describe('invite landing', () => {
 		await expect(page.locator('[data-bridge-invite="sign-in"]')).toBeVisible();
 	});
 
-	test('a member already is told so, and goes on', async ({ page, issuer, person }) => {
-		await signIn(page, person.email);
-		const token = await issuer.invite(person.email, ACME);
+	test('a member already is told so, and goes on', async ({ page, issuer }) => {
+		// The invite is sent first; the person joins the workspace some other way before opening it.
+		const email = uniqueEmail('mia');
+		const token = await issuer.invite(email, ACME);
+		await issuer.addPerson({ email, password: PASSWORD, workspaces: [ACME] });
+		await signIn(page, email);
+		const person = { email };
 		await page.goto(`/auth#bridge=invite&token=${token}`);
 		const landing = page.locator('[data-bridge-invite="accept"]');
 		await landing.getByRole('button', { name: 'Accept invite' }).click();
@@ -75,7 +78,9 @@ test.describe('invite landing', () => {
 		await expect(page.getByTestId('home-signed-in')).toContainText(person.email);
 	});
 
-	test('an expired, a used and a made-up link each say why, and nothing else', async ({ page, browser, issuer }) => {
+	test('an expired link says why, and nothing else', async ({ page, issuer }) => {
+		// An invite lasts 30 days on a real server and cannot be aged by a test.
+		test.skip(issuer.kind === 'real', 'Only the local issuer can make an invite older.');
 		const late = uniqueEmail('quinn');
 		const expired = await issuer.invite(late, ACME);
 		await issuer.expireInvites(late);
@@ -83,7 +88,9 @@ test.describe('invite landing', () => {
 		await expect(page.locator('[data-bridge-invite="closed"]')).toHaveAttribute('data-invite-state', 'expired');
 		await expect(page.locator('[data-bridge-alert]')).toHaveText('This invite has expired. Ask the person who invited you for a new one.');
 		await expect(page.locator('[data-bridge-invite="closed"]')).not.toContainText('Acme');
+	});
 
+	test('a used and a made-up link each say why, and nothing else', async ({ page, browser, issuer }) => {
 		const email = uniqueEmail('rosa');
 		const used = await issuer.invite(email, ACME);
 		const first = await browser.newContext();

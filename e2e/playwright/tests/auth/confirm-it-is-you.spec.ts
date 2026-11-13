@@ -30,6 +30,10 @@ function countSaves(page: Page): () => number {
 }
 
 test.describe('confirming it is you', () => {
+	test.beforeEach(({ issuer }) => {
+		test.skip(issuer.kind === 'real', 'Only the local issuer can make a sign-in older.');
+	});
+
 	test('a wrong password says so and keeps the dialog; the right one tries the action again, once, on the same page', async ({ page, issuer, person }) => {
 		await onProfile(page, issuer, person);
 		const saves = countSaves(page);

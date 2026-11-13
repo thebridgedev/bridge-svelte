@@ -8,13 +8,13 @@ test.describe('workspaces', () => {
 
 		const step = page.locator('[data-bridge-sign-in-step="workspace"]');
 		await expect(step.locator('[data-bridge-workspace-name]')).toHaveText(['Acme', 'Globex']);
-		await step.locator('[data-workspace-id="ws-globex"]').click();
+		await step.locator(`[data-workspace-id="${issuer.workspaceId('ws-globex')}"]`).click();
 		await expect(page.getByTestId('nav-workspace')).toHaveText('Globex');
 
 		await page.getByTestId('nav-workspace').click();
 		await expect(page).toHaveURL(/\/auth\/workspaces$/);
-		await expect(page.locator('[data-workspace-id="ws-globex"]')).toHaveAttribute('data-active', 'true');
-		await page.locator('[data-workspace-id="ws-acme"]').click();
+		await expect(page.locator(`[data-workspace-id="${issuer.workspaceId('ws-globex')}"]`)).toHaveAttribute('data-active', 'true');
+		await page.locator(`[data-workspace-id="${issuer.workspaceId('ws-acme')}"]`).click();
 		await expect(page.getByTestId('nav-workspace')).toHaveText('Acme');
 		await expect(page).toHaveURL(/\/$/);
 	});

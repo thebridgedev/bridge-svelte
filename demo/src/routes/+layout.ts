@@ -17,5 +17,7 @@ export const load = bridgeBootstrap({
 	// Bridge's own sign-in page turns this on to sign people in for the CLI.
 	handoff: { loopback: true, program: 'the Bridge CLI' },
 	// PUBLIC_DEMO_STORAGE=memory keeps the session in the page's memory only: nothing in the browser's storage.
-	storage: env.PUBLIC_DEMO_STORAGE === 'memory' ? 'memory' : 'local'
+	storage: env.PUBLIC_DEMO_STORAGE === 'memory' ? 'memory' : 'local',
+	// PUBLIC_DEMO_HOSTED=true signs people in on the page Bridge hosts for the app, and back at /auth/callback.
+	...(env.PUBLIC_DEMO_HOSTED === 'true' ? { hosted: {} } : {})
 });

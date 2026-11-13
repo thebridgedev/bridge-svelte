@@ -20,7 +20,7 @@ test.describe('hand-off mode', () => {
 		await page.locator('#handoff-email').fill(email);
 		await page.locator('#handoff-password').fill(PASSWORD);
 		await page.locator('[data-bridge-handoff="form"] button[type="submit"]').click();
-		await page.locator('[data-bridge-handoff="workspace"] [data-workspace-id="ws-globex"]').click();
+		await page.locator(`[data-bridge-handoff="workspace"] [data-workspace-id="${issuer.workspaceId('ws-globex')}"]`).click();
 
 		await expect.poll(() => returned?.searchParams.get('state')).toBe('state-12345');
 		expect(returned!.searchParams.get('code')).toBeTruthy();

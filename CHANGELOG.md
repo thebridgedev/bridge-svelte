@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.0-alpha.10] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.9.
+
+### Fixed
+
+- **A sign-in's own redirect is no longer lost.** The route guard runs again after a sign-in, a sign-out, a workspace switch or a flag change; it now waits for a navigation under way to end instead of replacing it, so the page a sign-in sends the person to is the page they land on.
+- **Hosted sign-in says the service is unavailable when it cannot start**, instead of showing a wrong-password message.
+
 ## [1.0.0-alpha.9] - unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.9.

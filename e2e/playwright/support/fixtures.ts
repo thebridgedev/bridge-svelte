@@ -1,13 +1,17 @@
 import { test as base, expect, type Page } from '@playwright/test';
+import { readManifest } from './stage/manifest';
 import { testIssuer, type Person, type TestIssuer } from './issuer';
 
 export const PASSWORD = 'correct horse battery';
 
 let counter = 0;
-/** An address no other test uses. */
+const run = Math.random().toString(36).slice(2, 8);
+const inbox = readManifest()?.inbox;
+/** An address no other test uses; on stage, one at the test inbox's domain, so the mail Bridge sends to it can be read. */
 export function uniqueEmail(name = 'person'): string {
 	counter += 1;
-	return `${name}-${Date.now().toString(36)}-${counter}@demo.test`;
+	const tag = `${name}-${Date.now().toString(36)}-${counter}`;
+	return inbox !== undefined && 'domain' in inbox ? `parity-${run}+${tag}@${inbox.domain}` : `${tag}@demo.test`;
 }
 
 /**

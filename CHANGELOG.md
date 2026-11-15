@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0-alpha.11] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.10.
+
+### Fixed
+
+- **A plan change reaches an open page.** When the workspace's plan changes, the page's flags follow within a few seconds, with no reload: a page behind a plan feature opens, and a `<FeatureFlag>` shows. Before, the page kept its old flags until it was reloaded, since the token Bridge refuses after the change was not renewed and the first answer after the change could still be the old one (both fixed in auth-core 1.0.0-alpha.10).
+
 ## [1.0.0-alpha.10] - unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.9.

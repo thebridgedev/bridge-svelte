@@ -44,4 +44,41 @@ test.describe('flag components', () => {
 		await expect(dialog).toHaveAttribute('data-metric', 'exports');
 		await expect(dialog.locator('[data-bridge-upgrade-dialog-message]')).toContainText('10');
 	});
+
+	test('a 402 FEATURE_NOT_IN_PLAN from the app’s own API opens the upgrade dialog, naming the feature', async ({ page, person }) => {
+		// The body is what bridge-nestjs answers for a flag a plan feature keeps off. The browser's side is what this tests.
+		await page.route('**/api/exports', (route) =>
+			route.fulfill({
+				status: 402,
+				json: {
+					statusCode: 402,
+					code: 'FEATURE_NOT_IN_PLAN',
+					error: 'Payment Required',
+					message: "Your plan does not include 'analytics'. Upgrade to use it.",
+					flag: 'reports',
+					feature: 'analytics',
+					why: 'plan',
+					fix: '/subscription',
+				},
+			}),
+		);
+		await signIn(page, person.email);
+		await page.goto('/tickets');
+		await page.getByTestId('export').click();
+		const dialog = page.locator('[data-bridge-upgrade-dialog]');
+		await expect(dialog).toHaveAttribute('data-variant', 'feature');
+		await expect(dialog).toHaveAttribute('data-feature', 'analytics');
+		await expect(dialog.locator('[data-bridge-upgrade-dialog-cta]')).toHaveAttribute('href', '/subscription');
+	});
+
+	test('a 403 FEATURE_OFF from the app’s own API opens nothing', async ({ page, person }) => {
+		await page.route('**/api/exports', (route) =>
+			route.fulfill({ status: 403, json: { statusCode: 403, code: 'FEATURE_OFF', error: 'Forbidden', message: "Feature flag 'reports' is not enabled", flag: 'reports', fix: 'This feature is not available to this caller.' } }),
+		);
+		await signIn(page, person.email);
+		await page.goto('/tickets');
+		await page.getByTestId('export').click();
+		await expect(page.getByTestId('export')).toBeVisible();
+		await expect(page.locator('[data-bridge-upgrade-dialog]')).toHaveCount(0);
+	});
 });

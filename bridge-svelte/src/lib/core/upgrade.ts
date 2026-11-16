@@ -61,8 +61,9 @@ function samePath(value: unknown): string | null {
  *
  * Understood: problem details (`type` ending in `plan-required` or
  * `quota-exceeded`, with `entitlement`, `metric`, `used`, `limit`), and the
- * `{ code: 'QUOTA_EXCEEDED', metric, used, limit, fix }` shape server
- * plugins answer a limit with.
+ * shapes server plugins answer with: `{ code: 'QUOTA_EXCEEDED', metric, used,
+ * limit, fix }` for a limit, and `{ code: 'FEATURE_NOT_IN_PLAN', flag,
+ * feature, fix }` for a flag that is off because the plan lacks a feature.
  */
 export function readPaymentRequired(body: unknown): UpgradeRequest | null {
 	if (body === null || typeof body !== 'object') return null;
@@ -76,6 +77,9 @@ export function readPaymentRequired(body: unknown): UpgradeRequest | null {
 	}
 	if (code === 'PLAN_REQUIRED' || type.endsWith('plan-required')) {
 		return { kind: 'feature', entitlement: str(b['entitlement']), message, upgradeHref };
+	}
+	if (code === 'FEATURE_NOT_IN_PLAN') {
+		return { kind: 'feature', entitlement: str(b['feature']) ?? str(b['entitlement']), flag: str(b['flag']), message, upgradeHref };
 	}
 	return null;
 }

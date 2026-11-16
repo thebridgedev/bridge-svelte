@@ -71,6 +71,30 @@ describe('readPaymentRequired', () => {
 		expect(readPaymentRequired('nope')).toBeNull();
 	});
 
+	it('reads a server plugin\'s 402 FEATURE_NOT_IN_PLAN, naming the feature', () => {
+		expect(
+			readPaymentRequired({
+				statusCode: 402,
+				code: 'FEATURE_NOT_IN_PLAN',
+				error: 'Payment Required',
+				message: "Your plan does not include 'analytics'. Upgrade to use it.",
+				flag: 'reports',
+				feature: 'analytics',
+				why: 'plan',
+				fix: '/subscription',
+			}),
+		).toEqual({
+			kind: 'feature',
+			entitlement: 'analytics',
+			flag: 'reports',
+			message: "Your plan does not include 'analytics'. Upgrade to use it.",
+			upgradeHref: '/subscription',
+		});
+		// A 403 FEATURE_OFF is not about the plan: nothing opens.
+		expect(readPaymentRequired({ statusCode: 403, code: 'FEATURE_OFF', flag: 'reports', fix: 'x' })).toBeNull();
+		expect(readPaymentRequired({ code: 'FEATURE_NOT_IN_PLAN', flag: 'reports', fix: 'https://evil.test' })?.upgradeHref).toBeNull();
+	});
+
 	it('follows only a same-origin link from the refusal', () => {
 		expect(readPaymentRequired({ code: 'QUOTA_EXCEEDED', fix: 'https://evil.test' })?.upgradeHref).toBeNull();
 		expect(readPaymentRequired({ code: 'QUOTA_EXCEEDED', fix: '//evil.test' })?.upgradeHref).toBeNull();

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0-alpha.12] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.10.
+
+### Fixed
+
+- **The upgrade dialog opens when your server refuses a plan-gated feature.** A request that `bridge-nestjs` refuses with `402` and `{ code: 'FEATURE_NOT_IN_PLAN', flag, feature, fix }` now opens the dialog in its feature variant, naming the feature (`data-feature`) and following `fix` when it is a path on your site. Before, only a limit (`QUOTA_EXCEEDED`) and problem details opened it, so a feature the plan lacks was refused with nothing on screen. A `403 FEATURE_OFF` still opens nothing.
+
 ## [1.0.0-alpha.11] - unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.10.

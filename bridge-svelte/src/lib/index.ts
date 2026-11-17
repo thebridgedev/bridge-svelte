@@ -88,6 +88,7 @@ export { default as PlanPicker } from './components/billing/PlanPicker.svelte';
 export { default as BillingPortalButton } from './components/billing/BillingPortalButton.svelte';
 export { default as SubscriptionStatus } from './components/billing/SubscriptionStatus.svelte';
 export { default as BillingNotice } from './components/billing/BillingNotice.svelte';
+export { default as BridgeBillingNotice } from './components/billing/BillingNotice.svelte';
 export { default as QuotaBanner } from './components/billing/QuotaBanner.svelte';
 export { default as BridgeQuotaBanner } from './components/billing/QuotaBanner.svelte';
 export { default as QuotaGate } from './components/billing/QuotaGate.svelte';

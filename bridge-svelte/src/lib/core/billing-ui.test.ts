@@ -258,3 +258,12 @@ describe('a 402 at a plan limit', () => {
 		expect(parseQuotaRefusal({ type: 'urn:bridge:problem:limit-reached', metric: 'seats', limit: 5, used: 5 })).toMatchObject({ metric: 'seats', fix: null });
 	});
 });
+
+describe('the 0.9 names of the billing components', () => {
+  it('BridgeBillingNotice, BridgeQuotaBanner and BridgeUpgradeDialog are the same components as the 1.0 names', async () => {
+    const lib = await import('../index.js');
+    expect(lib.BridgeBillingNotice).toBe(lib.BillingNotice);
+    expect(lib.BridgeQuotaBanner).toBe(lib.QuotaBanner);
+    expect(lib.BridgeUpgradeDialog).toBe(lib.UpgradeDialog);
+  });
+});

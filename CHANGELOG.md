@@ -10,7 +10,7 @@ Needs the auth-core release with plan limits, entitlements and the billing lock.
 - **`useQuota(metric)` has the numbers as properties:** `loading`, `unlimited`, `used`, `limit`, `remaining`, `warningLevel`, `kind` and `snapshot` (with `policy`). It is still a store, `$useQuota`, with `{ used, limit, ratio, state }`.
 - **The billing lock.** `<BillingNotice mode="hard" />` blocks the page while the workspace is locked for payment; the lock shows to every person and at once when your API answers a change with its 402 through `bridgeFetch`. `$billingGate` and `$billingLocked` give it as stores.
 - **`onBridgeQuotaExceeded(handler)`** runs for each limit your API refuses through `bridgeFetch`, for an app with its own dialog.
-- `BridgeQuotaBanner` and `BridgeUpgradeDialog` are other names for `QuotaBanner` and `UpgradeDialog`.
+- `BridgeBillingNotice`, `BridgeQuotaBanner` and `BridgeUpgradeDialog` are other names for `BillingNotice`, `QuotaBanner` and `UpgradeDialog`.
 
 ### Changed
 

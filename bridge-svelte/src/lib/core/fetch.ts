@@ -8,14 +8,16 @@
  *   is sent.
  * - A 402 that is a plan limit or a missing plan feature opens the upgrade
  *   dialog, when it came straight from your page's origin, your
- *   `tokenOrigins` or Bridge (never after a redirect). The response is
- *   returned as it came, either way.
+ *   `tokenOrigins` or Bridge (never after a redirect), and tells
+ *   `onBridgeQuotaExceeded` listeners of a limit. The response is
+ *   returned as it came, either way. A 402 for a workspace locked for
+ *   payment shows the lock (`BillingNotice`) and opens no dialog.
  *
  * There is no global fetch patch: only calls made through this carry a token.
  */
 import type { Bridge } from '@nebulr-group/bridge-auth-core';
 import { getBridge, peekConfig } from './client.js';
-import { openUpgrade, readPaymentRequired } from './upgrade.js';
+import { openUpgrade, parseQuotaRefusal, readPaymentRequired, reportQuotaRefusal } from './upgrade.js';
 
 function originOf(url: string): string | null {
 	try {
@@ -51,8 +53,11 @@ export async function bridgeFetch(input: RequestInfo | URL, init?: RequestInit):
 	const requested = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
 	if (response.status === 402 && mayExplain(bridge, requested, response)) {
 		try {
-			const request = readPaymentRequired(await response.clone().json());
+			const body: unknown = await response.clone().json();
+			const request = readPaymentRequired(body);
 			if (request !== null) openUpgrade(request);
+			const refusal = parseQuotaRefusal(body, response.url !== '' ? response.url : requested);
+			if (refusal !== null) reportQuotaRefusal(refusal);
 		} catch {
 			// Not JSON: not a refusal the dialog can explain.
 		}

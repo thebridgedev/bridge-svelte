@@ -34,11 +34,39 @@ Choosing a paid plan without a card on file sends the person to Stripe's checkou
 | `PlanPicker` | The plans on offer, with prices per interval and the current plan marked. Choosing needs `bridge-billing-manage`; others see who to ask |
 | `BillingPortalButton` | Opens Stripe's billing portal. Shown only with `bridge-billing-manage` |
 | `SubscriptionStatus` | The plan's name and its status |
-| `BillingNotice` | The one notice worth showing now: blocked, payment due, needs a plan, trial ending, ending, or a change waiting |
-| `QuotaBanner` | A limit nearing or reached, for one metric (`<QuotaBanner metric="tickets" />`) |
+| `BillingNotice` | The one notice worth showing now: blocked, payment due, needs a plan, trial ending, ending, or a change waiting. `mode="hard"` covers the page while the workspace is locked for payment |
+| `QuotaBanner` | A limit nearing (from 80%) or reached, for one metric (`<QuotaBanner metric="tickets" />`); a metered limit shows its overage |
+| `QuotaGate` | Disables the actions inside once a metric is at its hard limit, with an upgrade line beside them |
+| `Entitled` | Shows its content when the plan has a feature, a fallback when it does not |
 | `CheckoutNotice` | The outcome of a checkout the person came back from |
 
-`billing`, `plans` and `usage` are the stores behind them, as `{ value, loading, error }`. `useQuota('tickets')` gives `{ used, limit, ratio, state }` for your own display.
+`billing`, `plans` and `usage` are the stores behind them, as `{ value, loading, error }`.
+
+### Your own display
+
+`useQuota('tickets')` gives one metric's numbers, live: they move by themselves when usage or the plan changes.
+
+```svelte
+<script lang="ts">
+  import { useQuota } from '@nebulr-group/bridge-svelte';
+  const tickets = useQuota('tickets');
+</script>
+
+{#if tickets.loading}…{:else if tickets.unlimited}Unlimited{:else}{tickets.used} of {tickets.limit}{/if}
+```
+
+It has `loading`, `unlimited`, `used`, `limit`, `remaining`, `warningLevel` (`approaching` from 80%, `critical` from 95%), `kind` (`counter` or `gauge`) and the whole `snapshot` (with `policy`, `hard` or `metered`). There is never a made-up 0: while loading the numbers are `null`. It is also a store, `$tickets`, with `{ used, limit, ratio, state }`, or `null` while loading and for a metric without a limit.
+
+`$entitlements.can('analytics')` tells whether the plan has a feature; it reads the flag `bridge:billing.entitlement.analytics`, is `false` until Bridge has answered, and `$entitlements.ready` tells those two apart. `<Entitled to="analytics">` is the markup form. To gate a page or a button with a reason, use a flag with that rule and `<FeatureFlag>`.
+
+```svelte
+<QuotaGate metric="tickets">
+  <button onclick={createTicket}>New ticket</button>
+  {#snippet atLimit(quota)}{quota.used} of {quota.limit} used. <a href="/subscription">Upgrade</a>{/snippet}
+</QuotaGate>
+```
+
+The gate and the banner only decorate: your server refuses the write. They never disable on "not known yet", for a metric without a limit, or for a metered limit, which bills the overage instead of blocking.
 
 ## Plan limits
 
@@ -50,10 +78,16 @@ import { bridgeFetch } from '@nebulr-group/bridge-svelte';
 const response = await bridgeFetch('/api/tickets', { method: 'POST' });
 ```
 
-The dialog opens for a 402 that says a limit was reached (`{ code: 'QUOTA_EXCEEDED', metric, used, limit }`, or problem details of type `quota-exceeded`) or a plan feature is missing (`{ code: 'FEATURE_NOT_IN_PLAN', flag, feature }` from `@nebulr-group/bridge-nestjs`, or problem details of type `plan-required` with `entitlement`). Any other 402, such as a declined card, leaves it shut, and so does a 402 that came through a redirect or from a host other than your page, your `tokenOrigins` or Bridge. A link in the refusal is followed only when it is a path on your site. Open it yourself with `openUpgrade({ kind: 'feature', entitlement })`, replace it with `billing: { upgradeDialog: MyDialog }`, or turn it off with `false`.
+The dialog opens for a 402 that says a limit was reached (`{ code: 'QUOTA_EXCEEDED', metric, used, limit }`, or problem details of type `quota-exceeded`) or a plan feature is missing (`{ code: 'FEATURE_NOT_IN_PLAN', flag, feature }` from `@nebulr-group/bridge-nestjs`, or problem details of type `plan-required` with `entitlement`). Any other 402, such as a declined card, leaves it shut, and so does a 402 that came through a redirect or from a host other than your page, your `tokenOrigins` or Bridge. A link in the refusal is followed only when it is a path on your site. Run your own code for each refused limit with `onBridgeQuotaExceeded((refusal) => …)`. Open the dialog yourself with `openUpgrade({ kind: 'feature', entitlement })`, replace it with `billing: { upgradeDialog: MyDialog }`, or turn it off with `false`.
 
 `bridgeFetch` adds the person's token and refreshes it once after a 401. It sends the token only to your page's own origin, Bridge, and the origins you list:
 
 ```ts
 bridgeBootstrap({ tokenOrigins: ['https://api.example.com'] });
 ```
+
+## A workspace locked for payment
+
+When the payment provider has given up collecting, the workspace is locked: people can read, nothing can be changed. `<BillingNotice />` shows it to every person, not only the owner, and `<BillingNotice mode="hard" />` covers the page with a blocking screen that the owner can leave through the billing page. `$billingGate` is the lock as a store, `{ locked, severity, noticeState, recoveryUrl }`, and `$billingLocked` is its yes or no. It is read when the page starts and again when Bridge says billing access changed. When your API refuses a change with the lock's 402 (`BILLING_GATE_ENGAGED`) through `bridgeFetch`, the lock shows at once and the upgrade dialog stays shut: a locked workspace needs to pay, not to pick a plan.
+
+To run code when a metric's numbers change, use the client: `getBridge().handle({ 'quota.updated': (update) => … })` runs once for each metric whose numbers changed, and returns how to stop.

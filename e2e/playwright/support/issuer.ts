@@ -36,6 +36,8 @@ export interface TestIssuer {
 	/** Flag results for signed-in people (on top of the standard flags) and for visitors. */
 	setFlags(signedIn: Record<string, unknown>, visitor?: Record<string, unknown>): Promise<void>;
 	setFacts(facts: Record<string, unknown>): Promise<void>;
+	/** What the quota read answers for a metric (`null`: no limit on it). The local issuer only. */
+	setQuota(metric: string, read: Record<string, unknown> | null): Promise<void>;
 	/** Ends every session of a person, as Bridge does after a password reset or a removal. */
 	endSessions(email: string): Promise<void>;
 	/** Makes every session's last sign-in an hour old, so actions that want a recent sign-in ask the person to confirm it is them. */
@@ -84,6 +86,9 @@ class LocalIssuer implements TestIssuer {
 	}
 	async setFacts(facts: Record<string, unknown>) {
 		await this.call('/facts', facts);
+	}
+	async setQuota(metric: string, read: Record<string, unknown> | null) {
+		await this.call('/quota', { metric, read });
 	}
 	async endSessions(email: string) {
 		await this.call('/end-sessions', { email });

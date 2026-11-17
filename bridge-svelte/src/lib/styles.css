@@ -1755,6 +1755,62 @@
     color: var(--bridge-foreground, #111827);
   }
 
+  /* A locked workspace in hard mode: a blocking screen over the page. */
+  .bridge-billing-lockscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: var(--bridge-paywall-bg, rgba(15, 23, 42, 0.72));
+    backdrop-filter: blur(2px);
+  }
+
+  .bbl-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 28rem;
+    width: 100%;
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    background: var(--bridge-foreground, #111827);
+    color: var(--bridge-bg, #ffffff);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+    text-align: center;
+  }
+
+  .bbl-title {
+    font-size: calc(1.125 * var(--bridge-text-base, 1rem));
+    font-weight: var(--bridge-font-weight-heading, 600);
+  }
+
+  .bbl-body {
+    font-size: calc(0.9375 * var(--bridge-text-base, 1rem));
+    opacity: 0.85;
+  }
+
+  .bbl-cta {
+    align-self: center;
+    margin-top: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    border: 1px solid currentColor;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: var(--bridge-font-weight-button, 500);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .bbl-cta:hover {
+    background: var(--bridge-bg, #ffffff);
+    color: var(--bridge-foreground, #111827);
+  }
+
   /* ─── QuotaBanner ─────────────────────────────────────────────────────── */
 
   [data-bridge-quota-banner] {
@@ -1769,12 +1825,12 @@
     transition: opacity 280ms ease, transform 320ms ease;
   }
 
-  [data-bridge-quota-banner][data-state="near"] {
+  [data-bridge-quota-banner][data-severity="warn"] {
     background: var(--bridge-alert-warning-bg, #fffbeb);
     color: var(--bridge-alert-warning-fg, #92400e);
   }
 
-  [data-bridge-quota-banner][data-state="over"] {
+  [data-bridge-quota-banner][data-severity="critical"] {
     background: var(--bridge-alert-error-bg, #fef2f2);
     color: var(--bridge-alert-error-fg, #991b1b);
   }

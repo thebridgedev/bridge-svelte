@@ -4,11 +4,17 @@
   change waiting. Renders nothing when all is well. A person with the
   `billingManage` flag gets a link to the billing pages; anyone else is told
   to ask the workspace owner. Not dismissible: it goes when the facts change.
+
+  A workspace locked for payment shows to every person, from the lock Bridge
+  keeps (`billingGate`), and at once when your API refuses a write with the lock's
+  402 through `bridgeFetch`. With `mode="hard"` the lock covers the page as a
+  blocking screen; every other notice stays a banner.
 -->
 <script lang="ts">
   import type { HTMLAttributes } from 'svelte/elements';
   import { billingNotice, type BillingNotice as Notice } from '@nebulr-group/bridge-auth-core';
   import { peekConfig } from '../../core/client.js';
+  import { billingGate } from '../../core/billing-gate.js';
   import { canManageBilling } from '../../core/flags.js';
   import { billing, plans } from '../../core/stores.js';
   import { formatDate } from './plan-format.js';
@@ -19,13 +25,15 @@
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** The notice's shape: a full-width bar, a rail with a left edge, or a card. @default 'rail' */
     chassis?: Chassis;
+    /** `hard` covers the page with a blocking screen while the workspace is locked for payment; other notices stay banners. @default 'soft' */
+    mode?: 'soft' | 'hard';
     /** Where the action link goes. @default the plan page for no plan, else the subscription page */
     actionHref?: string;
     /** Replaces the action link's navigation. */
     onActionClick?: (notice: Notice) => void;
   }
 
-  let { chassis = 'rail', actionHref, onActionClick, class: className, style, ...rest }: Props = $props();
+  let { chassis = 'rail', mode = 'soft', actionHref, onActionClick, class: className, style, ...rest }: Props = $props();
 
   const config = peekConfig();
   const base = config?.billingBase ?? '/subscription';
@@ -42,7 +50,10 @@
 
   const OWNER = 'Please contact your workspace owner.';
 
-  const notice = $derived($billing.value ? billingNotice($billing.value) : null);
+  const BLOCKED: Notice = { kind: 'blocked' };
+  // The lock is shown from the gate as well as the billing facts: the gate is read by every person, and a refusal shows it at once.
+  const notice = $derived<Notice | null>($billingGate.locked ? BLOCKED : $billing.value ? billingNotice($billing.value) : null);
+  const lockscreen = $derived(mode === 'hard' && notice?.kind === 'blocked');
   const severity = $derived(notice ? SEVERITY[notice.kind] : 'info');
   const urgent = $derived(severity === 'critical' || severity === 'locked');
   const href = $derived(actionHref ?? (notice?.kind === 'needs-plan' ? `${base}/plan` : base || '/'));
@@ -102,7 +113,17 @@
   }
 </script>
 
-{#if notice && copy}
+{#if notice && copy && lockscreen}
+  <div class={['bridge-billing-lockscreen', className]} {style} data-bridge-billing-lockscreen role="alertdialog" aria-modal="true" aria-live="assertive" aria-labelledby="bridge-lock-title">
+    <div class="bbl-panel">
+      <strong id="bridge-lock-title" class="bbl-title">{copy.title}</strong>
+      <span class="bbl-body">{copy.body}</span>
+      {#if copy.cta && $canManage}
+        <a class="bbl-cta" {href} data-bridge-billing-notice-cta onclick={handleAction}>{copy.cta}</a>
+      {/if}
+    </div>
+  </div>
+{:else if notice && copy}
   <div
     class={['bridge-billing-notice', className]}
     {style}

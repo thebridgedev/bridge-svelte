@@ -67,17 +67,31 @@ function followLink(config: ResolvedConfig, url: URL): void {
 	redirect(307, `${page}${hash}`);
 }
 
+/**
+ * Whether the workspace is locked for payment, asked when the app's active flag is off. The flag is off both for a
+ * workspace with no plan and for one that is locked; only the first goes to the paywall. The flag can turn off before
+ * the lock held for the page is read again, so the lock is read now rather than taken from what is held.
+ */
+async function lockedNow(client: Bridge): Promise<boolean> {
+	if (client.isLocked()) return true;
+	const facts = await within(client.billing.gate(), READY_WAIT_MS);
+	return facts?.access === 'blocked';
+}
+
 async function guard(client: Bridge, config: ResolvedConfig, url: URL): Promise<GuardDecision> {
 	await within(client.ready, READY_WAIT_MS);
 	const flagsNeeded = authPageAt(normalizePath(url.pathname), config.authBase) === null;
 	if (flagsNeeded && get(client.flags.status) !== 'ready') await within(client.flags.load(), READY_WAIT_MS);
-	return decide(config, {
+	const input = {
 		path: url.pathname,
 		target: `${normalizePath(url.pathname)}${url.search}`,
 		session: client.session.get(),
 		flags: client.flags,
 		returnTo: readReturnTo(url, config.returnToParam),
-	});
+	};
+	const decision = decide(config, input);
+	if (decision.type !== 'redirect' || decision.reason !== 'paywall') return decision;
+	return (await lockedNow(client)) ? decide(config, { ...input, locked: true }) : decision;
 }
 
 /**

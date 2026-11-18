@@ -6,6 +6,10 @@
  *
  * It fails closed: while Bridge cannot be reached, a protected page sends
  * the visitor to sign-in, and a flag that has no result is off.
+ *
+ * The paywall is for a workspace that has no plan yet. A workspace locked for
+ * payment keeps its page: it can still be read, and the lock screen covers it
+ * where the person is (`<BillingNotice mode="hard">`), as in 0.9.
  */
 import { sanitizeReturnTo, withReturnTo, type SessionState } from '@nebulr-group/bridge-auth-core';
 import type { FlagRequirement, ResolvedConfig, RouteRule } from './config.js';
@@ -75,6 +79,8 @@ export interface GuardInput {
 	readonly flags: FlagReader;
 	/** The return address already on the URL, on an auth page. */
 	readonly returnTo: string | null;
+	/** Whether the workspace is locked for payment: then the page stays and shows the lock, rather than the paywall. */
+	readonly locked?: boolean;
 }
 
 /** Decides one navigation. */
@@ -102,7 +108,7 @@ export function decide(config: ResolvedConfig, given: GuardInput): GuardDecision
 	}
 
 	const billingPage = isUnder(input.path, config.billingBase);
-	if (signedIn && !isPublic && !billingPage && config.paywall !== null && !input.flags.enabled(config.flagKeys.appActive)) {
+	if (signedIn && !isPublic && !billingPage && config.paywall !== null && input.locked !== true && !input.flags.enabled(config.flagKeys.appActive)) {
 		if (config.paywall === input.path) return { type: 'allow' };
 		return { type: 'redirect', to: withReturnTo(config.paywall, input.target, config.returnToParam), reason: 'paywall' };
 	}

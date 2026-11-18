@@ -83,6 +83,13 @@ describe('decide', () => {
 		expect(run({ billing: { paywall: false } }, '/reports', signedIn, on())).toEqual({ type: 'allow' });
 		expect(run({ rules: [{ match: '/', public: true }] }, '/', signedIn, on())).toEqual({ type: 'allow' });
 	});
+
+	it('keeps the page of a workspace locked for payment: the lock screen covers it there, not the paywall', () => {
+		const config = resolveConfig({ issuer: ISSUER }, undefined);
+		const input = { path: '/reports', target: '/reports', session: signedIn, flags: on(), returnTo: null };
+		expect(decide(config, { ...input, locked: true })).toEqual({ type: 'allow' });
+		expect(decide(config, { ...input, locked: false })).toEqual({ type: 'redirect', to: '/subscription/plan?redirectUri=%2Freports', reason: 'paywall' });
+	});
 });
 
 describe('paths, as the router resolves them', () => {

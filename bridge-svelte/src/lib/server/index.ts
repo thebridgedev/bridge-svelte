@@ -168,6 +168,9 @@ export function bridgeHandle(options: BridgeHandleOptions): Handle {
 			},
 			server,
 			flags(hints) {
+				// A credential nothing checked (a `skip` route) is never forwarded: it may be a key
+				// from someone else's Bridge app, and that app's flag results would come back.
+				if (actor === null && carriesBridgeCredential(event.request, options.issuer)) return Promise.resolve(new FlagSet());
 				flags ??= server.flags.forRequest(event.request, hints).catch(() => new FlagSet());
 				return flags;
 			},

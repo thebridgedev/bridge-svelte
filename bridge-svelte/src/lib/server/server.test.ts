@@ -251,6 +251,17 @@ describe('keys on server endpoints', () => {
 		expect(status).toBe(200);
 	});
 
+	it('gives a `skip` route an empty flag set when the request carries a key or token nothing checked', async () => {
+		const { ring, fetchFn } = await issuer();
+		const handle = bridgeHandle({ issuer: ISSUER, fetch: fetchFn, skip: (event) => event.url.pathname.startsWith('/api/cron') });
+		const foreignKey = eventFor({ 'x-api-key': 'key-holder' }, 'GET', '/api/cron/nightly');
+		const token = eventFor({ authorization: `Bearer ${await personToken(ring)}` }, 'GET', '/api/cron/nightly');
+		for (const event of [foreignKey, token]) {
+			expect((await endpoint(handle, event, () => undefined)).status).toBe(200);
+			expect((await flagsFor(event as never)).enabled('reports')).toBe(false);
+		}
+	});
+
 	it('does not change what a person gets: requireActor, flagsFor and meter work as before', async () => {
 		const { ring, fetchFn } = await issuer();
 		const handle = bridgeHandle({ issuer: ISSUER, fetch: fetchFn, appKey: 'app-key-1', usageFlushMs: 60_000 });

@@ -1,8 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [1.0.0-alpha.13] - unreleased
 
-Needs the auth-core release with plan limits, entitlements and the billing lock.
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.11, which has plan limits, entitlements and the billing lock.
 
 ### Added
 

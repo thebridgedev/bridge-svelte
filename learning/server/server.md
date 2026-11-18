@@ -40,19 +40,27 @@ Call your API from the browser with `bridgeFetch`, which adds the person's token
 ```ts
 // src/routes/api/reports/+server.ts
 import { json } from '@sveltejs/kit';
-import { requireActor, meter, flagsFor } from '@nebulr-group/bridge-svelte/server';
+import { requireFlag, meter } from '@nebulr-group/bridge-svelte/server';
 
 export const POST = async (event) => {
-  const actor = requireActor(event);                 // 401 without a signed-in caller
-  const flags = await flagsFor(event);
-  if (!flags.enabled('reports')) return json({ error: 'off' }, { status: 403 });
+  const actor = await requireFlag(event, 'reports'); // 401 without a caller, 403 when the flag is off for them
   meter(event, 'reports');                           // "count this" for the caller's workspace
   return json({ workspace: actor.workspaceId });
 };
 ```
 
 - `actor` is `{ kind, id, personId, workspaceId, sessionId, appId, standing }`. A workspace whose `standing` is not `active` should only read.
+- `requireActor(event)` gives the caller or a 401, for an endpoint a signed-in person may use without a flag.
 - `meter(event, metric, quantity?)` counts usage. Reports are sent in batches every few seconds and sent again on failure without counting twice. It needs `appKey`.
-- `flagsFor(event)` gives the caller's flag results, worked out by Bridge for the person whose token came with the request. A request without one gets every flag's fallback.
+- `flagsFor(event)` gives the caller's flag results, worked out by Bridge for the credential that came with the request: a person's token, or a Bridge key (rules on the key's privileges apply; rules on a role, user or email never match a key). A request with neither gets every flag's fallback.
+
+## Keys on your endpoints
+
+A request that comes with a Bridge key (`x-api-key`) is protected by default. It reaches an endpoint in only two ways:
+
+- **A flag lets it in.** `requireFlag(event, 'reports')` lets a key through only when the key's privileges match the flag's rule. A key without the privilege gets a 403.
+- **You mark the endpoint open.** `requireActor(event, { openToKeys: true })` lets every valid key through, whatever the flags say. Use it for an endpoint that checks the key's rights some other way.
+
+Any other endpoint that asks for the caller (`requireActor(event)`, `meter(event, ...)`) answers a key 403, and `event.locals.bridge.actor` is `null` for it. People are checked exactly as before. A route in `skip` is not checked at all, so a key there is yours to handle.
 
 `event.locals.bridge.server` is the server client, for anything else.

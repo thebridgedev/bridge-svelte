@@ -5,7 +5,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { APP, makeKeyRing, mint, tamper, type KeyRing } from '../../../test-fixtures/signed/fixtures.js';
 import { fakeRevocationList, makeLaneKey, type LaneKey } from '../../../test-fixtures/signed/revocation-fixtures.js';
-import { bridgeHandle, flagsFor, meter, requireActor } from './index.js';
+import { isHttpError } from '@sveltejs/kit';
+import { bridgeHandle, flagsFor, meter, requireActor, requireFlag } from './index.js';
 
 const ORIGIN = 'https://bridge.test';
 const ISSUER = `${ORIGIN}/identity-access/apps/${APP}`;
@@ -13,6 +14,13 @@ const AUDIENCE = `${ORIGIN}/api`;
 const LIST = `${ORIGIN}/v2/lanes`;
 const JWKS = `${ORIGIN}/v2/identity-access/apps/${APP}/jwks.json`;
 const LANES = ['identity-access', 'accounts', 'billing', 'app-registry'] as const;
+const INTROSPECT = `${ORIGIN}/v2/identity-access/apps/${APP}/introspect`;
+const FLAGS = `${ORIGIN}/v2/flags/ofrep/v1/evaluate/flags`;
+/** Two keys: one holds the privilege the `reports` flag's rule asks for, one does not. */
+const KEYS: Record<string, { sub: string; kind: string; privileges: string[]; reports: boolean }> = {
+	'key-holder': { sub: 'key-1', kind: 'app_key', privileges: ['reports:read'], reports: true },
+	'key-bare': { sub: 'key-2', kind: 'service_account_key', privileges: [], reports: false },
+};
 const offline = (() => Promise.reject(new TypeError('offline'))) as unknown as typeof fetch;
 
 async function issuer(options: { listNow?: () => number } = {}) {
@@ -34,6 +42,19 @@ async function issuer(options: { listNow?: () => number } = {}) {
 	const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
 		const url = new Request(input, init).url;
 		if (url === `${ISSUER}/.well-known/openid-configuration`) return Response.json(metadata);
+		const key = new Request(input, init).headers.get('x-api-key');
+		if (url === FLAGS) {
+			// Bridge works the flag out for the key's own privileges.
+			const known = key === null ? undefined : KEYS[key];
+			const person = new Request(input, init).headers.get('authorization')?.startsWith('Bearer ') === true;
+			return Response.json({ flags: [{ key: 'reports', value: person || (known?.reports ?? false), reason: 'TARGETING_MATCH' }] });
+		}
+		if (url === INTROSPECT) {
+			const { token } = (await new Request(input, init).json()) as { token: string };
+			const known = KEYS[token];
+			if (known === undefined) return Response.json({ active: false });
+			return Response.json({ active: true, type: 'api', sub: known.sub, appId: APP, tenantId: known.kind === 'app_key' ? null : 'ws-acme', kind: known.kind, privileges: known.privileges });
+		}
 		return list.fetch(input, init);
 	}) as typeof fetch;
 	return { ring, list, fetchFn };
@@ -147,5 +168,104 @@ describe('bridgeHandle', () => {
 
 	it('says how to set it up when the hook is missing', () => {
 		expect(() => requireActor({ locals: {} } as never)).toThrow(/bridgeHandle/);
+	});
+});
+
+/** Runs an endpoint the way SvelteKit would: its thrown `error(...)` becomes the response status. */
+async function endpoint(handle: ReturnType<typeof bridgeHandle>, event: ReturnType<typeof eventFor>, route: (event: never) => unknown) {
+	const resolve = async () => {
+		try {
+			await route(event as never);
+			return new Response('ok');
+		} catch (thrown) {
+			if (isHttpError(thrown)) return new Response(thrown.body.message, { status: thrown.status });
+			throw thrown;
+		}
+	};
+	const response = await handle({ event, resolve } as never);
+	return { status: response.status };
+}
+
+describe('keys on server endpoints', () => {
+	const gated = (event: never) => requireFlag(event, 'reports');
+	const unmarked = (event: never) => requireActor(event);
+	const open = (event: never) => requireActor(event, { openToKeys: true });
+	const setUp = async () => {
+		const { fetchFn } = await issuer();
+		return bridgeHandle({ issuer: ISSUER, fetch: fetchFn });
+	};
+
+	it('lets a key through an endpoint gated by a flag when its privileges match the flag\'s rule', async () => {
+		const handle = await setUp();
+		const event = eventFor({ 'x-api-key': 'key-holder' });
+		expect((await endpoint(handle, event, gated)).status).toBe(200);
+		expect(requireActor(event as never)).toMatchObject({ kind: 'app_key', id: 'key-1' });
+	});
+
+	it('answers 403 to a key whose privileges do not match the flag\'s rule', async () => {
+		const handle = await setUp();
+		const event = eventFor({ 'x-api-key': 'key-bare' });
+		expect((await endpoint(handle, event, gated)).status).toBe(403);
+		// The refused key is still no caller for the rest of the request.
+		expect(() => requireActor(event as never)).toThrow();
+		expect((event.locals as { bridge: { actor: unknown } }).bridge.actor).toBeNull();
+	});
+
+	it('answers 403 to a key on an endpoint with no flag gate, and the endpoint does no work', async () => {
+		const handle = await setUp();
+		for (const key of ['key-holder', 'key-bare']) {
+			let worked = false;
+			const { status } = await endpoint(handle, eventFor({ 'x-api-key': key }, 'POST'), (event) => {
+				requireActor(event);
+				worked = true;
+			});
+			expect(status, key).toBe(403);
+			expect(worked, key).toBe(false);
+		}
+	});
+
+	it('answers 403 when an endpoint with no gate reads the caller or counts usage without asking for keys', async () => {
+		const handle = await setUp();
+		const event = eventFor({ 'x-api-key': 'key-holder' });
+		const { status } = await endpoint(handle, event, (e) => meter(e, 'reports'));
+		expect(status).toBe(403);
+		expect((event.locals as { bridge: { actor: unknown } }).bridge.actor).toBeNull();
+	});
+
+	it('lets a key through an endpoint marked open, whatever the flags say', async () => {
+		const handle = await setUp();
+		for (const key of ['key-holder', 'key-bare']) expect((await endpoint(handle, eventFor({ 'x-api-key': key }), open)).status, key).toBe(200);
+	});
+
+	it('still answers 401 to a bad key and 401 to a request with no credential', async () => {
+		const handle = await setUp();
+		expect((await endpoint(handle, eventFor({ 'x-api-key': 'key-unknown' }), open)).status).toBe(401);
+		expect((await endpoint(handle, eventFor(), open)).status).toBe(401);
+		expect((await endpoint(handle, eventFor(), gated)).status).toBe(401);
+	});
+
+	it('leaves a route in `skip` alone: no check, no actor, whatever it carries', async () => {
+		const { fetchFn } = await issuer();
+		const handle = bridgeHandle({ issuer: ISSUER, fetch: fetchFn, skip: (event) => event.url.pathname.startsWith('/api/cron') });
+		const { status } = await endpoint(handle, eventFor({ 'x-api-key': 'key-bare' }, 'POST', '/api/cron/nightly'), () => undefined);
+		expect(status).toBe(200);
+	});
+
+	it('does not change what a person gets: requireActor, flagsFor and meter work as before', async () => {
+		const { ring, fetchFn } = await issuer();
+		const handle = bridgeHandle({ issuer: ISSUER, fetch: fetchFn, appKey: 'app-key-1', usageFlushMs: 60_000 });
+		const event = eventFor({ authorization: `Bearer ${await personToken(ring)}` });
+		expect((await endpoint(handle, event, unmarked)).status).toBe(200);
+		expect(event.locals.bridge).toMatchObject({ actor: { kind: 'person', id: 'usr-alice' } });
+		expect(() => meter(event as never, 'reports')).not.toThrow();
+		expect((await flagsFor(event as never)).enabled('reports')).toBe(true);
+		expect((await endpoint(handle, eventFor({ authorization: `Bearer ${await personToken(ring)}` }), open)).status).toBe(200);
+	});
+
+	it('lets a person through requireFlag when the flag is on for them', async () => {
+		const { ring, fetchFn } = await issuer();
+		const handle = bridgeHandle({ issuer: ISSUER, fetch: fetchFn });
+		const token = await personToken(ring);
+		expect((await endpoint(handle, eventFor({ authorization: `Bearer ${token}` }), gated)).status).toBe(200);
 	});
 });

@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+Needs a `@nebulr-group/bridge-auth-core` release that evaluates flags for keys (`flags.forRequest` with an `x-api-key`).
+
+### Added
+
+- **A key passes a flag gate when its privileges match the flag's rule.** A request that carries a Bridge key now gets its flag results from Bridge for that key (before, only a person's token did, so every key failed every flag). The new `requireFlag(event, 'reports')` in `+server.ts` gives the caller, a 401 without one, and a 403 when the flag is off for them. For a key that means its privileges do not match the flag's rule.
+
+### Changed
+
+- **Breaking: endpoints are protected against keys by default.** A request that comes with a Bridge key is answered 403 by `requireActor(event)` and `meter(event, ...)`, and `event.locals.bridge.actor` is `null` for it, unless the endpoint lets keys in. Before, any valid key passed any endpoint that only called `requireActor`. Let a key in by gating the endpoint with `requireFlag(event, 'your-flag')`, or mark an endpoint that is meant for every valid key as open: `requireActor(event, { openToKeys: true })`. People's requests behave as before, and a route in `skip` is still left alone.
+
 ## [1.0.0-alpha.13] - unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.11, which has plan limits, entitlements and the billing lock.

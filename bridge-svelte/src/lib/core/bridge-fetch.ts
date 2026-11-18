@@ -40,6 +40,12 @@ function observeIfWatched(response: Response, url: string, apiBaseUrl: string): 
   }
 }
 
+/** True when the caller set its own `Authorization` header, on `init` or on a `Request`. */
+function hasExplicitAuthorization(input: RequestInfo | URL, init?: RequestInit): boolean {
+  if (init?.headers && new Headers(init.headers).has('Authorization')) return true;
+  return typeof Request !== 'undefined' && input instanceof Request && input.headers.has('Authorization');
+}
+
 /**
  * Wraps a fetch function with Bridge auth concerns for requests to `apiBaseUrl`.
  * Requests to other URLs pass through completely untouched.
@@ -70,6 +76,17 @@ export function wrapFetchWithBridgeAuth(baseFetch: typeof fetch, apiBaseUrl: str
       observeIfWatched(passthrough, url, apiBaseUrl);
       noteBackendResponse(passthrough); // TBP-697 — dev-only double-count check
       return passthrough;
+    }
+
+    // TBP-896 — a request that names its own credential keeps it. Replacing an
+    // explicit `Authorization` (an API token, an MCP connection token) with the
+    // signed-in user's session token sent the wrong identity: the MCP endpoint
+    // answered 401 to a valid service-account token called from an app page.
+    // Such a request is the caller's own, so it is passed through untouched.
+    if (hasExplicitAuthorization(input, init)) {
+      const own = await baseFetch(input, init);
+      observeIfWatched(own, url, apiBaseUrl);
+      return own;
     }
 
     // 1. Inject current access token.

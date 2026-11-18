@@ -161,6 +161,10 @@ export class StageIssuer implements TestIssuer {
 		}
 	}
 
+	async setQuota(): Promise<void> {
+		throw new Error('A quota read is the plan\'s own on a real server; the spec is for the local issuer.');
+	}
+
 	async setFacts(facts: Record<string, unknown>): Promise<void> {
 		const plan = (facts['plan'] as { key?: string } | undefined)?.key;
 		for (const workspace of this.workspaces.values()) {

@@ -20,14 +20,19 @@ export type { GuardDecision, GuardInput } from './core/guard.js';
 // State
 export { billing, flags, flagsStatus, liveStatus, me, plans, resource, session, signedIn, usage, user, workspace, workspaces } from './core/stores.js';
 export type { Resource, ResourceStore } from './core/stores.js';
+export { entitlements } from './core/entitlements.js';
+export type { EntitlementsState } from './core/entitlements.js';
+export { billingGate, billingLocked } from './core/billing-gate.js';
+export { useQuota } from './core/quota.js';
+export type { Quota, QuotaHandle, QuotaLevel, QuotaState } from './core/quota.js';
 
 // Flags
 export { canManageBilling, canManageTeam, flag, flagReason, requireFlag, useFlag } from './core/flags.js';
 
 // Calling your API
 export { bridgeFetch } from './core/fetch.js';
-export { closeUpgrade, openUpgrade, readPaymentRequired, upgradeRequest } from './core/upgrade.js';
-export type { UpgradeDialogProps, UpgradeRequest } from './core/upgrade.js';
+export { closeUpgrade, onBridgeQuotaExceeded, openUpgrade, parseQuotaRefusal, readPaymentRequired, upgradeRequest } from './core/upgrade.js';
+export type { BridgeQuotaRefusal, UpgradeDialogProps, UpgradeRequest } from './core/upgrade.js';
 
 // Confirming it is you
 export { cancelRecheck, confirmItIsYou, recheckRequest, withRecheck } from './core/recheck.js';
@@ -44,7 +49,7 @@ export type { PluginMessageKey } from './core/messages.js';
 
 // The few auth-core names app code needs to use this package
 export { BridgeError, isBridgeError, needsRecheck, STANDARD_FLAGS } from '@nebulr-group/bridge-auth-core';
-export type { Bridge, BridgeErrorKind, RecheckMethod, SessionState, SessionUser, SessionWorkspace } from '@nebulr-group/bridge-auth-core';
+export type { BillingGateState, Bridge, BridgeErrorKind, QuotaSnapshot, RecheckMethod, SessionState, SessionUser, SessionWorkspace } from '@nebulr-group/bridge-auth-core';
 
 // Components
 export { default as BridgeBootstrap } from './components/BridgeBootstrap.svelte';
@@ -68,6 +73,7 @@ export { default as ProfileName } from './components/auth/ProfileName.svelte';
 export { default as FeatureFlag } from './components/flags/FeatureFlag.svelte';
 export type { FeatureFlagOffInfo } from './components/flags/FeatureFlag.svelte';
 export { default as UpgradeDialog } from './components/billing/UpgradeDialog.svelte';
+export { default as BridgeUpgradeDialog } from './components/billing/UpgradeDialog.svelte';
 export { default as LiveStatusBadge } from './components/live/LiveStatusBadge.svelte';
 export { default as TeamPanel } from './components/team/TeamPanel.svelte';
 export { default as MemberList } from './components/team/MemberList.svelte';
@@ -82,7 +88,9 @@ export { default as PlanPicker } from './components/billing/PlanPicker.svelte';
 export { default as BillingPortalButton } from './components/billing/BillingPortalButton.svelte';
 export { default as SubscriptionStatus } from './components/billing/SubscriptionStatus.svelte';
 export { default as BillingNotice } from './components/billing/BillingNotice.svelte';
+export { default as BridgeBillingNotice } from './components/billing/BillingNotice.svelte';
 export { default as QuotaBanner } from './components/billing/QuotaBanner.svelte';
+export { default as BridgeQuotaBanner } from './components/billing/QuotaBanner.svelte';
+export { default as QuotaGate } from './components/billing/QuotaGate.svelte';
+export { default as Entitled } from './components/billing/Entitled.svelte';
 export { default as CheckoutNotice } from './components/billing/CheckoutNotice.svelte';
-export { useQuota } from './components/billing/quota.js';
-export type { Quota, QuotaState } from './components/billing/quota.js';

@@ -32,6 +32,7 @@ function fresh(): FakeIssuer {
 	made.setFlags(STANDARD_FLAGS);
 	made.setPlans(PLANS);
 	made.setFacts({ plan: { key: 'free', name: 'Free' }, status: 'active', access: 'ok', limits: { tickets: 3 }, usage: { tickets: 1 } });
+	made.setQuota('tickets', { used: 1, limit: 3, remaining: 2, policy: 'hard' });
 	return made;
 }
 
@@ -77,6 +78,9 @@ async function control(path: string, request: Request, url: URL): Promise<Respon
 			return json({ ok: true });
 		case '/facts':
 			fake.setFacts(body);
+			return json({ ok: true });
+		case '/quota':
+			fake.setQuota(String(body['metric']), (body['read'] as object | null) ?? null);
 			return json({ ok: true });
 		case '/usage':
 			return json(fake.usage);

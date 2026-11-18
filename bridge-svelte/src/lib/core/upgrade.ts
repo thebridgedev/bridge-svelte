@@ -83,3 +83,51 @@ export function readPaymentRequired(body: unknown): UpgradeRequest | null {
 	}
 	return null;
 }
+
+/** A plan limit your API refused: the 402 `QUOTA_EXCEEDED` answer, for code that wants to show something other than the dialog. */
+export interface BridgeQuotaRefusal {
+	/** The metric the plan ran out of, such as `tickets`. */
+	readonly metric: string;
+	/** How much was used when the request was refused, if the API said. */
+	readonly used: number | null;
+	/** The plan's limit, if the API said. */
+	readonly limit: number | null;
+	/** Where the refusal said to upgrade, when it named a page of this app; else null. */
+	readonly fix: string | null;
+	/** The API's own words, if it sent some. */
+	readonly message: string | null;
+	/** The address of the request that was refused. */
+	readonly url: string;
+}
+
+/** The refusal in a 402 body, or null when the body is not a plan limit (a declined card, a missing plan feature). */
+export function parseQuotaRefusal(body: unknown, url = ''): BridgeQuotaRefusal | null {
+	const request = readPaymentRequired(body);
+	if (request === null || request.kind !== 'limit' || request.metric === null || request.metric === undefined) return null;
+	return { metric: request.metric, used: request.used ?? null, limit: request.limit ?? null, fix: request.upgradeHref ?? null, message: request.message ?? null, url };
+}
+
+type QuotaListener = (refusal: BridgeQuotaRefusal) => void;
+const listeners = new Set<QuotaListener>();
+
+/**
+ * Runs `handler` each time your API refuses a request at a plan limit, through `bridgeFetch`: for an app that turned the
+ * dialog off (`billing.upgradeDialog: false`) and shows its own. Returns how to stop.
+ */
+export function onBridgeQuotaExceeded(handler: QuotaListener): () => void {
+	listeners.add(handler);
+	return () => {
+		listeners.delete(handler);
+	};
+}
+
+/** Tells the listeners of one refusal. A broken listener stops neither the others nor the dialog. */
+export function reportQuotaRefusal(refusal: BridgeQuotaRefusal): void {
+	for (const listener of [...listeners]) {
+		try {
+			listener(refusal);
+		} catch {
+			// One listener's mistake is its own.
+		}
+	}
+}

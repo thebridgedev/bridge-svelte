@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0-alpha.14] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.12, which reads the lock after a lock even while Bridge still refuses the renewed token.
+
+### Fixed
+
+- **A workspace locked for payment keeps its page.** The route guard no longer sends a locked workspace to the plan page (the paywall); it stays where it is and `<BillingNotice mode="hard" />` shows the lock screen, and recovers by itself once the workspace is unlocked. A workspace with no plan still goes to the plan page.
+
 ## [1.0.0-alpha.13] - unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.11, which has plan limits, entitlements and the billing lock.

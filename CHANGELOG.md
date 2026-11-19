@@ -1,8 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [1.0.0-alpha.15] - unreleased
 
-Needs a `@nebulr-group/bridge-auth-core` release that evaluates flags for keys (`flags.forRequest` with an `x-api-key`).
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.13, which evaluates flags for keys (`flags.forRequest` with an `x-api-key`).
 
 ### Added
 
@@ -11,6 +11,14 @@ Needs a `@nebulr-group/bridge-auth-core` release that evaluates flags for keys (
 ### Changed
 
 - **Breaking: endpoints are protected against keys by default.** A request that comes with a Bridge key is answered 403 by `requireActor(event)` and `meter(event, ...)`, and `event.locals.bridge.actor` is `null` for it, unless the endpoint lets keys in. Before, any valid key passed any endpoint that only called `requireActor`. Let a key in by gating the endpoint with `requireFlag(event, 'your-flag')`, or mark an endpoint that is meant for every valid key as open: `requireActor(event, { openToKeys: true })`. People's requests behave as before, and a route in `skip` is still left alone.
+
+## [1.0.0-alpha.14] - unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.12, which reads the lock after a lock even while Bridge still refuses the renewed token.
+
+### Fixed
+
+- **A workspace locked for payment keeps its page.** The route guard no longer sends a locked workspace to the plan page (the paywall); it stays where it is and `<BillingNotice mode="hard" />` shows the lock screen, and recovers by itself once the workspace is unlocked. A workspace with no plan still goes to the plan page.
 
 ## [1.0.0-alpha.13] - unreleased
 

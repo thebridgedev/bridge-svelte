@@ -13,6 +13,7 @@ import { resolveConfig } from './config.js';
 import { billingGate } from './billing-gate.js';
 import { entitlements } from './entitlements.js';
 import { bridgeFetch } from './fetch.js';
+import { bridgeBootstrap } from '../bootstrap.js';
 import { useQuota } from './quota.js';
 import { closeUpgrade, onBridgeQuotaExceeded, parseQuotaRefusal, upgradeRequest, type BridgeQuotaRefusal } from './upgrade.js';
 import BillingNotice from '../components/billing/BillingNotice.svelte';
@@ -266,4 +267,56 @@ describe('the 0.9 names of the billing components', () => {
     expect(lib.BridgeQuotaBanner).toBe(lib.QuotaBanner);
     expect(lib.BridgeUpgradeDialog).toBe(lib.UpgradeDialog);
   });
+});
+
+describe('a workspace locked for payment while a page is open', () => {
+	const event = (path: string) => ({ url: new URL(`http://localhost${path}`), params: {}, route: { id: '/r1' }, depends: () => undefined });
+	async function outcome(load: ReturnType<typeof bridgeBootstrap>, path: string): Promise<string> {
+		try {
+			await load(event(path));
+			return 'allow';
+		} catch (thrown) {
+			const t = thrown as { status?: number; location?: string };
+			return t.location !== undefined ? `${t.status} ${t.location}` : `${t.status}`;
+		}
+	}
+	async function withWindow<T>(work: () => Promise<T>): Promise<T> {
+		(globalThis as { window?: unknown }).window = { location: { hash: '' } };
+		try {
+			return await work();
+		} finally {
+			delete (globalThis as { window?: unknown }).window;
+		}
+	}
+
+	it('keeps the page and covers it with the lock screen, as 0.9 does: the paywall is only for a workspace with no plan', async () => {
+		await withWindow(async () => {
+			const { fake, client } = await signedIn();
+			const load = bridgeBootstrap({ issuer: fake.issuer, tokenOrigins: [API] });
+			expect(await outcome(load, '/r1')).toBe('allow');
+			// The lock: Bridge's facts say blocked and the app's active flag turns off. The flag results arrive first,
+			// before the lock held for the page is read again, and the guard runs on the open page.
+			fake.setFacts({ plan: { key: 'free', name: 'Free' }, status: 'past_due', access: 'blocked' });
+			fake.setFlags({ 'bridge-app-active': false, 'bridge-billing-manage': true });
+			await client.flags.load();
+			expect(get(billingGate).locked).toBe(false);
+			expect(await outcome(load, '/r1')).toBe('allow');
+			// The lock takes back every token: the next call renews, and the lock is read again.
+			fake.refuseTokensSoFar();
+			await client.billing.state();
+			await flush();
+			expect(get(billingGate).locked).toBe(true);
+			expect(html(BillingNotice, { mode: 'hard' })).toContain('data-bridge-billing-lockscreen');
+			// Still on the page after the lock is known; once lifted the flag turns on and the page goes on as before.
+			expect(await outcome(load, '/r1')).toBe('allow');
+		});
+	});
+
+	it('still sends a workspace with no plan to the paywall', async () => {
+		await withWindow(async () => {
+			const { fake } = await signedIn({ flags: { 'bridge-app-active': false }, facts: { plan: null, status: 'none', access: 'needs_plan' } });
+			const load = bridgeBootstrap({ issuer: fake.issuer, tokenOrigins: [API] });
+			expect(await outcome(load, '/r1')).toBe('307 /subscription/plan?redirectUri=%2Fr1');
+		});
+	});
 });

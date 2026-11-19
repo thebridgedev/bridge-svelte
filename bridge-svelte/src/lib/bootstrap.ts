@@ -68,14 +68,15 @@ function followLink(config: ResolvedConfig, url: URL): void {
 }
 
 /**
- * Whether the workspace is locked for payment, asked when the app's active flag is off. The flag is off both for a
- * workspace with no plan and for one that is locked; only the first goes to the paywall. The flag can turn off before
- * the lock held for the page is read again, so the lock is read now rather than taken from what is held.
+ * Whether the paywall's reason holds now: the workspace has no plan. The app's active flag is off for that, and also for
+ * a workspace that is locked for payment, and a flag result can lag Bridge's billing by a moment after the lock is
+ * lifted or a plan is chosen, so the flag alone does not send the page away. Bridge's billing facts are read now,
+ * not taken from what is held; only "needs a plan" goes to the paywall. When they cannot be read, the flag decides.
  */
-async function lockedNow(client: Bridge): Promise<boolean> {
-	if (client.isLocked()) return true;
+async function needsPlanNow(client: Bridge): Promise<boolean> {
+	if (client.isLocked()) return false;
 	const facts = await within(client.billing.gate(), READY_WAIT_MS);
-	return facts?.access === 'blocked';
+	return facts === undefined ? true : facts.access === 'needs_plan';
 }
 
 async function guard(client: Bridge, config: ResolvedConfig, url: URL): Promise<GuardDecision> {
@@ -91,7 +92,7 @@ async function guard(client: Bridge, config: ResolvedConfig, url: URL): Promise<
 	};
 	const decision = decide(config, input);
 	if (decision.type !== 'redirect' || decision.reason !== 'paywall') return decision;
-	return (await lockedNow(client)) ? decide(config, { ...input, locked: true }) : decision;
+	return (await needsPlanNow(client)) ? decision : decide(config, { ...input, locked: true });
 }
 
 /**

@@ -79,7 +79,7 @@ export interface GuardInput {
 	readonly flags: FlagReader;
 	/** The return address already on the URL, on an auth page. */
 	readonly returnTo: string | null;
-	/** Whether the workspace is locked for payment: then the page stays and shows the lock, rather than the paywall. */
+	/** The page stays although the app's active flag is off: the workspace is locked for payment (the lock screen covers the page) or has a plan (the flag lags Bridge's billing), rather than the paywall. */
 	readonly locked?: boolean;
 }
 

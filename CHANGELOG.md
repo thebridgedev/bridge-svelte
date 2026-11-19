@@ -6,6 +6,7 @@ Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.13, which evaluates flags for
 
 ### Added
 
+- **`<SignUpForm attribution={…}>`** sends where the visit came from (campaign tags and the visitor's marketing consent) with the sign-up; give a value or a function read when the form is sent. Sent from the auth-core release that takes `signUp.start({ attribution })`; an older one leaves it out.
 - **A key passes a flag gate when its privileges match the flag's rule.** A request that carries a Bridge key now gets its flag results from Bridge for that key (before, only a person's token did, so every key failed every flag). The new `requireFlag(event, 'reports')` in `+server.ts` gives the caller, a 401 without one, and a 403 when the flag is off for them. For a key that means its privileges do not match the flag's rule.
 
 ### Changed

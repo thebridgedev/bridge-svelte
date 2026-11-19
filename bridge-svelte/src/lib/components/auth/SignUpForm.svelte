@@ -23,6 +23,13 @@
   import Spinner from '../shared/Spinner.svelte';
   import PasswordInput from '../shared/PasswordInput.svelte';
 
+  /** Where a visit came from: campaign tags as strings, and the visitor's marketing consent (auth-core's sign-up attribution). */
+  interface SignUpAttribution {
+    readonly first: Readonly<Record<string, string>>;
+    readonly last?: Readonly<Record<string, string>>;
+    readonly marketingConsent: boolean;
+  }
+
   interface Props extends HTMLAttributes<HTMLDivElement> {
     heading?: string | null;
     headingSnippet?: Snippet;
@@ -42,6 +49,11 @@
     onSignIn?: () => void;
     showLoginLink?: boolean;
     loginHref?: string;
+    /**
+     * Where the visit came from, sent with the sign-up for your sign-up reports: campaign tags and the visitor's
+     * marketing consent. A function is read when the form is sent. Leave out for none.
+     */
+    attribution?: SignUpAttribution | (() => SignUpAttribution | undefined);
     /** Called once the email is sent. */
     onSent?: (email: string) => void;
     onError?: (error: unknown) => void;
@@ -58,6 +70,7 @@
     onSignIn,
     showLoginLink = true,
     loginHref = undefined,
+    attribution = undefined,
     onSent,
     onError,
     footer,
@@ -68,6 +81,11 @@
   }: Props = $props();
 
   const t = $derived(translator(messages));
+
+  function attributionOf(): { attribution?: SignUpAttribution } {
+    const given = typeof attribution === 'function' ? attribution() : attribution;
+    return given === undefined ? {} : { attribution: given };
+  }
   const config = peekConfig();
   const authBase = config?.authBase ?? '/auth';
 
@@ -124,6 +142,7 @@
         ...secret,
         ...names,
         ...(workspace === 'ask' ? { workspace: workspaceName.trim() || true } : workspace ? { workspace: true } : {}),
+        ...attributionOf(),
       });
       sentTo = address;
       onSent?.(address);

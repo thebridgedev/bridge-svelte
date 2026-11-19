@@ -23,6 +23,7 @@
   import AuthFormWrapper from '../shared/AuthFormWrapper.svelte';
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
+  import PasswordInput from '../shared/PasswordInput.svelte';
   import WorkspaceChooser from './WorkspaceChooser.svelte';
   import { takeEmailLink } from './email-link.js';
   import { bounded, handOff, leave } from './finish-link.js';
@@ -48,7 +49,8 @@
     | { step: 'continued' }
     | { step: 'signed-in'; to: string }
     | { step: 'workspace'; workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> }
-    | { step: 'failed'; message: string; kind: string | null };
+    | { step: 'failed'; message: string; kind: string | null }
+    | { step: 'password'; token: string; error: string | null; sending: boolean };
   let view = $state<State>({ step: 'working' });
 
   async function finish() {
@@ -60,6 +62,29 @@
     const to = config?.afterSignIn ?? '/';
     const here = location.pathname;
     if (!(await leave(() => goto(to, { invalidateAll: true }), () => location.pathname !== here))) view = { step: 'signed-in', to };
+  }
+
+  /** auth-core's finish, with the password chosen at the link (from the release that takes it). */
+  const finishSignUp = (link: string, password?: string): Promise<SignInStep> =>
+    (getBridge().signUp.finish as (token: string, password?: string) => Promise<SignInStep>)(link, password);
+
+  /** A sign-up started with no password: the person chooses it here, and the link is finished with it. */
+  let chosen = $state('');
+
+  async function choosePassword(event: SubmitEvent) {
+    event.preventDefault();
+    if (view.step !== 'password') return;
+    const link = view.token;
+    view = { ...view, sending: true, error: null };
+    try {
+      await follow(await bounded(finishSignUp(link, chosen)));
+    } catch (error) {
+      if (isBridgeError(error) && (error.code === 'password_rules' || error.code === 'password_required')) {
+        view = { step: 'password', token: link, sending: false, error: errorMessage(error, t, 'password.tooShort') };
+        return;
+      }
+      fail(error);
+    }
   }
 
   function fail(error: unknown) {
@@ -91,8 +116,13 @@
         view = { step: 'continued' };
         return;
       }
-      await follow(await bounded(getBridge().signUp.finish(found)));
+      await follow(await bounded(finishSignUp(found)));
     } catch (error) {
+      // Started with no password: the person chooses it now; the link stays usable.
+      if (isBridgeError(error) && error.code === 'password_required') {
+        view = { step: 'password', token: found, error: null, sending: false };
+        return;
+      }
       fail(error);
     }
   }
@@ -123,6 +153,31 @@
     <div class="bridge-form-footer">
       <a href={view.to} class="bridge-link">{t('invite.continue')}</a>
     </div>
+  </AuthFormWrapper>
+{:else if view.step === 'password'}
+  <AuthFormWrapper heading={t('forgot.headingSet')} {headingSnippet} class={className} {style} data-bridge-verify-email="password" {...rest}>
+    {#if view.error}
+      <Alert variant="error">{view.error}</Alert>
+    {/if}
+    <form onsubmit={choosePassword}>
+      <div class="bridge-form-group">
+        <label for="verify-password">{t('field.newPassword')}</label>
+        <PasswordInput
+          id="verify-password"
+          autocomplete="new-password"
+          placeholder={t('placeholder.newPassword')}
+          bind:value={chosen}
+          showLabel={t('action.showPassword')}
+          hideLabel={t('action.hidePassword')}
+          disabled={view.sending}
+          required
+        />
+      </div>
+      <button type="submit" class="bridge-btn-primary" disabled={view.sending || chosen === ''}>
+        {#if view.sending}<Spinner size={16} />{/if}
+        {t('forgot.setSubmit')}
+      </button>
+    </form>
   </AuthFormWrapper>
 {:else if view.step === 'workspace'}
   <AuthFormWrapper heading={t('workspace.chooseHeading')} {headingSnippet} class={className} {style} data-bridge-verify-email="workspace" {...rest}>

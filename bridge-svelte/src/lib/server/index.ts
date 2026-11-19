@@ -97,6 +97,18 @@ function serverFor(options: BridgeServerOptions): BridgeServer {
 }
 
 /** A key's caller: anything that is neither a person nor a job. A kind added later is protected too. */
+/** A workspace id as Bridge writes them; any other is not passed on, since auth-core's `forRequest` throws on it. */
+const WORKSPACE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
+
+/**
+ * The workspace an app key names for its flag results: `Bridge-Workspace`, or `x-tenant-id` as 0.x callers send it. Only a
+ * valid id is passed on; a key that names none, or an invalid one, gets its own results. For keys only.
+ */
+function workspaceNamedBy(headers: Headers): string | undefined {
+	const named = (headers.get('bridge-workspace') ?? headers.get('x-tenant-id'))?.trim();
+	return named !== undefined && WORKSPACE_ID.test(named) ? named : undefined;
+}
+
 function isKey(actor: Actor): boolean {
 	return actor.kind !== 'person' && actor.kind !== 'job';
 }
@@ -171,7 +183,8 @@ export function bridgeHandle(options: BridgeHandleOptions): Handle {
 				// A credential nothing checked (a `skip` route) is never forwarded: it may be a key
 				// from someone else's Bridge app, and that app's flag results would come back.
 				if (actor === null && carriesBridgeCredential(event.request, options.issuer)) return Promise.resolve(new FlagSet());
-				flags ??= server.flags.forRequest(event.request, hints).catch(() => new FlagSet());
+				const workspace = actor !== null && isKey(actor) ? workspaceNamedBy(event.request.headers) : undefined;
+				flags ??= server.flags.forRequest(event.request, hints, workspace === undefined ? {} : { workspace }).catch(() => new FlagSet());
 				return flags;
 			},
 			meter(metric, quantity, countOptions) {

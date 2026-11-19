@@ -74,7 +74,7 @@ In your app's settings in Bridge, add your app's address as a browser address an
 | Billing | `BridgeBillingRoutes`, `PlanPicker`, `BillingPortalButton`, `SubscriptionStatus`, `BillingNotice`, `QuotaBanner`, `QuotaGate`, `Entitled`, `CheckoutNotice`, `UpgradeDialog`, `bridgeFetch` |
 | Team | `TeamPanel`, `MemberList`, `InviteDialog`, `InviteList`, `EditMemberDialog`, `WorkspaceForm`, `ProfileForm` |
 | State | `session`, `user`, `workspace`, `workspaces`, `me`, `flags`, `billing`, `plans`, `usage`, `liveStatus`, `getBridge()` |
-| Server | `@nebulr-group/bridge-svelte/server`: `bridgeHandle`, `requireActor`, `meter`, `flagsFor` |
+| Server | `@nebulr-group/bridge-svelte/server`: `bridgeHandle`, `requireActor`, `requireFlag`, `meter`, `flagsFor` |
 | Hand-off | `HandoffSignIn`, `readHandoff`, `handoffSignIn`: a sign-in page for a command-line tool |
 
 All the guides: [learning/](learning/README.md).

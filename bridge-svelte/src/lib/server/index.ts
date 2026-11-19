@@ -14,13 +14,17 @@
  * export const handle = bridgeHandle({ issuer: pub.PUBLIC_BRIDGE_ISSUER, appKey: env.BRIDGE_APP_KEY });
  *
  * // src/routes/api/reports/+server.ts
- * import { requireActor, meter } from '@nebulr-group/bridge-svelte/server';
+ * import { requireFlag, meter } from '@nebulr-group/bridge-svelte/server';
  * export const POST = async (event) => {
- *   const actor = requireActor(event);
+ *   const actor = await requireFlag(event, 'reports'); // a person, or a key the flag's rule lets in
  *   meter(event, 'reports');
  *   ...
  * };
  * ```
+ *
+ * A request that comes with a Bridge key is protected by default: it reaches
+ * an endpoint only through `requireFlag` (the key must match the flag's rule),
+ * or one marked open with `requireActor(event, { openToKeys: true })`.
  *
  * Token checks follow the app's revocation list, so a session that ended or
  * a member who was removed is refused within seconds. While Bridge cannot be
@@ -42,7 +46,11 @@ export { FlagSet };
 
 /** What `bridgeHandle` puts on `event.locals.bridge`. */
 export interface BridgeLocals {
-	/** Who called: the person or key behind the request's credential, or null when it carried none. */
+	/**
+	 * Who called: the person or key behind the request's credential, or null
+	 * when it carried none. A key is null here until the endpoint lets keys in
+	 * with `requireFlag` or `requireActor(event, { openToKeys: true })`.
+	 */
 	readonly actor: Actor | null;
 	/** The caller's flag results, worked out by Bridge. Fetched once per request, when first asked. */
 	flags(hints?: Readonly<Record<string, Hint>>): Promise<FlagSet>;
@@ -87,6 +95,19 @@ function serverFor(options: BridgeServerOptions): BridgeServer {
 	}
 	return server;
 }
+
+/** A key's caller: anything that is neither a person nor a job. A kind added later is protected too. */
+function isKey(actor: Actor): boolean {
+	return actor.kind !== 'person' && actor.kind !== 'job';
+}
+
+/** What `bridgeHandle` knows about a request that the route reaches only through the helpers below. */
+interface RequestState {
+	readonly actor: Actor | null;
+	/** True for a person, a job or a request with no credential, and for a key once the endpoint let keys in. */
+	admitted: boolean;
+}
+const states = new WeakMap<BridgeLocals, RequestState>();
 
 const WRITES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -140,18 +161,26 @@ export function bridgeHandle(options: BridgeHandleOptions): Handle {
 			actor = checked.actor;
 		}
 		let flags: Promise<FlagSet> | null = null;
+		const state: RequestState = { actor, admitted: actor === null || !isKey(actor) };
 		const locals: BridgeLocals = {
-			actor,
+			get actor() {
+				return state.admitted ? state.actor : null;
+			},
 			server,
 			flags(hints) {
+				// A credential nothing checked (a `skip` route) is never forwarded: it may be a key
+				// from someone else's Bridge app, and that app's flag results would come back.
+				if (actor === null && carriesBridgeCredential(event.request, options.issuer)) return Promise.resolve(new FlagSet());
 				flags ??= server.flags.forRequest(event.request, hints).catch(() => new FlagSet());
 				return flags;
 			},
 			meter(metric, quantity, countOptions) {
-				if (actor === null) throw new Error('[bridge] meter() needs a signed-in caller: check with requireActor first.');
-				server.usage.count(actor, metric, quantity, countOptions);
+				if (state.actor === null) throw new Error('[bridge] meter() needs a signed-in caller: check with requireActor first.');
+				if (!state.admitted) error(403, KEY_REFUSAL);
+				server.usage.count(state.actor, metric, quantity, countOptions);
 			},
 		};
+		states.set(locals, state);
 		(event.locals as { bridge?: BridgeLocals }).bridge = locals;
 		return resolve(event);
 	};
@@ -163,11 +192,44 @@ function localsOf(event: Pick<RequestEvent, 'locals'>): BridgeLocals {
 	return locals;
 }
 
-/** The caller, or a 401 when the request carried no credential. */
-export function requireActor(event: Pick<RequestEvent, 'locals'>): Actor {
-	const { actor } = localsOf(event);
-	if (actor === null) error(401, 'Sign in first.');
-	return actor;
+const KEY_REFUSAL = 'This endpoint is not open to keys. Gate it with requireFlag, or mark it open with requireActor(event, { openToKeys: true }).';
+
+function stateOf(event: Pick<RequestEvent, 'locals'>): RequestState {
+	return states.get(localsOf(event))!;
+}
+
+/**
+ * The caller, or a 401 when the request carried no credential.
+ *
+ * A request that came with a Bridge key is refused 403 unless the endpoint
+ * says keys may come in: pass `{ openToKeys: true }` for an endpoint that is
+ * open to every valid key, or gate it with `requireFlag`. People are
+ * unaffected.
+ */
+export function requireActor(event: Pick<RequestEvent, 'locals'>, options: { readonly openToKeys?: boolean } = {}): Actor {
+	const state = stateOf(event);
+	if (state.actor === null) error(401, 'Sign in first.');
+	if (!state.admitted) {
+		if (options.openToKeys !== true) error(403, KEY_REFUSAL);
+		state.admitted = true;
+	}
+	return state.actor;
+}
+
+/**
+ * The caller, once the flag is on for them: a 401 when the request carried no
+ * credential, a 403 when the flag is off. Bridge works the flag out for the
+ * caller. For a key, rules on the key's privileges apply, so only a key whose
+ * privileges match the flag's rule gets in; this is what lets a key through
+ * an endpoint. Fails closed: while Bridge cannot answer, every flag is off.
+ */
+export async function requireFlag(event: Pick<RequestEvent, 'locals'>, flag: string, hints?: Readonly<Record<string, Hint>>): Promise<Actor> {
+	const state = stateOf(event);
+	if (state.actor === null) error(401, 'Sign in first.');
+	const flags = await localsOf(event).flags(hints);
+	if (!flags.enabled(flag)) error(403, 'Not available.');
+	state.admitted = true;
+	return state.actor;
 }
 
 /** Counts usage of a metric for the caller's workspace ("count this"). Needs the app key in `bridgeHandle`. */

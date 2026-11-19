@@ -312,6 +312,23 @@ describe('a workspace locked for payment while a page is open', () => {
 		});
 	});
 
+	it('keeps the page when the lock is lifted but the app\'s active flag still reads off for a moment: the paywall is for a workspace with no plan', async () => {
+		await withWindow(async () => {
+			const { fake, client } = await signedIn();
+			const load = bridgeBootstrap({ issuer: fake.issuer, tokenOrigins: [API] });
+			expect(await outcome(load, '/r1')).toBe('allow');
+			fake.setFacts({ plan: { key: 'free', name: 'Free' }, status: 'past_due', access: 'blocked' });
+			fake.setFlags({ 'bridge-app-active': false, 'bridge-billing-manage': true });
+			await client.flags.load();
+			expect(await outcome(load, '/r1')).toBe('allow');
+			// The lock is lifted: Bridge's billing says the workspace is fine, while the flag result held for the page
+			// (a copy of Bridge's facts that is a pull behind) still says off. The page must not go to the paywall.
+			fake.setFacts({ plan: { key: 'free', name: 'Free' }, status: 'active', access: 'ok' });
+			expect(get(client.flags.status)).toBe('ready');
+			expect(await outcome(load, '/r1')).toBe('allow');
+		});
+	});
+
 	it('still sends a workspace with no plan to the paywall', async () => {
 		await withWindow(async () => {
 			const { fake } = await signedIn({ flags: { 'bridge-app-active': false }, facts: { plan: null, status: 'none', access: 'needs_plan' } });

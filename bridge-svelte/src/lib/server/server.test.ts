@@ -23,6 +23,9 @@ const KEYS: Record<string, { sub: string; kind: string; privileges: string[]; re
 };
 const offline = (() => Promise.reject(new TypeError('offline'))) as unknown as typeof fetch;
 
+/** The Bridge-Workspace each flags read carried, in order (null: none). */
+const workspacesSent: (string | null)[] = [];
+
 async function issuer(options: { listNow?: () => number } = {}) {
 	const ring = await makeKeyRing();
 	const laneKeys: Record<string, LaneKey> = {};
@@ -44,6 +47,7 @@ async function issuer(options: { listNow?: () => number } = {}) {
 		if (url === `${ISSUER}/.well-known/openid-configuration`) return Response.json(metadata);
 		const key = new Request(input, init).headers.get('x-api-key');
 		if (url === FLAGS) {
+			workspacesSent.push(new Request(input, init).headers.get('bridge-workspace'));
 			// Bridge works the flag out for the key's own privileges.
 			const known = key === null ? undefined : KEYS[key];
 			const person = new Request(input, init).headers.get('authorization')?.startsWith('Bearer ') === true;
@@ -200,6 +204,17 @@ describe('keys on server endpoints', () => {
 		const event = eventFor({ 'x-api-key': 'key-holder' });
 		expect((await endpoint(handle, event, gated)).status).toBe(200);
 		expect(requireActor(event as never)).toMatchObject({ kind: 'app_key', id: 'key-1' });
+	});
+
+	it('passes the workspace a key names (Bridge-Workspace, or x-tenant-id) when it reads flags, and only a valid one', async () => {
+		const { fetchFn } = await issuer();
+		const handle = bridgeHandle({ issuer: ISSUER, fetch: fetchFn });
+		workspacesSent.length = 0;
+		for (const named of [{ 'bridge-workspace': 'ws-1' }, { 'x-tenant-id': 'ws-2' }, { 'bridge-workspace': 'not a valid id!' }, {}]) {
+			const event = eventFor({ 'x-api-key': 'key-holder', ...named });
+			expect((await endpoint(handle, event, (e) => requireFlag(e, 'reports'))).status).toBe(200);
+		}
+		expect(workspacesSent).toEqual(['ws-1', 'ws-2', null, null]);
 	});
 
 	it('answers 403 to a key whose privileges do not match the flag\'s rule', async () => {

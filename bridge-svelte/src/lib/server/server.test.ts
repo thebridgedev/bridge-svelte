@@ -210,7 +210,7 @@ describe('keys on server endpoints', () => {
 		const { fetchFn } = await issuer();
 		const handle = bridgeHandle({ issuer: ISSUER, fetch: fetchFn });
 		workspacesSent.length = 0;
-		for (const named of [{ 'bridge-workspace': 'ws-1' }, { 'x-tenant-id': 'ws-2' }, { 'bridge-workspace': 'not a valid id!' }, {}]) {
+		for (const named of [{ 'bridge-workspace': 'ws-1' }, { 'x-tenant-id': 'ws-2' }, { 'bridge-workspace': 'not a valid id!' }, {}] as Record<string, string>[]) {
 			const event = eventFor({ 'x-api-key': 'key-holder', ...named });
 			expect((await endpoint(handle, event, (e) => requireFlag(e, 'reports'))).status).toBe(200);
 		}

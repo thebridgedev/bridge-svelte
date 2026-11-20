@@ -13,6 +13,7 @@
   import type { HTMLAttributes } from 'svelte/elements';
   import { onDestroy, onMount } from 'svelte';
   import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import type { SignInOptions } from '@nebulr-group/bridge-auth-core';
   import { getBridge, peekConfig } from '../../core/client.js';
   import type { BridgeMessages } from '../../core/config.js';
@@ -54,6 +55,17 @@
      * marketing consent. A function is read when the form is sent. Leave out for none.
      */
     attribution?: SignUpAttribution | (() => SignUpAttribution | undefined);
+    /**
+     * The plan the new workspace starts on, by its key: a plan-specific sign-up link. Bridge applies it when the app
+     * offers that plan, and otherwise ignores it. @default the page address's `signupPlan` (or `plan`), if any
+     */
+    plan?: string;
+    /**
+     * With a plan, which of its prices: its currency (`EUR`) and interval (`month`), both or neither.
+     * @default the page address's `signupCurrency` (or `currency`) and `signupRecurrenceInterval` (or `recurrenceInterval`)
+     */
+    currency?: string;
+    interval?: 'day' | 'week' | 'month' | 'year';
     /** Called once the email is sent. */
     onSent?: (email: string) => void;
     onError?: (error: unknown) => void;
@@ -71,6 +83,9 @@
     showLoginLink = true,
     loginHref = undefined,
     attribution = undefined,
+    plan = undefined,
+    currency = undefined,
+    interval = undefined,
     onSent,
     onError,
     footer,
@@ -85,6 +100,17 @@
   function attributionOf(): { attribution?: SignUpAttribution } {
     const given = typeof attribution === 'function' ? attribution() : attribution;
     return given === undefined ? {} : { attribution: given };
+  }
+
+  /** The plan to sign up for: the `plan` prop, else the address's `signupPlan` or `plan`, as plan-specific links name it. */
+  function planOf(): { plan?: string; currency?: string; interval?: 'day' | 'week' | 'month' | 'year' } {
+    const params = page.url.searchParams;
+    const chosen = plan ?? params.get('signupPlan') ?? params.get('plan') ?? '';
+    if (chosen === '') return {};
+    const money = currency ?? params.get('signupCurrency') ?? params.get('currency') ?? '';
+    const every = (interval ?? params.get('signupRecurrenceInterval') ?? params.get('recurrenceInterval') ?? '').toLowerCase();
+    const known = (['day', 'week', 'month', 'year'] as const).find((each) => each === every);
+    return money === '' || known === undefined ? { plan: chosen } : { plan: chosen, currency: money, interval: known };
   }
   const config = peekConfig();
   const authBase = config?.authBase ?? '/auth';
@@ -143,6 +169,7 @@
         ...names,
         ...(workspace === 'ask' ? { workspace: workspaceName.trim() || true } : workspace ? { workspace: true } : {}),
         ...attributionOf(),
+        ...planOf(),
       });
       sentTo = address;
       onSent?.(address);

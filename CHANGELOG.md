@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.0-alpha.17] - Unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.15.
+
+### Added
+
+- **Plan-specific sign-up links.** `<SignUpForm plan="pro">` signs the person up on that plan; without the prop the form takes `signupPlan` (or `plan`) from the page's address, as today's signup links carry it, and `currency`/`interval` (default: `signupCurrency` and `signupRecurrenceInterval`) pick one of its prices. Bridge applies a plan the app offers and ignores any other.
+- **Login and signup links to Bridge's hosted page land in the app.** Opened directly, the hosted page sends the browser to the app's default sign-in return with the app's issuer. In hosted mode the callback page then starts the app's own sign-in (on the sign-up form, with the plan, for a signup link); otherwise it opens the app's own sign-in or sign-up page.
+
 ## [1.0.0-alpha.16] - Unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.14.

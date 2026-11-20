@@ -50,6 +50,7 @@
             ...(hosted.linkAddress === undefined ? {} : { linkAddress: hosted.linkAddress }),
             page: initiated.page,
             ...(initiated.plan === null ? {} : { plan: initiated.plan }),
+            ...(initiated.price === null ? {} : { currency: initiated.price.currency, interval: initiated.price.interval }),
           }),
         );
       } catch (error) {

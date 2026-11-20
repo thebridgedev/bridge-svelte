@@ -13,6 +13,7 @@
   import type { HTMLAttributes } from 'svelte/elements';
   import { onDestroy, onMount } from 'svelte';
   import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import type { SignInOptions } from '@nebulr-group/bridge-auth-core';
   import { getBridge, peekConfig } from '../../core/client.js';
   import type { BridgeMessages } from '../../core/config.js';
@@ -54,6 +55,11 @@
      * marketing consent. A function is read when the form is sent. Leave out for none.
      */
     attribution?: SignUpAttribution | (() => SignUpAttribution | undefined);
+    /**
+     * The plan the new workspace starts on, by its key: a plan-specific sign-up link. Bridge applies it when the app
+     * offers that plan, and otherwise ignores it. @default the page address's `signupPlan` (or `plan`), if any
+     */
+    plan?: string;
     /** Called once the email is sent. */
     onSent?: (email: string) => void;
     onError?: (error: unknown) => void;
@@ -71,6 +77,7 @@
     showLoginLink = true,
     loginHref = undefined,
     attribution = undefined,
+    plan = undefined,
     onSent,
     onError,
     footer,
@@ -85,6 +92,12 @@
   function attributionOf(): { attribution?: SignUpAttribution } {
     const given = typeof attribution === 'function' ? attribution() : attribution;
     return given === undefined ? {} : { attribution: given };
+  }
+
+  /** The plan to sign up for: the `plan` prop, else the address's `signupPlan` or `plan`, as plan-specific links name it. */
+  function planOf(): { plan?: string } {
+    const chosen = plan ?? page.url.searchParams.get('signupPlan') ?? page.url.searchParams.get('plan') ?? '';
+    return chosen === '' ? {} : { plan: chosen };
   }
   const config = peekConfig();
   const authBase = config?.authBase ?? '/auth';
@@ -143,6 +156,7 @@
         ...names,
         ...(workspace === 'ask' ? { workspace: workspaceName.trim() || true } : workspace ? { workspace: true } : {}),
         ...attributionOf(),
+        ...planOf(),
       });
       sentTo = address;
       onSent?.(address);

@@ -89,6 +89,7 @@ export { default as InviteDialog } from './components/team/InviteDialog.svelte';
 export { default as EditMemberDialog } from './components/team/EditMemberDialog.svelte';
 export { default as ConfirmDialog } from './components/team/ConfirmDialog.svelte';
 export { default as WorkspaceForm } from './components/team/WorkspaceForm.svelte';
+export { default as TermsNotice } from './components/shared/TermsNotice.svelte';
 export { default as PhoneInput } from './components/shared/PhoneInput.svelte';
 export { default as ProfileForm } from './components/team/ProfileForm.svelte';
 export { default as BridgeBillingRoutes } from './components/billing/BridgeBillingRoutes.svelte';

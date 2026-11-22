@@ -72,7 +72,11 @@ export type PluginMessageKey =
 	| 'phone.country'
 	| 'phone.search'
 	| 'phone.noResults'
-	| 'phone.invalid';
+	| 'phone.invalid'
+	| 'terms.notice'
+	| 'terms.noticeNoApp'
+	| 'terms.terms'
+	| 'terms.privacy';
 
 export type PluginMessages = Record<PluginMessageKey, string>;
 
@@ -145,6 +149,10 @@ const en: PluginMessages = {
 	'phone.search': 'Search country or code',
 	'phone.noResults': 'No country matches',
 	'phone.invalid': 'This phone number does not look right for the chosen country.',
+	'terms.notice': 'By continuing you accept {app}\'s {terms} and {privacy}.',
+	'terms.noticeNoApp': 'By continuing you accept the {terms} and {privacy}.',
+	'terms.terms': 'Terms of Service',
+	'terms.privacy': 'Privacy Policy',
 };
 
 const sv: PluginMessages = {
@@ -216,6 +224,10 @@ const sv: PluginMessages = {
 	'phone.search': 'Sök land eller landskod',
 	'phone.noResults': 'Inget land matchar',
 	'phone.invalid': 'Telefonnumret verkar inte stämma för det valda landet.',
+	'terms.notice': 'Genom att fortsätta godkänner du {app}s {terms} och {privacy}.',
+	'terms.noticeNoApp': 'Genom att fortsätta godkänner du {terms} och {privacy}.',
+	'terms.terms': 'användarvillkor',
+	'terms.privacy': 'integritetspolicy',
 };
 
 const da: PluginMessages = {
@@ -287,6 +299,10 @@ const da: PluginMessages = {
 	'phone.search': 'Søg efter land eller landekode',
 	'phone.noResults': 'Intet land matcher',
 	'phone.invalid': 'Telefonnummeret ser ikke rigtigt ud for det valgte land.',
+	'terms.notice': 'Ved at fortsætte accepterer du {app}s {terms} og {privacy}.',
+	'terms.noticeNoApp': 'Ved at fortsætte accepterer du {terms} og {privacy}.',
+	'terms.terms': 'servicevilkår',
+	'terms.privacy': 'privatlivspolitik',
 };
 
 const nb: PluginMessages = {
@@ -358,6 +374,10 @@ const nb: PluginMessages = {
 	'phone.search': 'Søk etter land eller landskode',
 	'phone.noResults': 'Ingen land samsvarer',
 	'phone.invalid': 'Telefonnummeret ser ikke riktig ut for det valgte landet.',
+	'terms.notice': 'Ved å fortsette godtar du {app}s {terms} og {privacy}.',
+	'terms.noticeNoApp': 'Ved å fortsette godtar du {terms} og {privacy}.',
+	'terms.terms': 'vilkår',
+	'terms.privacy': 'personvernerklæring',
 };
 
 const nl: PluginMessages = {
@@ -429,6 +449,10 @@ const nl: PluginMessages = {
 	'phone.search': 'Zoek een land of landcode',
 	'phone.noResults': 'Geen land gevonden',
 	'phone.invalid': 'Dit telefoonnummer lijkt niet te kloppen voor het gekozen land.',
+	'terms.notice': 'Door verder te gaan ga je akkoord met de {terms} en het {privacy} van {app}.',
+	'terms.noticeNoApp': 'Door verder te gaan ga je akkoord met de {terms} en het {privacy}.',
+	'terms.terms': 'servicevoorwaarden',
+	'terms.privacy': 'privacybeleid',
 };
 
 const de: PluginMessages = {
@@ -500,6 +524,10 @@ const de: PluginMessages = {
 	'phone.search': 'Land oder Vorwahl suchen',
 	'phone.noResults': 'Kein Land gefunden',
 	'phone.invalid': 'Diese Telefonnummer passt nicht zum gewählten Land.',
+	'terms.notice': 'Mit dem Fortfahren akzeptierst du die {terms} und die {privacy} von {app}.',
+	'terms.noticeNoApp': 'Mit dem Fortfahren akzeptierst du die {terms} und die {privacy}.',
+	'terms.terms': 'Nutzungsbedingungen',
+	'terms.privacy': 'Datenschutzerklärung',
 };
 
 const fi: PluginMessages = {
@@ -571,6 +599,10 @@ const fi: PluginMessages = {
 	'phone.search': 'Hae maata tai suuntanumeroa',
 	'phone.noResults': 'Ei hakua vastaavaa maata',
 	'phone.invalid': 'Puhelinnumero ei näytä oikealta valitulle maalle.',
+	'terms.notice': 'Jatkamalla hyväksyt kohteen {app} seuraavat: {terms} ja {privacy}.',
+	'terms.noticeNoApp': 'Jatkamalla hyväksyt seuraavat: {terms} ja {privacy}.',
+	'terms.terms': 'käyttöehdot',
+	'terms.privacy': 'tietosuojakäytäntö',
 };
 
 const fr: PluginMessages = {
@@ -642,6 +674,10 @@ const fr: PluginMessages = {
 	'phone.search': 'Rechercher un pays ou un indicatif',
 	'phone.noResults': 'Aucun pays ne correspond',
 	'phone.invalid': 'Ce numéro de téléphone ne semble pas correct pour le pays choisi.',
+	'terms.notice': 'En continuant, tu acceptes les {terms} et la {privacy} de {app}.',
+	'terms.noticeNoApp': 'En continuant, tu acceptes les {terms} et la {privacy}.',
+	'terms.terms': 'conditions d\'utilisation',
+	'terms.privacy': 'politique de confidentialité',
 };
 
 const es: PluginMessages = {
@@ -713,6 +749,10 @@ const es: PluginMessages = {
 	'phone.search': 'Buscar país o prefijo',
 	'phone.noResults': 'Ningún país coincide',
 	'phone.invalid': 'Este número de teléfono no parece correcto para el país elegido.',
+	'terms.notice': 'Al continuar, aceptas los {terms} y la {privacy} de {app}.',
+	'terms.noticeNoApp': 'Al continuar, aceptas los {terms} y la {privacy}.',
+	'terms.terms': 'términos del servicio',
+	'terms.privacy': 'política de privacidad',
 };
 
 const it: PluginMessages = {
@@ -784,6 +824,10 @@ const it: PluginMessages = {
 	'phone.search': 'Cerca un paese o un prefisso',
 	'phone.noResults': 'Nessun paese corrisponde',
 	'phone.invalid': 'Questo numero di telefono non sembra corretto per il paese scelto.',
+	'terms.notice': 'Continuando accetti i {terms} e la {privacy} di {app}.',
+	'terms.noticeNoApp': 'Continuando accetti i {terms} e la {privacy}.',
+	'terms.terms': 'termini di servizio',
+	'terms.privacy': 'informativa sulla privacy',
 };
 
 const pt: PluginMessages = {
@@ -855,6 +899,10 @@ const pt: PluginMessages = {
 	'phone.search': 'Procurar país ou indicativo',
 	'phone.noResults': 'Nenhum país corresponde',
 	'phone.invalid': 'Este número de telefone não parece correto para o país escolhido.',
+	'terms.notice': 'Ao continuar, aceitas os {terms} e a {privacy} de {app}.',
+	'terms.noticeNoApp': 'Ao continuar, aceitas os {terms} e a {privacy}.',
+	'terms.terms': 'Termos de Serviço',
+	'terms.privacy': 'Política de Privacidade',
 };
 
 const pl: PluginMessages = {
@@ -926,6 +974,10 @@ const pl: PluginMessages = {
 	'phone.search': 'Szukaj kraju lub numeru kierunkowego',
 	'phone.noResults': 'Żaden kraj nie pasuje',
 	'phone.invalid': 'Ten numer telefonu nie pasuje do wybranego kraju.',
+	'terms.notice': 'Kontynuując, akceptujesz {terms} i {privacy} aplikacji {app}.',
+	'terms.noticeNoApp': 'Kontynuując, akceptujesz {terms} i {privacy}.',
+	'terms.terms': 'regulamin',
+	'terms.privacy': 'politykę prywatności',
 };
 
 /** The plugin's copy by primary language subtag. */

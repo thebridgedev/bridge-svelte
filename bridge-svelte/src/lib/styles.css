@@ -505,6 +505,14 @@
     margin: 0.25rem 0 0;
   }
 
+  .bridge-terms-notice {
+    color: var(--bridge-muted);
+    font-size: calc(0.8125 * var(--bridge-text-base, 1rem));
+    line-height: 1.4;
+    margin: 0.75rem 0 0;
+    text-align: center;
+  }
+
   /* ─── Auth form helpers ───────────────────────────────────────────────────── */
 
   .bridge-sso-row {

@@ -23,6 +23,7 @@
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
   import PasswordInput from '../shared/PasswordInput.svelte';
+  import TermsNotice from '../shared/TermsNotice.svelte';
 
   /** Where a visit came from: campaign tags as strings, and the visitor's marketing consent (auth-core's sign-up attribution). */
   interface SignUpAttribution {
@@ -247,6 +248,7 @@
         {#if loading}<Spinner size={16} />{:else}{t('signup.submit')}{/if}
       </button>
     </form>
+    <TermsNotice notice={options?.signUpNotice} appName={options?.app.name} {messages} />
     {#if footer}
       {@render footer()}
     {:else if showLoginLink}

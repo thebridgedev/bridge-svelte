@@ -4,7 +4,7 @@
     src/routes/auth/[...bridge]/+page.svelte
     <BridgeAuthRoutes />
 
-  Serves sign-in, sign-up, verify-email, forgot-password, set-password,
+  Serves sign-in (also at `login`, the app's own sign-in path), sign-up, verify-email, forgot-password, set-password,
   invite, workspaces, handoff, magic-link (a sign-in link's landing), passkey-setup (a passkey setup link's landing)
   and callback (hosted mode's return from Bridge's page). An unknown page gets the app's own 404.
 

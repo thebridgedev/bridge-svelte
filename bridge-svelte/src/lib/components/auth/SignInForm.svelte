@@ -16,10 +16,10 @@
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
   import { onDestroy, onMount } from 'svelte';
-  import { handOff } from './finish-link.js';
+  import { continueOnAppPage, handOff, heldReturn } from './finish-link.js';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { isBridgeError, readReturnTo, type SignInOptions, type SignInStep, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
+  import { isBridgeError, isPasswordChangeRequired, passkeyHandOver, readReturnTo, type SignInOptions, type SignInStep, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
   import { get } from 'svelte/store';
   import { getBridge, peekConfig, takeEndedReason } from '../../core/client.js';
   import { session } from '../../core/stores.js';
@@ -30,6 +30,7 @@
   import Spinner from '../shared/Spinner.svelte';
   import PasswordInput from '../shared/PasswordInput.svelte';
   import WorkspaceChooser from './WorkspaceChooser.svelte';
+  import ReturnContinue from './ReturnContinue.svelte';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** Heading on the credentials step. @default the shared "Log in to your account" copy; `null` for none */
@@ -81,6 +82,10 @@
   let options = $state<SignInOptions | null>(null);
   let choice = $state<{ workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> } | null>(null);
   let settled = $state(false);
+  /** A finished sign-in whose return to the person's own machine waits for a click (a Continue button). */
+  let heldBack = $state<string | null>(null);
+  /** The right password that no longer meets the app's rules: a link to choose a new one was emailed. */
+  let mustChoose = $state<'asked' | 'resent' | null>(null);
 
   const signUpShown = $derived(showSignupLink ?? options?.signUp ?? true);
   const passwordOffered = $derived(options === null || options.methods.includes('password'));
@@ -88,6 +93,7 @@
   let passkeySupported = $state(false);
   let setupLinkSent = $state(false);
   const passkeysOffered = $derived(passkeySupported && options !== null && options.methods.includes('passkeys'));
+  const passkeyHandOverTo = (error: unknown) => passkeyHandOver(error);
   const emailAutocomplete = $derived(passkeysOffered ? 'username webauthn' : 'username');
   let autofillStarted = false;
 
@@ -99,7 +105,8 @@
     try {
       await follow(await bridge.passkeys.signIn({ autofill: true, ...(workspace ? { workspace } : {}) }));
     } catch (error) {
-      if (!isBridgeError(error, 'cancelled')) fail(error);
+      // Bridge's own page cannot offer a passkey (it belongs to the app's page): waiting for the list ends quietly.
+      if (!isBridgeError(error, 'cancelled') && passkeyHandOverTo(error) === null) fail(error);
     }
   }
 
@@ -136,6 +143,8 @@
       await follow(await getBridge().passkeys.signIn({ ...(email.trim() ? { email: email.trim() } : {}), ...(workspace ? { workspace } : {}) }));
     } catch (error) {
       if (isBridgeError(error, 'cancelled')) notice = t('passkey.cancelled');
+      // On Bridge's own page a passkey belongs to the app's sign-in page: the person is taken there.
+      else if (continueOnAppPage(error)) notice = t('passkey.handover');
       else fail(error);
     } finally {
       loading = false;
@@ -173,7 +182,11 @@
   }
 
   async function follow(step: SignInStep) {
-    if (handOff(step)) {
+    const held = heldReturn(step);
+    if (held !== null) {
+      heldBack = held;
+      settled = true;
+    } else if (handOff(step)) {
       settled = true;
     } else if (step.done) {
       finish();
@@ -190,6 +203,22 @@
     loading = true;
     try {
       await follow(await getBridge().signIn.start({ email: email.trim(), password, ...(workspace ? { workspace } : {}) }));
+    } catch (error) {
+      // The password is right, but the app's rules changed: a link to choose a new one is on its way.
+      if (isPasswordChangeRequired(error)) mustChoose = 'asked';
+      else fail(error);
+    } finally {
+      loading = false;
+    }
+  }
+
+  /** Sends the link to choose a new password again. The answer is the same whether or not the address has an account. */
+  async function resendChoose() {
+    if (loading || !email.trim()) return;
+    loading = true;
+    try {
+      await getBridge().password.forgot(email.trim());
+      mustChoose = 'resent';
     } catch (error) {
       fail(error);
     } finally {
@@ -225,7 +254,20 @@
   }
 </script>
 
-{#if settled}
+{#if heldBack !== null}
+  <ReturnContinue url={heldBack} {messages} class={className} {style} {...rest} />
+{:else if mustChoose !== null}
+  <AuthFormWrapper heading={t('login.passwordChangeHeading')} class={className} {style} data-bridge-sign-in-step="password-change" {...rest}>
+    {#if failure}<Alert variant="error">{failure}</Alert>{/if}
+    <Alert variant="info">{mustChoose === 'resent' ? t('login.passwordChangeSent') : t('login.passwordChange')}</Alert>
+    <button type="button" class="bridge-btn bridge-btn-secondary" data-bridge-password-change-resend onclick={resendChoose} disabled={loading}>
+      {#if loading}<Spinner size={16} />{/if} {t('login.passwordChangeResend')}
+    </button>
+    <div class="bridge-form-footer">
+      <a href={forgotPasswordHref ?? `${authBase}/forgot-password`} class="bridge-link">{t('login.forgotPassword')}</a>
+    </div>
+  </AuthFormWrapper>
+{:else if settled}
   <AuthFormWrapper heading={null} class={className} {style} {...rest}>
     <div class="bridge-auth-settling" data-bridge-auth-settling>
       <Spinner size={24} />

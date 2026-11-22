@@ -68,7 +68,16 @@ export type PluginMessageKey =
 	| 'recheck.anotherWay'
 	| 'recheck.noMethods'
 	| 'recheck.wrongPassword'
-	| 'recheck.confirmed';
+	| 'recheck.confirmed'
+	| 'passkey.handover'
+	| 'passkey.unusable'
+	| 'passkey.unusableNotice'
+	| 'return.hint'
+	| 'return.continue'
+	| 'login.passwordChangeHeading'
+	| 'login.passwordChange'
+	| 'login.passwordChangeResend'
+	| 'login.passwordChangeSent';
 
 export type PluginMessages = Record<PluginMessageKey, string>;
 
@@ -137,6 +146,15 @@ const en: PluginMessages = {
 	'recheck.noMethods': 'There is no way to confirm it is you here. Sign in again.',
 	'recheck.wrongPassword': 'That password is not right.',
 	'recheck.confirmed': 'Confirmed. You can close this tab and go back.',
+	'passkey.handover': 'Passkeys belong to the app\'s own sign-in page. Taking you there…',
+	'passkey.unusable': 'Made on the old sign-in page. It no longer works.',
+	'passkey.unusableNotice': 'Some of your passkeys were made on an old sign-in page and no longer work. Sign in another way, then add a new passkey.',
+	'return.hint': 'You are signed in. Press Continue to go back.',
+	'return.continue': 'Continue',
+	'login.passwordChangeHeading': 'Choose a new password',
+	'login.passwordChange': 'Your password no longer meets this app\'s rules. We have emailed you a link to choose a new one.',
+	'login.passwordChangeResend': 'Send the link again',
+	'login.passwordChangeSent': 'A new link is on its way to your email address.',
 };
 
 const sv: PluginMessages = {
@@ -204,6 +222,15 @@ const sv: PluginMessages = {
 	'recheck.noMethods': 'Det finns inget sätt att bekräfta att det är du här. Logga in igen.',
 	'recheck.wrongPassword': 'Det lösenordet stämmer inte.',
 	'recheck.confirmed': 'Bekräftat. Du kan stänga den här fliken och gå tillbaka.',
+	'passkey.handover': 'Passkeys hör till appens egen inloggningssida. Tar dig dit…',
+	'passkey.unusable': 'Skapad på den gamla inloggningssidan. Fungerar inte längre.',
+	'passkey.unusableNotice': 'Några av dina passkeys skapades på en gammal inloggningssida och fungerar inte längre. Logga in på ett annat sätt och lägg sedan till en ny passkey.',
+	'return.hint': 'Du är inloggad. Tryck på Fortsätt för att gå tillbaka.',
+	'return.continue': 'Fortsätt',
+	'login.passwordChangeHeading': 'Välj ett nytt lösenord',
+	'login.passwordChange': 'Ditt lösenord uppfyller inte längre appens regler. Vi har mejlat en länk där du väljer ett nytt.',
+	'login.passwordChangeResend': 'Skicka länken igen',
+	'login.passwordChangeSent': 'En ny länk är på väg till din e-postadress.',
 };
 
 const da: PluginMessages = {
@@ -271,6 +298,15 @@ const da: PluginMessages = {
 	'recheck.noMethods': 'Der er ingen måde at bekræfte, at det er dig, her. Log ind igen.',
 	'recheck.wrongPassword': 'Den adgangskode er ikke korrekt.',
 	'recheck.confirmed': 'Bekræftet. Du kan lukke denne fane og gå tilbage.',
+	'passkey.handover': 'Adgangsnøgler hører til appens egen login-side. Sender dig derhen…',
+	'passkey.unusable': 'Oprettet på den gamle login-side. Virker ikke længere.',
+	'passkey.unusableNotice': 'Nogle af dine adgangsnøgler blev oprettet på en gammel login-side og virker ikke længere. Log ind på en anden måde, og tilføj derefter en ny adgangsnøgle.',
+	'return.hint': 'Du er logget ind. Tryk på Fortsæt for at gå tilbage.',
+	'return.continue': 'Fortsæt',
+	'login.passwordChangeHeading': 'Vælg en ny adgangskode',
+	'login.passwordChange': 'Din adgangskode lever ikke længere op til appens regler. Vi har sendt dig et link til at vælge en ny.',
+	'login.passwordChangeResend': 'Send linket igen',
+	'login.passwordChangeSent': 'Et nyt link er på vej til din e-mailadresse.',
 };
 
 const nb: PluginMessages = {
@@ -338,6 +374,15 @@ const nb: PluginMessages = {
 	'recheck.noMethods': 'Det finnes ingen måte å bekrefte at det er deg her. Logg inn på nytt.',
 	'recheck.wrongPassword': 'Det passordet er ikke riktig.',
 	'recheck.confirmed': 'Bekreftet. Du kan lukke denne fanen og gå tilbake.',
+	'passkey.handover': 'Passnøkler hører til appens egen påloggingsside. Tar deg dit…',
+	'passkey.unusable': 'Opprettet på den gamle påloggingssiden. Fungerer ikke lenger.',
+	'passkey.unusableNotice': 'Noen av passnøklene dine ble opprettet på en gammel påloggingsside og fungerer ikke lenger. Logg inn på en annen måte, og legg deretter til en ny passnøkkel.',
+	'return.hint': 'Du er logget inn. Trykk på Fortsett for å gå tilbake.',
+	'return.continue': 'Fortsett',
+	'login.passwordChangeHeading': 'Velg et nytt passord',
+	'login.passwordChange': 'Passordet ditt oppfyller ikke lenger reglene til appen. Vi har sendt deg en lenke for å velge et nytt.',
+	'login.passwordChangeResend': 'Send lenken på nytt',
+	'login.passwordChangeSent': 'En ny lenke er på vei til e-postadressen din.',
 };
 
 const nl: PluginMessages = {
@@ -405,6 +450,15 @@ const nl: PluginMessages = {
 	'recheck.noMethods': 'Hier is geen manier om te bevestigen dat jij het bent. Meld je opnieuw aan.',
 	'recheck.wrongPassword': 'Dat wachtwoord klopt niet.',
 	'recheck.confirmed': 'Bevestigd. Je kunt dit tabblad sluiten en teruggaan.',
+	'passkey.handover': 'Passkeys horen bij de eigen inlogpagina van de app. Je gaat daar naartoe…',
+	'passkey.unusable': 'Gemaakt op de oude inlogpagina. Werkt niet meer.',
+	'passkey.unusableNotice': 'Sommige van je passkeys zijn gemaakt op een oude inlogpagina en werken niet meer. Log op een andere manier in en voeg daarna een nieuwe passkey toe.',
+	'return.hint': 'Je bent ingelogd. Druk op Doorgaan om terug te gaan.',
+	'return.continue': 'Doorgaan',
+	'login.passwordChangeHeading': 'Kies een nieuw wachtwoord',
+	'login.passwordChange': 'Je wachtwoord voldoet niet meer aan de regels van deze app. We hebben je een link gemaild om een nieuw te kiezen.',
+	'login.passwordChangeResend': 'Link opnieuw sturen',
+	'login.passwordChangeSent': 'Er is een nieuwe link onderweg naar je e-mailadres.',
 };
 
 const de: PluginMessages = {
@@ -472,6 +526,15 @@ const de: PluginMessages = {
 	'recheck.noMethods': 'Hier gibt es keine Möglichkeit zu bestätigen, dass du es bist. Melde dich erneut an.',
 	'recheck.wrongPassword': 'Dieses Passwort ist nicht richtig.',
 	'recheck.confirmed': 'Bestätigt. Du kannst diesen Tab schließen und zurückgehen.',
+	'passkey.handover': 'Passkeys gehören zur eigenen Anmeldeseite der App. Du wirst dorthin weitergeleitet…',
+	'passkey.unusable': 'Auf der alten Anmeldeseite erstellt. Funktioniert nicht mehr.',
+	'passkey.unusableNotice': 'Einige deiner Passkeys wurden auf einer alten Anmeldeseite erstellt und funktionieren nicht mehr. Melde dich auf andere Weise an und füge dann einen neuen Passkey hinzu.',
+	'return.hint': 'Du bist angemeldet. Klicke auf Weiter, um zurückzugehen.',
+	'return.continue': 'Weiter',
+	'login.passwordChangeHeading': 'Neues Passwort wählen',
+	'login.passwordChange': 'Dein Passwort erfüllt die Regeln dieser App nicht mehr. Wir haben dir einen Link zum Festlegen eines neuen gemailt.',
+	'login.passwordChangeResend': 'Link erneut senden',
+	'login.passwordChangeSent': 'Ein neuer Link ist auf dem Weg zu deiner E-Mail-Adresse.',
 };
 
 const fi: PluginMessages = {
@@ -539,6 +602,15 @@ const fi: PluginMessages = {
 	'recheck.noMethods': 'Täällä ei ole tapaa vahvistaa, että se olet sinä. Kirjaudu uudelleen.',
 	'recheck.wrongPassword': 'Salasana ei ole oikea.',
 	'recheck.confirmed': 'Vahvistettu. Voit sulkea tämän välilehden ja palata takaisin.',
+	'passkey.handover': 'Pääsyavaimet kuuluvat sovelluksen omalle kirjautumissivulle. Viemme sinut sinne…',
+	'passkey.unusable': 'Luotu vanhalla kirjautumissivulla. Ei enää toimi.',
+	'passkey.unusableNotice': 'Jotkin pääsyavaimistasi luotiin vanhalla kirjautumissivulla, eivätkä ne enää toimi. Kirjaudu sisään toisella tavalla ja lisää sitten uusi pääsyavain.',
+	'return.hint': 'Olet kirjautunut sisään. Palaa takaisin painamalla Jatka.',
+	'return.continue': 'Jatka',
+	'login.passwordChangeHeading': 'Valitse uusi salasana',
+	'login.passwordChange': 'Salasanasi ei enää täytä sovelluksen sääntöjä. Olemme lähettäneet sinulle sähköpostitse linkin uuden valitsemiseksi.',
+	'login.passwordChangeResend': 'Lähetä linkki uudelleen',
+	'login.passwordChangeSent': 'Uusi linkki on matkalla sähköpostiosoitteeseesi.',
 };
 
 const fr: PluginMessages = {
@@ -606,6 +678,15 @@ const fr: PluginMessages = {
 	'recheck.noMethods': "Il n'y a aucun moyen de confirmer ici que c'est vous. Reconnectez-vous.",
 	'recheck.wrongPassword': "Ce mot de passe n'est pas correct.",
 	'recheck.confirmed': 'Confirmé. Vous pouvez fermer cet onglet et revenir en arrière.',
+	'passkey.handover': 'Les clés d\'accès appartiennent à la page de connexion de l\'application. On t\'y emmène…',
+	'passkey.unusable': 'Créée sur l\'ancienne page de connexion. Ne fonctionne plus.',
+	'passkey.unusableNotice': 'Certaines de tes clés d\'accès ont été créées sur une ancienne page de connexion et ne fonctionnent plus. Connecte-toi autrement, puis ajoute une nouvelle clé d\'accès.',
+	'return.hint': 'Tu es connecté. Appuie sur Continuer pour revenir.',
+	'return.continue': 'Continuer',
+	'login.passwordChangeHeading': 'Choisis un nouveau mot de passe',
+	'login.passwordChange': 'Ton mot de passe ne respecte plus les règles de cette application. Nous t\'avons envoyé un lien par e-mail pour en choisir un nouveau.',
+	'login.passwordChangeResend': 'Renvoyer le lien',
+	'login.passwordChangeSent': 'Un nouveau lien est en route vers ton adresse e-mail.',
 };
 
 const es: PluginMessages = {
@@ -673,6 +754,15 @@ const es: PluginMessages = {
 	'recheck.noMethods': 'Aquí no hay forma de confirmar que eres tú. Vuelve a iniciar sesión.',
 	'recheck.wrongPassword': 'Esa contraseña no es correcta.',
 	'recheck.confirmed': 'Confirmado. Puedes cerrar esta pestaña y volver.',
+	'passkey.handover': 'Las llaves de acceso pertenecen a la página de inicio de sesión de la propia aplicación. Te llevamos allí…',
+	'passkey.unusable': 'Creada en la antigua página de inicio de sesión. Ya no funciona.',
+	'passkey.unusableNotice': 'Algunas de tus llaves de acceso se crearon en una página de inicio de sesión antigua y ya no funcionan. Inicia sesión de otra forma y añade después una llave de acceso nueva.',
+	'return.hint': 'Has iniciado sesión. Pulsa Continuar para volver.',
+	'return.continue': 'Continuar',
+	'login.passwordChangeHeading': 'Elige una nueva contraseña',
+	'login.passwordChange': 'Tu contraseña ya no cumple las reglas de esta aplicación. Te hemos enviado por correo un enlace para elegir una nueva.',
+	'login.passwordChangeResend': 'Reenviar el enlace',
+	'login.passwordChangeSent': 'Un nuevo enlace va de camino a tu dirección de correo.',
 };
 
 const it: PluginMessages = {
@@ -740,6 +830,15 @@ const it: PluginMessages = {
 	'recheck.noMethods': "Qui non c'è modo di confermare che sei tu. Accedi di nuovo.",
 	'recheck.wrongPassword': 'Quella password non è corretta.',
 	'recheck.confirmed': 'Confermato. Puoi chiudere questa scheda e tornare indietro.',
+	'passkey.handover': 'Le passkey appartengono alla pagina di accesso dell\'app. Ti ci portiamo…',
+	'passkey.unusable': 'Creata sulla vecchia pagina di accesso. Non funziona più.',
+	'passkey.unusableNotice': 'Alcune delle tue passkey sono state create su una vecchia pagina di accesso e non funzionano più. Accedi in un altro modo, poi aggiungi una nuova passkey.',
+	'return.hint': 'Hai effettuato l\'accesso. Premi Continua per tornare indietro.',
+	'return.continue': 'Continua',
+	'login.passwordChangeHeading': 'Scegli una nuova password',
+	'login.passwordChange': 'La tua password non rispetta più le regole di questa app. Ti abbiamo inviato via email un link per sceglierne una nuova.',
+	'login.passwordChangeResend': 'Invia di nuovo il link',
+	'login.passwordChangeSent': 'Un nuovo link è in arrivo al tuo indirizzo email.',
 };
 
 const pt: PluginMessages = {
@@ -807,6 +906,15 @@ const pt: PluginMessages = {
 	'recheck.noMethods': 'Aqui não há forma de confirmar que é você. Inicie sessão novamente.',
 	'recheck.wrongPassword': 'Essa palavra-passe não está correta.',
 	'recheck.confirmed': 'Confirmado. Pode fechar este separador e voltar.',
+	'passkey.handover': 'As chaves de acesso pertencem à página de início de sessão da própria aplicação. Vamos levar-te até lá…',
+	'passkey.unusable': 'Criada na antiga página de início de sessão. Já não funciona.',
+	'passkey.unusableNotice': 'Algumas das tuas chaves de acesso foram criadas numa antiga página de início de sessão e já não funcionam. Inicia sessão de outra forma e depois adiciona uma nova chave de acesso.',
+	'return.hint': 'Iniciaste sessão. Prime Continuar para voltar.',
+	'return.continue': 'Continuar',
+	'login.passwordChangeHeading': 'Escolhe uma nova palavra-passe',
+	'login.passwordChange': 'A tua palavra-passe já não cumpre as regras desta aplicação. Enviámos-te por e-mail uma ligação para escolheres uma nova.',
+	'login.passwordChangeResend': 'Reenviar a ligação',
+	'login.passwordChangeSent': 'Uma nova ligação está a caminho do teu endereço de e-mail.',
 };
 
 const pl: PluginMessages = {
@@ -874,6 +982,15 @@ const pl: PluginMessages = {
 	'recheck.noMethods': 'Nie ma tu sposobu, by potwierdzić, że to ty. Zaloguj się ponownie.',
 	'recheck.wrongPassword': 'To hasło jest nieprawidłowe.',
 	'recheck.confirmed': 'Potwierdzono. Możesz zamknąć tę kartę i wrócić.',
+	'passkey.handover': 'Klucze dostępu należą do strony logowania samej aplikacji. Przenosimy Cię tam…',
+	'passkey.unusable': 'Utworzony na starej stronie logowania. Już nie działa.',
+	'passkey.unusableNotice': 'Niektóre z Twoich kluczy dostępu zostały utworzone na starej stronie logowania i już nie działają. Zaloguj się w inny sposób, a potem dodaj nowy klucz dostępu.',
+	'return.hint': 'Jesteś zalogowany. Naciśnij Dalej, aby wrócić.',
+	'return.continue': 'Dalej',
+	'login.passwordChangeHeading': 'Wybierz nowe hasło',
+	'login.passwordChange': 'Twoje hasło nie spełnia już zasad tej aplikacji. Wysłaliśmy Ci e-mailem link do wybrania nowego.',
+	'login.passwordChangeResend': 'Wyślij link ponownie',
+	'login.passwordChangeSent': 'Nowy link jest w drodze na Twój adres e-mail.',
 };
 
 /** The plugin's copy by primary language subtag. */

@@ -22,6 +22,12 @@ export const AUTH_PAGES = [
 
 export type AuthPage = (typeof AUTH_PAGES)[number];
 
+/**
+ * Other names an auth page answers to. `login` is the sign-in page path Bridge's "Your app" settings default to
+ * (`/auth/login`): the address email links and sign-outs name when users sign in in the app, so it serves the sign-in page.
+ */
+export const AUTH_PAGE_ALIASES: Readonly<Record<string, AuthPage>> = { login: 'sign-in' };
+
 export const BILLING_PAGES = ['manage', 'plan', 'success', 'error'] as const;
 
 export type BillingPage = (typeof BILLING_PAGES)[number];
@@ -33,7 +39,8 @@ export const ROUTE_PARAM = 'bridge';
 export function parseAuthPage(rest: string | null | undefined): AuthPage | null {
 	const segments = (rest ?? '').split('/').filter((s) => s !== '');
 	if (segments.length !== 1) return null;
-	return (AUTH_PAGES as readonly string[]).includes(segments[0]) ? (segments[0] as AuthPage) : null;
+	const named = AUTH_PAGE_ALIASES[segments[0]] ?? segments[0];
+	return (AUTH_PAGES as readonly string[]).includes(named) ? (named as AuthPage) : null;
 }
 
 /** The billing page for the rest of a catch-all path; the bare base is `manage`. */

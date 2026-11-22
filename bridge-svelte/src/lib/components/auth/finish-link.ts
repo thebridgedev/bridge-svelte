@@ -3,7 +3,7 @@
  * never waits without end: finishing has a time limit, and once signed in
  * the page goes on even when another navigation cancels its first try.
  */
-import { BridgeError } from '@nebulr-group/bridge-auth-core';
+import { BridgeError, passkeyHandOver } from '@nebulr-group/bridge-auth-core';
 
 /** How long finishing a link may take before the page says it failed. */
 export const FINISH_WAIT_MS = 30_000;
@@ -54,8 +54,40 @@ export async function leave(go: () => Promise<unknown>, left: () => boolean, tri
  * the app's registered return with the code, and this page makes no session.
  * True when it went.
  */
-export function handOff(step: { readonly done: boolean; readonly handoff?: string }, go: (url: string) => void = (url) => location.assign(url)): boolean {
-	if (!step.done || step.handoff === undefined) return false;
+export function handOff(step: { readonly done: boolean; readonly handoff?: string; readonly confirmReturn?: true }, go: (url: string) => void = (url) => location.assign(url)): boolean {
+	if (!step.done || step.handoff === undefined || step.confirmReturn === true) return false;
 	go(step.handoff);
+	return true;
+}
+
+/**
+ * A sign-in that is done and goes back to the person's own machine (localhost) on an app in production: Bridge asks
+ * for a click first, so the page shows a Continue button and goes back only when it is pressed. The address to go
+ * back to, or null when the step holds none.
+ */
+export function heldReturn(step: { readonly done: boolean; readonly handoff?: string; readonly confirmReturn?: true }): string | null {
+	return step.done && step.handoff !== undefined && step.confirmReturn === true ? step.handoff : null;
+}
+
+/** An address the Continue button may go to: http or https, with no credentials in it. */
+export function safeReturn(url: string): string | null {
+	try {
+		const parsed = new URL(url);
+		return (parsed.protocol === 'https:' || parsed.protocol === 'http:') && parsed.username === '' && parsed.password === '' ? parsed.href : null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * A passkey sign-in on Bridge's own pages that Bridge handed over to the app's sign-in page (a passkey belongs to the
+ * app's own domain): goes there. True when it went. Only the person pressing the passkey button starts this: a wait for
+ * the autofill list on Bridge's page never sends the browser away.
+ */
+export function continueOnAppPage(error: unknown, go: (url: string) => void = (url) => location.assign(url)): boolean {
+	const to = passkeyHandOver(error);
+	const safe = to === null ? null : safeReturn(to);
+	if (safe === null) return false;
+	go(safe);
 	return true;
 }

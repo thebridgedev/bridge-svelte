@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+Needs the `@nebulr-group/bridge-auth-core` that carries `passkeyHandOver`, `usable`, `confirmReturn` and `isPasswordChangeRequired`.
+
+### Added
+
+- **The app's own sign-in path, `/auth/login`, is served.** It is the page Bridge's "Your app" settings default to, and the address email links and sign-outs name when users sign in in the app; it serves the sign-in page next to `/auth/sign-in`.
+- **Passkeys on the app's own domain.** On Bridge's own pages, "Sign in with a passkey" takes the person to the app's sign-in page, where the browser offers their passkey (Bridge's `passkey_on_app_page`); the wait for the autofill list on Bridge's page never sends the browser away. `<PasskeyManager>` tells the person about passkeys made on the old page (they no longer work, and a new one can be added next to them).
+- **A Continue button for returns to localhost.** When Bridge asks for a click before a sign-in goes back to the person's own machine (an app in production), the sign-in form and the sign-in and sign-up link pages show a Continue button instead of going back by themselves.
+- **Passwords that must change.** A sign-in with the right password that no longer meets the app's rules (an app that went to production) shows "Choose a new password": the link Bridge emailed opens the set-password page, with a button to send it again.
+
 ## [1.0.0-alpha.17] - Unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.15.

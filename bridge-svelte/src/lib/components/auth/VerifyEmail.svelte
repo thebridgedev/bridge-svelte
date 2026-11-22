@@ -26,7 +26,8 @@
   import PasswordInput from '../shared/PasswordInput.svelte';
   import WorkspaceChooser from './WorkspaceChooser.svelte';
   import { takeEmailLink } from './email-link.js';
-  import { bounded, handOff, leave } from './finish-link.js';
+  import { bounded, handOff, heldReturn, leave } from './finish-link.js';
+  import ReturnContinue from './ReturnContinue.svelte';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** The link's token. @default read from the page's address */
@@ -47,6 +48,7 @@
   type State =
     | { step: 'working' }
     | { step: 'continued' }
+    | { step: 'return'; url: string }
     | { step: 'signed-in'; to: string }
     | { step: 'workspace'; workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> }
     | { step: 'failed'; message: string; kind: string | null }
@@ -93,7 +95,9 @@
   }
 
   async function follow(step: SignInStep) {
-    if (handOff(step)) view = { step: 'working' };
+    const held = heldReturn(step);
+    if (held !== null) view = { step: 'return', url: held };
+    else if (handOff(step)) view = { step: 'working' };
     else if (step.done) await finish();
     else view = { step: 'workspace', workspaces: step.workspaces, choose: step.choose };
   }
@@ -144,6 +148,8 @@
       <span>{t('verify.finishing')}</span>
     </div>
   </AuthFormWrapper>
+{:else if view.step === 'return'}
+  <ReturnContinue url={view.url} {headingSnippet} {messages} class={className} {style} {...rest} />
 {:else if view.step === 'continued'}
   <AuthFormWrapper heading={t('signup.heading')} {headingSnippet} class={className} {style} data-bridge-verify-email="continued" {...rest}>
     <Alert variant="info">{t('verify.continuedElsewhere')}</Alert>

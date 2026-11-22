@@ -88,6 +88,9 @@
 <div class="bridge-passkeys {className ?? ''}" data-bridge-passkeys {...rest}>
   {#if heading !== null}<h3>{heading ?? t('passkey.manageHeading')}</h3>{/if}
   {#if failure}<Alert variant="error">{failure}</Alert>{/if}
+  {#if passkeys !== null && passkeys.some((each) => !each.usable)}
+    <Alert variant="info"><span data-bridge-passkeys-unusable>{t('passkey.unusableNotice')}</span></Alert>
+  {/if}
   {#if passkeys === null}
     <Spinner size={16} />
   {:else if passkeys.length === 0}
@@ -95,9 +98,10 @@
   {:else}
     <ul class="bridge-passkey-list">
       {#each passkeys as passkey (passkey.id)}
-        <li data-bridge-passkey={passkey.id}>
+        <li data-bridge-passkey={passkey.id} data-unusable={passkey.usable ? undefined : 'true'}>
           <div>
             <strong>{passkey.name}</strong>
+            {#if !passkey.usable}<div class="bridge-passkey-meta" data-bridge-passkey-unusable>{t('passkey.unusable')}</div>{/if}
             <div class="bridge-passkey-meta">
               {t('passkey.added', { date: date(passkey.createdAt) })}{#if passkey.lastUsedAt} · {t('passkey.lastUsed', { date: date(passkey.lastUsedAt) })}{/if}{#if passkey.deviceType === 'multiDevice'} · {t('passkey.synced')}{/if}
             </div>

@@ -76,7 +76,13 @@ export type PluginMessageKey =
 	| 'terms.notice'
 	| 'terms.noticeNoApp'
 	| 'terms.terms'
-	| 'terms.privacy';
+	| 'terms.privacy'
+	| 'link.button.verifyEmail'
+	| 'link.checking'
+	| 'link.press'
+	| 'link.used'
+	| 'link.expired'
+	| 'link.getNew';
 
 export type PluginMessages = Record<PluginMessageKey, string>;
 
@@ -153,6 +159,12 @@ const en: PluginMessages = {
 	'terms.noticeNoApp': 'By continuing you accept the {terms} and {privacy}.',
 	'terms.terms': 'Terms of Service',
 	'terms.privacy': 'Privacy Policy',
+	'link.button.verifyEmail': 'Confirm my email',
+	'link.checking': 'Checking your link…',
+	'link.press': 'Press the button to go on. Nothing happens until you do.',
+	'link.used': 'This link has already been used. Ask for a new one.',
+	'link.expired': 'This link has expired. Ask for a new one.',
+	'link.getNew': 'Get a new link',
 };
 
 const sv: PluginMessages = {
@@ -228,6 +240,12 @@ const sv: PluginMessages = {
 	'terms.noticeNoApp': 'Genom att fortsätta godkänner du {terms} och {privacy}.',
 	'terms.terms': 'användarvillkor',
 	'terms.privacy': 'integritetspolicy',
+	'link.button.verifyEmail': 'Bekräfta min e-post',
+	'link.checking': 'Kontrollerar länken…',
+	'link.press': 'Tryck på knappen för att gå vidare. Ingenting händer förrän du gör det.',
+	'link.used': 'Den här länken har redan använts. Be om en ny.',
+	'link.expired': 'Den här länken har gått ut. Be om en ny.',
+	'link.getNew': 'Skaffa en ny länk',
 };
 
 const da: PluginMessages = {
@@ -303,6 +321,12 @@ const da: PluginMessages = {
 	'terms.noticeNoApp': 'Ved at fortsætte accepterer du {terms} og {privacy}.',
 	'terms.terms': 'servicevilkår',
 	'terms.privacy': 'privatlivspolitik',
+	'link.button.verifyEmail': 'Bekræft min e-mail',
+	'link.checking': 'Kontrollerer linket…',
+	'link.press': 'Tryk på knappen for at fortsætte. Der sker ikke noget, før du gør det.',
+	'link.used': 'Dette link er allerede brugt. Bed om et nyt.',
+	'link.expired': 'Dette link er udløbet. Bed om et nyt.',
+	'link.getNew': 'Få et nyt link',
 };
 
 const nb: PluginMessages = {
@@ -378,6 +402,12 @@ const nb: PluginMessages = {
 	'terms.noticeNoApp': 'Ved å fortsette godtar du {terms} og {privacy}.',
 	'terms.terms': 'vilkår',
 	'terms.privacy': 'personvernerklæring',
+	'link.button.verifyEmail': 'Bekreft e-posten min',
+	'link.checking': 'Sjekker lenken…',
+	'link.press': 'Trykk på knappen for å fortsette. Ingenting skjer før du gjør det.',
+	'link.used': 'Denne lenken er allerede brukt. Be om en ny.',
+	'link.expired': 'Denne lenken har utløpt. Be om en ny.',
+	'link.getNew': 'Få en ny lenke',
 };
 
 const nl: PluginMessages = {
@@ -453,6 +483,12 @@ const nl: PluginMessages = {
 	'terms.noticeNoApp': 'Door verder te gaan ga je akkoord met de {terms} en het {privacy}.',
 	'terms.terms': 'servicevoorwaarden',
 	'terms.privacy': 'privacybeleid',
+	'link.button.verifyEmail': 'Bevestig mijn e-mail',
+	'link.checking': 'Link controleren…',
+	'link.press': 'Druk op de knop om verder te gaan. Er gebeurt niets totdat je dat doet.',
+	'link.used': 'Deze link is al gebruikt. Vraag een nieuwe aan.',
+	'link.expired': 'Deze link is verlopen. Vraag een nieuwe aan.',
+	'link.getNew': 'Nieuwe link opvragen',
 };
 
 const de: PluginMessages = {
@@ -528,6 +564,12 @@ const de: PluginMessages = {
 	'terms.noticeNoApp': 'Mit dem Fortfahren akzeptierst du die {terms} und die {privacy}.',
 	'terms.terms': 'Nutzungsbedingungen',
 	'terms.privacy': 'Datenschutzerklärung',
+	'link.button.verifyEmail': 'E-Mail bestätigen',
+	'link.checking': 'Link wird geprüft…',
+	'link.press': 'Klicke auf die Schaltfläche, um fortzufahren. Vorher passiert nichts.',
+	'link.used': 'Dieser Link wurde bereits verwendet. Fordere einen neuen an.',
+	'link.expired': 'Dieser Link ist abgelaufen. Fordere einen neuen an.',
+	'link.getNew': 'Neuen Link anfordern',
 };
 
 const fi: PluginMessages = {
@@ -603,6 +645,12 @@ const fi: PluginMessages = {
 	'terms.noticeNoApp': 'Jatkamalla hyväksyt seuraavat: {terms} ja {privacy}.',
 	'terms.terms': 'käyttöehdot',
 	'terms.privacy': 'tietosuojakäytäntö',
+	'link.button.verifyEmail': 'Vahvista sähköpostini',
+	'link.checking': 'Tarkistetaan linkkiä…',
+	'link.press': 'Jatka painamalla painiketta. Mitään ei tapahdu ennen sitä.',
+	'link.used': 'Tämä linkki on jo käytetty. Pyydä uusi.',
+	'link.expired': 'Tämä linkki on vanhentunut. Pyydä uusi.',
+	'link.getNew': 'Hae uusi linkki',
 };
 
 const fr: PluginMessages = {
@@ -678,6 +726,12 @@ const fr: PluginMessages = {
 	'terms.noticeNoApp': 'En continuant, tu acceptes les {terms} et la {privacy}.',
 	'terms.terms': 'conditions d\'utilisation',
 	'terms.privacy': 'politique de confidentialité',
+	'link.button.verifyEmail': 'Confirmer mon e-mail',
+	'link.checking': 'Vérification du lien…',
+	'link.press': 'Appuie sur le bouton pour continuer. Rien ne se passe avant.',
+	'link.used': 'Ce lien a déjà été utilisé. Demande-en un nouveau.',
+	'link.expired': 'Ce lien a expiré. Demande-en un nouveau.',
+	'link.getNew': 'Obtenir un nouveau lien',
 };
 
 const es: PluginMessages = {
@@ -753,6 +807,12 @@ const es: PluginMessages = {
 	'terms.noticeNoApp': 'Al continuar, aceptas los {terms} y la {privacy}.',
 	'terms.terms': 'términos del servicio',
 	'terms.privacy': 'política de privacidad',
+	'link.button.verifyEmail': 'Confirmar mi correo',
+	'link.checking': 'Comprobando el enlace…',
+	'link.press': 'Pulsa el botón para continuar. No pasa nada hasta que lo hagas.',
+	'link.used': 'Este enlace ya se ha usado. Pide uno nuevo.',
+	'link.expired': 'Este enlace ha caducado. Pide uno nuevo.',
+	'link.getNew': 'Obtener un enlace nuevo',
 };
 
 const it: PluginMessages = {
@@ -828,6 +888,12 @@ const it: PluginMessages = {
 	'terms.noticeNoApp': 'Continuando accetti i {terms} e la {privacy}.',
 	'terms.terms': 'termini di servizio',
 	'terms.privacy': 'informativa sulla privacy',
+	'link.button.verifyEmail': 'Conferma la mia email',
+	'link.checking': 'Controllo del link…',
+	'link.press': 'Premi il pulsante per continuare. Non succede nulla finché non lo fai.',
+	'link.used': 'Questo link è già stato usato. Chiedine uno nuovo.',
+	'link.expired': 'Questo link è scaduto. Chiedine uno nuovo.',
+	'link.getNew': 'Ottieni un nuovo link',
 };
 
 const pt: PluginMessages = {
@@ -903,6 +969,12 @@ const pt: PluginMessages = {
 	'terms.noticeNoApp': 'Ao continuar, aceitas os {terms} e a {privacy}.',
 	'terms.terms': 'Termos de Serviço',
 	'terms.privacy': 'Política de Privacidade',
+	'link.button.verifyEmail': 'Confirmar o meu e-mail',
+	'link.checking': 'A verificar a ligação…',
+	'link.press': 'Prime o botão para continuar. Nada acontece até o fazeres.',
+	'link.used': 'Esta ligação já foi utilizada. Pede uma nova.',
+	'link.expired': 'Esta ligação expirou. Pede uma nova.',
+	'link.getNew': 'Obter uma nova ligação',
 };
 
 const pl: PluginMessages = {
@@ -978,6 +1050,12 @@ const pl: PluginMessages = {
 	'terms.noticeNoApp': 'Kontynuując, akceptujesz {terms} i {privacy}.',
 	'terms.terms': 'regulamin',
 	'terms.privacy': 'politykę prywatności',
+	'link.button.verifyEmail': 'Potwierdź mój e-mail',
+	'link.checking': 'Sprawdzanie linku…',
+	'link.press': 'Naciśnij przycisk, aby przejść dalej. Nic się nie stanie, dopóki tego nie zrobisz.',
+	'link.used': 'Ten link został już użyty. Poproś o nowy.',
+	'link.expired': 'Ten link wygasł. Poproś o nowy.',
+	'link.getNew': 'Uzyskaj nowy link',
 };
 
 /** The plugin's copy by primary language subtag. */

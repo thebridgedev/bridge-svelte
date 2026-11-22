@@ -24,6 +24,9 @@
   import Spinner from '../shared/Spinner.svelte';
   import WorkspaceChooser from './WorkspaceChooser.svelte';
   import { takeEmailLink } from './email-link.js';
+  import { previewLink } from '../../core/link-preview.js';
+  import LinkConfirm from './LinkConfirm.svelte';
+  import LinkGone from './LinkGone.svelte';
   import { bounded, handOff, leave } from './finish-link.js';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
@@ -43,12 +46,15 @@
   const authBase = config?.authBase ?? '/auth';
 
   type State =
+    | { step: 'checking' }
+    | { step: 'confirm'; token: string }
+    | { step: 'gone'; state: 'used' | 'expired' }
     | { step: 'working' }
     | { step: 'signed-in'; to: string }
     | { step: 'rechecked' }
     | { step: 'workspace'; workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> }
     | { step: 'failed'; message: string; kind: string | null };
-  let view = $state<State>({ step: 'working' });
+  let view = $state<State>({ step: 'checking' });
 
   async function finish() {
     if (onSignIn) {
@@ -80,8 +86,18 @@
       view = { step: 'failed', message: t('verify.missingLink'), kind: null };
       return;
     }
-    bounded(getBridge().magicLink.finish(found)).then(follow).catch(fail);
+    // One button first: nothing is used up until it is pressed, so a mail scanner that opens the link spoils nothing.
+    void previewLink(found).then((state) => {
+      view = state === 'open' ? { step: 'confirm', token: found } : { step: 'gone', state };
+    });
   });
+
+  function confirm() {
+    if (view.step !== 'confirm') return;
+    const found = view.token;
+    view = { step: 'working' };
+    bounded(getBridge().magicLink.finish(found)).then(follow).catch(fail);
+  }
 
   async function choose(id: string) {
     if (view.step !== 'workspace') return;
@@ -93,7 +109,18 @@
   }
 </script>
 
-{#if view.step === 'working'}
+{#if view.step === 'checking'}
+  <AuthFormWrapper heading={null} class={className} {style} data-bridge-magic-link="checking" {...rest}>
+    <div class="bridge-auth-settling" data-bridge-auth-settling>
+      <Spinner size={24} />
+      <span>{t('link.checking')}</span>
+    </div>
+  </AuthFormWrapper>
+{:else if view.step === 'confirm'}
+  <LinkConfirm heading={t('login.heading')} {headingSnippet} label={t('login.submit')} onconfirm={confirm} {messages} class={className} {style} data-bridge-magic-link="confirm" {...rest} />
+{:else if view.step === 'gone'}
+  <LinkGone heading={t('login.heading')} {headingSnippet} state={view.state} href={`${authBase}/sign-in`} {messages} class={className} {style} data-bridge-magic-link={view.state} {...rest} />
+{:else if view.step === 'working'}
   <AuthFormWrapper heading={null} class={className} {style} data-bridge-magic-link="working" {...rest}>
     <div class="bridge-auth-settling" data-bridge-auth-settling>
       <Spinner size={24} />

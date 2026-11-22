@@ -19,12 +19,15 @@
   import { getBridge, peekConfig } from '../../core/client.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
+  import { previewLink } from '../../core/link-preview.js';
   import { offerSignUpLink, takeRelayedLink } from '../../core/link-relay.js';
   import AuthFormWrapper from '../shared/AuthFormWrapper.svelte';
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
   import PasswordInput from '../shared/PasswordInput.svelte';
   import WorkspaceChooser from './WorkspaceChooser.svelte';
+  import LinkConfirm from './LinkConfirm.svelte';
+  import LinkGone from './LinkGone.svelte';
   import { takeEmailLink } from './email-link.js';
   import { bounded, handOff, leave } from './finish-link.js';
 
@@ -45,13 +48,16 @@
   const authBase = config?.authBase ?? '/auth';
 
   type State =
+    | { step: 'checking' }
+    | { step: 'confirm'; token: string }
+    | { step: 'gone'; state: 'used' | 'expired' }
     | { step: 'working' }
     | { step: 'continued' }
     | { step: 'signed-in'; to: string }
     | { step: 'workspace'; workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> }
     | { step: 'failed'; message: string; kind: string | null }
     | { step: 'password'; token: string; error: string | null; sending: boolean };
-  let view = $state<State>({ step: 'working' });
+  let view = $state<State>({ step: 'checking' });
 
   async function finish() {
     if (onSignIn) {
@@ -106,8 +112,24 @@
       view = { step: 'failed', message: t('verify.missingLink'), kind: null };
       return;
     }
-    void start(found, relayed !== null);
+    // A link another tab took from a page where the button was pressed is finished here as it comes. Any other link
+    // shows one button first: nothing is used up until it is pressed, so a mail scanner spoils nothing.
+    if (relayed !== null) {
+      view = { step: 'working' };
+      void start(found, true);
+      return;
+    }
+    void previewLink(found).then((state) => {
+      view = state === 'open' ? { step: 'confirm', token: found } : { step: 'gone', state };
+    });
   });
+
+  function confirm() {
+    if (view.step !== 'confirm') return;
+    const found = view.token;
+    view = { step: 'working' };
+    void start(found, false);
+  }
 
   async function start(found: string, relayed: boolean) {
     try {
@@ -137,7 +159,18 @@
   }
 </script>
 
-{#if view.step === 'working'}
+{#if view.step === 'checking'}
+  <AuthFormWrapper heading={null} class={className} {style} data-bridge-verify-email="checking" {...rest}>
+    <div class="bridge-auth-settling" data-bridge-auth-settling>
+      <Spinner size={24} />
+      <span>{t('link.checking')}</span>
+    </div>
+  </AuthFormWrapper>
+{:else if view.step === 'confirm'}
+  <LinkConfirm heading={t('signup.heading')} {headingSnippet} label={t('link.button.verifyEmail')} onconfirm={confirm} {messages} class={className} {style} data-bridge-verify-email="confirm" {...rest} />
+{:else if view.step === 'gone'}
+  <LinkGone heading={t('signup.heading')} {headingSnippet} state={view.state} href={`${authBase}/sign-up`} {messages} class={className} {style} data-bridge-verify-email={view.state} {...rest} />
+{:else if view.step === 'working'}
   <AuthFormWrapper heading={null} class={className} {style} data-bridge-verify-email="working" {...rest}>
     <div class="bridge-auth-settling" data-bridge-auth-settling>
       <Spinner size={24} />

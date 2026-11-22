@@ -18,6 +18,9 @@
   import Spinner from '../shared/Spinner.svelte';
   import WorkspaceChooser from './WorkspaceChooser.svelte';
   import { takeEmailLink } from './email-link.js';
+  import { previewLink } from '../../core/link-preview.js';
+  import LinkGone from './LinkGone.svelte';
+  import NoReferrer from '../shared/NoReferrer.svelte';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** The link's token. @default read from the page's address */
@@ -37,6 +40,7 @@
 
   type State =
     | { step: 'ready' }
+    | { step: 'gone'; state: 'used' | 'expired' }
     | { step: 'working' }
     | { step: 'unsupported' }
     | { step: 'workspace'; workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> }
@@ -65,6 +69,11 @@
     found = token ?? takeEmailLink('passkey-setup');
     if (found === null) view = { step: 'failed', message: t('verify.missingLink'), kind: null, again: false };
     else if (!(await getBridge().passkeys.supported())) view = { step: 'unsupported' };
+    else {
+      // The page's one button is the only thing that uses the link: looking at it first spends nothing.
+      const state = await previewLink(found);
+      if (state !== 'open') view = { step: 'gone', state };
+    }
   });
 
   async function create() {
@@ -87,7 +96,10 @@
   }
 </script>
 
-{#if view.step === 'working'}
+<NoReferrer />
+{#if view.step === 'gone'}
+  <LinkGone heading={t('passkey.setupHeading')} {headingSnippet} state={view.state} href={`${authBase}/sign-in`} {messages} class={className} {style} data-bridge-passkey-setup={view.state} {...rest} />
+{:else if view.step === 'working'}
   <AuthFormWrapper heading={null} class={className} {style} data-bridge-passkey-setup="working" {...rest}>
     <div class="bridge-auth-settling" data-bridge-auth-settling>
       <Spinner size={24} />

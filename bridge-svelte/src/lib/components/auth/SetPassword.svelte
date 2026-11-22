@@ -14,6 +14,9 @@
   import Spinner from '../shared/Spinner.svelte';
   import PasswordInput from '../shared/PasswordInput.svelte';
   import { takeEmailLink } from './email-link.js';
+  import { previewLink } from '../../core/link-preview.js';
+  import LinkGone from './LinkGone.svelte';
+  import NoReferrer from '../shared/NoReferrer.svelte';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** The reset link's token. @default read from the page's address */
@@ -38,10 +41,14 @@
   let loading = $state(false);
   let done = $state(false);
   let failure = $state<string | null>(null);
+  /** The link was used already or has expired: told on opening, before a new password is typed for nothing. */
+  let gone = $state<'used' | 'expired' | null>(null);
 
   onMount(() => {
     linkToken = token ?? takeEmailLink('reset-password');
     checked = true;
+    // The page's one button is the only thing that uses the link: looking at it first spends nothing.
+    if (linkToken !== null) void previewLink(linkToken).then((state) => (gone = state === 'open' ? null : state));
     getBridge()
       .signIn.options()
       .then((found) => (minLength = found.password?.minLength ?? minLength))
@@ -73,7 +80,10 @@
   }
 </script>
 
-{#if done}
+<NoReferrer />
+{#if gone !== null}
+  <LinkGone heading={t('forgot.headingSet')} {headingSnippet} state={gone} href={`${authBase}/forgot-password`} {messages} class={className} {style} data-bridge-set-password={gone} {...rest} />
+{:else if done}
   <AuthFormWrapper heading={t('forgot.successHeading')} description={t('forgot.setDone')} class={className} {style} data-bridge-set-password="done" {...rest}>
     <a href={loginHref ?? `${authBase}/sign-in`} class="bridge-btn bridge-btn-primary">{t('login.submit')}</a>
   </AuthFormWrapper>

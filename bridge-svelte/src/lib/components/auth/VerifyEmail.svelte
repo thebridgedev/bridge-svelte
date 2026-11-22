@@ -73,7 +73,7 @@
 
   async function choosePassword(event: SubmitEvent) {
     event.preventDefault();
-    if (view.step !== 'password') return;
+    if (view.step !== 'password' || view.sending) return;
     const link = view.token;
     view = { ...view, sending: true, error: null };
     try {

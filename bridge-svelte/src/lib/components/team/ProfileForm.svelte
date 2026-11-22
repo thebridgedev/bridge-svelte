@@ -51,7 +51,7 @@
   });
 
   async function save() {
-    if (!dirty) return;
+    if (!dirty || saving) return;
     saving = true;
     error = null;
     success = null;

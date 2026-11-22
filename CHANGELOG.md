@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+Needs the `@nebulr-group/bridge-auth-core` that carries `language`, `links.preview` and `logout()`.
+
+### Added
+
+- **Enter submits every sign-in form, once.** The forms that let a second press through while they were sending (the password step of an email link, the profile form) now stop it, and a test holds every end-user screen: each field is in a form with a submit button, and nothing submits by itself.
+
 ## [1.0.0-alpha.17] - Unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.15.

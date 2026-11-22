@@ -19,7 +19,8 @@ export const load = bridgeBootstrap({
 ```
 
 - The first rule whose `match` fits the path decides. `match` is an exact path, a path with `*`, or a RegExp.
-- `public: true` opens a route to visitors. Routes no rule matches need a signed-in person, unless `defaultAccess: 'public'`.
+- `public: true` opens a route to visitors. Routes no rule matches need a signed-in person, unless `defaultAccess: 'public'`. A public route that no flag gates also skips the sign-in startup work (the stored sign-in, its renewal and the flag results), so marking your landing and marketing pages public is the faster choice: they show at once.
+- A sign-in or flag problem at startup never breaks a page, marked or not: the visitor is treated as signed out and flags have their default values. A page that needs sign-in sends the visitor to sign in; a public page shows.
 - `featureFlag` names one flag, `{ any: [...] }` or `{ all: [...] }`. While it is off, the person goes to `redirectTo` (default: your home page after sign-in).
 - The guard runs again when the session or the flags change, so a flag turned off in Bridge closes an open page within a second.
 

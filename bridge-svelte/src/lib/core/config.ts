@@ -15,7 +15,12 @@ export type FlagRequirement = string | { readonly any: readonly string[] } | { r
 export interface RouteRule {
 	/** An exact path, a path with `*` wildcards (`/docs/*`), or a RegExp. */
 	readonly match: string | RegExp;
-	/** Open to visitors. Without it, `defaultAccess` decides. */
+	/**
+	 * Open to visitors. Without it, `defaultAccess` decides. A public page with no `featureFlag` shows at once: it waits for
+	 * nothing the sign-in startup does (the stored sign-in, its renewal, flag results), so it is the faster choice for
+	 * marketing and landing pages. Without the mark a page is still never broken by a sign-in problem: the visitor is
+	 * taken as signed out.
+	 */
 	readonly public?: boolean;
 	/**
 	 * Flags the route needs. A flag's rule says why it is on: a privilege, a

@@ -83,6 +83,19 @@ export interface GuardInput {
 	readonly locked?: boolean;
 }
 
+/**
+ * Whether a page is open to everyone whatever the session or the flags say: a page marked `public` (or any page, with
+ * `defaultAccess: 'public'`) that no flag gates. Such a page needs none of the sign-in startup work (reading the
+ * stored sign-in, renewing it, loading flags) before it shows, so nothing waits for it, and a sign-in or flag problem
+ * can never hold it back. Sign-in pages are not among them: they send a signed-in person on.
+ */
+export function opensForEveryone(config: ResolvedConfig, path: string): boolean {
+	const normal = normalizePath(path);
+	if (authPageAt(normal, config.authBase) !== null) return false;
+	const rule = findRule(normal, config.rules);
+	return (rule?.public ?? config.defaultAccess === 'public') && rule?.featureFlag === undefined;
+}
+
 /** Decides one navigation. */
 export function decide(config: ResolvedConfig, given: GuardInput): GuardDecision {
 	const input = { ...given, path: normalizePath(given.path) };

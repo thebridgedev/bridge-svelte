@@ -4,6 +4,10 @@
 
 Needs the `@nebulr-group/bridge-auth-core` that carries `language`, `links.preview` and `logout()`.
 
+### Fixed
+
+- **Sign-in problems at startup never break a page.** A page that is public and gated by no flag (a rule with `public: true`, or any page with `defaultAccess: 'public'`) now shows at once and waits for nothing the sign-in startup does: before, every page waited for Bridge to answer, up to 8 seconds when Bridge did not. Any failure the guard does not expect is taken as a signed-out visitor, so a page that needs sign-in sends the visitor to sign in instead of failing. Refused or failed renewals, an unreachable Bridge and failing flags were already handled and are now held by a test.
+
 ### Added
 
 - **Email links open on a page with one button, and nothing is used until it is pressed.** The sign-up and sign-in link pages look at the link with `links.preview` and show one button ("Confirm my email", "Sign in"), so a mail scanner that opens the link first spoils nothing; the password and passkey pages use the link only when their own button is pressed. A used or expired link says so, with a way to get a new one. The link format stays `#bridge=<step>&token=<secret>`, and links sent before keep working. The pages tell the browser not to pass their address on to other sites.

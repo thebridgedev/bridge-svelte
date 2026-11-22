@@ -16,7 +16,7 @@ import { readEmailLink, readReturnTo, type Bridge } from '@nebulr-group/bridge-a
 import { get } from 'svelte/store';
 import { startClient } from './core/client.js';
 import { resolveConfig, type BridgeConfig, type ResolvedConfig } from './core/config.js';
-import { decide, normalizePath, type GuardDecision } from './core/guard.js';
+import { decide, normalizePath, opensForEveryone, type GuardDecision } from './core/guard.js';
 import { authPageAt, isCatchAll, isUnder, pageForLink, parseBillingPage, ROUTE_PARAM } from './core/routes.js';
 
 /** What the root layout's load gives every page. */
@@ -79,7 +79,23 @@ async function needsPlanNow(client: Bridge): Promise<boolean> {
 	return facts === undefined ? true : facts.access === 'needs_plan';
 }
 
+/**
+ * The decision for a visitor Bridge could not tell us about: signed out, with no flag results. What the guard falls back
+ * to when the startup work fails in a way nothing else caught, so a sign-in problem never breaks a page.
+ */
+function signedOutDecision(config: ResolvedConfig, url: URL): GuardDecision {
+	return decide(config, {
+		path: url.pathname,
+		target: `${normalizePath(url.pathname)}${url.search}`,
+		session: { status: 'signed-out', reason: 'never-signed-in' },
+		flags: { enabled: () => false },
+		returnTo: readReturnTo(url, config.returnToParam),
+	});
+}
+
 async function guard(client: Bridge, config: ResolvedConfig, url: URL): Promise<GuardDecision> {
+	// A page open to everyone shows at once: the client starts in the background, and nothing waits for it.
+	if (opensForEveryone(config, url.pathname)) return { type: 'allow' };
 	await within(client.ready, READY_WAIT_MS);
 	const flagsNeeded = authPageAt(normalizePath(url.pathname), config.authBase) === null;
 	if (flagsNeeded && get(client.flags.status) !== 'ready') await within(client.flags.load(), READY_WAIT_MS);
@@ -131,7 +147,9 @@ export function bridgeBootstrap(options: BridgeConfig = {}) {
 			if (isUnder(path, config.billingBase) && parseBillingPage(rest) === null) error(404, 'Not found');
 		}
 
-		const decision = await guard(client, config, url);
+		// Whatever goes wrong while reading the stored sign-in, renewing it or loading flags, the visitor is treated as signed
+		// out and the page decides from that: a public page shows, a page that needs sign-in sends the visitor to sign in.
+		const decision = await guard(client, config, url).catch(() => signedOutDecision(config, url));
 		switch (decision.type) {
 			case 'sign-in':
 			case 'redirect':

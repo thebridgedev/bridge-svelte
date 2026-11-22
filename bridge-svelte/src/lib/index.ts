@@ -29,6 +29,10 @@ export type { Quota, QuotaHandle, QuotaLevel, QuotaState } from './core/quota.js
 // Flags
 export { canManageBilling, canManageTeam, flag, flagReason, requireFlag, useFlag } from './core/flags.js';
 
+// Signing out
+export { logout } from './core/logout.js';
+export type { LogoutOptions, LogoutResult } from '@nebulr-group/bridge-auth-core';
+
 // Calling your API
 export { bridgeFetch } from './core/fetch.js';
 export { closeUpgrade, onBridgeQuotaExceeded, openUpgrade, parseQuotaRefusal, readPaymentRequired, upgradeRequest } from './core/upgrade.js';

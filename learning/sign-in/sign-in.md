@@ -110,7 +110,15 @@ An invite that no longer works says why: revoked or expired (ask for a new one),
 <SignOutButton />
 ```
 
-Signing out ends the session here, in every open tab, and at Bridge. Switching workspace moves every tab to the new workspace; flag results, billing and the team panel follow.
+Signing out ends the session here, in every open tab, and at Bridge, so a copied token stops working. Then the person goes where you choose:
+
+```svelte
+<SignOutButton />                        <!-- the app's own sign-in page (auth.afterSignOut) -->
+<SignOutButton redirectTo="/goodbye" />  <!-- another page of the app -->
+<SignOutButton silent />                 <!-- stay here: signed out, no page reload, show your own signed-out view -->
+```
+
+`redirectTo` is only ever a path on the page's own address, or an address in `auth.appOrigins` (`https://app.acme.com`). Any other address is refused and the default is used, so a link can never sign somebody out and send them to another site. In your own code, `logout({ redirectTo, silent })` does the same; the `signed-out` event reaches everything that listens in every case. Switching workspace moves every tab to the new workspace; flag results, billing and the team panel follow.
 
 ## Using the forms on your own pages
 

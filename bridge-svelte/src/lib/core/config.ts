@@ -46,6 +46,11 @@ export interface BridgeConfig {
 		readonly afterSignIn?: string;
 		/** Where a person lands after signing out. @default the sign-in page */
 		readonly afterSignOut?: string;
+		/**
+		 * Other addresses of the app (besides this page's own) that a sign-out may send a person to, as origins
+		 * (`https://app.acme.com`). A sign-out never goes to an address that is not the page's own or one of these.
+		 */
+		readonly appOrigins?: readonly string[];
 	};
 	/** The query parameter that carries the page to return to after sign-in. @default 'redirectUri' */
 	readonly returnToParam?: string;
@@ -157,6 +162,7 @@ export interface ResolvedConfig {
 	readonly authBase: string;
 	readonly afterSignIn: string;
 	readonly afterSignOut: string;
+	readonly appOrigins: readonly string[];
 	readonly returnToParam: string;
 	readonly locale: string | undefined;
 	readonly messages: BridgeMessages;
@@ -227,6 +233,7 @@ export function resolveConfig(config: BridgeConfig, envIssuer: string | undefine
 		authBase,
 		afterSignIn: config.auth?.afterSignIn ?? '/',
 		afterSignOut: config.auth?.afterSignOut ?? `${authBase}/sign-in`,
+		appOrigins: config.auth?.appOrigins ?? [],
 		returnToParam: config.returnToParam ?? 'redirectUri',
 		locale: config.locale,
 		messages: config.messages ?? {},

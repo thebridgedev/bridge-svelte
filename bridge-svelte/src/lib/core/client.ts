@@ -4,6 +4,7 @@
  * on a server: the server side has its own helpers (`/server`), per request.
  */
 import { createBridge, localStorageAdapter, memoryStorage, type Bridge, type BridgeOptions, type SignedOutReason } from '@nebulr-group/bridge-auth-core';
+import { goto } from '$app/navigation';
 import { get, writable, type Readable } from 'svelte/store';
 import type { ResolvedConfig } from './config.js';
 import { setAppCopy } from './i18n.js';
@@ -65,6 +66,10 @@ export function startClient(config: ResolvedConfig, extra?: Partial<BridgeOption
 	const client = createBridge({
 		issuer: config.issuer,
 		tokenOrigins: config.tokenOrigins,
+		// Signing out goes through the router, so no page reloads, and lands where the app chose.
+		signedOutPage: config.afterSignOut,
+		appOrigins: config.appOrigins,
+		navigate: (to: string) => goto(to, { invalidateAll: true }),
 		...(config.live ? {} : { live: false as const }),
 		// Memory: the refresh token and the visitor id stay in this page. A sign-up's verifier waits in localStorage
 		// for its email link, which opens in a new tab, for the link's 15 minutes at most, and is removed once used.

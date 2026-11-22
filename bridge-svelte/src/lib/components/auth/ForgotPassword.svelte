@@ -5,6 +5,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
+  import { takeCarriedEmail } from '../../core/carry.js';
   import { getBridge, peekConfig } from '../../core/client.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
@@ -26,7 +27,8 @@
   const t = $derived(translator(messages));
   const authBase = peekConfig()?.authBase ?? '/auth';
 
-  let email = $state('');
+  // The address typed on the sign-in screen, when the person came from there: shown, and still theirs to change.
+  let email = $state(takeCarriedEmail());
   let loading = $state(false);
   let sent = $state(false);
   let failure = $state<string | null>(null);

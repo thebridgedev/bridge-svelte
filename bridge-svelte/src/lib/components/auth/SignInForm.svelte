@@ -22,6 +22,7 @@
   import { isBridgeError, readReturnTo, type SignInOptions, type SignInStep, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
   import { get } from 'svelte/store';
   import { getBridge, peekConfig, takeEndedReason } from '../../core/client.js';
+  import { carryEmail } from '../../core/carry.js';
   import { session } from '../../core/stores.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
@@ -283,7 +284,7 @@
         </button>
         {#if showForgotPassword}
           <div class="bridge-forgot-row">
-            <a href={forgotPasswordHref ?? `${authBase}/forgot-password`} class="bridge-link">{t('login.forgotPassword')}</a>
+            <a href={forgotPasswordHref ?? `${authBase}/forgot-password`} class="bridge-link" data-bridge-forgot-link onclick={() => carryEmail(email)}>{t('login.forgotPassword')}</a>
           </div>
         {/if}
         {#if linkOffered}

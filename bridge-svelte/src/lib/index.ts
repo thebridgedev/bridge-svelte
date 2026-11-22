@@ -38,6 +38,9 @@ export type { BridgeQuotaRefusal, UpgradeDialogProps, UpgradeRequest } from './c
 export { cancelRecheck, confirmItIsYou, recheckRequest, withRecheck } from './core/recheck.js';
 export type { RecheckRequest } from './core/recheck.js';
 
+// What one sign-in screen hands to the next, for sign-in pages of your own
+export { carryEmail, takeCarriedEmail } from './core/carry.js';
+
 // Hand-off mode
 export { handoffSignIn, readHandoff, returnToProgram } from './core/handoff.js';
 export type { HandoffState } from './core/handoff.js';

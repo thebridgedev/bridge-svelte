@@ -6,6 +6,7 @@ Needs the `@nebulr-group/bridge-auth-core` that carries `language`, `links.previ
 
 ### Added
 
+- **The email typed on sign-in carries to Forgot password.** It shows in the field there and can be changed; opening Forgot password directly shows an empty field, and the email is never put in the web address (`carryEmail` / `takeCarriedEmail` for sign-in pages of your own).
 - **Enter submits every sign-in form, once.** The forms that let a second press through while they were sending (the password step of an email link, the profile form) now stop it, and a test holds every end-user screen: each field is in a form with a submit button, and nothing submits by itself.
 
 ## [1.0.0-alpha.17] - Unreleased

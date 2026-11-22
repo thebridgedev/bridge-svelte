@@ -63,6 +63,28 @@ describe('the terms line on sign-up (TBP-864)', () => {
 	});
 });
 
+describe('the line names the app, in every language (TBP-864)', () => {
+	it('renders the app\'s name and both link labels in each of the plugin\'s languages', () => {
+		try {
+			for (const [locale, messages] of Object.entries(PLUGIN_LOCALES)) {
+				setAppCopy(locale, {});
+				const out = html({ notice, appName: 'Acme' });
+				expect(out, locale).toContain('Acme');
+				expect(out, locale).toContain(`>${messages['terms.terms']}</a>`);
+				expect(out, locale).toContain(`>${messages['terms.privacy']}</a>`);
+				expect(out, locale).not.toContain('{app}');
+			}
+		} finally {
+			setAppCopy(undefined, {});
+		}
+	});
+
+	it('names the app from the sign-in options\' app name, the one the server sends from the app\'s registry copy', () => {
+		const out = html({ notice, appName: '  Acme Cloud ' });
+		expect(out).toContain("By continuing you accept Acme Cloud's ");
+	});
+});
+
 describe('where the line is shown', () => {
 	const files = import.meta.glob(['../auth/SignUpForm.svelte', '../auth/SignInForm.svelte', '../auth/InviteLanding.svelte'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 

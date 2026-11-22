@@ -68,7 +68,11 @@ export type PluginMessageKey =
 	| 'recheck.anotherWay'
 	| 'recheck.noMethods'
 	| 'recheck.wrongPassword'
-	| 'recheck.confirmed';
+	| 'recheck.confirmed'
+	| 'phone.country'
+	| 'phone.search'
+	| 'phone.noResults'
+	| 'phone.invalid';
 
 export type PluginMessages = Record<PluginMessageKey, string>;
 
@@ -137,6 +141,10 @@ const en: PluginMessages = {
 	'recheck.noMethods': 'There is no way to confirm it is you here. Sign in again.',
 	'recheck.wrongPassword': 'That password is not right.',
 	'recheck.confirmed': 'Confirmed. You can close this tab and go back.',
+	'phone.country': 'Country',
+	'phone.search': 'Search country or code',
+	'phone.noResults': 'No country matches',
+	'phone.invalid': 'This phone number does not look right for the chosen country.',
 };
 
 const sv: PluginMessages = {
@@ -204,6 +212,10 @@ const sv: PluginMessages = {
 	'recheck.noMethods': 'Det finns inget sätt att bekräfta att det är du här. Logga in igen.',
 	'recheck.wrongPassword': 'Det lösenordet stämmer inte.',
 	'recheck.confirmed': 'Bekräftat. Du kan stänga den här fliken och gå tillbaka.',
+	'phone.country': 'Land',
+	'phone.search': 'Sök land eller landskod',
+	'phone.noResults': 'Inget land matchar',
+	'phone.invalid': 'Telefonnumret verkar inte stämma för det valda landet.',
 };
 
 const da: PluginMessages = {
@@ -271,6 +283,10 @@ const da: PluginMessages = {
 	'recheck.noMethods': 'Der er ingen måde at bekræfte, at det er dig, her. Log ind igen.',
 	'recheck.wrongPassword': 'Den adgangskode er ikke korrekt.',
 	'recheck.confirmed': 'Bekræftet. Du kan lukke denne fane og gå tilbage.',
+	'phone.country': 'Land',
+	'phone.search': 'Søg efter land eller landekode',
+	'phone.noResults': 'Intet land matcher',
+	'phone.invalid': 'Telefonnummeret ser ikke rigtigt ud for det valgte land.',
 };
 
 const nb: PluginMessages = {
@@ -338,6 +354,10 @@ const nb: PluginMessages = {
 	'recheck.noMethods': 'Det finnes ingen måte å bekrefte at det er deg her. Logg inn på nytt.',
 	'recheck.wrongPassword': 'Det passordet er ikke riktig.',
 	'recheck.confirmed': 'Bekreftet. Du kan lukke denne fanen og gå tilbake.',
+	'phone.country': 'Land',
+	'phone.search': 'Søk etter land eller landskode',
+	'phone.noResults': 'Ingen land samsvarer',
+	'phone.invalid': 'Telefonnummeret ser ikke riktig ut for det valgte landet.',
 };
 
 const nl: PluginMessages = {
@@ -405,6 +425,10 @@ const nl: PluginMessages = {
 	'recheck.noMethods': 'Hier is geen manier om te bevestigen dat jij het bent. Meld je opnieuw aan.',
 	'recheck.wrongPassword': 'Dat wachtwoord klopt niet.',
 	'recheck.confirmed': 'Bevestigd. Je kunt dit tabblad sluiten en teruggaan.',
+	'phone.country': 'Land',
+	'phone.search': 'Zoek een land of landcode',
+	'phone.noResults': 'Geen land gevonden',
+	'phone.invalid': 'Dit telefoonnummer lijkt niet te kloppen voor het gekozen land.',
 };
 
 const de: PluginMessages = {
@@ -472,6 +496,10 @@ const de: PluginMessages = {
 	'recheck.noMethods': 'Hier gibt es keine Möglichkeit zu bestätigen, dass du es bist. Melde dich erneut an.',
 	'recheck.wrongPassword': 'Dieses Passwort ist nicht richtig.',
 	'recheck.confirmed': 'Bestätigt. Du kannst diesen Tab schließen und zurückgehen.',
+	'phone.country': 'Land',
+	'phone.search': 'Land oder Vorwahl suchen',
+	'phone.noResults': 'Kein Land gefunden',
+	'phone.invalid': 'Diese Telefonnummer passt nicht zum gewählten Land.',
 };
 
 const fi: PluginMessages = {
@@ -539,6 +567,10 @@ const fi: PluginMessages = {
 	'recheck.noMethods': 'Täällä ei ole tapaa vahvistaa, että se olet sinä. Kirjaudu uudelleen.',
 	'recheck.wrongPassword': 'Salasana ei ole oikea.',
 	'recheck.confirmed': 'Vahvistettu. Voit sulkea tämän välilehden ja palata takaisin.',
+	'phone.country': 'Maa',
+	'phone.search': 'Hae maata tai suuntanumeroa',
+	'phone.noResults': 'Ei hakua vastaavaa maata',
+	'phone.invalid': 'Puhelinnumero ei näytä oikealta valitulle maalle.',
 };
 
 const fr: PluginMessages = {
@@ -606,6 +638,10 @@ const fr: PluginMessages = {
 	'recheck.noMethods': "Il n'y a aucun moyen de confirmer ici que c'est vous. Reconnectez-vous.",
 	'recheck.wrongPassword': "Ce mot de passe n'est pas correct.",
 	'recheck.confirmed': 'Confirmé. Vous pouvez fermer cet onglet et revenir en arrière.',
+	'phone.country': 'Pays',
+	'phone.search': 'Rechercher un pays ou un indicatif',
+	'phone.noResults': 'Aucun pays ne correspond',
+	'phone.invalid': 'Ce numéro de téléphone ne semble pas correct pour le pays choisi.',
 };
 
 const es: PluginMessages = {
@@ -673,6 +709,10 @@ const es: PluginMessages = {
 	'recheck.noMethods': 'Aquí no hay forma de confirmar que eres tú. Vuelve a iniciar sesión.',
 	'recheck.wrongPassword': 'Esa contraseña no es correcta.',
 	'recheck.confirmed': 'Confirmado. Puedes cerrar esta pestaña y volver.',
+	'phone.country': 'País',
+	'phone.search': 'Buscar país o prefijo',
+	'phone.noResults': 'Ningún país coincide',
+	'phone.invalid': 'Este número de teléfono no parece correcto para el país elegido.',
 };
 
 const it: PluginMessages = {
@@ -740,6 +780,10 @@ const it: PluginMessages = {
 	'recheck.noMethods': "Qui non c'è modo di confermare che sei tu. Accedi di nuovo.",
 	'recheck.wrongPassword': 'Quella password non è corretta.',
 	'recheck.confirmed': 'Confermato. Puoi chiudere questa scheda e tornare indietro.',
+	'phone.country': 'Paese',
+	'phone.search': 'Cerca un paese o un prefisso',
+	'phone.noResults': 'Nessun paese corrisponde',
+	'phone.invalid': 'Questo numero di telefono non sembra corretto per il paese scelto.',
 };
 
 const pt: PluginMessages = {
@@ -807,6 +851,10 @@ const pt: PluginMessages = {
 	'recheck.noMethods': 'Aqui não há forma de confirmar que é você. Inicie sessão novamente.',
 	'recheck.wrongPassword': 'Essa palavra-passe não está correta.',
 	'recheck.confirmed': 'Confirmado. Pode fechar este separador e voltar.',
+	'phone.country': 'País',
+	'phone.search': 'Procurar país ou indicativo',
+	'phone.noResults': 'Nenhum país corresponde',
+	'phone.invalid': 'Este número de telefone não parece correto para o país escolhido.',
 };
 
 const pl: PluginMessages = {
@@ -874,6 +922,10 @@ const pl: PluginMessages = {
 	'recheck.noMethods': 'Nie ma tu sposobu, by potwierdzić, że to ty. Zaloguj się ponownie.',
 	'recheck.wrongPassword': 'To hasło jest nieprawidłowe.',
 	'recheck.confirmed': 'Potwierdzono. Możesz zamknąć tę kartę i wrócić.',
+	'phone.country': 'Kraj',
+	'phone.search': 'Szukaj kraju lub numeru kierunkowego',
+	'phone.noResults': 'Żaden kraj nie pasuje',
+	'phone.invalid': 'Ten numer telefonu nie pasuje do wybranego kraju.',
 };
 
 /** The plugin's copy by primary language subtag. */

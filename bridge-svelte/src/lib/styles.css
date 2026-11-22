@@ -394,6 +394,117 @@
     color: var(--bridge-foreground);
   }
 
+  /* ─── Phone number field with country picker ─────────────────────────────── */
+
+  .bridge-phone {
+    position: relative;
+  }
+
+  .bridge-phone-field {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .bridge-phone-field input[type="tel"] {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .bridge-phone-country {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex: none;
+    background: var(--bridge-bg, #ffffff);
+    color: inherit;
+    border: 1px solid var(--bridge-border);
+    border-radius: var(--bridge-border-radius);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    padding: 0 0.5rem;
+  }
+
+  .bridge-phone-flag {
+    width: 20px;
+    height: 14px;
+    flex: none;
+    object-fit: cover;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 15%, transparent);
+  }
+
+  .bridge-phone-flag-none {
+    display: inline-block;
+    background: color-mix(in srgb, currentColor 10%, transparent);
+  }
+
+  .bridge-phone-picker {
+    position: absolute;
+    z-index: 20;
+    left: 0;
+    right: 0;
+    top: calc(100% + 0.25rem);
+    background: var(--bridge-bg, #ffffff);
+    border: 1px solid var(--bridge-border);
+    border-radius: var(--bridge-border-radius);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+    padding: 0.5rem;
+  }
+
+  .bridge-phone-search {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 0.375rem;
+  }
+
+  .bridge-phone-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 14rem;
+    overflow-y: auto;
+  }
+
+  .bridge-phone-list li > button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    padding: 0.375rem 0.5rem;
+    text-align: left;
+  }
+
+  .bridge-phone-list li[data-active="true"] > button,
+  .bridge-phone-list li > button:hover {
+    background: color-mix(in srgb, var(--bridge-primary) 10%, transparent);
+  }
+
+  .bridge-phone-name {
+    flex: 1;
+  }
+
+  .bridge-phone-dial {
+    color: var(--bridge-muted);
+  }
+
+  .bridge-phone-empty {
+    color: var(--bridge-muted);
+    padding: 0.5rem;
+  }
+
+  .bridge-phone-error {
+    color: var(--bridge-alert-error-fg, #b91c1c);
+    font-size: calc(0.8125 * var(--bridge-text-base, 1rem));
+    margin: 0.25rem 0 0;
+  }
+
   /* ─── Auth form helpers ───────────────────────────────────────────────────── */
 
   .bridge-sso-row {

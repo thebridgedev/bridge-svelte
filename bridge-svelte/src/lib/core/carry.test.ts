@@ -1,8 +1,8 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { carryEmail, takeCarriedEmail } from './carry.js';
 
-const source = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
+const files = import.meta.glob('../components/auth/*.svelte', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const source = (path: string) => files[path] as string;
 
 describe('the email carried from sign-in to Forgot password', () => {
   it('is handed over once, trimmed, and then gone', () => {

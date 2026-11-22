@@ -1,4 +1,3 @@
-import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -11,7 +10,10 @@ import { describe, expect, it } from 'vitest';
  * a code field when its last digit is typed.
  */
 
-const folders = ['.', '../team'].map((each) => new URL(each + '/', import.meta.url));
+/** Every component of the sign-in and team screens, as source text, by file name. */
+const files = import.meta.glob(['./*.svelte', '../team/*.svelte', '../shared/*.svelte'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const sourceOf = (name: string): string => Object.entries(files).find(([path]) => path.endsWith(`/${name}.svelte`))?.[1] as string;
+
 const SCREENS = [
   'SignInForm',
   'SignUpForm',
@@ -22,7 +24,7 @@ const SCREENS = [
   'RecheckDialog',
   'PasskeyManager',
   'ProfileForm',
-].map((name) => ({ name, source: folders.map((f) => { try { return readFileSync(new URL(`${name}.svelte`, f), 'utf8'); } catch { return null; } }).find((x) => x !== null) as string }));
+].map((name) => ({ name, source: sourceOf(name) }));
 
 /** The `<form ...>...</form>` blocks of a screen. */
 function forms(source: string): string[] {
@@ -58,8 +60,7 @@ describe('Enter submits every end-user screen', () => {
   });
 
   it('the shared password field\'s toggle is a plain button, so Enter never presses it', () => {
-    const field = readFileSync(new URL('../shared/PasswordInput.svelte', import.meta.url), 'utf8');
-    expect(field).toMatch(/<button\s+type="button"/);
+    expect(sourceOf('PasswordInput')).toMatch(/<button\s+type="button"/);
   });
 
   it.each([
@@ -80,8 +81,10 @@ describe('Enter submits every end-user screen', () => {
 describe('every end-user screen is held by the test above', () => {
   it('lists each component that has a text field', () => {
     const held = new Set(SCREENS.map((s) => s.name));
-    const dirs = [new URL('./', import.meta.url), new URL('../team/', import.meta.url)];
-    const withFields = dirs.flatMap((dir) => readdirSync(dir).filter((f) => f.endsWith('.svelte')).filter((f) => TEXT_FIELD.test(readFileSync(new URL(f, dir), 'utf8'))).map((f) => f.replace('.svelte', '')));
+    const withFields = Object.entries(files)
+      .filter(([path]) => !path.includes('/shared/'))
+      .filter(([, source]) => TEXT_FIELD.test(source))
+      .map(([path]) => path.replace(/^.*\//, '').replace('.svelte', ''));
     // Team dialogs for admins are not sign-in screens; the rest must be held.
     const adminOnly = new Set(['InviteDialog', 'MemberList', 'WorkspaceForm', 'EditMemberDialog']);
     expect(withFields.filter((name) => !held.has(name) && !adminOnly.has(name))).toEqual([]);

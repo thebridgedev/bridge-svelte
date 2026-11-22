@@ -60,7 +60,9 @@
 		"@sveltejs/kit": "^2.0.0"
 	},
 	"dependencies": {
-		"@nebulr-group/bridge-auth-core": "1.0.0-alpha.15"
+		"@nebulr-group/bridge-auth-core": "1.0.0-alpha.15",
+		"country-flag-icons": "^1.6.20",
+		"libphonenumber-js": "^1.13.17"
 	},
 	"devDependencies": {
 		"@sveltejs/kit": "^2.16.0",

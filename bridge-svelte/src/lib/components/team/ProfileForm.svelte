@@ -7,6 +7,7 @@
   import { errorMessage, translator } from '../../core/i18n.js';
   import { me } from '../../core/stores.js';
   import Alert from '../shared/Alert.svelte';
+  import PhoneInput from '../shared/PhoneInput.svelte';
   import Spinner from '../shared/Spinner.svelte';
 
   type Profile = Pick<Me, 'email' | 'firstName' | 'lastName' | 'phoneNumber'>;
@@ -23,6 +24,7 @@
   let firstName = $state('');
   let lastName = $state('');
   let phoneNumber = $state('');
+  let phoneInvalid = $state(false);
   let saving = $state(false);
   let error = $state<string | null>(null);
   let success = $state<string | null>(null);
@@ -52,6 +54,11 @@
 
   async function save() {
     if (!dirty || saving) return;
+    // A number that cannot exist for the chosen country is caught here, before anything is saved.
+    if (phoneInvalid) {
+      error = t('phone.invalid');
+      return;
+    }
     saving = true;
     error = null;
     success = null;
@@ -114,7 +121,7 @@
 
       <div class="bridge-team-form-group">
         <label for="bridge-profile-phone">Phone Number</label>
-        <input id="bridge-profile-phone" type="tel" autocomplete="tel" bind:value={phoneNumber} disabled={saving} />
+        <PhoneInput id="bridge-profile-phone" bind:value={phoneNumber} bind:invalid={phoneInvalid} disabled={saving} />
       </div>
 
       <div class="bridge-team-form-actions">

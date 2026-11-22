@@ -30,6 +30,14 @@ export function setAppCopy(locale: string | undefined, messages: BridgeMessages)
 	appMessages = messages;
 }
 
+/**
+ * The language of the screens the person is on, as a language tag: what Bridge writes the emails of sign-up, sign-in
+ * links, password recovery and passkey setup in. The screens are English when the app names no language.
+ */
+export function screenLanguage(): string {
+	return appLocale ?? 'en';
+}
+
 function isPluginKey(key: string): key is PluginMessageKey {
 	return key in PLUGIN_EN;
 }

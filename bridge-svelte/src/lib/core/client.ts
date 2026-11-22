@@ -7,7 +7,7 @@ import { createBridge, localStorageAdapter, memoryStorage, type Bridge, type Bri
 import { goto } from '$app/navigation';
 import { get, writable, type Readable } from 'svelte/store';
 import type { ResolvedConfig } from './config.js';
-import { setAppCopy } from './i18n.js';
+import { screenLanguage, setAppCopy } from './i18n.js';
 
 const clientStore = writable<Bridge | null>(null);
 const configStore = writable<ResolvedConfig | null>(null);
@@ -66,6 +66,8 @@ export function startClient(config: ResolvedConfig, extra?: Partial<BridgeOption
 	const client = createBridge({
 		issuer: config.issuer,
 		tokenOrigins: config.tokenOrigins,
+		// The screens' language goes with every email request, so the email comes in it.
+		language: screenLanguage,
 		// Signing out goes through the router, so no page reloads, and lands where the app chose.
 		signedOutPage: config.afterSignOut,
 		appOrigins: config.appOrigins,

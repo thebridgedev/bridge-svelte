@@ -153,8 +153,7 @@
   function afterConfirmed() {
     confirmed = true;
     stopSession?.();
-    // Memory only: the session lives in the tab the link opened, so this one only says so.
-    if (config?.storage === 'memory') return;
+    // The session reaches this tab on its own, in memory mode too (the tabs hand each other the access token): when it does, go on signed in.
     let left = false;
     stopSession = session.subscribe((state) => {
       if (left || state.status !== 'signed-in') return;

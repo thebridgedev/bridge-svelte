@@ -33,7 +33,7 @@ test.describe('storage: memory', () => {
 		expect(await storageOf(page)).toEqual({});
 	});
 
-	test('a sign-up link opened in a new tab signs in there, and the tab that started the sign-up says so', async ({ page, context, issuer }) => {
+	test('a sign-up link opened in a new tab signs in there, and the tab that started the sign-up follows', async ({ page, context, issuer }) => {
 		const email = uniqueEmail('sam');
 		await page.goto('/auth/sign-up');
 		await page.locator('#signup-email').fill(email);
@@ -46,9 +46,8 @@ test.describe('storage: memory', () => {
 		await linkTab.goto(`/auth#bridge=verify-email&token=${token}`);
 		await expect(linkTab.getByTestId('home-signed-in')).toContainText(email);
 		expect(linkTab.url()).not.toContain(token);
-		await expect(page.locator('[data-bridge-sign-up-confirmed]')).toHaveText(
-			'Email confirmed. You are signed in in the tab the email link opened. You can close this one.',
-		);
+		// The tabs hand each other the session even with nothing in storage, so the tab that started the sign-up goes on signed in too.
+		await expect(page.getByTestId('home-signed-in')).toContainText(email);
 		expect(await storageOf(linkTab)).toEqual({});
 	});
 

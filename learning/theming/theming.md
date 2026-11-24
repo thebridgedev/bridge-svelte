@@ -23,7 +23,7 @@ All of it sits in a CSS cascade layer named `bridge`, so your own CSS wins over 
 
 Take these steps in order, and stop as soon as Bridge looks like the rest of your app:
 
-1. **Nothing.** Bridge pages render inside your layout and inherit your font, text size and text colour.
+1. **Nothing.** Bridge pages render inside your layout, use a system font stack (so an app with no font of its own never shows the browser's serif), and inherit your text size and text colour.
 2. **Set a few `--bridge-*` variables**: your primary colour, borders, corners, and if your app has a distinct type style, its weights and shadows. The tables below list them all.
 3. **Write plain CSS** against Bridge's classes and data attributes for anything the variables don't cover. It wins over Bridge's styles with no `!important`.
 
@@ -98,6 +98,7 @@ Every default is the look Bridge has without them.
 
 | Token | Default | Styles |
 |---|---|---|
+| `--bridge-font-family` | `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif` | The font of every Bridge page and component. Set it to your app's font, e.g. `"Inter", sans-serif` |
 | `--bridge-font-size` | your `<body>` text size | The base every Bridge text size scales from. Set it only to size Bridge text differently from your body text, e.g. `18px` |
 | `--bridge-font-weight-heading` | `600`, `700` on a few titles | Page, dialog and section titles, plan names, prices |
 | `--bridge-font-weight-button` | `500` | Every Bridge button |
@@ -117,7 +118,7 @@ A weight token sets every element it covers to the same weight.
 
 ### Not tokens
 
-Font family and text colour. Bridge pages render inside your `+layout.svelte`, so they inherit your font, text colour and background like any other page. Text size follows your page too: every Bridge text size is relative to your `<body>` text size, so at the browser default of 16px nothing changes, and if your body text is 18px, Bridge's is sized to match. `--bridge-font-size` is there only for when Bridge should differ from your body.
+Text colour. Bridge pages render inside your `+layout.svelte`, so they inherit your text colour and background like any other page. The font is a token (`--bridge-font-family`, above). Text size follows your page: every Bridge text size is relative to your `<body>` text size, so at the browser default of 16px nothing changes, and if your body text is 18px, Bridge's is sized to match. `--bridge-font-size` is there only for when Bridge should differ from your body.
 
 ### Deprecated names
 

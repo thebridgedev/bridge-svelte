@@ -15,6 +15,7 @@ Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.16.
 
 ### Changed
 
+- **Bridge text uses a system font stack** (`system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`) instead of whatever the page gives, so an app with no font of its own never shows the browser's serif. The new `--bridge-font-family` token sets it to your app's font.
 - **No separate success page after checkout.** Stripe returns to the subscription page, which confirms the payment there and shows the same banner as a Free plan pick. `/subscription/success` stays only as a redirect to the subscription page, for old links. The `redirectTo` prop of `<BridgeBillingRoutes>` (the success page's Continue) is gone.
 - **A checkout that cannot start because of the app's setup** shows the person a plain message, and the developer the exact words with the fix in the browser console (and in the app's log in the dashboard), not Bridge's developer text on the page.
 - Choosing the plan the workspace holds while a downgrade waits (`billing.keepPlan`) drops the downgrade.

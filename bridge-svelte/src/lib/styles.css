@@ -34,8 +34,11 @@
  *   --bridge-card-shadow      their shadow, and the plan-change dialog's; `none` for a flat look
  *   --bridge-button-shadow    every Bridge button's shadow, e.g. `4px 4px 0 #000` (default none)
  *
- * Type. Bridge text follows your app: every size is relative to the
- * text size of your page's <body>, and the font family is inherited.
+ * Type. Every Bridge text size is relative to the text size of your page's
+ * <body>. The font family is a system font stack, so a page with no font of
+ * its own never falls back to the browser's serif; set the token to your app's font.
+ *   --bridge-font-family            the family of every Bridge page and component
+ *                                   (default: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif)
  *   --bridge-font-size              the base all Bridge text sizes scale from
  *                                   (default: your <body> text size)
  *   --bridge-font-weight-heading    page, dialog and section titles, plan names, prices
@@ -58,8 +61,8 @@
  * major:  --bridge-primary-foreground → --bridge-primary-fg
  *         --bridge-bg-muted           → --bridge-muted-bg
  *
- * Font family and text colour are not tokens: Bridge pages render inside your
- * layout and inherit them. Text sizes follow your <body> (see Type above).
+ * Text colour is not a token: Bridge pages render inside your layout and
+ * inherit it. Text sizes follow your <body> (see Type above).
  *
  * State selectors:
  *   [data-active="true"]    — active tab
@@ -113,6 +116,7 @@
        muted-bg, paywall-panel-bg) have no value here on purpose: each falls back
        to its source where it is used, so setting --bridge-primary on a wrapper
        re-derives them for that wrapper too. */
+    --bridge-font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --bridge-primary: #4f46e5;
     --bridge-bg: #ffffff;
     --bridge-foreground: #111827;
@@ -137,6 +141,19 @@
     --bridge-billing-page-width: 60rem;
     --bridge-billing-page-padding: 3rem 1rem;
     --bridge-paywall-bg: rgba(15, 23, 42, 0.72);
+  }
+
+  /* ─── The font of every Bridge page and component ────────────────────────────
+     Each root takes --bridge-font-family (a system stack unless the app sets it), and everything inside inherits it.
+     Zero specificity, so any CSS of the app wins. */
+
+  :where([data-bridge-auth-form], [data-bridge-alert], [data-bridge-social], [data-bridge-passkeys], [data-bridge-workspace-selector],
+         [data-bridge-recheck-dialog], [data-bridge-sign-out], [data-bridge-profile-name], [data-bridge-live-status],
+         [data-bridge-billing-lockscreen], [data-bridge-billing-summary], [data-bridge-billing-portal], [data-bridge-billing-back],
+         [data-bridge-plan-selector], [data-bridge-checkout-notice], [data-bridge-quota-banner], [data-bridge-subscription-status],
+         [data-bridge-upgrade-dialog], [data-bridge-team-panel], [data-bridge-team-dialog], [data-bridge-team-users],
+         [data-bridge-team-invites], [data-bridge-team-profile], [data-bridge-team-workspace], .bridge-billing-page) {
+    font-family: var(--bridge-font-family);
   }
 
   /* ─── Input visual defaults ──────────────────────────────────────────────── */

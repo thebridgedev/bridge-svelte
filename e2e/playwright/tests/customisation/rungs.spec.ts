@@ -13,6 +13,20 @@ test.describe('customisation', () => {
 		expect(await style(page, '#login-email', 'border-top-left-radius')).toBe('10px');
 	});
 
+	test('the font is a system stack, never the browser serif, until the app sets --bridge-font-family', async ({ page }) => {
+		await page.goto('/auth/sign-in');
+		const form = '[data-bridge-sign-in-step="credentials"]';
+		await expect(page.locator(form)).toBeVisible();
+		// An app with no font of its own (body in the browser's serif): Bridge's text is still a sans-serif system stack.
+		await page.addStyleTag({ content: 'body { font-family: "Times New Roman", serif; }' });
+		expect(await style(page, form, 'font-family')).toContain('system-ui');
+		expect(await style(page, '#login-email', 'font-family')).toContain('system-ui');
+		expect(await style(page, form, 'font-family')).not.toContain('Times');
+		// The app's token wins.
+		await page.addStyleTag({ content: ':root { --bridge-font-family: Georgia, serif; }' });
+		expect(await style(page, form, 'font-family')).toContain('Georgia');
+	});
+
 	test('rung 2: a frame and per-page headings around every auth page', async ({ page }) => {
 		await page.goto('/framed/sign-in');
 		await expect(page.getByTestId('frame')).toHaveAttribute('data-page', 'sign-in');

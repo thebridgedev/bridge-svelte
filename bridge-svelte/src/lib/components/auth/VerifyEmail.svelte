@@ -181,11 +181,13 @@
 {:else}
   <AuthFormWrapper heading={t('signup.heading')} {headingSnippet} class={className} {style} data-bridge-verify-email="failed" data-error-kind={view.kind} {...rest}>
     <Alert variant="error">{view.message}</Alert>
-    <div class="bridge-form-footer">
-      {#if view.kind === 'wrong-device'}
-        <!-- Another browser or device: signing up again here is the way on (the link still works where it started). -->
+    {#if view.kind === 'wrong-device'}
+      <!-- Another browser or device: signing up again here is the way on (the link still works where it started). -->
+      <div class="bridge-form-footer">
         <a href={`${authBase}/sign-up`} class="bridge-link" data-bridge-verify-sign-up-again>{t('login.signupLink')}</a>
-      {/if}
+      </div>
+    {/if}
+    <div class="bridge-form-footer">
       <a href={`${authBase}/sign-in`} class="bridge-link">{t('action.backToSignIn')}</a>
     </div>
   </AuthFormWrapper>

@@ -1,9 +1,9 @@
 /**
- * Memory mode: a sign-up's email link opens in a new tab and is handed to
- * the tab that started the sign-up, over a BroadcastChannel of the origin.
+ * A sign-up's email link finishes in the tab it opens, which tells the tab
+ * that started the sign-up, over a BroadcastChannel of the origin.
  */
 import { afterEach, describe, expect, it } from 'vitest';
-import { offerSignUpLink, takeRelayedLink, takeSignUpLinks } from './link-relay.js';
+import { announceSignUpFinished, onSignUpFinished } from './link-relay.js';
 
 const ISSUER = 'https://bridge.test/identity-access/apps/app-1';
 let stops: (() => void)[] = [];
@@ -11,34 +11,34 @@ let stops: (() => void)[] = [];
 afterEach(() => {
 	for (const stop of stops) stop();
 	stops = [];
-	takeRelayedLink();
 });
 
-describe('the sign-up link relay', () => {
-	it('the tab that started the sign-up takes the link, once', async () => {
-		let taken = 0;
-		stops.push(takeSignUpLinks(ISSUER, () => (taken += 1)));
-		await expect(offerSignUpLink(ISSUER, 'link-token', 1000)).resolves.toBe(true);
-		expect(taken).toBe(1);
-		expect(takeRelayedLink()).toBe('link-token');
-		expect(takeRelayedLink()).toBeNull();
+const settle = () => new Promise((done) => setTimeout(done, 50));
+
+describe('the finished sign-up announcement', () => {
+	it('reaches the tab that started the sign-up, once', async () => {
+		let heard = 0;
+		stops.push(onSignUpFinished(ISSUER, () => (heard += 1)));
+		announceSignUpFinished(ISSUER);
+		announceSignUpFinished(ISSUER);
+		await settle();
+		expect(heard).toBe(1);
 	});
 
-	it('with no such tab, the offer lapses and the new tab goes on alone', async () => {
-		await expect(offerSignUpLink(ISSUER, 'link-token', 50)).resolves.toBe(false);
-		expect(takeRelayedLink()).toBeNull();
+	it('another issuer\'s tab never hears it', async () => {
+		let heard = 0;
+		stops.push(onSignUpFinished('https://bridge.test/identity-access/apps/other', () => (heard += 1)));
+		announceSignUpFinished(ISSUER);
+		await settle();
+		expect(heard).toBe(0);
 	});
 
-	it('another issuer\'s tab never takes it', async () => {
-		let taken = 0;
-		stops.push(takeSignUpLinks('https://bridge.test/identity-access/apps/other', () => (taken += 1)));
-		await expect(offerSignUpLink(ISSUER, 'link-token', 50)).resolves.toBe(false);
-		expect(taken).toBe(0);
-	});
-
-	it('a stopped listener takes nothing', async () => {
-		const stop = takeSignUpLinks(ISSUER, () => undefined);
+	it('a stopped listener hears nothing', async () => {
+		let heard = 0;
+		const stop = onSignUpFinished(ISSUER, () => (heard += 1));
 		stop();
-		await expect(offerSignUpLink(ISSUER, 'link-token', 50)).resolves.toBe(false);
+		announceSignUpFinished(ISSUER);
+		await settle();
+		expect(heard).toBe(0);
 	});
 });

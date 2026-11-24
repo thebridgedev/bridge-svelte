@@ -20,6 +20,19 @@ PUBLIC_BRIDGE_ISSUER=https://…/identity-access/apps/<your app id>
 
 The issuer must be an `https` address. Only on your own machine may it be `http://localhost`.
 
+On SvelteKit 3, an environment variable is read only when the app declares it. Add the issuer to `src/env.ts`:
+
+```ts
+// src/env.ts (SvelteKit 3)
+import { defineEnvVars } from '@sveltejs/kit/env';
+
+export const variables = defineEnvVars({
+  PUBLIC_BRIDGE_ISSUER: { public: true },
+});
+```
+
+(or pass `issuer` to `bridgeBootstrap()` yourself). SvelteKit 2 reads `.env` as it is.
+
 In your app's settings in Bridge, also add:
 
 - your app's address (`https://app.example.com`, and `http://localhost:5173` while developing) as a **browser address**, so your pages may call Bridge;
@@ -98,7 +111,7 @@ By default the session is kept in `localStorage`, so a reload and a new tab stay
 export const load = bridgeBootstrap({ storage: 'memory' });
 ```
 
-A sign-up's email link opens in a new tab. In memory mode that tab hands the link to the tab that started the sign-up, which finishes there, and the new tab says to go on in the other window. If that tab was closed, the new tab finishes the sign-up itself: the sign-up's PKCE verifier is the one thing memory mode keeps in `localStorage`, for the link's 15 minutes at most, and it is removed once used. Opened on another device, the link says to open it where the sign-up started; it stays usable there.
+A sign-up's email link opens in a new tab, which finishes the sign-up and signs in right there, in either storage mode: the sign-up's PKCE verifier is the one thing memory mode keeps in `localStorage`, for the link's 15 minutes at most, and it is removed once used. The tab that started the sign-up is told: with `localStorage` it goes on signed in too; in memory mode it says the person is signed in in the other tab. Opened in another browser or on another device, the link says it works only in the browser where the sign-up started, offers to sign up again there, and stays usable in the right browser.
 
 SvelteKit itself keeps scroll positions in `sessionStorage` (`sveltekit:*`). Those hold nothing of Bridge's.
 

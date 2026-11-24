@@ -30,7 +30,7 @@
  * a member who was removed is refused within seconds. While Bridge cannot be
  * checked, the answer is 503, never yes.
  */
-import { error, json, type Handle, type RequestEvent } from '@sveltejs/kit';
+import { error, json, type RequestEvent } from '@sveltejs/kit';
 import {
 	createBridgeServer,
 	FlagSet,
@@ -43,6 +43,16 @@ import { readCredentials } from '@nebulr-group/bridge-auth-core/verifier';
 
 export type { Actor, BridgeServerOptions };
 export { FlagSet };
+
+/**
+ * A SvelteKit `handle` hook. Declared here because SvelteKit 2 exports the type from `@sveltejs/kit` and SvelteKit 3 from
+ * `@sveltejs/kit/hooks`; both accept this shape.
+ */
+type Handle = (input: {
+	event: RequestEvent;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- SvelteKit's ResolveOptions, which both versions declare
+	resolve: (event: RequestEvent, options?: any) => Response | Promise<Response>;
+}) => Response | Promise<Response>;
 
 /** What `bridgeHandle` puts on `event.locals.bridge`. */
 export interface BridgeLocals {

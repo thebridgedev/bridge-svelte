@@ -30,7 +30,7 @@
       const hosted = config?.hosted ?? {};
       const redirectUri = hosted.redirectUri ?? new URL(`${config?.authBase ?? '/auth'}/callback`, location.origin).toString();
       // Where to go once signed in survives the trip to Bridge's page, in this tab.
-      stashReturnTo(readReturnTo(page.url, config?.returnToParam));
+      stashReturnTo(readReturnTo(page.url.href, config?.returnToParam));
       location.assign(await getBridge().hosted.start({ redirectUri, ...(hosted.linkAddress === undefined ? {} : { linkAddress: hosted.linkAddress }) }));
     } catch (error) {
       failure = errorMessage(error, t, 'error.unavailable');

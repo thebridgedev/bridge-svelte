@@ -34,8 +34,12 @@
  *   --bridge-card-shadow      their shadow, and the plan-change dialog's; `none` for a flat look
  *   --bridge-button-shadow    every Bridge button's shadow, e.g. `4px 4px 0 #000` (default none)
  *
- * Type. Bridge text follows your app: every size is relative to the
- * text size of your page's <body>, and the font family is inherited.
+ * Type. Every Bridge text size is relative to the text size of your page's
+ * <body>, and Bridge inherits your app's font. Only on a page whose body is
+ * still in the browser's default serif does bridgeBootstrap set a system font stack.
+ *   --bridge-font-family            the family of every Bridge page and component, when it should differ from your app's
+ *                                   (default: your app's font; system-ui, -apple-system, "Segoe UI", Roboto, sans-serif
+ *                                   on a page with no font of its own)
  *   --bridge-font-size              the base all Bridge text sizes scale from
  *                                   (default: your <body> text size)
  *   --bridge-font-weight-heading    page, dialog and section titles, plan names, prices
@@ -58,8 +62,8 @@
  * major:  --bridge-primary-foreground → --bridge-primary-fg
  *         --bridge-bg-muted           → --bridge-muted-bg
  *
- * Font family and text colour are not tokens: Bridge pages render inside your
- * layout and inherit them. Text sizes follow your <body> (see Type above).
+ * Text colour is not a token: Bridge pages render inside your layout and
+ * inherit it. Text sizes follow your <body> (see Type above).
  *
  * State selectors:
  *   [data-active="true"]    — active tab
@@ -139,6 +143,20 @@
     --bridge-paywall-bg: rgba(15, 23, 42, 0.72);
   }
 
+  /* ─── The font of every Bridge page and component ────────────────────────────
+     Each root takes --bridge-font-family when it is set and otherwise inherits the app's font; everything inside
+     inherits from the root. bridgeBootstrap sets the token to a system stack only on a page whose body is in the
+     browser's default serif. Zero specificity, so any CSS of the app wins. */
+
+  :where([data-bridge-auth-form], [data-bridge-alert], [data-bridge-social], [data-bridge-passkeys], [data-bridge-workspace-selector],
+         [data-bridge-recheck-dialog], [data-bridge-sign-out], [data-bridge-profile-name], [data-bridge-live-status],
+         [data-bridge-billing-lockscreen], [data-bridge-billing-summary], [data-bridge-billing-portal], [data-bridge-billing-back],
+         [data-bridge-plan-selector], [data-bridge-checkout-notice], [data-bridge-quota-banner], [data-bridge-subscription-status],
+         [data-bridge-upgrade-dialog], [data-bridge-team-panel], [data-bridge-team-dialog], [data-bridge-team-users],
+         [data-bridge-team-invites], [data-bridge-team-profile], [data-bridge-team-workspace], .bridge-billing-page) {
+    font-family: var(--bridge-font-family, inherit);
+  }
+
   /* ─── Input visual defaults ──────────────────────────────────────────────── */
 
   :where(input[type="text"], input[type="email"], input[type="password"], input[type="tel"],
@@ -146,6 +164,8 @@
     border: 1px solid var(--bridge-border);
     border-radius: var(--bridge-border-radius);
     outline: none;
+    /* An input does not inherit the font on its own: it would stay in the browser's form font next to Bridge's text. */
+    font-family: inherit;
   }
   :where(input[type="text"]:focus, input[type="email"]:focus,
          input[type="password"]:focus, input[type="tel"]:focus,
@@ -331,6 +351,23 @@
 
   [data-bridge-auth-form] .bridge-divider::before { margin-right: 0.5rem; }
   [data-bridge-auth-form] .bridge-divider::after  { margin-left: 0.5rem; }
+
+  /* ─── Social sign-in ───────────────────────────────────────────────────────── */
+
+  [data-bridge-auth-form] .bridge-social {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  [data-bridge-auth-form] .bridge-backup-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: calc(1.25 * var(--bridge-text-base, 1rem));
+    letter-spacing: 0.1em;
+    text-align: center;
+    margin: 1rem 0;
+    user-select: all;
+  }
 
   /* ─── PasskeyLogin ────────────────────────────────────────────────────────── */
 
@@ -1571,6 +1608,67 @@
     align-items: flex-start;
     gap: 0.25rem;
     min-width: 0;
+  }
+
+  .bridge-billing-summary-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* What is on its way, under the plan: a scheduled change, an upgrade being paid for. */
+  .bridge-billing-summary-change,
+  .bridge-billing-summary-note {
+    flex: 1 1 100%;
+  }
+
+  .bridge-billing-summary-change {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--bridge-alert-info-border);
+    border-radius: var(--bridge-border-radius);
+    background: var(--bridge-alert-info-bg);
+    color: var(--bridge-alert-info-fg);
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  .bridge-billing-summary-change > div {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .bridge-billing-summary-change[data-state="failed"] {
+    border-color: var(--bridge-alert-error-border);
+    background: var(--bridge-alert-error-bg);
+    color: var(--bridge-alert-error-fg);
+  }
+
+  .bridge-billing-summary-change[data-state="done"] {
+    border-color: var(--bridge-alert-success-border);
+    background: var(--bridge-alert-success-bg);
+    color: var(--bridge-alert-success-fg);
+  }
+
+  .bridge-billing-back {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    color: var(--bridge-muted);
+    text-decoration: none;
+  }
+
+  .bridge-billing-back:hover,
+  .bridge-billing-back:focus-visible {
+    color: var(--bridge-foreground);
+    text-decoration: underline;
   }
 
   .bridge-billing-label {

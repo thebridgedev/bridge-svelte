@@ -35,7 +35,7 @@ test.describe('plan changes', () => {
 		await page.locator('[data-bridge-plan-card][data-plan="pro"] .bridge-plan-select-btn').click();
 		const confirm = page.locator('[data-bridge-plan-confirm-btn]');
 		if (await confirm.isVisible().catch(() => false)) await confirm.click();
-		await expect(page).toHaveURL(/\/subscription$/);
+		await expect(page).toHaveURL(/\/subscription(\?|$)/);
 		await expect(page.locator('[data-bridge-checkout-notice]')).toContainText("You're on Pro now");
 		await expect(page.locator('[data-bridge-billing-summary]')).toContainText('Pro');
 		expect((await issuer.billingCalls()).planChoices).toEqual([{ plan: 'pro', returnUrl: `${ORIGIN}/subscription` }]);

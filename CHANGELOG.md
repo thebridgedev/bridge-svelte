@@ -12,6 +12,7 @@ Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.16.
 - **A "Back" link on the billing pages**, to `/` by default: `billing: { back: '/dashboard' }`, or `back: false` for none.
 - **Social sign-in buttons.** `SignInForm` and `SignUpForm` show "Continue with …" for the providers the app offers, and `SignInForm` finishes the provider's answer when it comes back. `SocialButtons` on its own for a page of your own.
 - **The text-message second step.** Every sign-in form asks for the code texted to the person's phone when their workspace requires it, sets up the number the first time and shows the backup code once. `SecondStepForm` on its own.
+- **A social sign-up with an address the provider did not confirm (Facebook) shows "check your email"** on `SignInForm`, the step a password sign-up shows, and finishes through the email link as it does (`CheckYourEmail`).
 
 ### Changed
 

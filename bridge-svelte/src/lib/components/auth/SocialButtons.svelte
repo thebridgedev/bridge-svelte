@@ -31,11 +31,23 @@
   const NAMES: Record<SocialProvider, string> = { google: 'Google', linkedin: 'LinkedIn', facebook: 'Facebook', github: 'GitHub', azure: 'Microsoft' };
   let going = $state<SocialProvider | null>(null);
 
+  /**
+   * The page the provider's answer comes back to. On another app's sign-in request (Bridge's hosted page) the page took
+   * the request out of its address when it opened: it goes back in, so the page coming back signs in for it again.
+   */
+  async function pageToReturnTo(): Promise<string> {
+    const back = new URL(returnPage ?? window.location.href);
+    back.hash = '';
+    const request = await getBridge().request.current();
+    if (request !== null && !back.searchParams.has('request')) back.searchParams.set('request', request);
+    return back.toString();
+  }
+
   async function go(provider: SocialProvider) {
     if (going !== null || disabled) return;
     going = provider;
     try {
-      const url = await getBridge().social.start(provider, { intent, ...(returnPage === undefined ? {} : { returnPage }), ...(intent === 'sign-up' ? (signUp?.() ?? {}) : {}) });
+      const url = await getBridge().social.start(provider, { intent, returnPage: await pageToReturnTo(), ...(intent === 'sign-up' ? (signUp?.() ?? {}) : {}) });
       window.location.assign(url);
     } catch (error) {
       going = null;

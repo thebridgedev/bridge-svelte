@@ -21,7 +21,9 @@ export type PluginMessageKey =
 	| 'invite.wrongAddress'
 	| 'invite.alreadyMember'
 	| 'invite.accountExists'
+	/** Kept for apps that set it; nothing shows it since the email link signs in in the tab it opens. */
 	| 'verify.continuedElsewhere'
+	| 'signup.confirmedElsewhere'
 	| 'handoff.invalid'
 	| 'handoff.notOffered'
 	| 'session.ended'
@@ -91,6 +93,7 @@ const en: PluginMessages = {
 	'invite.alreadyMember': 'You are a member of this workspace already.',
 	'invite.accountExists': 'This address has an account already. Sign in to accept the invite.',
 	'verify.continuedElsewhere': 'Your sign-up goes on in the window where you started it. You can close this one.',
+	'signup.confirmedElsewhere': 'Email confirmed. You are signed in in the tab the email link opened. You can close this one.',
 	'handoff.invalid': 'This sign-in link is not valid. Start signing in again from {program}.',
 	'handoff.notOffered': 'This page does not sign in other programs.',
 	'session.ended': 'Your session ended. Please sign in again.',
@@ -159,6 +162,7 @@ const sv: PluginMessages = {
 	'invite.alreadyMember': 'Du är redan medlem i den här arbetsytan.',
 	'invite.accountExists': 'Adressen har redan ett konto. Logga in för att ta emot inbjudan.',
 	'verify.continuedElsewhere': 'Registreringen fortsätter i fönstret där du började. Du kan stänga det här.',
+	'signup.confirmedElsewhere': 'E-postadressen är bekräftad. Du är inloggad i fliken som länken öppnade. Du kan stänga den här.',
 	'handoff.invalid': 'Inloggningslänken är inte giltig. Börja logga in igen från {program}.',
 	'handoff.notOffered': 'Den här sidan loggar inte in andra program.',
 	'session.ended': 'Din session har avslutats. Logga in igen.',
@@ -227,6 +231,7 @@ const da: PluginMessages = {
 	'invite.alreadyMember': 'Du er allerede medlem af dette arbejdsområde.',
 	'invite.accountExists': 'Adressen har allerede en konto. Log ind for at tage imod invitationen.',
 	'verify.continuedElsewhere': 'Din tilmelding fortsætter i det vindue, hvor du startede. Du kan lukke dette.',
+	'signup.confirmedElsewhere': 'E-mailen er bekræftet. Du er logget ind i den fane, linket åbnede. Du kan lukke denne.',
 	'handoff.invalid': 'Login-linket er ikke gyldigt. Start login igen fra {program}.',
 	'handoff.notOffered': 'Denne side logger ikke andre programmer ind.',
 	'session.ended': 'Din session er afsluttet. Log ind igen.',
@@ -295,6 +300,7 @@ const nb: PluginMessages = {
 	'invite.alreadyMember': 'Du er allerede medlem av dette arbeidsområdet.',
 	'invite.accountExists': 'Adressen har allerede en konto. Logg inn for å ta imot invitasjonen.',
 	'verify.continuedElsewhere': 'Registreringen fortsetter i vinduet der du startet. Du kan lukke dette.',
+	'signup.confirmedElsewhere': 'E-posten er bekreftet. Du er logget inn i fanen lenken åpnet. Du kan lukke denne.',
 	'handoff.invalid': 'Innloggingslenken er ikke gyldig. Start innloggingen på nytt fra {program}.',
 	'handoff.notOffered': 'Denne siden logger ikke inn andre programmer.',
 	'session.ended': 'Økten din er avsluttet. Logg inn på nytt.',
@@ -363,6 +369,7 @@ const nl: PluginMessages = {
 	'invite.alreadyMember': 'Je bent al lid van deze werkruimte.',
 	'invite.accountExists': 'Dit adres heeft al een account. Log in om de uitnodiging aan te nemen.',
 	'verify.continuedElsewhere': 'Je registratie gaat verder in het venster waar je begon. Je kunt dit venster sluiten.',
+	'signup.confirmedElsewhere': 'E-mail bevestigd. Je bent ingelogd in het tabblad dat de link opende. Je kunt dit tabblad sluiten.',
 	'handoff.invalid': 'Deze inloglink is niet geldig. Begin opnieuw met inloggen vanuit {program}.',
 	'handoff.notOffered': 'Deze pagina logt geen andere programma\'s in.',
 	'session.ended': 'Je sessie is beëindigd. Log opnieuw in.',
@@ -431,6 +438,7 @@ const de: PluginMessages = {
 	'invite.alreadyMember': 'Du bist bereits Mitglied dieses Arbeitsbereichs.',
 	'invite.accountExists': 'Diese Adresse hat bereits ein Konto. Melde dich an, um die Einladung anzunehmen.',
 	'verify.continuedElsewhere': 'Deine Registrierung geht in dem Fenster weiter, in dem du sie begonnen hast. Du kannst dieses schließen.',
+	'signup.confirmedElsewhere': 'E-Mail bestätigt. Du bist in dem Tab angemeldet, den der Link geöffnet hat. Du kannst diesen schließen.',
 	'handoff.invalid': 'Dieser Anmeldelink ist ungültig. Starte die Anmeldung erneut über {program}.',
 	'handoff.notOffered': 'Diese Seite meldet keine anderen Programme an.',
 	'session.ended': 'Deine Sitzung wurde beendet. Bitte melde dich erneut an.',
@@ -499,6 +507,7 @@ const fi: PluginMessages = {
 	'invite.alreadyMember': 'Olet jo tämän työtilan jäsen.',
 	'invite.accountExists': 'Osoitteella on jo tili. Kirjaudu sisään hyväksyäksesi kutsun.',
 	'verify.continuedElsewhere': 'Rekisteröityminen jatkuu ikkunassa, jossa aloitit sen. Voit sulkea tämän ikkunan.',
+	'signup.confirmedElsewhere': 'Sähköposti vahvistettu. Olet kirjautunut sisään välilehdellä, jonka linkki avasi. Voit sulkea tämän.',
 	'handoff.invalid': 'Kirjautumislinkki ei ole voimassa. Aloita kirjautuminen uudelleen ohjelmasta {program}.',
 	'handoff.notOffered': 'Tämä sivu ei kirjaa sisään muita ohjelmia.',
 	'session.ended': 'Istuntosi päättyi. Kirjaudu sisään uudelleen.',
@@ -567,6 +576,7 @@ const fr: PluginMessages = {
 	'invite.alreadyMember': 'Tu es déjà membre de cet espace de travail.',
 	'invite.accountExists': 'Cette adresse a déjà un compte. Connecte-toi pour accepter l\'invitation.',
 	'verify.continuedElsewhere': 'Ton inscription continue dans la fenêtre où tu l\'as commencée. Tu peux fermer celle-ci.',
+	'signup.confirmedElsewhere': 'E-mail confirmé. Tu es connecté dans l\'onglet ouvert par le lien. Tu peux fermer celui-ci.',
 	'handoff.invalid': 'Ce lien de connexion n\'est pas valide. Recommence la connexion depuis {program}.',
 	'handoff.notOffered': 'Cette page ne connecte pas d\'autres programmes.',
 	'session.ended': 'Ta session a pris fin. Connecte-toi à nouveau.',
@@ -635,6 +645,7 @@ const es: PluginMessages = {
 	'invite.alreadyMember': 'Ya eres miembro de este espacio de trabajo.',
 	'invite.accountExists': 'Esta dirección ya tiene una cuenta. Inicia sesión para aceptar la invitación.',
 	'verify.continuedElsewhere': 'Tu registro continúa en la ventana donde lo empezaste. Puedes cerrar esta.',
+	'signup.confirmedElsewhere': 'Correo confirmado. Has iniciado sesión en la pestaña que abrió el enlace. Puedes cerrar esta.',
 	'handoff.invalid': 'Este enlace de inicio de sesión no es válido. Vuelve a iniciar sesión desde {program}.',
 	'handoff.notOffered': 'Esta página no inicia sesión en otros programas.',
 	'session.ended': 'Tu sesión ha terminado. Vuelve a iniciar sesión.',
@@ -703,6 +714,7 @@ const it: PluginMessages = {
 	'invite.alreadyMember': 'Sei già membro di questo spazio di lavoro.',
 	'invite.accountExists': 'Questo indirizzo ha già un account. Accedi per accettare l\'invito.',
 	'verify.continuedElsewhere': 'La registrazione continua nella finestra in cui l\'hai iniziata. Puoi chiudere questa.',
+	'signup.confirmedElsewhere': 'Email confermata. Hai effettuato l\'accesso nella scheda aperta dal link. Puoi chiudere questa.',
 	'handoff.invalid': 'Questo link di accesso non è valido. Ricomincia l\'accesso da {program}.',
 	'handoff.notOffered': 'Questa pagina non fa accedere altri programmi.',
 	'session.ended': 'La tua sessione è terminata. Accedi di nuovo.',
@@ -771,6 +783,7 @@ const pt: PluginMessages = {
 	'invite.alreadyMember': 'Já és membro deste espaço de trabalho.',
 	'invite.accountExists': 'Este endereço já tem uma conta. Inicia sessão para aceitar o convite.',
 	'verify.continuedElsewhere': 'O teu registo continua na janela onde o começaste. Podes fechar esta.',
+	'signup.confirmedElsewhere': 'Email confirmado. Tens sessão iniciada no separador que a ligação abriu. Podes fechar este.',
 	'handoff.invalid': 'Este link de início de sessão não é válido. Começa de novo a partir de {program}.',
 	'handoff.notOffered': 'Esta página não inicia sessão noutros programas.',
 	'session.ended': 'A tua sessão terminou. Inicia sessão novamente.',
@@ -839,6 +852,7 @@ const pl: PluginMessages = {
 	'invite.alreadyMember': 'Należysz już do tej przestrzeni roboczej.',
 	'invite.accountExists': 'Ten adres ma już konto. Zaloguj się, by przyjąć zaproszenie.',
 	'verify.continuedElsewhere': 'Rejestracja trwa w oknie, w którym ją zaczęto. Możesz zamknąć to okno.',
+	'signup.confirmedElsewhere': 'E-mail potwierdzony. Jesteś zalogowany w karcie otwartej przez link. Możesz zamknąć tę.',
 	'handoff.invalid': 'Ten link logowania jest nieprawidłowy. Zacznij logowanie od nowa w {program}.',
 	'handoff.notOffered': 'Ta strona nie loguje innych programów.',
 	'session.ended': 'Twoja sesja wygasła. Zaloguj się ponownie.',

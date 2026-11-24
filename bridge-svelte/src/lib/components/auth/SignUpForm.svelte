@@ -1,7 +1,9 @@
 <!--
   Sign up with email and password. Nothing is made until the person proves
   the address: Bridge emails a link to the app's verify-email page, which
-  finishes the sign-up on this device. The answer is the same whether or not
+  finishes the sign-up in this browser and signs in in the tab the link
+  opened. This tab is told, and goes on signed in too (or, when the session
+  lives in that tab only, says so). The answer is the same whether or not
   the address already has an account, so the form never says which.
 
   With `invite`, it signs the person up from an invite instead: the invite's
@@ -18,7 +20,8 @@
   import { getBridge, peekConfig } from '../../core/client.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
-  import { takeSignUpLinks } from '../../core/link-relay.js';
+  import { onSignUpFinished } from '../../core/link-relay.js';
+  import { session } from '../../core/stores.js';
   import AuthFormWrapper from '../shared/AuthFormWrapper.svelte';
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
@@ -130,8 +133,29 @@
   const passwordOffered = $derived(options === null || options.methods.includes('password'));
   // An invite is its own way in, whether or not the app takes sign-ups.
   const closed = $derived(!invite && options !== null && !options.signUp);
+  /** The email link finished the sign-up in another tab of this browser (link-relay). */
+  let confirmed = $state(false);
   let stopRelay: (() => void) | null = null;
-  onDestroy(() => stopRelay?.());
+  let stopSession: (() => void) | null = null;
+  onDestroy(() => {
+    stopRelay?.();
+    stopSession?.();
+  });
+
+  /** Once the link finished the sign-up in another tab: on, signed in, when the session reached this tab too. */
+  function afterConfirmed() {
+    confirmed = true;
+    stopSession?.();
+    // Memory only: the session lives in the tab the link opened, so this one only says so.
+    if (config?.storage === 'memory') return;
+    let left = false;
+    stopSession = session.subscribe((state) => {
+      if (left || state.status !== 'signed-in') return;
+      left = true;
+      if (onSignIn) onSignIn();
+      else void goto(config?.afterSignIn ?? '/', { invalidateAll: true });
+    });
+  }
 
   onMount(() => {
     getBridge()
@@ -173,10 +197,8 @@
       });
       sentTo = address;
       onSent?.(address);
-      // Memory only: this tab holds the sign-up's verifier, and the email link opens in a new tab, which hands it here.
-      if (config?.storage === 'memory' && stopRelay === null) {
-        stopRelay = takeSignUpLinks(config.issuer, () => void goto(`${authBase}/verify-email`));
-      }
+      // The email link opens in a new tab, which finishes the sign-up there and tells this one.
+      if (config !== null && config !== undefined && stopRelay === null) stopRelay = onSignUpFinished(config.issuer, afterConfirmed);
     } catch (error) {
       failure = errorMessage(error, t, 'signup.error.create');
       onError?.(error);
@@ -191,6 +213,9 @@
     {#snippet descriptionSnippet()}
       <p class="bridge-step-desc" data-bridge-sign-up-sent>{t('signup.successDescription', { email: sentTo ?? '' })}</p>
     {/snippet}
+    {#if confirmed}
+      <Alert variant="success" data-bridge-sign-up-confirmed>{t('signup.confirmedElsewhere')}</Alert>
+    {/if}
   </AuthFormWrapper>
 {:else if closed}
   <AuthFormWrapper heading={heading === undefined ? t('signup.heading') : heading} {headingSnippet} class={className} {style} data-bridge-sign-up-step="closed" {...rest}>

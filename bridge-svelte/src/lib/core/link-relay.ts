@@ -1,70 +1,44 @@
 /**
- * A sign-up's email link, handed to the tab that started the sign-up, for
- * apps that keep the session in memory (`storage: 'memory'`).
+ * A sign-up's email link, and the tab that started the sign-up.
  *
- * A sign-up finishes only on the device that started it, with the PKCE
- * verifier it kept in localStorage. In memory mode the session lives in the
- * tab that started the sign-up, and the email link opens in a new one. The
- * new tab offers the link on a BroadcastChannel of the page's own origin;
- * the tab that started the sign-up takes it and finishes there, and the new
- * tab says so. When no tab takes it within a moment (it was closed, or the
- * browser put it to sleep), the new tab finishes itself with the stored
- * verifier. On another device there is none, and Bridge answers that the
- * link belongs to the device that started the sign-up; the link stays
- * usable there.
+ * A sign-up finishes only in the browser that started it, with the PKCE
+ * verifier it kept in localStorage while the email was on the way. The link
+ * opens in a new tab, which finishes the sign-up and signs in right there,
+ * whichever storage the app uses. It then tells the other tabs of the
+ * origin, on a BroadcastChannel, that the sign-up is finished, so the tab
+ * that started it does not keep waiting: it goes on signed in when the
+ * session reached it too, and otherwise says where the person is signed in.
+ * In another browser or on another device there is no verifier, and Bridge
+ * answers that the link belongs to the browser that started the sign-up;
+ * the link stays usable there.
  *
- * Only the token crosses, only between tabs of the same origin, and never
- * through storage or an address.
+ * Only the fact that a sign-up finished crosses, only between tabs of the
+ * same origin: never a token, an address or a name.
  */
 
-type Message = { readonly type: 'offer'; readonly id: string; readonly token: string } | { readonly type: 'taken'; readonly id: string };
-
-/** How long a new tab waits for the tab that started the sign-up. */
-export const OFFER_WAIT_MS = 1_500;
+type Message = { readonly type: 'finished' };
 
 const channelOf = (issuer: string) => `bridge:${issuer.replace(/\/+$/, '')}:sign-up-link`;
 
-let relayed: string | null = null;
-
-/** Offers a sign-up link's token to the tab that started the sign-up. True when one took it. */
-export function offerSignUpLink(issuer: string, token: string, waitMs = OFFER_WAIT_MS): Promise<boolean> {
-	if (typeof BroadcastChannel === 'undefined') return Promise.resolve(false);
+/** Tells the other tabs of this origin that a sign-up finished here. */
+export function announceSignUpFinished(issuer: string): void {
+	if (typeof BroadcastChannel === 'undefined') return;
 	const channel = new BroadcastChannel(channelOf(issuer));
-	const id = crypto.randomUUID();
-	return new Promise((done) => {
-		const finish = (taken: boolean) => {
-			clearTimeout(timer);
-			channel.close();
-			done(taken);
-		};
-		const timer = setTimeout(() => finish(false), waitMs);
-		channel.onmessage = (event: MessageEvent<Message>) => {
-			if (event.data?.type === 'taken' && event.data.id === id) finish(true);
-		};
-		channel.postMessage({ type: 'offer', id, token } satisfies Message);
-	});
+	channel.postMessage({ type: 'finished' } satisfies Message);
+	channel.close();
 }
 
 /**
- * While a sign-up started here waits for its email link: takes the link
- * another tab offers and calls `take` with it. Returns how to stop.
+ * While a sign-up started here waits for its email link: calls `then` once
+ * another tab of this origin finished a sign-up. Returns how to stop.
  */
-export function takeSignUpLinks(issuer: string, take: () => void): () => void {
+export function onSignUpFinished(issuer: string, then: () => void): () => void {
 	if (typeof BroadcastChannel === 'undefined') return () => undefined;
 	const channel = new BroadcastChannel(channelOf(issuer));
 	channel.onmessage = (event: MessageEvent<Message>) => {
-		const message = event.data;
-		if (message?.type !== 'offer' || typeof message.token !== 'string' || message.token === '') return;
-		relayed = message.token;
-		channel.postMessage({ type: 'taken', id: message.id } satisfies Message);
-		take();
+		if (event.data?.type !== 'finished') return;
+		channel.close();
+		then();
 	};
 	return () => channel.close();
-}
-
-/** The link token another tab handed to this one, once. */
-export function takeRelayedLink(): string | null {
-	const token = relayed;
-	relayed = null;
-	return token;
 }

@@ -4,8 +4,7 @@ import { expect, PASSWORD, signIn, test, uniqueEmail } from '../../support/fixtu
 /**
  * The demo with `storage: 'memory'`: the session never reaches the browser's
  * storage, a reload signs in again, and a sign-up's email link, which opens
- * in a new tab, finishes in the tab that started it, or in the new tab when
- * that one was closed. Only the sign-up's verifier waits in localStorage, and
+ * in a new tab, finishes and signs in there; the tab that started it says so. Only the sign-up's verifier waits in localStorage, and
  * it is gone once used.
  *
  * SvelteKit itself keeps scroll positions in sessionStorage (`sveltekit:*`);
@@ -34,7 +33,7 @@ test.describe('storage: memory', () => {
 		expect(await storageOf(page)).toEqual({});
 	});
 
-	test('a sign-up link opened in a new tab finishes in the tab that started the sign-up', async ({ page, context, issuer }) => {
+	test('a sign-up link opened in a new tab signs in there, and the tab that started the sign-up says so', async ({ page, context, issuer }) => {
 		const email = uniqueEmail('sam');
 		await page.goto('/auth/sign-up');
 		await page.locator('#signup-email').fill(email);
@@ -45,12 +44,12 @@ test.describe('storage: memory', () => {
 
 		const linkTab = await context.newPage();
 		await linkTab.goto(`/auth#bridge=verify-email&token=${token}`);
-		await expect(linkTab.locator('[data-bridge-verify-email="continued"] [data-bridge-alert]')).toHaveText(
-			'Your sign-up goes on in the window where you started it. You can close this one.',
-		);
+		await expect(linkTab.getByTestId('home-signed-in')).toContainText(email);
 		expect(linkTab.url()).not.toContain(token);
-		await expect(page.getByTestId('home-signed-in')).toContainText(email);
-		expect(await storageOf(page)).toEqual({});
+		await expect(page.locator('[data-bridge-sign-up-confirmed]')).toHaveText(
+			'Email confirmed. You are signed in in the tab the email link opened. You can close this one.',
+		);
+		expect(await storageOf(linkTab)).toEqual({});
 	});
 
 	test('with the starting tab closed, the link opened in a new tab of the same browser finishes the sign-up there', async ({ context, issuer }) => {

@@ -163,7 +163,7 @@
       onSignIn();
       return;
     }
-    const back = readReturnTo(page.url, config?.returnToParam);
+    const back = readReturnTo(page.url.href, config?.returnToParam);
     void goto(back ?? config?.afterSignIn ?? '/', { invalidateAll: true });
   }
 

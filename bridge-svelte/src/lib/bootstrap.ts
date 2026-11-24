@@ -11,6 +11,8 @@
  * ```
  */
 import { error, redirect } from '@sveltejs/kit';
+// SvelteKit 3 names this module `$app/env/public` and keeps `$env/dynamic/public` working (it warns), without types for it.
+// @ts-ignore -- typed on SvelteKit 2, untyped on 3
 import { env } from '$env/dynamic/public';
 import { readEmailLink, readReturnTo, type Bridge } from '@nebulr-group/bridge-auth-core';
 import { get } from 'svelte/store';

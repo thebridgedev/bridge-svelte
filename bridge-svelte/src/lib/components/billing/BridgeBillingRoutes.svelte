@@ -59,11 +59,11 @@
   const appActive = flag(config?.flagKeys.appActive ?? STANDARD_FLAGS.appActive);
 
   const current = $derived(parseBillingPage(page.params[ROUTE_PARAM]));
-  const returnTo = $derived(readReturnTo(page.url, config?.returnToParam) ?? config?.afterSignIn ?? '/');
+  const returnTo = $derived(readReturnTo(page.url.href, config?.returnToParam) ?? config?.afterSignIn ?? '/');
   // The "Back" link: the page the person was headed for when it is in the address, else the app's home.
   const backHref = $derived.by(() => {
     if (back === false || (back === undefined && config?.billingBack === null)) return null;
-    return back ?? readReturnTo(page.url, config?.returnToParam) ?? config?.billingBack ?? '/';
+    return back ?? readReturnTo(page.url.href, config?.returnToParam) ?? config?.billingBack ?? '/';
   });
 
   const DEFAULT_HEADINGS: Record<BillingPage, string> = {

@@ -79,6 +79,17 @@ async function control(path: string, request: Request, url: URL): Promise<Respon
 		case '/facts':
 			fake.setFacts(body);
 			return json({ ok: true });
+		case '/checkout-return-on':
+			fake.requireCheckoutReturnOn((body['origins'] as string[] | null) ?? null);
+			return json({ ok: true });
+		case '/settle-payment':
+			fake.settlePayment();
+			return json({ ok: true });
+		case '/fail-payment':
+			fake.failPayment();
+			return json({ ok: true });
+		case '/billing-calls':
+			return json({ planChoices: fake.planChoices, portalReturns: fake.portalReturns });
 		case '/quota':
 			fake.setQuota(String(body['metric']), (body['read'] as object | null) ?? null);
 			return json({ ok: true });

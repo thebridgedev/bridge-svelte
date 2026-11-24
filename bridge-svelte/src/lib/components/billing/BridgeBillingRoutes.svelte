@@ -9,10 +9,13 @@
     plan        the paywall: where the route guard sends a workspace whose app
                 is not active. Once a plan is active it goes on to the page the
                 person was headed for.
-    success     a confirmation page
+    success     where checkouts of earlier versions returned: it goes on to the
+                subscription page, with the checkout's details kept
     error       where a failed checkout lands
-  A return from checkout is confirmed on any of the first three. An unknown
-  page gets the app's own 404.
+  Checkout returns to the subscription page itself, which confirms the payment
+  there ("You're on Pro now") and shows the plan. A return from checkout is
+  confirmed on any of the first three. An unknown page gets the app's own 404.
+  Every page has a "Back" link to the app (`billing.back`, or the `back` prop).
 
   Customising, in rungs:
     1. `--bridge-*` CSS tokens restyle the pages.
@@ -20,8 +23,9 @@
        page; `heading(page)` replaces each page's heading.
     3. To own one page, create it (`src/routes/subscription/plan/+page.svelte`):
        SvelteKit prefers the specific route, and the other pages keep working.
-    4. Headless: PlanPicker, SubscriptionStatus, BillingPortalButton,
-       CheckoutNotice and the `billing` and `plans` stores.
+    4. Headless: PlanPicker, CurrentPlan, SubscriptionStatus,
+       BillingPortalButton, CheckoutNotice and the `billing` and `plans`
+       stores.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
@@ -31,25 +35,23 @@
   import { peekConfig } from '../../core/client.js';
   import { flag } from '../../core/flags.js';
   import { parseBillingPage, ROUTE_PARAM, type BillingPage } from '../../core/routes.js';
-  import { billing } from '../../core/stores.js';
-  import BillingPortalButton from './BillingPortalButton.svelte';
+  import Spinner from '../shared/Spinner.svelte';
   import CheckoutNotice from './CheckoutNotice.svelte';
+  import CurrentPlan from './CurrentPlan.svelte';
   import PlanPicker from './PlanPicker.svelte';
-  import SubscriptionStatus from './SubscriptionStatus.svelte';
-  import { subscriptionMeta } from './plan-format.js';
 
   interface Props {
     /** Replaces everything around the content, on every page. */
     frame?: Snippet<[BillingPage, Snippet]>;
     /** Replaces each page's heading. */
     heading?: Snippet<[BillingPage]>;
-    /** Where "Continue" on the success page goes. @default the return address, else `auth.afterSignIn` */
-    redirectTo?: string;
+    /** Where the "Back" link goes, or `false` for no link. @default `billing.back`, else '/' */
+    back?: string | false;
     /** Confirm and announce a return from checkout. `false` leaves it to your own CheckoutNotice. @default true */
     checkoutNotice?: boolean;
   }
 
-  let { frame, heading, redirectTo, checkoutNotice = true }: Props = $props();
+  let { frame, heading, back, checkoutNotice = true }: Props = $props();
 
   const config = peekConfig();
   const base = config?.billingBase ?? '/subscription';
@@ -58,14 +60,25 @@
 
   const current = $derived(parseBillingPage(page.params[ROUTE_PARAM]));
   const returnTo = $derived(readReturnTo(page.url, config?.returnToParam) ?? config?.afterSignIn ?? '/');
-  const meta = $derived(subscriptionMeta($billing.value));
+  // The "Back" link: the page the person was headed for when it is in the address, else the app's home.
+  const backHref = $derived.by(() => {
+    if (back === false || (back === undefined && config?.billingBack === null)) return null;
+    return back ?? readReturnTo(page.url, config?.returnToParam) ?? config?.billingBack ?? '/';
+  });
 
   const DEFAULT_HEADINGS: Record<BillingPage, string> = {
     manage: 'Subscription',
     plan: 'Choose a plan',
-    success: "You're all set",
+    success: 'Subscription',
     error: "We couldn't confirm your payment",
   };
+
+  // An old checkout's return address, `/subscription/success`: on to the subscription page, with the checkout's details
+  // kept so the payment is confirmed there.
+  $effect(() => {
+    if (current !== 'success') return;
+    void goto(`${manageHref}${page.url.search}`, { replaceState: true });
+  });
 
   // On the plan page: once a plan was chosen here and the app is active, go on.
   let chosen = $state(false);
@@ -82,6 +95,14 @@
   {#if checkoutNotice && p !== 'error'}
     <CheckoutNotice onConfirmed={p === 'plan' ? () => (chosen = true) : undefined} />
   {/if}
+  {#if backHref !== null}
+    <a class="bridge-billing-back" href={backHref} data-bridge-billing-back>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M10 3.5 5.5 8l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      Back
+    </a>
+  {/if}
   {#if heading}
     {@render heading(p)}
   {:else}
@@ -90,27 +111,13 @@
 
   {#if p === 'manage'}
     <p class="bridge-billing-text">Your plan, what it includes, and billing.</p>
-    <div class="bridge-billing-summary" data-bridge-billing-summary>
-      <div class="bridge-billing-summary-plan">
-        <span class="bridge-billing-label">Current plan</span>
-        <SubscriptionStatus class="bridge-billing-summary-status" />
-        {#if meta}
-          <span class="bridge-billing-summary-meta" data-bridge-billing-meta>{meta}</span>
-        {/if}
-      </div>
-      <BillingPortalButton />
-    </div>
+    <CurrentPlan />
     <PlanPicker heading="Change plan" />
   {:else if p === 'plan'}
     <p class="bridge-billing-text">Pick a plan to start using the app.</p>
     <PlanPicker onChanged={() => (chosen = true)} />
   {:else if p === 'success'}
-    <p class="bridge-billing-text">Your plan is active.</p>
-    <div class="bridge-billing-current">
-      <span class="bridge-billing-label">Current plan</span>
-      <SubscriptionStatus />
-    </div>
-    <a class="bridge-btn-primary bridge-billing-action" href={redirectTo ?? returnTo}>Continue</a>
+    <Spinner />
   {:else if p === 'error'}
     <p class="bridge-billing-text">
       The payment may still have gone through. Check your subscription in a moment; if it has not changed, try again.

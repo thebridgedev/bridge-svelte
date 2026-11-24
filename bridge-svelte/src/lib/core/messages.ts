@@ -68,7 +68,8 @@ export type PluginMessageKey =
 	| 'recheck.anotherWay'
 	| 'recheck.noMethods'
 	| 'recheck.wrongPassword'
-	| 'recheck.confirmed';
+	| 'recheck.confirmed'
+	| 'billing.error.checkout';
 
 export type PluginMessages = Record<PluginMessageKey, string>;
 
@@ -137,6 +138,7 @@ const en: PluginMessages = {
 	'recheck.noMethods': 'There is no way to confirm it is you here. Sign in again.',
 	'recheck.wrongPassword': 'That password is not right.',
 	'recheck.confirmed': 'Confirmed. You can close this tab and go back.',
+	'billing.error.checkout': 'Changing the plan is not available right now. Please try again later or contact support.',
 };
 
 const sv: PluginMessages = {
@@ -204,6 +206,7 @@ const sv: PluginMessages = {
 	'recheck.noMethods': 'Det finns inget sätt att bekräfta att det är du här. Logga in igen.',
 	'recheck.wrongPassword': 'Det lösenordet stämmer inte.',
 	'recheck.confirmed': 'Bekräftat. Du kan stänga den här fliken och gå tillbaka.',
+	'billing.error.checkout': 'Det går inte att byta plan just nu. Försök igen senare eller kontakta supporten.',
 };
 
 const da: PluginMessages = {
@@ -271,6 +274,7 @@ const da: PluginMessages = {
 	'recheck.noMethods': 'Der er ingen måde at bekræfte, at det er dig, her. Log ind igen.',
 	'recheck.wrongPassword': 'Den adgangskode er ikke korrekt.',
 	'recheck.confirmed': 'Bekræftet. Du kan lukke denne fane og gå tilbage.',
+	'billing.error.checkout': 'Det er ikke muligt at skifte plan lige nu. Prøv igen senere, eller kontakt support.',
 };
 
 const nb: PluginMessages = {
@@ -338,6 +342,7 @@ const nb: PluginMessages = {
 	'recheck.noMethods': 'Det finnes ingen måte å bekrefte at det er deg her. Logg inn på nytt.',
 	'recheck.wrongPassword': 'Det passordet er ikke riktig.',
 	'recheck.confirmed': 'Bekreftet. Du kan lukke denne fanen og gå tilbake.',
+	'billing.error.checkout': 'Det er ikke mulig å bytte plan akkurat nå. Prøv igjen senere, eller kontakt kundestøtte.',
 };
 
 const nl: PluginMessages = {
@@ -405,6 +410,7 @@ const nl: PluginMessages = {
 	'recheck.noMethods': 'Hier is geen manier om te bevestigen dat jij het bent. Meld je opnieuw aan.',
 	'recheck.wrongPassword': 'Dat wachtwoord klopt niet.',
 	'recheck.confirmed': 'Bevestigd. Je kunt dit tabblad sluiten en teruggaan.',
+	'billing.error.checkout': 'Het plan wijzigen is nu niet mogelijk. Probeer het later opnieuw of neem contact op met de support.',
 };
 
 const de: PluginMessages = {
@@ -472,6 +478,7 @@ const de: PluginMessages = {
 	'recheck.noMethods': 'Hier gibt es keine Möglichkeit zu bestätigen, dass du es bist. Melde dich erneut an.',
 	'recheck.wrongPassword': 'Dieses Passwort ist nicht richtig.',
 	'recheck.confirmed': 'Bestätigt. Du kannst diesen Tab schließen und zurückgehen.',
+	'billing.error.checkout': 'Der Tarifwechsel ist gerade nicht möglich. Bitte versuche es später erneut oder wende dich an den Support.',
 };
 
 const fi: PluginMessages = {
@@ -539,6 +546,7 @@ const fi: PluginMessages = {
 	'recheck.noMethods': 'Täällä ei ole tapaa vahvistaa, että se olet sinä. Kirjaudu uudelleen.',
 	'recheck.wrongPassword': 'Salasana ei ole oikea.',
 	'recheck.confirmed': 'Vahvistettu. Voit sulkea tämän välilehden ja palata takaisin.',
+	'billing.error.checkout': 'Tilauksen vaihtaminen ei ole juuri nyt mahdollista. Yritä myöhemmin uudelleen tai ota yhteyttä tukeen.',
 };
 
 const fr: PluginMessages = {
@@ -606,6 +614,7 @@ const fr: PluginMessages = {
 	'recheck.noMethods': "Il n'y a aucun moyen de confirmer ici que c'est vous. Reconnectez-vous.",
 	'recheck.wrongPassword': "Ce mot de passe n'est pas correct.",
 	'recheck.confirmed': 'Confirmé. Vous pouvez fermer cet onglet et revenir en arrière.',
+	'billing.error.checkout': 'Le changement d\'offre n\'est pas possible pour le moment. Réessaie plus tard ou contacte le support.',
 };
 
 const es: PluginMessages = {
@@ -673,6 +682,7 @@ const es: PluginMessages = {
 	'recheck.noMethods': 'Aquí no hay forma de confirmar que eres tú. Vuelve a iniciar sesión.',
 	'recheck.wrongPassword': 'Esa contraseña no es correcta.',
 	'recheck.confirmed': 'Confirmado. Puedes cerrar esta pestaña y volver.',
+	'billing.error.checkout': 'Ahora mismo no se puede cambiar de plan. Inténtalo más tarde o ponte en contacto con el soporte.',
 };
 
 const it: PluginMessages = {
@@ -740,6 +750,7 @@ const it: PluginMessages = {
 	'recheck.noMethods': "Qui non c'è modo di confermare che sei tu. Accedi di nuovo.",
 	'recheck.wrongPassword': 'Quella password non è corretta.',
 	'recheck.confirmed': 'Confermato. Puoi chiudere questa scheda e tornare indietro.',
+	'billing.error.checkout': 'Al momento non è possibile cambiare piano. Riprova più tardi o contatta l\'assistenza.',
 };
 
 const pt: PluginMessages = {
@@ -807,6 +818,7 @@ const pt: PluginMessages = {
 	'recheck.noMethods': 'Aqui não há forma de confirmar que é você. Inicie sessão novamente.',
 	'recheck.wrongPassword': 'Essa palavra-passe não está correta.',
 	'recheck.confirmed': 'Confirmado. Pode fechar este separador e voltar.',
+	'billing.error.checkout': 'Não é possível mudar de plano neste momento. Tenta mais tarde ou contacta o suporte.',
 };
 
 const pl: PluginMessages = {
@@ -874,6 +886,7 @@ const pl: PluginMessages = {
 	'recheck.noMethods': 'Nie ma tu sposobu, by potwierdzić, że to ty. Zaloguj się ponownie.',
 	'recheck.wrongPassword': 'To hasło jest nieprawidłowe.',
 	'recheck.confirmed': 'Potwierdzono. Możesz zamknąć tę kartę i wrócić.',
+	'billing.error.checkout': 'Zmiana planu nie jest teraz możliwa. Spróbuj ponownie później lub skontaktuj się z pomocą.',
 };
 
 /** The plugin's copy by primary language subtag. */

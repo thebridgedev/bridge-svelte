@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { BridgeError } from '@nebulr-group/bridge-auth-core';
 import { errorMessage, setAppCopy, translator } from './i18n.js';
 import { PLUGIN_EN, PLUGIN_LOCALES } from './messages.js';
@@ -50,6 +50,27 @@ describe('the plugin copy', () => {
 		// No wait time known, or a limit of another kind: the generic message.
 		expect(errorMessage(new BridgeError('rate-limited', 'x'), t)).toBe(t('error.rateLimited'));
 		expect(errorMessage(new BridgeError('rate-limited', 'x', { code: 'too_many_attempts' }), t)).toBe(t('error.rateLimited'));
+	});
+});
+
+describe('a checkout that cannot start because of the app\'s setup', () => {
+	it('tells the payer plainly, never the developer\'s words, and the developer exactly in the console, once', () => {
+		const t = translator();
+		const logged: string[] = [];
+		const spy = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => void logged.push(args.join(' ')));
+		const detail = "return-url-not-registered: https://app.test is not one of the app's registered browser origins, so a payer is not sent back to it. Add it.";
+		const refused = new BridgeError('conflict', detail, { status: 409, code: 'return-url-not-registered' });
+		expect(errorMessage(refused, t)).toBe(t('billing.error.checkout'));
+		expect(errorMessage(refused, t)).toBe('Changing the plan is not available right now. Please try again later or contact support.');
+		expect(errorMessage(refused, t)).not.toContain('return-url');
+		const none = new BridgeError('conflict', 'no-return-url: Billing was not told where to return.', { status: 409, code: 'no-return-url' });
+		expect(errorMessage(none, t)).toBe(t('billing.error.checkout'));
+		spy.mockRestore();
+		// One line per problem and page, and it carries the server's words with the fix.
+		expect(logged).toHaveLength(2);
+		expect(logged[0]).toContain('[bridge] The checkout could not start. return-url-not-registered:');
+		// Any other conflict keeps Bridge's own reason.
+		expect(errorMessage(new BridgeError('conflict', 'The payer is on this plan already.', { status: 409 }), t)).toBe('The payer is on this plan already.');
 	});
 });
 

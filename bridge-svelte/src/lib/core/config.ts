@@ -108,6 +108,11 @@ export interface BridgeConfig {
 		 * prompt). `false` for none, or your own component. @default true
 		 */
 		readonly upgradeDialog?: boolean | Component<UpgradeDialogProps>;
+		/**
+		 * Where the "Back" link on the billing pages goes (a path of your app), or `false` for no link.
+		 * @default '/'
+		 */
+		readonly back?: string | false;
 	};
 	/**
 	 * Hand-off mode, for a sign-in page that signs a person in for a program
@@ -167,6 +172,8 @@ export interface ResolvedConfig {
 	readonly flagKeys: { readonly billingManage: string; readonly teamManage: string; readonly appActive: string };
 	readonly billingBase: string;
 	readonly paywall: string | null;
+	/** Where the billing pages' "Back" link goes; null for none. */
+	readonly billingBack: string | null;
 	readonly upgradeDialog: boolean | Component<UpgradeDialogProps>;
 	readonly handoff: { readonly program: string } | null;
 	/** Whether the page signs in for other apps' sign-in requests (`?request=<id>`). */
@@ -241,6 +248,7 @@ export function resolveConfig(config: BridgeConfig, envIssuer: string | undefine
 		},
 		billingBase,
 		paywall: paywall === false ? null : (paywall ?? `${billingBase}/plan`),
+		billingBack: config.billing?.back === false ? null : (config.billing?.back ?? '/'),
 		upgradeDialog: config.billing?.upgradeDialog ?? true,
 		handoff: config.handoff?.loopback === true ? { program: config.handoff.program ?? 'the command-line tool' } : null,
 		signInRequests: config.handoff?.requests === true,

@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.0-alpha.18] - Unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.16.
+
+### Added
+
+- **SvelteKit 3.** The plugin installs and runs on SvelteKit 2 and 3 (`@sveltejs/kit` `^2.0.0 || ^3.0.0`; SvelteKit 3 brings Vite 8 and `@sveltejs/vite-plugin-svelte` 7). Before, a new SvelteKit app failed the install on the peer range.
+- **Checkout comes back to your subscription page.** The plugin sends its own subscription page as the return address; Bridge accepts it on the app's registered browser addresses. The address set in the dashboard stays an optional override, so an app no longer has to set one before its first paid upgrade.
+- **A plan change on its way stays on the page.** The current-plan box says "Pro until 24 Dec 2026, then Free" for a downgrade (with a "Keep Pro" button; the Free card says when it starts), and "Upgrading to Mega… confirming your payment" with a spinner for an upgrade until the payment is confirmed, then "You're on Mega now". A bank asking for confirmation or a failed payment says so with one button. `<CurrentPlan>` is the box.
+- **A "Back" link on the billing pages**, to `/` by default: `billing: { back: '/dashboard' }`, or `back: false` for none.
+
+### Changed
+
+- **No separate success page after checkout.** Stripe returns to the subscription page, which confirms the payment there and shows the same banner as a Free plan pick. `/subscription/success` stays only as a redirect to the subscription page, for old links. The `redirectTo` prop of `<BridgeBillingRoutes>` (the success page's Continue) is gone.
+- **A checkout that cannot start because of the app's setup** shows the person a plain message, and the developer the exact words with the fix in the browser console (and in the app's log in the dashboard), not Bridge's developer text on the page.
+- Choosing the plan the workspace holds while a downgrade waits (`billing.keepPlan`) drops the downgrade.
+
 ## [1.0.0-alpha.17] - Unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.15.

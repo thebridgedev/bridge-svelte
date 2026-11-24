@@ -38,6 +38,9 @@ describe('defaults', () => {
 		expect(config.flagKeys).toEqual({ billingManage: 'bridge-billing-manage', teamManage: 'bridge-team-manage', appActive: ACTIVE });
 		expect(config.handoff).toBeNull();
 		expect(resolveConfig({ issuer: ISSUER, billing: { paywall: false } }, undefined).paywall).toBeNull();
+		expect(resolveConfig({ issuer: ISSUER }, undefined).billingBack).toBe('/');
+		expect(resolveConfig({ issuer: ISSUER, billing: { back: '/dashboard' } }, undefined).billingBack).toBe('/dashboard');
+		expect(resolveConfig({ issuer: ISSUER, billing: { back: false } }, undefined).billingBack).toBeNull();
 		expect(resolveConfig({ issuer: ISSUER, handoff: { loopback: true, program: 'the CLI' } }, undefined).handoff).toEqual({ program: 'the CLI' });
 	});
 });

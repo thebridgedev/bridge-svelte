@@ -4,6 +4,7 @@
  * component's own `messages` prop, in that order of precedence (last wins).
  */
 import {
+	checkoutSetupProblem,
 	createTranslator,
 	interpolate,
 	isBridgeError,
@@ -47,6 +48,7 @@ export function translator(messages?: BridgeMessages): BridgeTranslator {
 }
 
 const reportedOrigins = new Set<string>();
+const reportedCheckout = new Set<string>();
 
 /**
  * What a screen shows when a Bridge call fails, from the error's kind. A
@@ -56,6 +58,17 @@ const reportedOrigins = new Set<string>();
 export function errorMessage(error: unknown, t: BridgeTranslator, fallback: BridgeMessageKey = 'error.generic'): string {
 	if (!isBridgeError(error)) return t(fallback);
 	const e = error as BridgeError;
+	// A checkout that cannot start because of how the app is set up: the payer is told plainly, the developer exactly
+	// (the same words are in the app's log in Bridge's dashboard).
+	if (checkoutSetupProblem(e) !== null) {
+		const origin = typeof location === 'undefined' ? '' : location.origin;
+		const once = `${e.code ?? ''}|${origin}`;
+		if (!reportedCheckout.has(once)) {
+			reportedCheckout.add(once);
+			console.error(`[bridge] The checkout could not start. ${e.message}`);
+		}
+		return t('billing.error.checkout');
+	}
 	switch (e.kind) {
 		case 'wrong-credentials':
 			return t('login.error.invalidCredentials');

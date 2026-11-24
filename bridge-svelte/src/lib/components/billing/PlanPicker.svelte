@@ -24,6 +24,7 @@
   import BillingPortalButton from './BillingPortalButton.svelte';
   import {
     formatAmount,
+    formatDate,
     formatPrice,
     intervalSuffix,
     isFreePick,
@@ -88,6 +89,9 @@
   const loadError = $derived($plans.value === null && $plans.error !== null ? errorMessage($plans.error, translator(), 'error.generic') : null);
   const list = $derived(($plans.value ?? []).filter((p) => !p.archived || p.key === currentKey));
   const flagsKnown = $derived($flagsStatus === 'ready' || $flagsStatus === 'error');
+  // A change on its way, shown on the plan it is for, so it never rests on a message that goes away.
+  const waiting = $derived(facts?.waiting ?? null);
+  const startsAt = $derived(waiting?.waitsFor === 'period_end' ? formatDate(waiting.at ?? facts?.periodEnd) : null);
 
   const uiState = $derived.by(() => {
     if (!facts) return 'idle';
@@ -129,15 +133,8 @@
     return free ? [free] : [];
   }
 
-  function changeNotice(plan: Plan, price: Price | undefined, status: PlanChange['status']): string {
-    switch (status) {
-      case 'scheduled':
-        return `You'll move to ${plan.name} at the end of this billing period.`;
-      case 'waiting_for_payment':
-        return `You'll move to ${plan.name} once the payment goes through.`;
-      default:
-        return `You're now on ${plan.name} (${formatPrice(price)}).`;
-    }
+  function changeNotice(plan: Plan, price: Price | undefined): string {
+    return `You're now on ${plan.name} (${formatPrice(price)}).`;
   }
 
   function showSuccess(message: string): void {
@@ -160,7 +157,9 @@
       return true;
     }
     await billing.refresh();
-    showSuccess(changeNotice(plan, price, change.status));
+    // A change that waits (for the end of the period, or for its payment) is shown where it belongs, in the current-plan
+    // box and on the plan's card, and stays there; only a change that is done gets a message that goes away.
+    if (change.status === 'changed') showSuccess(changeNotice(plan, price));
     onChanged?.({ plan, change });
     return false;
   }
@@ -307,6 +306,8 @@
           {@const kind = pickKind(plan, currentPlan)}
           {@const days = trialDays(plan)}
           {@const features = planFeatures(plan)}
+          {@const isScheduled = waiting?.waitsFor === 'period_end' && waiting.plan === plan.key}
+          {@const isUpgrading = waiting?.waitsFor === 'payment' && facts?.plan != null && waiting.plan === plan.key}
           {@const buttonClass = [kind === 'current' || kind === 'switch' ? 'bridge-btn-secondary' : 'bridge-btn-primary', 'bridge-plan-select-btn']}
 
           {#if planCard}
@@ -318,10 +319,14 @@
               data-current={isCurrent}
               data-trial={days !== null}
               data-pick={kind}
+              data-scheduled={isScheduled}
+              data-upgrading={isUpgrading}
               class="bridge-plan-card"
             >
               {#if isCurrent}
                 <span class="bridge-plan-current-flag" data-bridge-plan-current-flag>Your plan</span>
+              {:else if isScheduled}
+                <span class="bridge-plan-current-flag" data-bridge-plan-scheduled-flag>{startsAt ? `Starts ${startsAt}` : 'Starts next period'}</span>
               {/if}
               <div class="bridge-plan-card-header">
                 <h3 class="bridge-plan-name">{plan.name}</h3>
@@ -362,14 +367,14 @@
 
               <div class="bridge-plan-prices">
                 {#each visiblePrices as price (`${price.interval ?? ''}:${price.currency}`)}
-                  <button class={buttonClass} disabled={isCurrent || picking || !$canManage} onclick={() => onPick(price)}>
-                    {pickLabel(kind, plan)}{#if visiblePrices.length > 1 && !isCurrent}{` · ${formatAmount(price.amount, price.currency)}`}{/if}
+                  <button class={buttonClass} disabled={isCurrent || isScheduled || isUpgrading || picking || !$canManage} onclick={() => onPick(price)}>
+                    {isScheduled ? 'Scheduled' : isUpgrading ? 'Upgrading…' : pickLabel(kind, plan)}{#if visiblePrices.length > 1 && !isCurrent}{` · ${formatAmount(price.amount, price.currency)}`}{/if}
                   </button>
                 {/each}
 
                 {#if plan.prices.length === 0}
-                  <button class={buttonClass} disabled={isCurrent || picking || !$canManage} onclick={() => onPick()}>
-                    {pickLabel(kind, plan)}
+                  <button class={buttonClass} disabled={isCurrent || isScheduled || isUpgrading || picking || !$canManage} onclick={() => onPick()}>
+                    {isScheduled ? 'Scheduled' : isUpgrading ? 'Upgrading…' : pickLabel(kind, plan)}
                   </button>
                 {:else if visiblePrices.length === 0}
                   <p class="bridge-plan-unavailable" data-bridge-plan-unavailable>

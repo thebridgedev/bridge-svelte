@@ -20,6 +20,19 @@ PUBLIC_BRIDGE_ISSUER=https://…/identity-access/apps/<your app id>
 
 The issuer must be an `https` address. Only on your own machine may it be `http://localhost`.
 
+On SvelteKit 3, an environment variable is read only when the app declares it. Add the issuer to `src/env.ts`:
+
+```ts
+// src/env.ts (SvelteKit 3)
+import { defineEnvVars } from '@sveltejs/kit/env';
+
+export const variables = defineEnvVars({
+  PUBLIC_BRIDGE_ISSUER: { public: true },
+});
+```
+
+(or pass `issuer` to `bridgeBootstrap()` yourself). SvelteKit 2 reads `.env` as it is.
+
 In your app's settings in Bridge, also add:
 
 - your app's address (`https://app.example.com`, and `http://localhost:5173` while developing) as a **browser address**, so your pages may call Bridge;

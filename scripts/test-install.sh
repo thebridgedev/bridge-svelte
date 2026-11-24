@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test that the packed package installs cleanly with Svelte 5 + SvelteKit 2.
+# Test that the packed package installs cleanly with Svelte 5 + SvelteKit 2, and with SvelteKit 3.
 # Run from repo root: bun run test:install (or ./scripts/test-install.sh)
 set -e
 
@@ -30,6 +30,15 @@ npm init -y
 npm install svelte@^5 @sveltejs/kit@^2
 npm install "$ROOT/install-test-pkg.tgz"
 echo "    svelte@5 + @sveltejs/kit@2: OK"
+
+echo "==> Testing install with svelte@5 + @sveltejs/kit@3 (vite 8, vite-plugin-svelte 7)..."
+rm -rf "$TEST_DIR"
+mkdir -p "$TEST_DIR"
+cd "$TEST_DIR"
+npm init -y
+npm install svelte@^5 @sveltejs/kit@^3 vite@^8 @sveltejs/vite-plugin-svelte@^7 typescript@^6
+npm install "$TGZ"
+echo "    svelte@5 + @sveltejs/kit@3: OK"
 rm -rf "$TEST_DIR"
 rm -f "$TGZ"
 

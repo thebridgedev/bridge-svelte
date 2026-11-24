@@ -1573,6 +1573,67 @@
     min-width: 0;
   }
 
+  .bridge-billing-summary-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* What is on its way, under the plan: a scheduled change, an upgrade being paid for. */
+  .bridge-billing-summary-change,
+  .bridge-billing-summary-note {
+    flex: 1 1 100%;
+  }
+
+  .bridge-billing-summary-change {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--bridge-alert-info-border);
+    border-radius: var(--bridge-border-radius);
+    background: var(--bridge-alert-info-bg);
+    color: var(--bridge-alert-info-fg);
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  .bridge-billing-summary-change > div {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .bridge-billing-summary-change[data-state="failed"] {
+    border-color: var(--bridge-alert-error-border);
+    background: var(--bridge-alert-error-bg);
+    color: var(--bridge-alert-error-fg);
+  }
+
+  .bridge-billing-summary-change[data-state="done"] {
+    border-color: var(--bridge-alert-success-border);
+    background: var(--bridge-alert-success-bg);
+    color: var(--bridge-alert-success-fg);
+  }
+
+  .bridge-billing-back {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    color: var(--bridge-muted);
+    text-decoration: none;
+  }
+
+  .bridge-billing-back:hover,
+  .bridge-billing-back:focus-visible {
+    color: var(--bridge-foreground);
+    text-decoration: underline;
+  }
+
   .bridge-billing-label {
     font-size: calc(0.75 * var(--bridge-text-base, 1rem));
     font-weight: var(--bridge-font-weight-label, 600);

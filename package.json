@@ -19,6 +19,8 @@
 		"test:networkidle-guard": "bash scripts/check-no-networkidle.sh",
 		"test:e2e:report": "bunx playwright show-report test-reports/playwright-report",
 		"test:install": "bash scripts/test-install.sh",
+		"test:kit2": "bash scripts/test-kit.sh 2",
+		"test:kit3": "bash scripts/test-kit.sh 3",
 		"test:unit": "bun run --filter @nebulr-group/bridge-svelte test:unit",
 		"check": "bun run --filter @nebulr-group/bridge-svelte check && bun run --filter demo check",
 		"test:e2e:stage": "bash scripts/stage-e2e.sh"

@@ -48,6 +48,8 @@
 
   async function follow(step: SignInStep) {
     if (!step.done) {
+      // A passkey sign-in never answers verify_email (only a social sign-up with an unconfirmed address does, on the sign-in form).
+      if (step.next === 'verify_email') return;
       view = step.next === 'workspace' ? { step: 'workspace', workspaces: step.workspaces, choose: step.choose } : { step: 'second', second: step };
       return;
     }

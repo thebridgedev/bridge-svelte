@@ -74,7 +74,8 @@
     else if (handOff(step)) view = { step: 'working' };
     else if (step.done) await finish();
     else if (step.next === 'workspace') view = { step: 'workspace', workspaces: step.workspaces, choose: step.choose };
-    else view = { step: 'second', second: step };
+    // A link never answers verify_email (only a social sign-up with an unconfirmed address does, on the sign-in form).
+    else if (step.next !== 'verify_email') view = { step: 'second', second: step };
   }
 
   onMount(() => {

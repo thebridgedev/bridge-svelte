@@ -36,6 +36,7 @@
   import WorkspaceChooser from './WorkspaceChooser.svelte';
   import SocialButtons from './SocialButtons.svelte';
   import SecondStepForm from './SecondStepForm.svelte';
+  import CheckYourEmail from './CheckYourEmail.svelte';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** Heading on the credentials step. @default the shared "Log in to your account" copy; `null` for none */
@@ -89,6 +90,8 @@
   let settled = $state(false);
   /** The second step, while it waits for its code or a number. */
   let second = $state<Extract<SignInStep, { next: 'second_step' } | { next: 'second_step_setup' }> | null>(null);
+  /** A social sign-up whose address the provider did not confirm: the address Bridge emailed its own link to. */
+  let checkEmail = $state<string | null>(null);
   const social = $derived(options?.social ?? []);
 
   const signUpShown = $derived(showSignupLink ?? options?.signUp ?? true);
@@ -196,6 +199,10 @@
       settled = true;
     } else if (step.done) {
       finish();
+    } else if (step.next === 'verify_email') {
+      second = null;
+      choice = null;
+      checkEmail = step.email;
     } else if (step.next === 'workspace') {
       second = null;
       choice = { workspaces: step.workspaces, choose: step.choose };
@@ -255,6 +262,8 @@
       <span>{t('login.submitting')}</span>
     </div>
   </AuthFormWrapper>
+{:else if checkEmail !== null}
+  <CheckYourEmail email={checkEmail} {onSignIn} class={className} {style} {messages} />
 {:else if second}
   <SecondStepForm step={second} onStep={(next) => void follow(next)} class={className} {style} {messages} />
 {:else if choice}

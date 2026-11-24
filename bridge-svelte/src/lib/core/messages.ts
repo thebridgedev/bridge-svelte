@@ -5,6 +5,22 @@
  * placeholders positioned in the sentence.
  */
 export type PluginMessageKey =
+	| 'social.continueWith'
+	| 'secondStep.heading'
+	| 'secondStep.codeSent'
+	| 'secondStep.notSent'
+	| 'field.code'
+	| 'secondStep.verify'
+	| 'secondStep.resend'
+	| 'secondStep.useBackup'
+	| 'field.backupCode'
+	| 'secondStep.setupHeading'
+	| 'secondStep.setupIntro'
+	| 'field.phone'
+	| 'secondStep.sendCode'
+	| 'secondStep.backupHeading'
+	| 'secondStep.backupIntro'
+	| 'secondStep.continue'
 	| 'signup.closed'
 	| 'field.workspaceName'
 	| 'verify.missingLink'
@@ -142,6 +158,22 @@ const en: PluginMessages = {
 	'recheck.wrongPassword': 'That password is not right.',
 	'recheck.confirmed': 'Confirmed. You can close this tab and go back.',
 	'billing.error.checkout': 'Changing the plan is not available right now. Please try again later or contact support.',
+	'social.continueWith': "Continue with {provider}",
+	'secondStep.heading': "Enter your code",
+	'secondStep.codeSent': "We sent a code by text message to {phone}.",
+	'secondStep.notSent': "The code could not be sent. Send a new one.",
+	'field.code': "Code",
+	'secondStep.verify': "Verify",
+	'secondStep.resend': "Send a new code",
+	'secondStep.useBackup': "Lost your phone? Use your backup code",
+	'field.backupCode': "Backup code",
+	'secondStep.setupHeading': "Add your mobile number",
+	'secondStep.setupIntro': "This workspace asks for a code by text message at sign-in. Enter your number with its country code.",
+	'field.phone': "Mobile number",
+	'secondStep.sendCode': "Send code",
+	'secondStep.backupHeading': "Save your backup code",
+	'secondStep.backupIntro': "Keep it somewhere safe. It is shown only once, and you need it if you lose your phone.",
+	'secondStep.continue': "Continue",
 };
 
 const sv: PluginMessages = {
@@ -211,6 +243,22 @@ const sv: PluginMessages = {
 	'recheck.wrongPassword': 'Det lösenordet stämmer inte.',
 	'recheck.confirmed': 'Bekräftat. Du kan stänga den här fliken och gå tillbaka.',
 	'billing.error.checkout': 'Det går inte att byta plan just nu. Försök igen senare eller kontakta supporten.',
+	'social.continueWith': "Fortsätt med {provider}",
+	'secondStep.heading': "Ange din kod",
+	'secondStep.codeSent': "Vi har skickat en kod via sms till {phone}.",
+	'secondStep.notSent': "Koden kunde inte skickas. Skicka en ny.",
+	'field.code': "Kod",
+	'secondStep.verify': "Verifiera",
+	'secondStep.resend': "Skicka en ny kod",
+	'secondStep.useBackup': "Tappat telefonen? Använd din reservkod",
+	'field.backupCode': "Reservkod",
+	'secondStep.setupHeading': "Lägg till ditt mobilnummer",
+	'secondStep.setupIntro': "Den här arbetsytan kräver en kod via sms vid inloggning. Ange ditt nummer med landsnummer.",
+	'field.phone': "Mobilnummer",
+	'secondStep.sendCode': "Skicka kod",
+	'secondStep.backupHeading': "Spara din reservkod",
+	'secondStep.backupIntro': "Förvara den säkert. Den visas bara en gång, och du behöver den om du tappar telefonen.",
+	'secondStep.continue': "Fortsätt",
 };
 
 const da: PluginMessages = {
@@ -280,6 +328,22 @@ const da: PluginMessages = {
 	'recheck.wrongPassword': 'Den adgangskode er ikke korrekt.',
 	'recheck.confirmed': 'Bekræftet. Du kan lukke denne fane og gå tilbage.',
 	'billing.error.checkout': 'Det er ikke muligt at skifte plan lige nu. Prøv igen senere, eller kontakt support.',
+	'social.continueWith': "Fortsæt med {provider}",
+	'secondStep.heading': "Indtast din kode",
+	'secondStep.codeSent': "Vi har sendt en kode via sms til {phone}.",
+	'secondStep.notSent': "Koden kunne ikke sendes. Send en ny.",
+	'field.code': "Kode",
+	'secondStep.verify': "Bekræft",
+	'secondStep.resend': "Send en ny kode",
+	'secondStep.useBackup': "Mistet din telefon? Brug din backupkode",
+	'field.backupCode': "Backupkode",
+	'secondStep.setupHeading': "Tilføj dit mobilnummer",
+	'secondStep.setupIntro': "Dette arbejdsområde kræver en kode via sms ved login. Indtast dit nummer med landekode.",
+	'field.phone': "Mobilnummer",
+	'secondStep.sendCode': "Send kode",
+	'secondStep.backupHeading': "Gem din backupkode",
+	'secondStep.backupIntro': "Opbevar den sikkert. Den vises kun én gang, og du skal bruge den, hvis du mister din telefon.",
+	'secondStep.continue': "Fortsæt",
 };
 
 const nb: PluginMessages = {
@@ -349,6 +413,22 @@ const nb: PluginMessages = {
 	'recheck.wrongPassword': 'Det passordet er ikke riktig.',
 	'recheck.confirmed': 'Bekreftet. Du kan lukke denne fanen og gå tilbake.',
 	'billing.error.checkout': 'Det er ikke mulig å bytte plan akkurat nå. Prøv igjen senere, eller kontakt kundestøtte.',
+	'social.continueWith': "Fortsett med {provider}",
+	'secondStep.heading': "Skriv inn koden",
+	'secondStep.codeSent': "Vi har sendt en kode på SMS til {phone}.",
+	'secondStep.notSent': "Koden kunne ikke sendes. Send en ny.",
+	'field.code': "Kode",
+	'secondStep.verify': "Bekreft",
+	'secondStep.resend': "Send en ny kode",
+	'secondStep.useBackup': "Mistet telefonen? Bruk reservekoden",
+	'field.backupCode': "Reservekode",
+	'secondStep.setupHeading': "Legg til mobilnummeret ditt",
+	'secondStep.setupIntro': "Dette arbeidsområdet krever en kode på SMS ved innlogging. Skriv inn nummeret med landskode.",
+	'field.phone': "Mobilnummer",
+	'secondStep.sendCode': "Send kode",
+	'secondStep.backupHeading': "Lagre reservekoden",
+	'secondStep.backupIntro': "Oppbevar den trygt. Den vises bare én gang, og du trenger den hvis du mister telefonen.",
+	'secondStep.continue': "Fortsett",
 };
 
 const nl: PluginMessages = {
@@ -418,6 +498,22 @@ const nl: PluginMessages = {
 	'recheck.wrongPassword': 'Dat wachtwoord klopt niet.',
 	'recheck.confirmed': 'Bevestigd. Je kunt dit tabblad sluiten en teruggaan.',
 	'billing.error.checkout': 'Het plan wijzigen is nu niet mogelijk. Probeer het later opnieuw of neem contact op met de support.',
+	'social.continueWith': "Doorgaan met {provider}",
+	'secondStep.heading': "Voer je code in",
+	'secondStep.codeSent': "We hebben een code per sms gestuurd naar {phone}.",
+	'secondStep.notSent': "De code kon niet worden verstuurd. Stuur een nieuwe.",
+	'field.code': "Code",
+	'secondStep.verify': "Bevestigen",
+	'secondStep.resend': "Stuur een nieuwe code",
+	'secondStep.useBackup': "Telefoon kwijt? Gebruik je back-upcode",
+	'field.backupCode': "Back-upcode",
+	'secondStep.setupHeading': "Voeg je mobiele nummer toe",
+	'secondStep.setupIntro': "Deze werkruimte vraagt bij het inloggen om een code per sms. Voer je nummer in met landcode.",
+	'field.phone': "Mobiel nummer",
+	'secondStep.sendCode': "Code versturen",
+	'secondStep.backupHeading': "Bewaar je back-upcode",
+	'secondStep.backupIntro': "Bewaar hem op een veilige plek. Hij wordt maar één keer getoond en je hebt hem nodig als je je telefoon kwijtraakt.",
+	'secondStep.continue': "Doorgaan",
 };
 
 const de: PluginMessages = {
@@ -487,6 +583,22 @@ const de: PluginMessages = {
 	'recheck.wrongPassword': 'Dieses Passwort ist nicht richtig.',
 	'recheck.confirmed': 'Bestätigt. Du kannst diesen Tab schließen und zurückgehen.',
 	'billing.error.checkout': 'Der Tarifwechsel ist gerade nicht möglich. Bitte versuche es später erneut oder wende dich an den Support.',
+	'social.continueWith': "Weiter mit {provider}",
+	'secondStep.heading': "Code eingeben",
+	'secondStep.codeSent': "Wir haben einen Code per SMS an {phone} gesendet.",
+	'secondStep.notSent': "Der Code konnte nicht gesendet werden. Fordere einen neuen an.",
+	'field.code': "Code",
+	'secondStep.verify': "Bestätigen",
+	'secondStep.resend': "Neuen Code senden",
+	'secondStep.useBackup': "Telefon verloren? Backup-Code verwenden",
+	'field.backupCode': "Backup-Code",
+	'secondStep.setupHeading': "Handynummer hinzufügen",
+	'secondStep.setupIntro': "Dieser Workspace verlangt bei der Anmeldung einen Code per SMS. Gib deine Nummer mit Ländervorwahl ein.",
+	'field.phone': "Handynummer",
+	'secondStep.sendCode': "Code senden",
+	'secondStep.backupHeading': "Backup-Code speichern",
+	'secondStep.backupIntro': "Bewahre ihn sicher auf. Er wird nur einmal angezeigt, und du brauchst ihn, wenn du dein Telefon verlierst.",
+	'secondStep.continue': "Weiter",
 };
 
 const fi: PluginMessages = {
@@ -556,6 +668,22 @@ const fi: PluginMessages = {
 	'recheck.wrongPassword': 'Salasana ei ole oikea.',
 	'recheck.confirmed': 'Vahvistettu. Voit sulkea tämän välilehden ja palata takaisin.',
 	'billing.error.checkout': 'Tilauksen vaihtaminen ei ole juuri nyt mahdollista. Yritä myöhemmin uudelleen tai ota yhteyttä tukeen.',
+	'social.continueWith': "Jatka palvelulla {provider}",
+	'secondStep.heading': "Anna koodi",
+	'secondStep.codeSent': "Lähetimme koodin tekstiviestillä numeroon {phone}.",
+	'secondStep.notSent': "Koodia ei voitu lähettää. Lähetä uusi.",
+	'field.code': "Koodi",
+	'secondStep.verify': "Vahvista",
+	'secondStep.resend': "Lähetä uusi koodi",
+	'secondStep.useBackup': "Kadotitko puhelimesi? Käytä varakoodia",
+	'field.backupCode': "Varakoodi",
+	'secondStep.setupHeading': "Lisää matkapuhelinnumerosi",
+	'secondStep.setupIntro': "Tämä työtila pyytää kirjautuessa koodin tekstiviestillä. Anna numerosi maatunnuksen kanssa.",
+	'field.phone': "Matkapuhelinnumero",
+	'secondStep.sendCode': "Lähetä koodi",
+	'secondStep.backupHeading': "Tallenna varakoodi",
+	'secondStep.backupIntro': "Säilytä se turvassa. Se näytetään vain kerran, ja tarvitset sitä, jos kadotat puhelimesi.",
+	'secondStep.continue': "Jatka",
 };
 
 const fr: PluginMessages = {
@@ -625,6 +753,22 @@ const fr: PluginMessages = {
 	'recheck.wrongPassword': "Ce mot de passe n'est pas correct.",
 	'recheck.confirmed': 'Confirmé. Vous pouvez fermer cet onglet et revenir en arrière.',
 	'billing.error.checkout': 'Le changement d\'offre n\'est pas possible pour le moment. Réessaie plus tard ou contacte le support.',
+	'social.continueWith': "Continuer avec {provider}",
+	'secondStep.heading': "Saisissez votre code",
+	'secondStep.codeSent': "Nous avons envoyé un code par SMS au {phone}.",
+	'secondStep.notSent': "Le code n'a pas pu être envoyé. Demandez-en un nouveau.",
+	'field.code': "Code",
+	'secondStep.verify': "Vérifier",
+	'secondStep.resend': "Envoyer un nouveau code",
+	'secondStep.useBackup': "Téléphone perdu ? Utilisez votre code de secours",
+	'field.backupCode': "Code de secours",
+	'secondStep.setupHeading': "Ajoutez votre numéro de mobile",
+	'secondStep.setupIntro': "Cet espace de travail demande un code par SMS à la connexion. Saisissez votre numéro avec l'indicatif du pays.",
+	'field.phone': "Numéro de mobile",
+	'secondStep.sendCode': "Envoyer le code",
+	'secondStep.backupHeading': "Conservez votre code de secours",
+	'secondStep.backupIntro': "Conservez-le en lieu sûr. Il n'est affiché qu'une fois, et vous en aurez besoin si vous perdez votre téléphone.",
+	'secondStep.continue': "Continuer",
 };
 
 const es: PluginMessages = {
@@ -694,6 +838,22 @@ const es: PluginMessages = {
 	'recheck.wrongPassword': 'Esa contraseña no es correcta.',
 	'recheck.confirmed': 'Confirmado. Puedes cerrar esta pestaña y volver.',
 	'billing.error.checkout': 'Ahora mismo no se puede cambiar de plan. Inténtalo más tarde o ponte en contacto con el soporte.',
+	'social.continueWith': "Continuar con {provider}",
+	'secondStep.heading': "Introduce tu código",
+	'secondStep.codeSent': "Hemos enviado un código por SMS al {phone}.",
+	'secondStep.notSent': "No se pudo enviar el código. Envía uno nuevo.",
+	'field.code': "Código",
+	'secondStep.verify': "Verificar",
+	'secondStep.resend': "Enviar un código nuevo",
+	'secondStep.useBackup': "¿Perdiste el teléfono? Usa tu código de respaldo",
+	'field.backupCode': "Código de respaldo",
+	'secondStep.setupHeading': "Añade tu número de móvil",
+	'secondStep.setupIntro': "Este espacio de trabajo pide un código por SMS al iniciar sesión. Introduce tu número con el prefijo del país.",
+	'field.phone': "Número de móvil",
+	'secondStep.sendCode': "Enviar código",
+	'secondStep.backupHeading': "Guarda tu código de respaldo",
+	'secondStep.backupIntro': "Guárdalo en un lugar seguro. Solo se muestra una vez y lo necesitarás si pierdes el teléfono.",
+	'secondStep.continue': "Continuar",
 };
 
 const it: PluginMessages = {
@@ -763,6 +923,22 @@ const it: PluginMessages = {
 	'recheck.wrongPassword': 'Quella password non è corretta.',
 	'recheck.confirmed': 'Confermato. Puoi chiudere questa scheda e tornare indietro.',
 	'billing.error.checkout': 'Al momento non è possibile cambiare piano. Riprova più tardi o contatta l\'assistenza.',
+	'social.continueWith': "Continua con {provider}",
+	'secondStep.heading': "Inserisci il codice",
+	'secondStep.codeSent': "Abbiamo inviato un codice via SMS al {phone}.",
+	'secondStep.notSent': "Non è stato possibile inviare il codice. Inviane uno nuovo.",
+	'field.code': "Codice",
+	'secondStep.verify': "Verifica",
+	'secondStep.resend': "Invia un nuovo codice",
+	'secondStep.useBackup': "Hai perso il telefono? Usa il codice di backup",
+	'field.backupCode': "Codice di backup",
+	'secondStep.setupHeading': "Aggiungi il tuo numero di cellulare",
+	'secondStep.setupIntro': "Questo spazio di lavoro richiede un codice via SMS all'accesso. Inserisci il numero con il prefisso internazionale.",
+	'field.phone': "Numero di cellulare",
+	'secondStep.sendCode': "Invia codice",
+	'secondStep.backupHeading': "Salva il codice di backup",
+	'secondStep.backupIntro': "Conservalo al sicuro. Viene mostrato una sola volta e ti servirà se perdi il telefono.",
+	'secondStep.continue': "Continua",
 };
 
 const pt: PluginMessages = {
@@ -832,6 +1008,22 @@ const pt: PluginMessages = {
 	'recheck.wrongPassword': 'Essa palavra-passe não está correta.',
 	'recheck.confirmed': 'Confirmado. Pode fechar este separador e voltar.',
 	'billing.error.checkout': 'Não é possível mudar de plano neste momento. Tenta mais tarde ou contacta o suporte.',
+	'social.continueWith': "Continuar com {provider}",
+	'secondStep.heading': "Introduza o seu código",
+	'secondStep.codeSent': "Enviámos um código por SMS para {phone}.",
+	'secondStep.notSent': "Não foi possível enviar o código. Envie um novo.",
+	'field.code': "Código",
+	'secondStep.verify': "Verificar",
+	'secondStep.resend': "Enviar um novo código",
+	'secondStep.useBackup': "Perdeu o telemóvel? Use o seu código de recuperação",
+	'field.backupCode': "Código de recuperação",
+	'secondStep.setupHeading': "Adicione o seu número de telemóvel",
+	'secondStep.setupIntro': "Este espaço de trabalho pede um código por SMS ao iniciar sessão. Introduza o seu número com o indicativo do país.",
+	'field.phone': "Número de telemóvel",
+	'secondStep.sendCode': "Enviar código",
+	'secondStep.backupHeading': "Guarde o seu código de recuperação",
+	'secondStep.backupIntro': "Guarde-o num local seguro. Só é mostrado uma vez e vai precisar dele se perder o telemóvel.",
+	'secondStep.continue': "Continuar",
 };
 
 const pl: PluginMessages = {
@@ -901,6 +1093,22 @@ const pl: PluginMessages = {
 	'recheck.wrongPassword': 'To hasło jest nieprawidłowe.',
 	'recheck.confirmed': 'Potwierdzono. Możesz zamknąć tę kartę i wrócić.',
 	'billing.error.checkout': 'Zmiana planu nie jest teraz możliwa. Spróbuj ponownie później lub skontaktuj się z pomocą.',
+	'social.continueWith': "Kontynuuj przez {provider}",
+	'secondStep.heading': "Wpisz kod",
+	'secondStep.codeSent': "Wysłaliśmy kod SMS-em na numer {phone}.",
+	'secondStep.notSent': "Nie udało się wysłać kodu. Wyślij nowy.",
+	'field.code': "Kod",
+	'secondStep.verify': "Zweryfikuj",
+	'secondStep.resend': "Wyślij nowy kod",
+	'secondStep.useBackup': "Zgubiony telefon? Użyj kodu zapasowego",
+	'field.backupCode': "Kod zapasowy",
+	'secondStep.setupHeading': "Dodaj numer telefonu komórkowego",
+	'secondStep.setupIntro': "Ten obszar roboczy wymaga przy logowaniu kodu SMS. Wpisz numer z kierunkowym kraju.",
+	'field.phone': "Numer telefonu komórkowego",
+	'secondStep.sendCode': "Wyślij kod",
+	'secondStep.backupHeading': "Zapisz kod zapasowy",
+	'secondStep.backupIntro': "Przechowuj go w bezpiecznym miejscu. Jest pokazywany tylko raz i będzie potrzebny, jeśli zgubisz telefon.",
+	'secondStep.continue': "Dalej",
 };
 
 /** The plugin's copy by primary language subtag. */

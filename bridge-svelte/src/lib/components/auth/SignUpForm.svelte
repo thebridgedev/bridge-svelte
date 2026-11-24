@@ -26,6 +26,7 @@
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
   import PasswordInput from '../shared/PasswordInput.svelte';
+  import SocialButtons from './SocialButtons.svelte';
 
   /** Where a visit came from: campaign tags as strings, and the visitor's marketing consent (auth-core's sign-up attribution). */
   interface SignUpAttribution {
@@ -117,6 +118,12 @@
   }
   const config = peekConfig();
   const authBase = config?.authBase ?? '/auth';
+  /** The sign-in page as an address, with this page's query (a hosted sign-in's request): where a provider's answer is finished. */
+  function signInPage(): string {
+    const at = new URL(loginHref ?? `${authBase}/sign-in`, page.url);
+    if (at.search === '') at.search = page.url.search;
+    return `${at.origin}${at.pathname}${at.search}`;
+  }
 
   let email = $state('');
   let password = $state('');
@@ -272,6 +279,19 @@
         {#if loading}<Spinner size={16} />{:else}{t('signup.submit')}{/if}
       </button>
     </form>
+    {#if !invite && (options?.social ?? []).length > 0}
+      <div class="bridge-divider" data-bridge-sign-up-or>{t('magicLink.or')}</div>
+      <!-- The provider's answer is finished on the sign-in page, which also asks for a workspace or a second step. -->
+      <SocialButtons
+        providers={options?.social ?? []}
+        intent="sign-up"
+        returnPage={signInPage()}
+        signUp={() => ({ ...planOf(), ...attributionOf(), ...(workspace === 'ask' ? { workspace: workspaceName.trim() || true } : workspace ? { workspace: true } : {}) })}
+        disabled={loading}
+        onError={(message, error) => { failure = message; onError?.(error); }}
+        {messages}
+      />
+    {/if}
     {#if footer}
       {@render footer()}
     {:else if showLoginLink}

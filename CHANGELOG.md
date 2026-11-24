@@ -10,6 +10,8 @@ Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.16.
 - **Checkout comes back to your subscription page.** The plugin sends its own subscription page as the return address; Bridge accepts it on the app's registered browser addresses. The address set in the dashboard stays an optional override, so an app no longer has to set one before its first paid upgrade.
 - **A plan change on its way stays on the page.** The current-plan box says "Pro until 24 Dec 2026, then Free" for a downgrade (with a "Keep Pro" button; the Free card says when it starts), and "Upgrading to Mega… confirming your payment" with a spinner for an upgrade until the payment is confirmed, then "You're on Mega now". A bank asking for confirmation or a failed payment says so with one button. `<CurrentPlan>` is the box.
 - **A "Back" link on the billing pages**, to `/` by default: `billing: { back: '/dashboard' }`, or `back: false` for none.
+- **Social sign-in buttons.** `SignInForm` and `SignUpForm` show "Continue with …" for the providers the app offers, and `SignInForm` finishes the provider's answer when it comes back. `SocialButtons` on its own for a page of your own.
+- **The text-message second step.** Every sign-in form asks for the code texted to the person's phone when their workspace requires it, sets up the number the first time and shows the backup code once. `SecondStepForm` on its own.
 
 ### Changed
 

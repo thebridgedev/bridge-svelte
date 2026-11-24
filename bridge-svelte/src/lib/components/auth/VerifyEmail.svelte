@@ -25,6 +25,7 @@
   import Spinner from '../shared/Spinner.svelte';
   import PasswordInput from '../shared/PasswordInput.svelte';
   import WorkspaceChooser from './WorkspaceChooser.svelte';
+  import SecondStepForm from './SecondStepForm.svelte';
   import { takeEmailLink } from './email-link.js';
   import { bounded, handOff, leave } from './finish-link.js';
 
@@ -49,6 +50,7 @@
     | { step: 'continued' }
     | { step: 'signed-in'; to: string }
     | { step: 'workspace'; workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> }
+    | { step: 'second'; second: Extract<SignInStep, { next: 'second_step' } | { next: 'second_step_setup' }> }
     | { step: 'failed'; message: string; kind: string | null }
     | { step: 'password'; token: string; error: string | null; sending: boolean };
   let view = $state<State>({ step: 'working' });
@@ -95,7 +97,8 @@
   async function follow(step: SignInStep) {
     if (handOff(step)) view = { step: 'working' };
     else if (step.done) await finish();
-    else view = { step: 'workspace', workspaces: step.workspaces, choose: step.choose };
+    else if (step.next === 'workspace') view = { step: 'workspace', workspaces: step.workspaces, choose: step.choose };
+    else view = { step: 'second', second: step };
   }
 
   onMount(() => {
@@ -179,6 +182,8 @@
       </button>
     </form>
   </AuthFormWrapper>
+{:else if view.step === 'second'}
+  <SecondStepForm step={view.second} onStep={(next) => void follow(next)} class={className} {style} {messages} />
 {:else if view.step === 'workspace'}
   <AuthFormWrapper heading={t('workspace.chooseHeading')} {headingSnippet} class={className} {style} data-bridge-verify-email="workspace" {...rest}>
     <WorkspaceChooser workspaces={view.workspaces} onChoose={choose} {messages} />

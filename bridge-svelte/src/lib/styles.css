@@ -332,6 +332,23 @@
   [data-bridge-auth-form] .bridge-divider::before { margin-right: 0.5rem; }
   [data-bridge-auth-form] .bridge-divider::after  { margin-left: 0.5rem; }
 
+  /* ─── Social sign-in ───────────────────────────────────────────────────────── */
+
+  [data-bridge-auth-form] .bridge-social {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  [data-bridge-auth-form] .bridge-backup-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: calc(1.25 * var(--bridge-text-base, 1rem));
+    letter-spacing: 0.1em;
+    text-align: center;
+    margin: 1rem 0;
+    user-select: all;
+  }
+
   /* ─── PasskeyLogin ────────────────────────────────────────────────────────── */
 
   [data-bridge-passkey-login] {

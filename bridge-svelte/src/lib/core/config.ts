@@ -198,7 +198,7 @@ const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
 export function checkIssuer(issuer: string | undefined): string {
 	if (typeof issuer !== 'string' || issuer.trim() === '') {
 		throw new Error(
-			'[bridge] No issuer. Set PUBLIC_BRIDGE_ISSUER to the issuer from your app\'s settings in Bridge, or pass `issuer` to bridgeBootstrap().',
+			'[bridge] No issuer. Set PUBLIC_BRIDGE_ISSUER to the issuer from your app\'s settings in Bridge, or pass `issuer` to bridgeBootstrap(). On SvelteKit 3, declare PUBLIC_BRIDGE_ISSUER in src/env.ts first (defineEnvVars, public: true).',
 		);
 	}
 	let url: URL;

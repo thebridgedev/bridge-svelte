@@ -51,6 +51,18 @@ export default defineConfig({
 	plugins: [sveltekit({ preprocess: vitePreprocess() })]
 });
 CONFIG
+  # ...and an environment variable is read only once the app declares it.
+  cat > demo/src/env.ts <<'CONFIG'
+import { defineEnvVars } from '@sveltejs/kit/env';
+
+const optional = (value: string | undefined) => value;
+export const variables = defineEnvVars({
+	PUBLIC_BRIDGE_ISSUER: { public: true, schema: optional },
+	PUBLIC_DEMO_STORAGE: { public: true, schema: optional },
+	PUBLIC_DEMO_HOSTED: { public: true, schema: optional },
+	BRIDGE_APP_KEY: { schema: optional }
+});
+CONFIG
   cat > demo/vite.config.ts <<'CONFIG'
 import adapter from '@sveltejs/adapter-auto';
 import { sveltekit } from '@sveltejs/kit/vite';

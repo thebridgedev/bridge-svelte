@@ -35,10 +35,11 @@
  *   --bridge-button-shadow    every Bridge button's shadow, e.g. `4px 4px 0 #000` (default none)
  *
  * Type. Every Bridge text size is relative to the text size of your page's
- * <body>. The font family is a system font stack, so a page with no font of
- * its own never falls back to the browser's serif; set the token to your app's font.
- *   --bridge-font-family            the family of every Bridge page and component
- *                                   (default: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif)
+ * <body>, and Bridge inherits your app's font. Only on a page whose body is
+ * still in the browser's default serif does bridgeBootstrap set a system font stack.
+ *   --bridge-font-family            the family of every Bridge page and component, when it should differ from your app's
+ *                                   (default: your app's font; system-ui, -apple-system, "Segoe UI", Roboto, sans-serif
+ *                                   on a page with no font of its own)
  *   --bridge-font-size              the base all Bridge text sizes scale from
  *                                   (default: your <body> text size)
  *   --bridge-font-weight-heading    page, dialog and section titles, plan names, prices
@@ -116,7 +117,6 @@
        muted-bg, paywall-panel-bg) have no value here on purpose: each falls back
        to its source where it is used, so setting --bridge-primary on a wrapper
        re-derives them for that wrapper too. */
-    --bridge-font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --bridge-primary: #4f46e5;
     --bridge-bg: #ffffff;
     --bridge-foreground: #111827;
@@ -144,8 +144,9 @@
   }
 
   /* ─── The font of every Bridge page and component ────────────────────────────
-     Each root takes --bridge-font-family (a system stack unless the app sets it), and everything inside inherits it.
-     Zero specificity, so any CSS of the app wins. */
+     Each root takes --bridge-font-family when it is set and otherwise inherits the app's font; everything inside
+     inherits from the root. bridgeBootstrap sets the token to a system stack only on a page whose body is in the
+     browser's default serif. Zero specificity, so any CSS of the app wins. */
 
   :where([data-bridge-auth-form], [data-bridge-alert], [data-bridge-social], [data-bridge-passkeys], [data-bridge-workspace-selector],
          [data-bridge-recheck-dialog], [data-bridge-sign-out], [data-bridge-profile-name], [data-bridge-live-status],
@@ -153,7 +154,7 @@
          [data-bridge-plan-selector], [data-bridge-checkout-notice], [data-bridge-quota-banner], [data-bridge-subscription-status],
          [data-bridge-upgrade-dialog], [data-bridge-team-panel], [data-bridge-team-dialog], [data-bridge-team-users],
          [data-bridge-team-invites], [data-bridge-team-profile], [data-bridge-team-workspace], .bridge-billing-page) {
-    font-family: var(--bridge-font-family);
+    font-family: var(--bridge-font-family, inherit);
   }
 
   /* ─── Input visual defaults ──────────────────────────────────────────────── */

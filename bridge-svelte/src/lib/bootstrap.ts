@@ -18,6 +18,7 @@ import { readEmailLink, readReturnTo, type Bridge } from '@nebulr-group/bridge-a
 import { get } from 'svelte/store';
 import { startClient } from './core/client.js';
 import { resolveConfig, type BridgeConfig, type ResolvedConfig } from './core/config.js';
+import { fallBackFromBrowserFont } from './core/font.js';
 import { decide, normalizePath, type GuardDecision } from './core/guard.js';
 import { authPageAt, isCatchAll, isUnder, pageForLink, parseBillingPage, ROUTE_PARAM } from './core/routes.js';
 
@@ -107,6 +108,9 @@ export function bridgeBootstrap(options: BridgeConfig = {}) {
 			throw new Error('[bridge] bridgeBootstrap runs in the browser. Add `export const ssr = false` to your root +layout.ts.');
 		}
 		event.depends(SESSION_DEPENDENCY, FLAGS_DEPENDENCY);
+		// Bridge inherits the app's font; only a page still in the browser's default serif gets a system stack. Checked on
+		// every navigation, so a stylesheet that arrives later takes it away again.
+		fallBackFromBrowserFont();
 		const config = resolveConfig(options, env.PUBLIC_BRIDGE_ISSUER);
 		const client = startClient(config);
 		const { url } = event;

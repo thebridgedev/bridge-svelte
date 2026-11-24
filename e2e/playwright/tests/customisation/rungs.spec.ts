@@ -13,16 +13,30 @@ test.describe('customisation', () => {
 		expect(await style(page, '#login-email', 'border-top-left-radius')).toBe('10px');
 	});
 
-	test('the font is a system stack, never the browser serif, until the app sets --bridge-font-family', async ({ page }) => {
+	test('an app with its own font: Bridge inherits it, and the app’s --bridge-font-family wins', async ({ page }) => {
 		await page.goto('/auth/sign-in');
 		const form = '[data-bridge-sign-in-step="credentials"]';
 		await expect(page.locator(form)).toBeVisible();
-		// An app with no font of its own (body in the browser's serif): Bridge's text is still a sans-serif system stack.
-		await page.addStyleTag({ content: 'body { font-family: "Times New Roman", serif; }' });
+		// The demo's body has a font of its own: Bridge sets nothing and takes the body's.
+		await expect(page.locator('style[data-bridge-font-fallback]')).toHaveCount(0);
+		expect(await style(page, form, 'font-family')).toBe(await style(page, 'body', 'font-family'));
+		await page.addStyleTag({ content: 'body { font-family: Georgia, serif; }' });
+		expect(await style(page, form, 'font-family')).toContain('Georgia');
+		expect(await style(page, '#login-email', 'font-family')).toContain('Georgia');
+		await page.addStyleTag({ content: ':root { --bridge-font-family: "Courier New", monospace; }' });
+		expect(await style(page, form, 'font-family')).toContain('Courier New');
+	});
+
+	test('an app with no font of its own: the body stays in the browser serif, and Bridge gets a system stack', async ({ page }) => {
+		// Without the demo's stylesheet the page is a fresh app's: no font anywhere.
+		await page.route('**/src/app.css*', (route) => route.fulfill({ contentType: 'text/javascript', body: 'export default "";' }));
+		await page.goto('/auth/sign-in');
+		const form = '[data-bridge-sign-in-step="credentials"]';
+		await expect(page.locator(form)).toBeVisible();
+		expect(await style(page, 'body', 'font-family')).toMatch(/Times|serif/);
 		expect(await style(page, form, 'font-family')).toContain('system-ui');
 		expect(await style(page, '#login-email', 'font-family')).toContain('system-ui');
-		expect(await style(page, form, 'font-family')).not.toContain('Times');
-		// The app's token wins.
+		// The app's token still wins over Bridge's stack.
 		await page.addStyleTag({ content: ':root { --bridge-font-family: Georgia, serif; }' });
 		expect(await style(page, form, 'font-family')).toContain('Georgia');
 	});

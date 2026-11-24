@@ -120,7 +120,7 @@
   const authBase = config?.authBase ?? '/auth';
   /** The sign-in page as an address, with this page's query (a hosted sign-in's request): where a provider's answer is finished. */
   function signInPage(): string {
-    const at = new URL(loginHref ?? `${authBase}/sign-in`, page.url);
+    const at = new URL(loginHref ?? `${authBase}/sign-in`, page.url.href);
     if (at.search === '') at.search = page.url.search;
     return `${at.origin}${at.pathname}${at.search}`;
   }

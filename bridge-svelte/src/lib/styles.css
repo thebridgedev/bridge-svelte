@@ -163,6 +163,8 @@
     border: 1px solid var(--bridge-border);
     border-radius: var(--bridge-border-radius);
     outline: none;
+    /* An input does not inherit the font on its own: it would stay in the browser's form font next to Bridge's text. */
+    font-family: inherit;
   }
   :where(input[type="text"]:focus, input[type="email"]:focus,
          input[type="password"]:focus, input[type="tel"]:focus,

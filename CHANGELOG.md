@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [1.0.0-alpha.19] - Unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.16.
 
 ### Added
 

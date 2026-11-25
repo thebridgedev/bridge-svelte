@@ -256,7 +256,7 @@ export const KEYS = {
     sub: 'key-legacy-app',
     appId: APP,
     tenantId: null,
-    privileges: ['USER_READ'],
+    privileges: ['users:read'],
     exp: 4102444800,
   },
   legacyWorkspace: {
@@ -265,7 +265,7 @@ export const KEYS = {
     sub: 'key-legacy-ws',
     appId: APP,
     tenantId: 'ws-alpha',
-    privileges: ['USER_READ'],
+    privileges: ['users:read'],
   },
   otherApp: {
     active: true,

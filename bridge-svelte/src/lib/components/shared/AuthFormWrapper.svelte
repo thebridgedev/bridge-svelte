@@ -1,7 +1,8 @@
 <!--
   The frame of every sign-in form: an optional heading and description, then
   the form. Pass `heading={null}` and `description={null}` when your page
-  writes its own title; each is suppressed on its own.
+  writes its own title; each is suppressed on its own. `logo` is the app's
+  logo above them, from its sign-in options (none when the app has none).
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
@@ -15,13 +16,18 @@
     description?: string | null;
     /** The line under the heading, with markup. Wins over `description`. */
     descriptionSnippet?: Snippet;
+    /** The app's logo, drawn above the heading. `null` draws none. */
+    logo?: string | null;
     children?: Snippet;
   }
 
-  let { heading, headingSnippet, description, descriptionSnippet, children, class: className, style, ...rest }: Props = $props();
+  let { heading, headingSnippet, description, descriptionSnippet, logo = null, children, class: className, style, ...rest }: Props = $props();
 </script>
 
 <div class={className} {style} data-bridge-auth-form {...rest}>
+  {#if logo}
+    <img class="bridge-app-logo" src={logo} alt="" referrerpolicy="no-referrer" data-bridge-app-logo />
+  {/if}
   {#if headingSnippet}
     {@render headingSnippet()}
   {:else if heading}

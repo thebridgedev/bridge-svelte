@@ -43,6 +43,8 @@
     heading?: string | null;
     /** Replaces the heading on the credentials step only. */
     headingSnippet?: Snippet;
+    /** Show the app's logo (from its App Properties in the dashboard) above the form. @default true; `false` when your page draws it itself */
+    showLogo?: boolean;
     /** Show the sign-up link. @default whether the app's sign-in options allow sign-up */
     showSignupLink?: boolean;
     signupHref?: string;
@@ -61,6 +63,7 @@
   let {
     heading = undefined,
     headingSnippet,
+    showLogo = true,
     showSignupLink = undefined,
     signupHref = undefined,
     showForgotPassword = true,
@@ -274,6 +277,7 @@
   <AuthFormWrapper
     heading={heading === undefined ? t('login.heading') : heading}
     {headingSnippet}
+    logo={showLogo ? (options?.app.logo ?? null) : null}
     class={className}
     {style}
     data-bridge-sign-in-step="credentials"

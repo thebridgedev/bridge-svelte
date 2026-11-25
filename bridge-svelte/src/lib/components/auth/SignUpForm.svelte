@@ -38,6 +38,8 @@
   interface Props extends HTMLAttributes<HTMLDivElement> {
     heading?: string | null;
     headingSnippet?: Snippet;
+    /** Show the app's logo (from its App Properties in the dashboard) above the form. @default true; `false` when your page draws it itself */
+    showLogo?: boolean;
     /** Ask for first and last name. @default true */
     showNameFields?: boolean;
     /**
@@ -80,6 +82,7 @@
   let {
     heading = undefined,
     headingSnippet,
+    showLogo = true,
     showNameFields = true,
     workspace = true,
     invite = undefined,
@@ -231,7 +234,7 @@
     </div>
   </AuthFormWrapper>
 {:else}
-  <AuthFormWrapper heading={heading === undefined ? t('signup.heading') : heading} {headingSnippet} class={className} {style} data-bridge-sign-up-step="form" {...rest}>
+  <AuthFormWrapper heading={heading === undefined ? t('signup.heading') : heading} {headingSnippet} logo={showLogo ? (options?.app.logo ?? null) : null} class={className} {style} data-bridge-sign-up-step="form" {...rest}>
     {#if failure}<Alert variant="error">{failure}</Alert>{/if}
     <form onsubmit={submit}>
       {#if showNameFields}

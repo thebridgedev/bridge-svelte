@@ -278,6 +278,15 @@
     margin: 0 auto;
   }
 
+  /* The app's logo above the form (from its sign-in options). */
+  [data-bridge-auth-form] > [data-bridge-app-logo] {
+    display: block;
+    max-width: 12rem;
+    max-height: 3rem;
+    margin: 0 auto 1.25rem;
+    object-fit: contain;
+  }
+
   [data-bridge-auth-form] label {
     display: block;
     margin-bottom: 0.25rem;

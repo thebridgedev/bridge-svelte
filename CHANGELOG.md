@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0-alpha.19] - Unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.16.
+
+### Added
+
+- **The app's logo shows above the sign-in and sign-up forms.** `SignInForm` and `SignUpForm` draw the logo uploaded in the app's App Properties (the sign-in options carry it as `app.logo`), above the heading. An app with no logo shows none. `showLogo={false}` leaves it out when your page draws the logo itself.
+
 ## [1.0.0-alpha.18] - Unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.16.

@@ -8,7 +8,7 @@ const STEP: Record<LinkPurpose, string> = { 'verify-sign-up': 'verify-email', 'r
 
 /** The demo's plan names (`free`, `pro`) as the stage app's plans call them. */
 /** Roles a test names that the app does not have: made on first use, with these privileges. */
-const TEST_ROLES: Record<string, readonly string[]> = { READER: ['USER_READ'] };
+const TEST_ROLES: Record<string, readonly string[]> = { READER: ['users:read'] };
 
 const PLAN_KEYS: Record<string, string> = { free: 'parity-free', pro: 'parity-pro', team: 'parity-team' };
 

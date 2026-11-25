@@ -4,7 +4,7 @@ You are adding team management to a SvelteKit application that uses The Bridge.
 
 ## The one rule for app code
 
-**Every gate in app code is a flag.** A link, a page, a button, an endpoint: if some people get it and others do not, the code asks a flag, and the flag's rule says why: a privilege (`privileges contains "USER_WRITE"`), a plan feature (`bridge:billing.entitlement.analytics eq true`) or a rollout. App code never reads a role, a privilege list, the plan or a plan feature to decide what someone may see or do.
+**Every gate in app code is a flag.** A link, a page, a button, an endpoint: if some people get it and others do not, the code asks a flag, and the flag's rule says why: a privilege (`privileges contains "users:write"`), a plan feature (`bridge:billing.entitlement.analytics eq true`) or a rollout. App code never reads a role, a privilege list, the plan or a plan feature to decide what someone may see or do.
 
 Two things are not gates and are not flags: **numbers** are plan limits (`<QuotaGate>` in the browser, `@RequireQuota` on the backend), and **permission on one specific record** stays in app code ("only the author edits their post").
 
@@ -169,12 +169,12 @@ For "2 seats on Free, 5 on Pro": `bridge plan quota set free --metric seats --li
 
 Not everyone in a workspace should manage its members, so the team page and its nav link are gated. Like every gate in app code, that gate is a flag ruled on a privilege — never a role list in the code such as `['OWNER','ADMIN'].includes(role)`.
 
-1. **Read the app's real roles first**: `list_roles` (MCP) or `bridge role list` (CLI). What a role can do is only "in the default setup"; pick the privilege the roles that should manage members actually hold (in the default setup, `USER_WRITE`).
+1. **Read the app's real roles first**: `list_roles` (MCP) or `bridge role list` (CLI). What a role can do is only "in the default setup"; pick the privilege the roles that should manage members actually hold (in the default setup, `users:write`).
 2. **Create the flag** `team-management`, ruled on that privilege:
 
 ```bash
 bridge flag create --key team-management --value-type boolean --state on-with-rule \
-  --rule '{"branches":[{"conditions":[{"attribute":"privileges","operator":"contains","values":["USER_WRITE"]}],"returnValue":true}],"otherwiseValue":false,"rolloutPct":100}'
+  --rule '{"branches":[{"conditions":[{"attribute":"privileges","operator":"contains","values":["users:write"]}],"returnValue":true}],"otherwiseValue":false,"rolloutPct":100}'
 ```
 
 (MCP: `create_feature_flag` with the same rule as a structured object.) `contains` on `privileges` is exact membership.

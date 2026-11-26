@@ -18,6 +18,35 @@ Needs the `@nebulr-group/bridge-auth-core` that carries `language`, `links.previ
 - **The email typed on sign-in carries to Forgot password.** It shows in the field there and can be changed; opening Forgot password directly shows an empty field, and the email is never put in the web address (`carryEmail` / `takeCarriedEmail` for sign-in pages of your own).
 - **Enter submits every sign-in form, once.** The forms that let a second press through while they were sending (the password step of an email link, the profile form) now stop it, and a test holds every end-user screen: each field is in a form with a submit button, and nothing submits by itself.
 
+## [1.0.0-alpha.19] - Unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.16.
+
+### Added
+
+- **The app's logo shows above the sign-in and sign-up forms.** `SignInForm` and `SignUpForm` draw the logo uploaded in the app's App Properties (the sign-in options carry it as `app.logo`), above the heading. An app with no logo shows none. `showLogo={false}` leaves it out when your page draws the logo itself.
+
+## [1.0.0-alpha.18] - Unreleased
+
+Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.16.
+
+### Added
+
+- **SvelteKit 3.** The plugin installs and runs on SvelteKit 2 and 3 (`@sveltejs/kit` `^2.0.0 || ^3.0.0`; SvelteKit 3 brings Vite 8 and `@sveltejs/vite-plugin-svelte` 7). Before, a new SvelteKit app failed the install on the peer range.
+- **Checkout comes back to your subscription page.** The plugin sends its own subscription page as the return address; Bridge accepts it on the app's registered browser addresses. The address set in the dashboard stays an optional override, so an app no longer has to set one before its first paid upgrade.
+- **A plan change on its way stays on the page.** The current-plan box says "Pro until 24 Dec 2026, then Free" for a downgrade (with a "Keep Pro" button; the Free card says when it starts), and "Upgrading to Mega… confirming your payment" with a spinner for an upgrade until the payment is confirmed, then "You're on Mega now". A bank asking for confirmation or a failed payment says so with one button. `<CurrentPlan>` is the box.
+- **A "Back" link on the billing pages**, to `/` by default: `billing: { back: '/dashboard' }`, or `back: false` for none.
+- **Social sign-in buttons.** `SignInForm` and `SignUpForm` show "Continue with …" for the providers the app offers, and `SignInForm` finishes the provider's answer when it comes back. `SocialButtons` on its own for a page of your own.
+- **The text-message second step.** Every sign-in form asks for the code texted to the person's phone when their workspace requires it, sets up the number the first time and shows the backup code once. `SecondStepForm` on its own.
+- **A social sign-up with an address the provider did not confirm (Facebook) shows "check your email"** on `SignInForm`, the step a password sign-up shows, and finishes through the email link as it does (`CheckYourEmail`).
+
+### Changed
+
+- **An app with no font of its own no longer shows Bridge in the browser's serif.** Bridge still inherits your app's font. Only when your page's `<body>` is in the browser's default font (Times) does `bridgeBootstrap` give Bridge a system font stack (`system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`). The new `--bridge-font-family` token sets Bridge's font when it should differ from your app's.
+- **No separate success page after checkout.** Stripe returns to the subscription page, which confirms the payment there and shows the same banner as a Free plan pick. `/subscription/success` stays only as a redirect to the subscription page, for old links. The `redirectTo` prop of `<BridgeBillingRoutes>` (the success page's Continue) is gone.
+- **A checkout that cannot start because of the app's setup** shows the person a plain message, and the developer the exact words with the fix in the browser console (and in the app's log in the dashboard), not Bridge's developer text on the page.
+- Choosing the plan the workspace holds while a downgrade waits (`billing.keepPlan`) drops the downgrade.
+
 ## [1.0.0-alpha.17] - Unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.15.

@@ -145,7 +145,8 @@ import { getBridge, errorMessage, translator } from '@nebulr-group/bridge-svelte
 
 try {
   const step = await getBridge().signIn.start({ email, password });
-  if (!step.done) await step.choose(step.workspaces[0].id);
+  // A step that is not done is `workspace`, or `second_step` / `second_step_setup` when the workspace asks for a text-message code.
+  if (!step.done && step.next === 'workspace') await step.choose(step.workspaces[0].id);
 } catch (error) {
   message = errorMessage(error, translator());
 }

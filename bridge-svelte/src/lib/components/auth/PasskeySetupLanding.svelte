@@ -17,6 +17,7 @@
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
   import WorkspaceChooser from './WorkspaceChooser.svelte';
+  import SecondStepForm from './SecondStepForm.svelte';
   import { takeEmailLink } from './email-link.js';
   import { previewLink } from '../../core/link-preview.js';
   import LinkGone from './LinkGone.svelte';
@@ -44,13 +45,16 @@
     | { step: 'working' }
     | { step: 'unsupported' }
     | { step: 'workspace'; workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> }
+    | { step: 'second'; second: Extract<SignInStep, { next: 'second_step' } | { next: 'second_step_setup' }> }
     | { step: 'failed'; message: string; kind: string | null; again: boolean };
   let view = $state<State>({ step: 'ready' });
   let found: string | null = null;
 
   async function follow(step: SignInStep) {
     if (!step.done) {
-      view = { step: 'workspace', workspaces: step.workspaces, choose: step.choose };
+      // A passkey sign-in never answers verify_email (only a social sign-up with an unconfirmed address does, on the sign-in form).
+      if (step.next === 'verify_email') return;
+      view = step.next === 'workspace' ? { step: 'workspace', workspaces: step.workspaces, choose: step.choose } : { step: 'second', second: step };
       return;
     }
     if (onSignIn) onSignIn();
@@ -106,6 +110,8 @@
       <span>{t('magicLink.finishing')}</span>
     </div>
   </AuthFormWrapper>
+{:else if view.step === 'second'}
+  <SecondStepForm step={view.second} onStep={(next) => void follow(next)} class={className} {style} {messages} />
 {:else if view.step === 'workspace'}
   <AuthFormWrapper heading={t('workspace.chooseHeading')} {headingSnippet} class={className} {style} data-bridge-passkey-setup="workspace" {...rest}>
     <WorkspaceChooser workspaces={view.workspaces} onChoose={choose} {messages} />

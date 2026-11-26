@@ -9,8 +9,12 @@
   links, and "Sign in with a passkey" when it offers passkeys and the browser
   can use them. With passkeys, the email field also offers the person's
   passkeys in its autofill list, where the browser supports it; the button
-  stays for a phone or a security key. Other methods (email codes, company
-  login, a second step) arrive as new sign-in steps and join the same way.
+  stays for a phone or a security key. The social providers the app offers
+  show as "Continue with …" buttons; the provider's answer comes back to this
+  page and is finished here. A workspace that requires a second step asks for
+  the code texted to the person's phone (or a number to set up first, then
+  shows the backup code once). Other methods (email codes, company login)
+  arrive as new sign-in steps and join the same way.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
@@ -19,7 +23,7 @@
   import { handOff } from './finish-link.js';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { isBridgeError, readReturnTo, type SignInOptions, type SignInStep, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
+  import { isBridgeError, readReturnTo, takeSocialReturn, type SignInOptions, type SignInStep, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
   import { get } from 'svelte/store';
   import { getBridge, peekConfig, takeEndedReason } from '../../core/client.js';
   import { carryEmail } from '../../core/carry.js';
@@ -31,12 +35,17 @@
   import Spinner from '../shared/Spinner.svelte';
   import PasswordInput from '../shared/PasswordInput.svelte';
   import WorkspaceChooser from './WorkspaceChooser.svelte';
+  import SocialButtons from './SocialButtons.svelte';
+  import SecondStepForm from './SecondStepForm.svelte';
+  import CheckYourEmail from './CheckYourEmail.svelte';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** Heading on the credentials step. @default the shared "Log in to your account" copy; `null` for none */
     heading?: string | null;
     /** Replaces the heading on the credentials step only. */
     headingSnippet?: Snippet;
+    /** Show the app's logo (from its App Properties in the dashboard) above the form. @default true; `false` when your page draws it itself */
+    showLogo?: boolean;
     /** Show the sign-up link. @default whether the app's sign-in options allow sign-up */
     showSignupLink?: boolean;
     signupHref?: string;
@@ -55,6 +64,7 @@
   let {
     heading = undefined,
     headingSnippet,
+    showLogo = true,
     showSignupLink = undefined,
     signupHref = undefined,
     showForgotPassword = true,
@@ -82,6 +92,11 @@
   let options = $state<SignInOptions | null>(null);
   let choice = $state<{ workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> } | null>(null);
   let settled = $state(false);
+  /** The second step, while it waits for its code or a number. */
+  let second = $state<Extract<SignInStep, { next: 'second_step' } | { next: 'second_step_setup' }> | null>(null);
+  /** A social sign-up whose address the provider did not confirm: the address Bridge emailed its own link to. */
+  let checkEmail = $state<string | null>(null);
+  const social = $derived(options?.social ?? []);
 
   const signUpShown = $derived(showSignupLink ?? options?.signUp ?? true);
   const passwordOffered = $derived(options === null || options.methods.includes('password'));
@@ -111,6 +126,16 @@
     if (ended === 'session-ended') notice = t('session.ended');
     if (ended === 'access-removed') notice = t('session.accessRemoved');
     const bridge = getBridge();
+    // Back from a social provider: its answer finishes here, in the browser that started.
+    const answer = takeSocialReturn();
+    if (answer !== null) {
+      loading = true;
+      bridge.social
+        .finish(answer)
+        .then(follow)
+        .catch((error: unknown) => (isBridgeError(error, 'cancelled') ? (notice = t('passkey.cancelled')) : fail(error)))
+        .finally(() => (loading = false));
+    }
     bridge.signIn
       .options()
       .then(async (found) => {
@@ -164,7 +189,7 @@
       onSignIn();
       return;
     }
-    const back = readReturnTo(page.url, config?.returnToParam);
+    const back = readReturnTo(page.url.href, config?.returnToParam);
     void goto(back ?? config?.afterSignIn ?? '/', { invalidateAll: true });
   }
 
@@ -178,8 +203,16 @@
       settled = true;
     } else if (step.done) {
       finish();
-    } else {
+    } else if (step.next === 'verify_email') {
+      second = null;
+      choice = null;
+      checkEmail = step.email;
+    } else if (step.next === 'workspace') {
+      second = null;
       choice = { workspaces: step.workspaces, choose: step.choose };
+    } else {
+      choice = null;
+      second = step;
     }
   }
 
@@ -233,6 +266,10 @@
       <span>{t('login.submitting')}</span>
     </div>
   </AuthFormWrapper>
+{:else if checkEmail !== null}
+  <CheckYourEmail email={checkEmail} {onSignIn} class={className} {style} {messages} />
+{:else if second}
+  <SecondStepForm step={second} onStep={(next) => void follow(next)} class={className} {style} {messages} />
 {:else if choice}
   <AuthFormWrapper heading={t('workspace.chooseHeading')} class={className} {style} data-bridge-sign-in-step="workspace" {...rest}>
     <WorkspaceChooser workspaces={choice.workspaces} onChoose={choose} {messages} />
@@ -241,6 +278,7 @@
   <AuthFormWrapper
     heading={heading === undefined ? t('login.heading') : heading}
     {headingSnippet}
+    logo={showLogo ? (options?.app.logo ?? null) : null}
     class={className}
     {style}
     data-bridge-sign-in-step="credentials"
@@ -329,6 +367,11 @@
       <div class="bridge-forgot-row">
         <button type="button" class="bridge-link" data-bridge-passkey-setup-link onclick={sendSetupLink} disabled={loading || !email.trim()}>{t('passkey.setupLinkSend')}</button>
       </div>
+    {/if}
+
+    {#if social.length > 0 && !linkSent && !setupLinkSent}
+      {#if passwordOffered || linkOffered || passkeysOffered}<div class="bridge-divider" data-bridge-sign-in-or>{t('magicLink.or')}</div>{/if}
+      <SocialButtons providers={social} disabled={loading} onError={(message, error) => { failure = message; onError?.(error); }} {messages} />
     {/if}
 
     {#if footer}

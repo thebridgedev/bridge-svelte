@@ -36,6 +36,13 @@ export interface TestIssuer {
 	/** Flag results for signed-in people (on top of the standard flags) and for visitors. */
 	setFlags(signedIn: Record<string, unknown>, visitor?: Record<string, unknown>): Promise<void>;
 	setFacts(facts: Record<string, unknown>): Promise<void>;
+	/** Makes a checkout need a return address on one of these origins, as Bridge does (`null`: none is checked). The local issuer only. */
+	requireCheckoutReturnOn(origins: readonly string[] | null): Promise<void>;
+	/** The payment of the plan the person is waiting for goes through, or fails. The local issuer only. */
+	settlePayment(): Promise<void>;
+	failPayment(): Promise<void>;
+	/** The plan choices and portal calls the issuer saw, with the return address each carried. The local issuer only. */
+	billingCalls(): Promise<{ planChoices: { plan: string; returnUrl: string | null }[]; portalReturns: (string | null)[] }>;
 	/** What the quota read answers for a metric (`null`: no limit on it). The local issuer only. */
 	setQuota(metric: string, read: Record<string, unknown> | null): Promise<void>;
 	/** Ends every session of a person, as Bridge does after a password reset or a removal. */
@@ -86,6 +93,18 @@ class LocalIssuer implements TestIssuer {
 	}
 	async setFacts(facts: Record<string, unknown>) {
 		await this.call('/facts', facts);
+	}
+	async requireCheckoutReturnOn(origins: readonly string[] | null) {
+		await this.call('/checkout-return-on', { origins });
+	}
+	async settlePayment() {
+		await this.call('/settle-payment', {});
+	}
+	async failPayment() {
+		await this.call('/fail-payment', {});
+	}
+	async billingCalls() {
+		return (await this.call('/billing-calls')) as { planChoices: { plan: string; returnUrl: string | null }[]; portalReturns: (string | null)[] };
 	}
 	async setQuota(metric: string, read: Record<string, unknown> | null) {
 		await this.call('/quota', { metric, read });

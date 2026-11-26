@@ -16,7 +16,10 @@ import { bridgeFetch } from './fetch.js';
 import { bridgeBootstrap } from '../bootstrap.js';
 import { useQuota } from './quota.js';
 import { closeUpgrade, onBridgeQuotaExceeded, parseQuotaRefusal, upgradeRequest, type BridgeQuotaRefusal } from './upgrade.js';
+import { billing, plans } from './stores.js';
 import BillingNotice from '../components/billing/BillingNotice.svelte';
+import CurrentPlan from '../components/billing/CurrentPlan.svelte';
+import PlanPicker from '../components/billing/PlanPicker.svelte';
 import EntitledFixture from '../components/billing/EntitledFixture.test.svelte';
 import QuotaBanner from '../components/billing/QuotaBanner.svelte';
 import QuotaGateFixture from '../components/billing/QuotaGateFixture.test.svelte';
@@ -335,5 +338,68 @@ describe('a workspace locked for payment while a page is open', () => {
 			const load = bridgeBootstrap({ issuer: fake.issuer, tokenOrigins: [API] });
 			expect(await outcome(load, '/r1')).toBe('307 /subscription/plan?redirectUri=%2Fr1');
 		});
+	});
+});
+
+describe('the current-plan box', () => {
+	const PRO = { key: 'pro', name: 'Pro', free: false, prices: [{ currency: 'usd', interval: 'month', amount: 2900 }], features: [], limits: {}, archived: false, description: null, trial: null };
+	const FREE = { key: 'free', name: 'Free', free: true, prices: [], features: [], limits: {}, archived: false, description: null, trial: null };
+	const MEGA = { key: 'mega', name: 'Mega', free: false, prices: [{ currency: 'usd', interval: 'month', amount: 9900 }], features: [], limits: {}, archived: false, description: null, trial: null };
+
+	async function shown(facts: Record<string, unknown>) {
+		const made = await signedIn({ facts: { plan: { key: 'pro', name: 'Pro' }, status: 'active', access: 'ok', periodEnd: '2026-12-24T00:00:00.000Z', ...facts } });
+		made.fake.setPlans([FREE, PRO, MEGA]);
+		const stops = [billing.subscribe(() => undefined), plans.subscribe(() => undefined)];
+		await flush();
+		await billing.refresh();
+		await plans.refresh();
+		return { ...made, stop: () => stops.forEach((stop) => stop()) };
+	}
+
+	it('says a downgrade waits for the end of the period, in the box, and offers to keep the plan', async () => {
+		const { stop } = await shown({ waiting: { plan: 'free', waitsFor: 'period_end', at: '2026-12-24T00:00:00.000Z' } });
+		const body = html(CurrentPlan, {});
+		expect(body).toContain('data-bridge-billing-scheduled');
+		expect(body).toMatch(/Pro until [A-Za-z]{3} 24, 2026, then Free/);
+		expect(body).not.toContain('Renews');
+		expect(body).toContain('data-bridge-billing-keep');
+		expect(body).toContain('Keep Pro');
+		stop();
+	});
+
+	it('says a plan renews when nothing waits, and offers no keep button', async () => {
+		const { stop } = await shown({ waiting: null });
+		const body = html(CurrentPlan, {});
+		expect(body).toContain('Renews');
+		expect(body).not.toContain('data-bridge-billing-keep');
+		stop();
+	});
+
+	it('shows an upgrade being confirmed in the box, not as a message that goes away, and the downgrade on the card of the plan it is for', async () => {
+		const { stop } = await shown({ waiting: { plan: 'mega', waitsFor: 'payment', at: null } });
+		const body = html(CurrentPlan, {});
+		expect(body).toContain('data-bridge-billing-upgrade');
+		expect(body).toContain('data-state="confirming"');
+		expect(body).toContain('Upgrading to Mega');
+		expect(html(PlanPicker, {})).toContain('data-upgrading="true"');
+		stop();
+	});
+
+	it('says a payment that did not go through, with one button to update the card', async () => {
+		const { stop } = await shown({ status: 'past_due', access: 'payment_due', waiting: { plan: 'mega', waitsFor: 'payment', at: null } });
+		const body = html(CurrentPlan, {});
+		expect(body).toContain('data-state="failed"');
+		expect(body).toContain('did not go through');
+		expect(body).toContain('Update card');
+		stop();
+	});
+
+	it('marks the plan a downgrade is for with the day it starts', async () => {
+		const { stop } = await shown({ waiting: { plan: 'free', waitsFor: 'period_end', at: '2026-12-24T00:00:00.000Z' } });
+		const body = html(PlanPicker, {});
+		expect(body).toContain('data-bridge-plan-scheduled-flag');
+		expect(body).toMatch(/Starts [A-Za-z]{3} 24, 2026/);
+		expect(body).toContain('Scheduled');
+		stop();
 	});
 });

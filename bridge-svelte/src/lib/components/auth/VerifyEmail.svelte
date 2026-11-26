@@ -1,11 +1,10 @@
 <!--
-  Finishes a sign-up from its email link, on the device that started it, and
-  signs the person in. Opened on another device it says so, and the link
-  still works on the right one.
-
-  With `storage: 'memory'` the session lives only in the tab that started the
-  sign-up, so this page first hands the link to that tab; when one takes it,
-  this page says to go on there. When none does, this page finishes itself.
+  Finishes a sign-up from its email link, in the browser that started it, and
+  signs the person in right here, in the tab the link opened, whichever
+  storage the app uses. The tab that started the sign-up is told it finished
+  (link-relay), and goes on signed in too, or says where the person is.
+  Opened in another browser or on another device it says so, offers to sign
+  up again here, and the link still works in the right browser.
 
   Every wait has a bound: finishing fails with an error after a while, and
   once signed in the page goes on, or offers a link when it cannot.
@@ -20,7 +19,7 @@
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
   import { previewLink } from '../../core/link-preview.js';
-  import { offerSignUpLink, takeRelayedLink } from '../../core/link-relay.js';
+  import { announceSignUpFinished } from '../../core/link-relay.js';
   import AuthFormWrapper from '../shared/AuthFormWrapper.svelte';
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
@@ -28,6 +27,7 @@
   import WorkspaceChooser from './WorkspaceChooser.svelte';
   import LinkConfirm from './LinkConfirm.svelte';
   import LinkGone from './LinkGone.svelte';
+  import SecondStepForm from './SecondStepForm.svelte';
   import { takeEmailLink } from './email-link.js';
   import { bounded, handOff, leave } from './finish-link.js';
 
@@ -52,9 +52,9 @@
     | { step: 'confirm'; token: string }
     | { step: 'gone'; state: 'used' | 'expired' }
     | { step: 'working' }
-    | { step: 'continued' }
     | { step: 'signed-in'; to: string }
     | { step: 'workspace'; workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> }
+    | { step: 'second'; second: Extract<SignInStep, { next: 'second_step' } | { next: 'second_step_setup' }> }
     | { step: 'failed'; message: string; kind: string | null }
     | { step: 'password'; token: string; error: string | null; sending: boolean };
   let view = $state<State>({ step: 'checking' });
@@ -98,27 +98,28 @@
     onError?.(error);
   }
 
+  /** The sign-up is finished and signed in: the tab that started it stops waiting (link-relay). */
+  function announce() {
+    if (config?.issuer !== undefined) announceSignUpFinished(config.issuer);
+  }
+
   async function follow(step: SignInStep) {
+    if (step.done) announce();
     if (handOff(step)) view = { step: 'working' };
     else if (step.done) await finish();
-    else view = { step: 'workspace', workspaces: step.workspaces, choose: step.choose };
+    else if (step.next === 'workspace') view = { step: 'workspace', workspaces: step.workspaces, choose: step.choose };
+    // A link never answers verify_email (only a social sign-up with an unconfirmed address does, on the sign-in form).
+    else if (step.next !== 'verify_email') view = { step: 'second', second: step };
   }
 
   onMount(() => {
-    // A link another tab handed here (memory only), the token given, or the page's own address.
-    const relayed = token === undefined ? takeRelayedLink() : null;
-    const found = token ?? relayed ?? takeEmailLink('verify-email');
+    // The token given, or the page's own address.
+    const found = token ?? takeEmailLink('verify-email');
     if (found === null) {
       view = { step: 'failed', message: t('verify.missingLink'), kind: null };
       return;
     }
-    // A link another tab took from a page where the button was pressed is finished here as it comes. Any other link
-    // shows one button first: nothing is used up until it is pressed, so a mail scanner spoils nothing.
-    if (relayed !== null) {
-      view = { step: 'working' };
-      void start(found, true);
-      return;
-    }
+    // One button first: nothing is used up until it is pressed, so a mail scanner spoils nothing.
     void previewLink(found).then((state) => {
       view = state === 'open' ? { step: 'confirm', token: found } : { step: 'gone', state };
     });
@@ -128,16 +129,12 @@
     if (view.step !== 'confirm') return;
     const found = view.token;
     view = { step: 'working' };
-    void start(found, false);
+    void start(found);
   }
 
-  async function start(found: string, relayed: boolean) {
+  async function start(found: string) {
     try {
-      // The session belongs in the tab that started the sign-up (memory only): offer it the link first.
-      if (!relayed && config?.storage === 'memory' && (await offerSignUpLink(config.issuer, found))) {
-        view = { step: 'continued' };
-        return;
-      }
+      // Finished here, in the tab the link opened, and signed in here (owner, 24 Nov): no hand-off to the first tab.
       await follow(await bounded(finishSignUp(found)));
     } catch (error) {
       // Started with no password: the person chooses it now; the link stays usable.
@@ -177,10 +174,6 @@
       <span>{t('verify.finishing')}</span>
     </div>
   </AuthFormWrapper>
-{:else if view.step === 'continued'}
-  <AuthFormWrapper heading={t('signup.heading')} {headingSnippet} class={className} {style} data-bridge-verify-email="continued" {...rest}>
-    <Alert variant="info">{t('verify.continuedElsewhere')}</Alert>
-  </AuthFormWrapper>
 {:else if view.step === 'signed-in'}
   <AuthFormWrapper heading={t('signup.heading')} {headingSnippet} class={className} {style} data-bridge-verify-email="signed-in" {...rest}>
     <div class="bridge-form-footer">
@@ -212,6 +205,8 @@
       </button>
     </form>
   </AuthFormWrapper>
+{:else if view.step === 'second'}
+  <SecondStepForm step={view.second} onStep={(next) => void follow(next)} class={className} {style} {messages} />
 {:else if view.step === 'workspace'}
   <AuthFormWrapper heading={t('workspace.chooseHeading')} {headingSnippet} class={className} {style} data-bridge-verify-email="workspace" {...rest}>
     <WorkspaceChooser workspaces={view.workspaces} onChoose={choose} {messages} />
@@ -219,6 +214,12 @@
 {:else}
   <AuthFormWrapper heading={t('signup.heading')} {headingSnippet} class={className} {style} data-bridge-verify-email="failed" data-error-kind={view.kind} {...rest}>
     <Alert variant="error">{view.message}</Alert>
+    {#if view.kind === 'wrong-device'}
+      <!-- Another browser or device: signing up again here is the way on (the link still works where it started). -->
+      <div class="bridge-form-footer">
+        <a href={`${authBase}/sign-up`} class="bridge-link" data-bridge-verify-sign-up-again>{t('login.signupLink')}</a>
+      </div>
+    {/if}
     <div class="bridge-form-footer">
       <a href={`${authBase}/sign-in`} class="bridge-link">{t('action.backToSignIn')}</a>
     </div>

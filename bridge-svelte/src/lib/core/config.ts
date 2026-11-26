@@ -118,6 +118,11 @@ export interface BridgeConfig {
 		 * prompt). `false` for none, or your own component. @default true
 		 */
 		readonly upgradeDialog?: boolean | Component<UpgradeDialogProps>;
+		/**
+		 * Where the "Back" link on the billing pages goes (a path of your app), or `false` for no link.
+		 * @default '/'
+		 */
+		readonly back?: string | false;
 	};
 	/**
 	 * Hand-off mode, for a sign-in page that signs a person in for a program
@@ -178,6 +183,8 @@ export interface ResolvedConfig {
 	readonly flagKeys: { readonly billingManage: string; readonly teamManage: string; readonly appActive: string };
 	readonly billingBase: string;
 	readonly paywall: string | null;
+	/** Where the billing pages' "Back" link goes; null for none. */
+	readonly billingBack: string | null;
 	readonly upgradeDialog: boolean | Component<UpgradeDialogProps>;
 	readonly handoff: { readonly program: string } | null;
 	/** Whether the page signs in for other apps' sign-in requests (`?request=<id>`). */
@@ -202,7 +209,7 @@ const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
 export function checkIssuer(issuer: string | undefined): string {
 	if (typeof issuer !== 'string' || issuer.trim() === '') {
 		throw new Error(
-			'[bridge] No issuer. Set PUBLIC_BRIDGE_ISSUER to the issuer from your app\'s settings in Bridge, or pass `issuer` to bridgeBootstrap().',
+			'[bridge] No issuer. Set PUBLIC_BRIDGE_ISSUER to the issuer from your app\'s settings in Bridge, or pass `issuer` to bridgeBootstrap(). On SvelteKit 3, declare PUBLIC_BRIDGE_ISSUER in src/env.ts first (defineEnvVars, public: true).',
 		);
 	}
 	let url: URL;
@@ -253,6 +260,7 @@ export function resolveConfig(config: BridgeConfig, envIssuer: string | undefine
 		},
 		billingBase,
 		paywall: paywall === false ? null : (paywall ?? `${billingBase}/plan`),
+		billingBack: config.billing?.back === false ? null : (config.billing?.back ?? '/'),
 		upgradeDialog: config.billing?.upgradeDialog ?? true,
 		handoff: config.handoff?.loopback === true ? { program: config.handoff.program ?? 'the command-line tool' } : null,
 		signInRequests: config.handoff?.requests === true,

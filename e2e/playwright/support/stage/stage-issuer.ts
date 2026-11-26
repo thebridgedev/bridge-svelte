@@ -8,7 +8,7 @@ const STEP: Record<LinkPurpose, string> = { 'verify-sign-up': 'verify-email', 'r
 
 /** The demo's plan names (`free`, `pro`) as the stage app's plans call them. */
 /** Roles a test names that the app does not have: made on first use, with these privileges. */
-const TEST_ROLES: Record<string, readonly string[]> = { READER: ['USER_READ'] };
+const TEST_ROLES: Record<string, readonly string[]> = { READER: ['users:read'] };
 
 const PLAN_KEYS: Record<string, string> = { free: 'parity-free', pro: 'parity-pro', team: 'parity-team' };
 
@@ -159,6 +159,19 @@ export class StageIssuer implements TestIssuer {
 				this.flagsTouched.add(key);
 			}
 		}
+	}
+
+	async requireCheckoutReturnOn(): Promise<void> {
+		throw new Error('The return address rule is the server\'s own on a real server; the spec is for the local issuer.');
+	}
+	async settlePayment(): Promise<void> {
+		throw new Error('A payment is the payment provider\'s on a real server; the spec is for the local issuer.');
+	}
+	async failPayment(): Promise<void> {
+		throw new Error('A payment is the payment provider\'s on a real server; the spec is for the local issuer.');
+	}
+	async billingCalls(): Promise<never> {
+		throw new Error('The calls are the server\'s own on a real server; the spec is for the local issuer.');
 	}
 
 	async setQuota(): Promise<void> {

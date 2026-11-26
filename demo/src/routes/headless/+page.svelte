@@ -11,7 +11,7 @@
 		message = null;
 		try {
 			const step = await getBridge().signIn.start({ email, password });
-			if (!step.done) await step.choose(step.workspaces[0].id);
+			if (!step.done && step.next === 'workspace') await step.choose(step.workspaces[0].id);
 		} catch (error) {
 			message = errorMessage(error, translator());
 		}

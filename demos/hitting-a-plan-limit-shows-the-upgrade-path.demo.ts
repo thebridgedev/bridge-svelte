@@ -101,7 +101,7 @@ async function setup(): Promise<{ appId: string; password: string }> {
 	await post('ensure-plan', { appDomain: DOMAIN, key: 'free', name: 'Free', trial: false, trialDays: 0, prices: [{ amount: 0, currency: 'USD', recurrenceInterval: 'month' }] });
 	const { token: apiToken } = await post<{ token: string }>('generate-jwt', {
 		appDomain: DOMAIN,
-		privileges: ['AUTHENTICATED', 'USER_READ', 'USER_WRITE', 'TENANT_READ', 'TENANT_WRITE']
+		privileges: ['app:use', 'users:read', 'users:write', 'workspace:read', 'workspace:write']
 	});
 	await json('/v1/account/payments/plan/free', {
 		method: 'PUT',

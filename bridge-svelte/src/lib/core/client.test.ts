@@ -63,7 +63,7 @@ describe('the client and its stores', () => {
 		const { client } = setup();
 		await client.ready;
 		const step = await client.signIn.start({ email: 'bob@acme.test', password: PASSWORD });
-		if (step.done) throw new Error('expected the workspace step');
+		if (step.done || step.next !== 'workspace') throw new Error('expected the workspace step');
 		expect(step.workspaces.map((w) => w.name)).toEqual(['Acme', 'Globex']);
 		await step.choose('ws-globex');
 		await until(workspaces, (list) => (list.value?.length ?? 0) === 2);

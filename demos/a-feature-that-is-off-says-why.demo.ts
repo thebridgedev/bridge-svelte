@@ -57,7 +57,7 @@ const WEB = 'demo-feature-off-says-why-web';
 const API = 'demo-feature-off-says-why-api';
 
 const PLAN_FEATURE = { attribute: 'bridge:billing.entitlement.analytics', operator: 'eq', values: [true] };
-const CAN_CHANGE_USERS = { attribute: 'privileges', operator: 'contains', values: ['USER_WRITE'] };
+const CAN_CHANGE_USERS = { attribute: 'privileges', operator: 'contains', values: ['users:write'] };
 const ruleOf = (...conditions: unknown[]) => ({ branches: [{ conditions, returnValue: true }], otherwiseValue: false, rolloutPct: 100 });
 const FLAGS = [
 	{ key: 'analytics', description: 'The analytics report: sold on Pro', state: 'on-with-rule', rule: ruleOf(PLAN_FEATURE) },
@@ -126,7 +126,7 @@ async function setup(): Promise<Setup> {
 	await post('set-tenant-plan', { appDomain: DOMAIN, tenantId: app.tenantId, planKey: 'free', currency: 'USD', recurrenceInterval: 'month' });
 	const { token } = await post<{ token: string }>('generate-jwt', {
 		appDomain: DOMAIN,
-		privileges: ['AUTHENTICATED', 'USER_READ', 'USER_WRITE', 'TENANT_READ', 'TENANT_WRITE']
+		privileges: ['app:use', 'users:read', 'users:write', 'workspace:read', 'workspace:write']
 	});
 	const mgmt = { 'Content-Type': 'application/json', 'x-api-key': token };
 	await json('/v1/account/payments/plan/pro', { method: 'PUT', headers: mgmt, body: JSON.stringify({ features: [{ key: 'analytics', name: 'Analytics' }] }) });

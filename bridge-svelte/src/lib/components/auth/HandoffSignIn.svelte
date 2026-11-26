@@ -45,7 +45,7 @@
   let failure = $state<string | null>(null);
 
   onMount(() => {
-    view = readHandoff(page.url.searchParams);
+    view = readHandoff(new URLSearchParams(page.url.search));
   });
 
   function settle(next: HandoffState) {

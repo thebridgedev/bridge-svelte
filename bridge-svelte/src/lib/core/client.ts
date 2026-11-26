@@ -70,6 +70,8 @@ export function startClient(config: ResolvedConfig, extra?: Partial<BridgeOption
 		// for its email link, which opens in a new tab, for the link's 15 minutes at most, and is removed once used.
 		...(config.storage === 'memory' ? { storage: memoryStorage(), signUpStorage: localStorageAdapter() } : {}),
 		...(config.linkAddress === undefined ? {} : { linkAddress: config.linkAddress }),
+		// A payer comes back from checkout and the billing portal to the subscription page, which confirms the payment there.
+		billingReturn: () => (typeof location === 'undefined' ? undefined : `${location.origin}${config.billingBase}`),
 		...extra,
 	});
 	// A page that signs in for other apps' sign-in requests takes the request from its address, before any form.

@@ -55,7 +55,7 @@
   const config = peekConfig();
 
   function afterSwitch() {
-    void goto(readReturnTo(page.url, config?.returnToParam) ?? config?.afterSignIn ?? '/', { invalidateAll: true });
+    void goto(readReturnTo(page.url.href, config?.returnToParam) ?? config?.afterSignIn ?? '/', { invalidateAll: true });
   }
 </script>
 

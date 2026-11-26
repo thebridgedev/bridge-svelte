@@ -23,6 +23,7 @@
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
   import WorkspaceChooser from './WorkspaceChooser.svelte';
+  import SecondStepForm from './SecondStepForm.svelte';
   import { takeEmailLink } from './email-link.js';
   import { bounded, handOff, heldReturn, leave } from './finish-link.js';
   import ReturnContinue from './ReturnContinue.svelte';
@@ -49,6 +50,7 @@
     | { step: 'rechecked' }
     | { step: 'return'; url: string }
     | { step: 'workspace'; workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> }
+    | { step: 'second'; second: Extract<SignInStep, { next: 'second_step' } | { next: 'second_step_setup' }> }
     | { step: 'failed'; message: string; kind: string | null };
   let view = $state<State>({ step: 'working' });
 
@@ -75,7 +77,9 @@
     else if (step.done && step.rechecked === true) view = { step: 'rechecked' };
     else if (handOff(step)) view = { step: 'working' };
     else if (step.done) await finish();
-    else view = { step: 'workspace', workspaces: step.workspaces, choose: step.choose };
+    else if (step.next === 'workspace') view = { step: 'workspace', workspaces: step.workspaces, choose: step.choose };
+    // A link never answers verify_email (only a social sign-up with an unconfirmed address does, on the sign-in form).
+    else if (step.next !== 'verify_email') view = { step: 'second', second: step };
   }
 
   onMount(() => {
@@ -116,6 +120,8 @@
       <a href={view.to} class="bridge-link">{t('invite.continue')}</a>
     </div>
   </AuthFormWrapper>
+{:else if view.step === 'second'}
+  <SecondStepForm step={view.second} onStep={(next) => void follow(next)} class={className} {style} {messages} />
 {:else if view.step === 'workspace'}
   <AuthFormWrapper heading={t('workspace.chooseHeading')} {headingSnippet} class={className} {style} data-bridge-magic-link="workspace" {...rest}>
     <WorkspaceChooser workspaces={view.workspaces} onChoose={choose} {messages} />

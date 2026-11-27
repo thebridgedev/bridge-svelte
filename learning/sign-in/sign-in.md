@@ -168,6 +168,10 @@ bridgeBootstrap({
 
 A form's own `messages` prop changes wording on that form only.
 
+## Social sign-in
+
+The forms show a button for each social provider your app switched on in Bridge (Google, Microsoft, Apple, GitHub, LinkedIn, Facebook). How to set up each one, step by step: [Social sign-in](social.md).
+
 ## What comes later
 
 Email and password, and sign-in links, are the sign-in methods in this alpha. Passkeys, email codes, company sign-in and a second step arrive as new sign-in steps, and the forms show them when your app's sign-in options in Bridge list them.

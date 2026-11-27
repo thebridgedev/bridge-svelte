@@ -100,6 +100,8 @@ test.describe('confirming it is you', () => {
 		const token = await issuer.lastLink(person.email, 'magic-link');
 		const linkTab = await context.newPage();
 		await linkTab.goto(`/auth#bridge=magic-link&token=${token}`);
+		// One button first (TBP-55): nothing is used until it is pressed.
+		await linkTab.locator('[data-bridge-link-confirm]').click();
 		await expect(linkTab.locator('[data-bridge-magic-link="rechecked"]')).toContainText('Confirmed. You can close this tab and go back.');
 		await expect(linkTab, 'it signs nobody in again: no navigation away').toHaveURL(/\/auth\/magic-link/);
 

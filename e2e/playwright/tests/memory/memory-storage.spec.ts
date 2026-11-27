@@ -44,6 +44,8 @@ test.describe('storage: memory', () => {
 
 		const linkTab = await context.newPage();
 		await linkTab.goto(`/auth#bridge=verify-email&token=${token}`);
+		// One button first (TBP-55): nothing is used until it is pressed.
+		await linkTab.locator('[data-bridge-link-confirm]').click();
 		await expect(linkTab.getByTestId('home-signed-in')).toContainText(email);
 		expect(linkTab.url()).not.toContain(token);
 		// The tabs hand each other the session even with nothing in storage, so the tab that started the sign-up goes on signed in too.
@@ -66,6 +68,8 @@ test.describe('storage: memory', () => {
 
 		const linkTab = await context.newPage();
 		await linkTab.goto(`/auth#bridge=verify-email&token=${token}`);
+		// One button first (TBP-55): nothing is used until it is pressed.
+		await linkTab.locator('[data-bridge-link-confirm]').click();
 		await expect(linkTab.getByTestId('home-signed-in')).toContainText(email);
 		expect(linkTab.url()).not.toContain(token);
 		expect(await storageOf(linkTab)).toEqual({});
@@ -89,6 +93,8 @@ test.describe('storage: memory', () => {
 			await route.continue();
 		});
 		await linkTab.goto(`/auth#bridge=verify-email&token=${token}`);
+		// One button first (TBP-55): nothing is used until it is pressed.
+		await linkTab.locator('[data-bridge-link-confirm]').click();
 		await expect(linkTab.getByTestId('home-signed-in')).toContainText(email);
 		expect(await storageOf(linkTab)).toEqual({});
 	});
@@ -108,6 +114,8 @@ test.describe('storage: memory', () => {
 		const second = await browser.newContext();
 		const tab = await second.newPage();
 		await tab.goto(`/auth#bridge=verify-email&token=${token}`);
+		// One button first (TBP-55): nothing is used until it is pressed.
+		await tab.locator('[data-bridge-link-confirm]').click();
 		await expect(tab.locator('[data-bridge-verify-email="failed"]')).toHaveAttribute('data-error-kind', 'wrong-device');
 		await second.close();
 	});

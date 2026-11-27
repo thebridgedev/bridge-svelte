@@ -17,6 +17,8 @@ test.describe('sign-up', () => {
 		const requests = recordRequests(page);
 		// Bridge's email links land on the app's email-links address with the token in the fragment.
 		await page.goto(`/auth#bridge=verify-email&token=${token}`);
+		// One button first (TBP-55): nothing is used until it is pressed.
+		await page.locator('[data-bridge-link-confirm]').click();
 		await expect(page.getByTestId('home-signed-in')).toContainText(email);
 		await expectTokenGone(page, token, requests);
 	});
@@ -29,6 +31,8 @@ test.describe('sign-up', () => {
 		const other = await browser.newContext();
 		const elsewhere = await other.newPage();
 		await elsewhere.goto(`/auth#bridge=verify-email&token=${token}`);
+		// One button first (TBP-55): nothing is used until it is pressed.
+		await elsewhere.locator('[data-bridge-link-confirm]').click();
 		await expect(elsewhere.locator('[data-bridge-verify-email="failed"]')).toHaveAttribute('data-error-kind', 'wrong-device');
 		await expect(elsewhere.locator('[data-bridge-alert]')).toHaveText('This link works only in the browser where you signed up. Open it there, or sign up again here.');
 		// The way on from there: signing up again in this browser.
@@ -36,6 +40,8 @@ test.describe('sign-up', () => {
 		await other.close();
 
 		await page.goto(`/auth#bridge=verify-email&token=${token}`);
+		// One button first (TBP-55): nothing is used until it is pressed.
+		await page.locator('[data-bridge-link-confirm]').click();
 		await expect(page.getByTestId('home-signed-in')).toContainText(email);
 	});
 
@@ -45,6 +51,8 @@ test.describe('sign-up', () => {
 		const token = await issuer.lastLink(email, 'verify-sign-up');
 		const linkTab = await context.newPage();
 		await linkTab.goto(`/auth#bridge=verify-email&token=${token}`);
+		// One button first (TBP-55): nothing is used until it is pressed.
+		await linkTab.locator('[data-bridge-link-confirm]').click();
 		await expect(linkTab.getByTestId('home-signed-in')).toContainText(email);
 		await expect(page.getByTestId('home-signed-in')).toContainText(email);
 	});

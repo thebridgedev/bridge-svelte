@@ -114,6 +114,7 @@ export type PluginMessageKey =
 	| 'password.removed'
 	| 'password.removeNeedsPasskey'
 	| 'password.none'
+	| 'password.removeNeedsEmail'
 	| 'passkey.offerHeading'
 	| 'passkey.offerText'
 	| 'passkey.offerLater'
@@ -248,6 +249,7 @@ const en: PluginMessages = {
 	"password.removed": "Password removed. You sign in with a passkey, or by email.",
 	"password.removeNeedsPasskey": "Add a passkey first: without a password you sign in with it.",
 	"password.none": "No password: you sign in with a passkey, or by email.",
+	"password.removeNeedsEmail": "Confirm your email address first: without a password, it is your way back in.",
 	"passkey.offerHeading": "Sign in faster with a passkey",
 	"passkey.offerText": "Use your fingerprint, face or screen lock instead of a password.",
 	"passkey.offerLater": "Not now",
@@ -381,6 +383,7 @@ const sv: PluginMessages = {
 	"password.removed": "Lösenordet är borttaget. Du loggar in med en passkey eller via e-post.",
 	"password.removeNeedsPasskey": "Lägg först till en passkey: utan lösenord loggar du in med den.",
 	"password.none": "Inget lösenord: du loggar in med en passkey eller via e-post.",
+	"password.removeNeedsEmail": "Bekräfta först din e-postadress: utan lösenord är den din väg tillbaka in.",
 	"passkey.offerHeading": "Logga in snabbare med en passkey",
 	"passkey.offerText": "Använd fingeravtryck, ansikte eller skärmlås i stället för ett lösenord.",
 	"passkey.offerLater": "Inte nu",
@@ -514,6 +517,7 @@ const da: PluginMessages = {
 	"password.removed": "Adgangskoden er fjernet. Du logger ind med en passkey eller via e-mail.",
 	"password.removeNeedsPasskey": "Tilføj først en passkey: uden adgangskode logger du ind med den.",
 	"password.none": "Ingen adgangskode: du logger ind med en passkey eller via e-mail.",
+	"password.removeNeedsEmail": "Bekræft først din e-mailadresse: uden adgangskode er den din vej ind igen.",
 	"passkey.offerHeading": "Log hurtigere ind med en passkey",
 	"passkey.offerText": "Brug dit fingeraftryk, ansigt eller din skærmlås i stedet for en adgangskode.",
 	"passkey.offerLater": "Ikke nu",
@@ -647,6 +651,7 @@ const nb: PluginMessages = {
 	"password.removed": "Passordet er fjernet. Du logger inn med en passkey eller via e-post.",
 	"password.removeNeedsPasskey": "Legg først til en passkey: uten passord logger du inn med den.",
 	"password.none": "Ingen passord: du logger inn med en passkey eller via e-post.",
+	"password.removeNeedsEmail": "Bekreft e-postadressen din først: uten passord er den veien din tilbake inn.",
 	"passkey.offerHeading": "Logg inn raskere med en passkey",
 	"passkey.offerText": "Bruk fingeravtrykk, ansikt eller skjermlås i stedet for et passord.",
 	"passkey.offerLater": "Ikke nå",
@@ -780,6 +785,7 @@ const nl: PluginMessages = {
 	"password.removed": "Wachtwoord verwijderd. Je logt in met een passkey of via e-mail.",
 	"password.removeNeedsPasskey": "Voeg eerst een passkey toe: zonder wachtwoord log je daarmee in.",
 	"password.none": "Geen wachtwoord: je logt in met een passkey of via e-mail.",
+	"password.removeNeedsEmail": "Bevestig eerst je e-mailadres: zonder wachtwoord kom je daarmee weer binnen.",
 	"passkey.offerHeading": "Sneller inloggen met een passkey",
 	"passkey.offerText": "Gebruik je vingerafdruk, gezicht of schermvergrendeling in plaats van een wachtwoord.",
 	"passkey.offerLater": "Niet nu",
@@ -913,6 +919,7 @@ const de: PluginMessages = {
 	"password.removed": "Passwort entfernt. Du meldest dich mit einem Passkey oder per E-Mail an.",
 	"password.removeNeedsPasskey": "Füge zuerst einen Passkey hinzu: Ohne Passwort meldest du dich damit an.",
 	"password.none": "Kein Passwort: Du meldest dich mit einem Passkey oder per E-Mail an.",
+	"password.removeNeedsEmail": "Bestätige zuerst deine E-Mail-Adresse: Ohne Passwort ist sie dein Weg zurück.",
 	"passkey.offerHeading": "Schneller anmelden mit einem Passkey",
 	"passkey.offerText": "Verwende deinen Fingerabdruck, dein Gesicht oder deine Bildschirmsperre statt eines Passworts.",
 	"passkey.offerLater": "Nicht jetzt",
@@ -1046,6 +1053,7 @@ const fi: PluginMessages = {
 	"password.removed": "Salasana poistettu. Kirjaudut passkeyllä tai sähköpostilla.",
 	"password.removeNeedsPasskey": "Lisää ensin passkey: ilman salasanaa kirjaudut sillä.",
 	"password.none": "Ei salasanaa: kirjaudut passkeyllä tai sähköpostilla.",
+	"password.removeNeedsEmail": "Vahvista ensin sähköpostiosoitteesi: ilman salasanaa pääset sen kautta takaisin sisään.",
 	"passkey.offerHeading": "Kirjaudu nopeammin passkeyllä",
 	"passkey.offerText": "Käytä sormenjälkeä, kasvoja tai näytön lukitusta salasanan sijaan.",
 	"passkey.offerLater": "Ei nyt",
@@ -1179,6 +1187,7 @@ const fr: PluginMessages = {
 	"password.removed": "Mot de passe supprimé. Vous vous connectez avec une passkey ou par e-mail.",
 	"password.removeNeedsPasskey": "Ajoutez d'abord une passkey : sans mot de passe, vous vous connectez avec elle.",
 	"password.none": "Pas de mot de passe : vous vous connectez avec une passkey ou par e-mail.",
+	"password.removeNeedsEmail": "Confirmez d'abord votre adresse e-mail : sans mot de passe, c'est elle qui vous permet de revenir.",
 	"passkey.offerHeading": "Connectez-vous plus vite avec une passkey",
 	"passkey.offerText": "Utilisez votre empreinte digitale, votre visage ou le verrouillage de l'écran au lieu d'un mot de passe.",
 	"passkey.offerLater": "Pas maintenant",
@@ -1312,6 +1321,7 @@ const es: PluginMessages = {
 	"password.removed": "Contraseña eliminada. Inicias sesión con una passkey o por correo electrónico.",
 	"password.removeNeedsPasskey": "Añade primero una passkey: sin contraseña, inicias sesión con ella.",
 	"password.none": "Sin contraseña: inicias sesión con una passkey o por correo electrónico.",
+	"password.removeNeedsEmail": "Confirma primero tu dirección de correo: sin contraseña, es tu forma de volver a entrar.",
 	"passkey.offerHeading": "Inicia sesión más rápido con una passkey",
 	"passkey.offerText": "Usa tu huella, tu cara o el bloqueo de pantalla en lugar de una contraseña.",
 	"passkey.offerLater": "Ahora no",
@@ -1445,6 +1455,7 @@ const it: PluginMessages = {
 	"password.removed": "Password rimossa. Accedi con una passkey o tramite email.",
 	"password.removeNeedsPasskey": "Aggiungi prima una passkey: senza password accedi con quella.",
 	"password.none": "Nessuna password: accedi con una passkey o tramite email.",
+	"password.removeNeedsEmail": "Conferma prima il tuo indirizzo email: senza password è il tuo modo per rientrare.",
 	"passkey.offerHeading": "Accedi più velocemente con una passkey",
 	"passkey.offerText": "Usa l'impronta digitale, il volto o il blocco schermo al posto della password.",
 	"passkey.offerLater": "Non ora",
@@ -1578,6 +1589,7 @@ const pt: PluginMessages = {
 	"password.removed": "Palavra-passe removida. Inicia sessão com uma passkey ou por email.",
 	"password.removeNeedsPasskey": "Adicione primeiro uma passkey: sem palavra-passe, inicia sessão com ela.",
 	"password.none": "Sem palavra-passe: inicia sessão com uma passkey ou por email.",
+	"password.removeNeedsEmail": "Confirme primeiro o seu endereço de email: sem palavra-passe, é a sua forma de voltar a entrar.",
 	"passkey.offerHeading": "Inicie sessão mais depressa com uma passkey",
 	"passkey.offerText": "Use a impressão digital, o rosto ou o bloqueio de ecrã em vez de uma palavra-passe.",
 	"passkey.offerLater": "Agora não",
@@ -1711,6 +1723,7 @@ const pl: PluginMessages = {
 	"password.removed": "Hasło usunięte. Logujesz się passkey lub przez e-mail.",
 	"password.removeNeedsPasskey": "Najpierw dodaj passkey: bez hasła logujesz się nim.",
 	"password.none": "Brak hasła: logujesz się passkey lub przez e-mail.",
+	"password.removeNeedsEmail": "Najpierw potwierdź adres e-mail: bez hasła to twoja droga powrotu.",
 	"passkey.offerHeading": "Loguj się szybciej z passkey",
 	"passkey.offerText": "Używaj odcisku palca, twarzy lub blokady ekranu zamiast hasła.",
 	"passkey.offerLater": "Nie teraz",

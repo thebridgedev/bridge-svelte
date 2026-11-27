@@ -184,6 +184,8 @@
           <button type="button" class="bridge-btn bridge-btn-secondary" data-bridge-password-remove onclick={() => (confirmingRemoval = true)} disabled={busy}>{t('password.remove')}</button>
         {:else if password.why === 'no_passkey'}
           <p class="bridge-passkey-meta" data-bridge-password-needs-passkey>{t('password.removeNeedsPasskey')}</p>
+        {:else if password.why === 'address_not_proven'}
+          <p class="bridge-passkey-meta" data-bridge-password-needs-email>{t('password.removeNeedsEmail')}</p>
         {/if}
       {/if}
     </div>

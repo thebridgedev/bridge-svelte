@@ -164,6 +164,9 @@ export class StageIssuer implements TestIssuer {
 	async requireCheckoutReturnOn(): Promise<void> {
 		throw new Error('The return address rule is the server\'s own on a real server; the spec is for the local issuer.');
 	}
+	async lastText(): Promise<string> {
+		throw new Error('A text message is the phone\'s on a real server; the spec is for the local issuer.');
+	}
 	async settlePayment(): Promise<void> {
 		throw new Error('A payment is the payment provider\'s on a real server; the spec is for the local issuer.');
 	}

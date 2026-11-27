@@ -15,7 +15,9 @@ export interface Person {
 	readonly email: string;
 	readonly password: string;
 	readonly firstName?: string;
-	readonly workspaces?: readonly { readonly id: string; readonly name: string; readonly role?: string }[];
+	readonly workspaces?: readonly { readonly id: string; readonly name: string; readonly role?: string; readonly mfa?: boolean }[];
+	/** The phone a workspace's text-message second step sends its code to; none: the person sets one up first. */
+	readonly phone?: string;
 }
 
 export interface TestIssuer {
@@ -49,6 +51,8 @@ export interface TestIssuer {
 	endSessions(email: string): Promise<void>;
 	/** Makes every session's last sign-in an hour old, so actions that want a recent sign-in ask the person to confirm it is them. */
 	signedInLongAgo(): Promise<void>;
+	/** The last second-step code texted to a phone (full international number). The local issuer only. */
+	lastText(phone: string): Promise<string>;
 }
 
 class LocalIssuer implements TestIssuer {
@@ -96,6 +100,9 @@ class LocalIssuer implements TestIssuer {
 	}
 	async requireCheckoutReturnOn(origins: readonly string[] | null) {
 		await this.call('/checkout-return-on', { origins });
+	}
+	async lastText(phone: string) {
+		return ((await this.call(`/text?${new URLSearchParams({ to: phone })}`)) as { code: string }).code;
 	}
 	async settlePayment() {
 		await this.call('/settle-payment', {});

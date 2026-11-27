@@ -104,6 +104,11 @@ async function control(path: string, request: Request, url: URL): Promise<Respon
 		case '/signed-in-long-ago':
 			fake.signedInLongAgo();
 			return json({ ok: true });
+		case '/text': {
+			// The last second-step code texted to a phone, as the person reads it on their phone.
+			const code = fake.lastText(url.searchParams.get('to') ?? '');
+			return code === null ? json({ code: null }, 404) : json({ code });
+		}
 		case '/requests':
 			return json(fake.requests.map((r) => ({ method: r.method, path: r.path })));
 		default:

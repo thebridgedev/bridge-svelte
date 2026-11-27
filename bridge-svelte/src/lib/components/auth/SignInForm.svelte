@@ -26,6 +26,7 @@
   import { hostedPageRedirect, isBridgeError, isPasswordChangeRequired, passkeyHandOver, readReturnTo, takeSocialReturn, type SignInOptions, type SignInStep, type SocialProvider, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
   import { get } from 'svelte/store';
   import { getBridge, peekConfig, takeEndedReason } from '../../core/client.js';
+  import { holdSignInPage } from '../../core/guard.js';
   import { session } from '../../core/stores.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
@@ -38,6 +39,7 @@
   import SocialButtons from './SocialButtons.svelte';
   import SecondStepForm from './SecondStepForm.svelte';
   import CheckYourEmail from './CheckYourEmail.svelte';
+  import PasskeyOffer from './PasskeyOffer.svelte';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** Heading on the credentials step. @default the shared "Log in to your account" copy; `null` for none */
@@ -111,6 +113,8 @@
   const passwordOffered = $derived(options === null || options.methods.includes('password'));
   const linkOffered = $derived(options !== null && options.methods.includes('magicLink'));
   let passkeySupported = $state(false);
+  /** Signed in: a passkey is offered before going on, when Bridge says so (TBP-536). */
+  let offering = $state(false);
   let setupLinkSent = $state(false);
   const passkeysOffered = $derived(passkeySupported && options !== null && options.methods.includes('passkeys'));
   const passkeyHandOverTo = (error: unknown) => passkeyHandOver(error);
@@ -126,7 +130,8 @@
       await follow(await bridge.passkeys.signIn({ autofill: true, ...(workspace ? { workspace } : {}) }));
     } catch (error) {
       // Bridge's own page cannot offer a passkey (it belongs to the app's page): waiting for the list ends quietly.
-      if (!isBridgeError(error, 'cancelled') && passkeyHandOverTo(error) === null) fail(error);
+      // A browser that refuses the app's passkey domain on this page (related origins it does not support) waits quietly too.
+      if (!isBridgeError(error, 'cancelled') && !isBridgeError(error, 'origin-not-allowed') && passkeyHandOverTo(error) === null) fail(error);
     }
   }
 
@@ -170,12 +175,15 @@
         }
         if (!found.methods.includes('passkeys')) return;
         passkeySupported = await bridge.passkeys.supported();
+        // A sign-in here is followed by the passkey offer, before the person is sent on (TBP-536).
+        if (passkeySupported && found.passkeyOffer !== undefined) holdSignInPage(true);
         if (passkeySupported) void startAutofill();
       })
       .catch(() => undefined);
   });
 
   onDestroy(() => {
+    holdSignInPage(false);
     // An autofill wait must not outlive the form.
     if (autofillStarted) void getBridge().passkeys.cancel();
   });
@@ -192,7 +200,12 @@
       if (isBridgeError(error, 'cancelled')) notice = t('passkey.cancelled');
       // On Bridge's own page a passkey belongs to the app's sign-in page: the person is taken there.
       else if (continueOnAppPage(error)) notice = t('passkey.handover');
-      else fail(error);
+      // Bridge's page with related origins (TBP-873) in a browser that does not support them (Firefox): the browser refuses
+      // the app's passkey domain here, and the person goes on to the app's own sign-in page, as without them.
+      else if (isBridgeError(error, 'origin-not-allowed') && config?.signInRequests && options?.signIn?.url && /^https:\/\//.test(options.signIn.url)) {
+        notice = t('passkey.handover');
+        location.assign(options.signIn.url);
+      } else fail(error);
     } finally {
       loading = false;
     }
@@ -213,7 +226,18 @@
     }
   }
 
+  /** Signed in. Where the app offers passkeys, Bridge is asked first whether to offer one (TBP-536); then on. */
   function finish() {
+    if (!offering && options?.passkeyOffer !== undefined && passkeySupported) {
+      offering = true;
+      return;
+    }
+    goOn();
+  }
+
+  function goOn() {
+    offering = false;
+    holdSignInPage(false);
     settled = true;
     if (onSignIn) {
       onSignIn();
@@ -312,7 +336,9 @@
   }
 </script>
 
-{#if linkedName !== null}
+{#if offering}
+  <PasskeyOffer onDone={goOn} {messages} class={className} {style} />
+{:else if linkedName !== null}
   <AuthFormWrapper heading={null} class={className} {style} data-bridge-sign-in-step="linked" {...rest}>
     <Alert variant="success">{t('social.linked', { provider: linkedName })}</Alert>
     <button type="button" class="bridge-btn bridge-btn-primary" data-bridge-linked-continue onclick={() => { linkedName = null; finish(); }}>{t('secondStep.continue')}</button>

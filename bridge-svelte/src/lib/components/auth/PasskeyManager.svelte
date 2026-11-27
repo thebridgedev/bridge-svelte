@@ -37,6 +37,10 @@
   let failure = $state<string | null>(null);
   /** The passkey being renamed, and the name typed. */
   let renaming = $state<string | null>(null);
+  /** The person's password (TBP-862): whether they have one and may remove it, and the removal asked to be confirmed. */
+  let password = $state<{ set: boolean; removable: boolean; why?: string } | null>(null);
+  let confirmingRemoval = $state(false);
+  let passwordNotice = $state<string | null>(null);
   let newName = $state('');
 
   const date = (value: string | null) => (value === null ? '' : new Date(value).toLocaleDateString());
@@ -52,6 +56,25 @@
 
   async function load() {
     passkeys = await getBridge().passkeys.list();
+    // An older server has no answer about the password: no row then.
+    password = await getBridge().passkeys.passwordState().catch(() => null);
+  }
+
+  async function removePassword() {
+    if (busy) return;
+    busy = true;
+    failure = null;
+    try {
+      await getBridge().passkeys.removePassword();
+      confirmingRemoval = false;
+      passwordNotice = t('password.removed');
+      await load();
+    } catch (error) {
+      if (isBridgeError(error, 'conflict') && error.code === 'no_passkey') failure = t('password.removeNeedsPasskey');
+      else fail(error);
+    } finally {
+      busy = false;
+    }
   }
 
   onMount(async () => {
@@ -144,6 +167,26 @@
         </li>
       {/each}
     </ul>
+  {/if}
+  {#if password !== null}
+    <div class="bridge-password-row" data-bridge-password-row={password.set ? 'set' : 'none'}>
+      <h4>{t('password.rowHeading')}</h4>
+      {#if passwordNotice}<Alert variant="success">{passwordNotice}</Alert>{/if}
+      {#if !password.set}
+        {#if !passwordNotice}<p>{t('password.none')}</p>{/if}
+      {:else if confirmingRemoval}
+        <p data-bridge-password-remove-confirm>{t('password.removeConfirm')}</p>
+        <button type="button" class="bridge-btn bridge-btn-primary" data-bridge-password-remove-yes onclick={removePassword} disabled={busy}>{#if busy}<Spinner size={16} />{/if} {t('password.remove')}</button>
+        <button type="button" class="bridge-link" onclick={() => (confirmingRemoval = false)} disabled={busy}>{t('passkey.offerLater')}</button>
+      {:else}
+        <p>{t('password.rowText')}</p>
+        {#if password.removable}
+          <button type="button" class="bridge-btn bridge-btn-secondary" data-bridge-password-remove onclick={() => (confirmingRemoval = true)} disabled={busy}>{t('password.remove')}</button>
+        {:else if password.why === 'no_passkey'}
+          <p class="bridge-passkey-meta" data-bridge-password-needs-passkey>{t('password.removeNeedsPasskey')}</p>
+        {/if}
+      {/if}
+    </div>
   {/if}
   {#if supported}
     <form onsubmit={(event) => { event.preventDefault(); void add(); }} class="bridge-passkey-add">

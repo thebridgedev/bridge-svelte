@@ -1,0 +1,174 @@
+# CLI 1.0 command tree: each line is a command path, then its long options.
+# Generated from bridge-cli v1 (scripts/command-tree.mjs). Regenerate when CLI 1.0 adds or renames a command.
+bridge	--version --server --issuer --app --help
+bridge auth	
+bridge auth login	--password --email --password-stdin --allow-delete --workspace --no-browser
+bridge auth logout	
+bridge auth whoami	
+bridge auth workspace [id]	
+bridge auth methods	
+bridge auth methods list	
+bridge auth methods enable <method>	
+bridge auth methods disable <method>	
+bridge auth config	
+bridge auth password-policy	--access-token-ttl --refresh-token-ttl
+bridge app	
+bridge app list	
+bridge app create	--name --sign-in-return --email-links --browser-origin --no-use --logo --website --privacy-policy --terms-of-service
+bridge app use <id>	
+bridge app get	
+bridge app update	--name --logo --website --privacy-policy --terms-of-service
+bridge app delete	--yes
+bridge app default-return <url>	
+bridge app setup	--url --auth-path --dotenv --var
+bridge app address	
+bridge app address list	
+bridge app address add <url>	--use
+bridge app address remove <url>	--use
+bridge key	
+bridge key list	
+bridge key create	--name --privilege --expires-in-days
+bridge key revoke <id>	
+bridge plan	
+bridge plan list	--archived
+bridge plan get <key>	
+bridge plan create <key>	--name --trial --no-trial --description --price --usage-price --feature --limit --trial-days --card-required
+bridge plan update <key>	--name --no-trial --description --price --usage-price --feature --limit --trial-days --card-required
+bridge plan apply <file>	
+bridge plan archive <key>	--undo
+bridge plan delete <key>	--dry-run
+bridge plan price	
+bridge plan price set <plan> <price>	
+bridge plan price remove <plan> <currency-interval>	
+bridge plan usage-price	
+bridge plan usage-price set <plan> <usage>	
+bridge plan usage-price remove <plan> <metric>	
+bridge plan feature	
+bridge plan feature add <plan> <feature>	
+bridge plan feature remove <plan> <feature>	
+bridge plan limit	
+bridge plan limit set <plan> <limit>	
+bridge plan limit remove <plan> <metric>	
+bridge product	
+bridge product list	--archived
+bridge product get <key>	
+bridge product create <key>	--name --kind --description --price --feature --adds
+bridge product update <key>	--name --description --price --feature --adds
+bridge product archive <key>	--undo
+bridge product delete <key>	
+bridge metric	
+bridge metric list	
+bridge metric set <key>	--kind --name
+bridge metric remove <key>	
+bridge tax	
+bridge tax list	
+bridge tax set <country>	--name --rate
+bridge tax remove <country>	
+bridge billing	
+bridge billing settings	--currency --return-url --auto-redirect --no-auto-redirect
+bridge stripe	
+bridge stripe status	
+bridge stripe connect	--secret-key-stdin --publishable-key --live
+bridge stripe disconnect	--yes
+bridge flag	
+bridge flag list	
+bridge flag get <key>	
+bridge flag create <key>	--type --description --on-value --off-value --state --rule --rule-file --when --rollout --public
+bridge flag update <key>	--new-key --private --description --on-value --off-value --state --rule --rule-file --when --rollout --public
+bridge flag on <key>	
+bridge flag off <key>	
+bridge flag restore <key>	
+bridge flag delete <key>	--yes --dry-run
+bridge flag toggle <key>	--enabled
+bridge flag eval <key>	--context --identity
+bridge flag init	--framework --cwd --no-config --base-url --force
+bridge flag schedule	
+bridge flag schedule set <key>	--at --state
+bridge flag schedule clear <key>	
+bridge flag schedule list [key]	
+bridge flag export	--out
+bridge flag import <file>	--dry-run --prune --yes
+bridge flag rule	
+bridge flag rule show <key>	
+bridge flag rule set <key>	--rule --rule-file
+bridge flag rule add <key>	--when --value --rollout --first
+bridge flag rule clear <key>	
+bridge role	
+bridge role list	
+bridge role create <key>	--name --description --privilege --default
+bridge role update <role>	--name --description --privilege --default
+bridge role delete <role>	
+bridge role set-default <role>	
+bridge privilege	
+bridge privilege list	
+bridge privilege create <key>	--description
+bridge privilege update <privilege>	--new-key --description
+bridge privilege delete <privilege>	
+bridge workspace	
+bridge workspace list	--search --limit --after
+bridge member	
+bridge member list	--workspace --search --limit --after
+bridge member get <member>	--workspace
+bridge member update <member>	--workspace --role --disable --enable
+bridge member remove <member>	--workspace --yes
+bridge invite	
+bridge invite list	--workspace
+bridge invite send <email>	--role --first-name --last-name --workspace
+bridge invite revoke <invite>	--workspace
+bridge tenant	
+bridge tenant list	
+bridge tenant get	--name --id
+bridge tenant create	--owner-email --name --plan --locale
+bridge tenant update	--name --id --new-name --locale --logo
+bridge tenant set-plan	--name --id --plan --interval --currency
+bridge tenant delete	--name --id --dry-run --yes
+bridge user	
+bridge user list	--tenant-id
+bridge user get	--email --user-id --tenant-id
+bridge user invite	--email --role --first-name --last-name --tenant-id
+bridge user update	--email --user-id --role --enabled --tenant-id
+bridge user remove	--email --user-id --dry-run --yes --tenant-id
+bridge token	
+bridge token list	
+bridge token create	--name --privileges --expire-at
+bridge token revoke	--name --id --dry-run
+bridge branding	
+bridge branding get	
+bridge branding update	--bg-color --text-color --primary-btn-bg --link-color --primary-btn-text --font-family --border-radius --scheme
+bridge event	
+bridge event list	--type --tenant-id --since --limit
+bridge event auth-attempts	--user --since --limit
+bridge setup	
+bridge setup communication	--from-address --from-name
+bridge setup status	
+bridge doctor	--env-file --framework --dir
+bridge info	
+bridge info app	
+bridge info auth-config	
+bridge info flags	
+bridge info plans	
+bridge info roles	
+bridge guide	--json
+bridge guide list	
+bridge guide flags	--framework --json
+bridge guide billing	--framework --json
+bridge guide mechanisms	--json
+bridge guide orientation	--json
+bridge guide fit-together	--json
+bridge guide integration-success	--json
+bridge guide decision <domain>	--json
+bridge guide svelte [feature]	--json
+bridge guide react [feature]	--json
+bridge guide angular [feature]	--json
+bridge guide nextjs [feature]	--json
+bridge guide nestjs [feature]	--json
+bridge guide express [feature]	--json
+bridge guide add-login	--framework --json
+bridge guide add-paid-plan	--framework --json
+bridge guide add-feature-flag	--framework --json
+bridge guide add-teams	--framework --json
+bridge guide go-live	--framework --json
+bridge guide verify-setup	--framework --json
+bridge guide whats-wrong	--framework --json
+bridge check	
+bridge check gates	--cwd --json

@@ -163,6 +163,9 @@
          .bridge-input) {
     border: 1px solid var(--bridge-border);
     border-radius: var(--bridge-border-radius);
+    /* Field / FieldText are the browser's own input colours, so nothing changes until the app sets the tokens. */
+    background-color: var(--bridge-input-bg, Field);
+    color: var(--bridge-input-fg, FieldText);
     outline: none;
     /* An input does not inherit the font on its own: it would stay in the browser's form font next to Bridge's text. */
     font-family: inherit;
@@ -186,7 +189,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
+    padding: var(--bridge-button-padding, 0.5rem 1rem);
     cursor: pointer;
     font-family: inherit;
     font-size: calc(0.875 * var(--bridge-text-base, 1rem));
@@ -298,7 +301,7 @@
   [data-bridge-auth-form] input[type="password"],
   [data-bridge-auth-form] input[type="tel"] {
     width: 100%;
-    padding: 0.5rem 0.75rem;
+    padding: var(--bridge-input-padding, 0.5rem 0.75rem);
     box-sizing: border-box;
     font-size: calc(0.875 * var(--bridge-text-base, 1rem));
   }
@@ -406,7 +409,7 @@
     cursor: pointer;
     font-family: inherit;
     font-size: calc(0.875 * var(--bridge-text-base, 1rem));
-    padding: 0.5rem 1rem;
+    padding: var(--bridge-button-padding, 0.5rem 1rem);
     box-sizing: border-box;
   }
 
@@ -750,7 +753,7 @@
   .bridge-team-form-group select,
   .bridge-team-form-group textarea {
     width: 100%;
-    padding: 0.5rem 0.75rem;
+    padding: var(--bridge-input-padding, 0.5rem 0.75rem);
     font-size: calc(0.875 * var(--bridge-text-base, 1rem));
     font-family: inherit;
     box-sizing: border-box;
@@ -1077,7 +1080,7 @@
   .bridge-input {
     display: block;
     width: 100%;
-    padding: 0.5rem 0.75rem;
+    padding: var(--bridge-input-padding, 0.5rem 0.75rem);
     font-size: calc(0.875 * var(--bridge-text-base, 1rem));
     font-family: inherit;
     box-sizing: border-box;

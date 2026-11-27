@@ -84,6 +84,7 @@ Bridge's defaults sit in its cascade layer, so your `:root` wins whatever order 
 | `--bridge-border` | `#d1d5db` | Input, table, card and secondary button borders |
 | `--bridge-border-radius` | `6px` | Corners of inputs, buttons, alerts, cards and dialogs |
 | `--bridge-card-bg` | `--bridge-bg` | Plan cards and the current-plan panel on the subscription page |
+| `--bridge-input-bg` / `--bridge-input-fg` | the browser's own field colours (`Field` / `FieldText`) | The fill and text of inputs. Set them for a dark theme |
 | `--bridge-overlay` | `rgba(15, 23, 42, 0.45)` | Backdrop behind dialogs |
 | `--bridge-alert-error-bg` / `-fg` / `-border` | `#fef2f2` / `#991b1b` / `#fca5a5` | Errors, critical billing notices, cancelled plan badge |
 | `--bridge-alert-success-bg` / `-fg` / `-border` | `#f0fdf4` / `#166534` / `#86efac` | Confirmations, the checkout banner, active plan badge |
@@ -115,6 +116,8 @@ A weight token sets every element it covers to the same weight.
 | `--bridge-auth-page-padding` | `3rem 1rem` | The default container of the sign-in pages (`<BridgeAuthRoutes>`) |
 | `--bridge-billing-page-width` | `60rem` | The subscription pages (`<BridgeBillingRoutes>`) |
 | `--bridge-billing-page-padding` | `3rem 1rem` | The subscription pages |
+| `--bridge-input-padding` | `0.5rem 0.75rem` | The space inside inputs on the sign-in pages, the team dialogs and the key form |
+| `--bridge-button-padding` | `0.5rem 1rem` | The space inside every Bridge button |
 
 ### Not tokens
 

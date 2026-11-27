@@ -1,32 +1,32 @@
-# Bridge SvelteKit — Feature Flags
+# Bridge SvelteKit — Feature Flags (bridge-svelte 1.0)
 
-You are adding **Feature Flags** to a SvelteKit application that uses The Bridge. The goal is to ship code behind a switch you control from the Bridge dashboard — no redeploy needed.
+You are adding **feature flags** to a SvelteKit app that uses `@nebulr-group/bridge-svelte` 1.0. The goal: a page, a link, a button or a value is controlled by a switch in Bridge, changed without a redeploy. If Bridge is not set up in the project yet, do `bridge guide svelte` (MCP: `get_integration_guide topic=integration framework=svelte`) first; flags need nothing beyond that setup.
 
 ## The one rule for app code
 
-**Every gate in app code is a flag.** A link, a page, a button, an endpoint: if some people get it and others do not, the code asks a flag, and the flag's rule says why: a privilege (`privileges contains "users:write"`), a plan feature (`bridge:billing.entitlement.analytics eq true`) or a rollout. App code never reads a role, a privilege list, the plan or a plan feature to decide what someone may see or do.
+**Every gate in app code is a flag.** A link, a page, a button, an endpoint: if some people get it and others do not, the code asks a flag, and the flag's rule says why: a privilege (`privileges contains users:write`), a plan feature (`bridge:billing.entitlement.analytics eq true`) or a rollout. App code never reads a role, a privilege list, the plan or a plan feature to decide what someone may see or do.
 
-Two things are not gates and are not flags: **numbers** are plan limits (`<QuotaGate>` in the browser, `@RequireQuota` on the backend), and **permission on one specific record** stays in app code ("only the author edits their post").
+Two things are not gates and are not flags: **numbers** are plan limits (`<QuotaGate>` and `useQuota` in the browser, `meter()` on the server: `bridge guide svelte billing`), and **permission on one specific record** stays in app code ("only the author edits their post").
 
-Before calling the work done, run `npx @nebulr-group/bridge-cli check gates` in the project. It lists every direct role, privilege, plan or plan-feature check with the flag to use instead. Fix each one.
+The browser shows or hides with the surfaces below; the server enforces the same flag on every call with `requireFlag` from `@nebulr-group/bridge-svelte/server` (or `@RequireFlag` in a NestJS backend). A flag Bridge has no result for is off (or gives the fallback you pass), so gates fail closed.
 
-In SvelteKit: a piece of UI is `<FeatureFlag key="…">`; a page is a route rule `{ match: '/admin/*', featureFlag: 'admin-area', redirectTo: '/' }`; a nav link is the same `<FeatureFlag>` around the link.
+Before calling the work done, run `npx @nebulr-group/bridge-cli@alpha check gates` in the project and fix what it lists.
 
 ## Choose the surface first
 
-Read this table before writing anything. Every case below is already solved by the SDK; **do not subscribe to the flag cache by hand.** If you find yourself reaching for `subscribeToFlagChanges`, `getBridgeFlagsInstance()` or a `cacheSize()` probe to work around flags "not being ready yet", you are rebuilding one of these three and will get the hydration edge cases wrong.
+Every case is already solved by the plugin. Do not subscribe to the flag results by hand or probe whether they have loaded.
 
 | What you are gating | Use | Where |
 |---|---|---|
-| **A whole route** — the page should not exist when the flag is off | a `routeConfig` rule: `featureFlag` + `redirectTo` | `+layout.ts`, in the `bridgeBootstrap()` call |
-| **Markup** — a button, panel, menu entry inside a page | `<FeatureFlag>` | the component |
-| **A value or behaviour** — which endpoint, what limit, a string/number/JSON flag | `useFlag` | the component or a `.svelte.ts` module |
+| **A whole route**: the page must not open while the flag is off | a route rule `{ match, featureFlag, redirectTo }` | `src/routes/+layout.ts`, in `bridgeBootstrap({ rules })` |
+| **One page's load** | `requireFlag(key, { redirectTo })` | that page's `+page.ts` |
+| **Markup**: a button, a panel, a nav link | `<FeatureFlag key>` | the component |
+| **A value or behaviour**: a string, number or JSON flag, or a boolean in script | `useFlag(key, fallback)` (runes) or `flag(key, fallback)` (a store) | the component or a `.svelte.ts` module |
+| **An endpoint** | `requireFlag(event, key)` from `@nebulr-group/bridge-svelte/server` | `+server.ts` |
 
-Gating a route in the page component is the common mistake: the page still loads, its `load`/`onMount` still runs, and you then have to redirect *after* the flag resolves — which is where the hand-rolled hydration probes come from. The route guard runs before the route renders and has no such race.
+Gating a route inside the page component is the common mistake: the page still loads and then has to leave. The route rule runs before the route renders.
 
 ## Gate a whole route
-
-Route rules take a `featureFlag` and a `redirectTo`. The guard runs inside `bridgeBootstrap()` in your root `load`, on every navigation, before the route renders:
 
 ```ts
 // src/routes/+layout.ts
@@ -37,219 +37,156 @@ export const ssr = false;
 export const load = bridgeBootstrap({
   rules: [
     { match: '/', public: true },
-    { match: '/premium/*', featureFlag: 'premium-feature', redirectTo: '/upgrade' },
-    { match: '/beta/*', featureFlag: { any: ['beta-feature', 'internal'] }, redirectTo: '/' },
+    { match: '/reports', featureFlag: 'reports', redirectTo: '/' },
+    { match: /^\/admin(\/|$)/, featureFlag: { all: ['admin-area', 'reports'] } },
   ],
-  defaultAccess: 'protected',
 });
 ```
 
-`featureFlag` accepts `'key'`, `{ any: [...] }` or `{ all: [...] }`. `match` accepts a string pattern or a `RegExp`. A rule can carry `featureFlag` **and** `public: true` together — the route needs no session, but still disappears when the flag is off.
+- The first rule whose `match` fits decides. `match` is an exact path, a path with `*`, or a `RegExp`.
+- `featureFlag` takes `'key'`, `{ any: [...] }` or `{ all: [...] }`. While it is off, the person goes to `redirectTo` (default: `auth.afterSignIn` when signed in, else sign-in).
+- A rule may carry `public: true` and `featureFlag` together: no session needed, and the page still closes while the flag is off. A flag a signed-out visitor reads must be public (`bridge flag update <key> --public`).
+- The guard runs again when the session or the flags change, so a flag turned off in Bridge closes an open page within about a second.
+- Adding a flag to a path that already has a rule is an edit of that rule, not a new one.
 
-**Adding a flag to a route that already has a rule is an edit, not a new rule.** Look for an existing entry matching that path before adding one.
+For one page, in its own load:
 
-### What the route guard does differently
+```ts
+// src/routes/reports/+page.ts
+import { requireFlag } from '@nebulr-group/bridge-svelte';
 
-It is a separate evaluation path from `<FeatureFlag>` / `useFlag`, and the difference is worth knowing before you pick it:
-
-| | Route guard | `<FeatureFlag>` / `useFlag` |
-|---|---|---|
-| Evaluated | server-side, via the Bridge eval API, against the session | in-browser, against the local flag cache |
-| Freshness | live: the current page is re-checked when a flag its rules name, the plan, entitlements or the session change | realtime push, instant |
-| Context | derived from the session (`user.*`, `tenant.*`, `privileges`) and the workspace's billing (`bridge:billing.*`) | local context + `bridge.attributes` + per-call `context` |
-| Values | boolean gate only | any value type |
-
-Both run the same FF 2.0 rule evaluator over the same flag records, so they agree on the verdict. They differ on *when* and on *what context they can see*: a rule targeting attributes you publish client-side with `bridge.attributes.set(...)` is invisible to the route guard.
-
-The route guard's verdict cache is dropped whenever a flag change, plan change, entitlements change, user state change or new access token arrives, and `<BridgeBootstrap>` re-checks the page the user is currently on, so flipping a route's flag off moves the user off that page within about a second — no navigation or reload needed. Only when live updates are off (e.g. a proxy blocks WebSockets) does the guard fall back to its 5-minute cache expiry.
-
-> Route guards ride the full Bridge bootstrap (`bridgeBootstrap` from the package root). An app running flags-only — the auth-free `/flags` subpath, no `bridgeBootstrap` — does not have them; gate with `<FeatureFlag>` instead.
-
-## Prerequisites
-
-Bridge is set up in this project (`bridge guide svelte`): `src/routes/+layout.ts` exports `load = bridgeBootstrap({ rules })` and `src/routes/+layout.svelte` wraps the app in `<BridgeBootstrap>`. That is all flags need: `<BridgeBootstrap>` starts them for every visitor, signed in or not. There is nothing to install, no flags bootstrap and no side-effect import. `@nebulr-group/bridge-svelte/flags` is where `useFlag` and `FeatureFlag` are imported from; it is part of the same package.
-
-If flags never leave their default, the app id or API address is wrong — see *Troubleshooting*.
+export const load = async ({ parent }) => {
+  await parent();
+  await requireFlag('reports', { redirectTo: '/' });
+};
+```
 
 ## Gate markup
 
 ```svelte
 <script lang="ts">
-  import { FeatureFlag } from '@nebulr-group/bridge-svelte/flags';
+  import { FeatureFlag } from '@nebulr-group/bridge-svelte';
 </script>
 
-<FeatureFlag key="new-dashboard" defaultValue={false}>
-  <NewDashboard />
-  {#snippet fallback()}
-    <OldDashboard />
+<FeatureFlag key="reports">
+  <a href="/reports">Reports</a>
+</FeatureFlag>
+```
+
+| Prop | Type | What it does |
+|---|---|---|
+| `key` | `string` | The flag key |
+| `defaultValue` | `T` | The value while there is no result |
+| `children` | `Snippet<[T]>` | Rendered while the flag is on; receives the value |
+| `fallback` | `Snippet<[T, { reason, entitlement, why, openUpgrade }]>` | Rendered while it is off. `reason` is `'plan'` when the workspace's plan lacks the feature the rule names, `'off'` otherwise, `undefined` while loading; `openUpgrade()` opens the upgrade dialog |
+| `upgrade` | `boolean` | With no `fallback`: when the plan is the reason, a small upgrade prompt in its place |
+| `messages` | `BridgeMessages` | Wording of the upgrade prompt |
+
+```svelte
+<FeatureFlag key="reports">
+  <Reports />
+  {#snippet fallback(_value, { reason, openUpgrade })}
+    {#if reason === 'plan'}<button onclick={openUpgrade}>Upgrade for reports</button>{/if}
   {/snippet}
 </FeatureFlag>
 ```
 
-The flag is created in Bridge, switched off, the first time it is evaluated; switch it on and the page changes without a reload. To show the developer it works, use a flag in a page they already have rather than creating a demo page.
+## Values and behaviour in script
 
-## How `FeatureFlag` works
+```ts
+import { useFlag, flag } from '@nebulr-group/bridge-svelte';
 
-| Prop | Type | Required | Description |
-|------|------|----------|-------------|
-| `key` | `string` | yes | Flag key — auto-created in Bridge on first eval if it doesn't exist |
-| `defaultValue` | `T` | yes | Value returned until the cache hydrates or if the flag doesn't exist |
-| `context` | `Partial<EvalContext>` | no | Per-call eval context — see *Eval context* below |
-| `children` | `Snippet<[T]>` | no | Rendered when the flag is on (`passed: true`). Receives the typed flag value |
-| `fallback` | `Snippet<[T, { reason, feature, openUpgrade }]>` | no | Rendered when the flag is off (`passed: false`). Receives the typed flag value and why it is off: `reason` is `'plan'` (an upgrade alone would turn it on), `'permission'`, `'off'`, `'rule'` or `'rollout'`; `openUpgrade()` opens the upgrade dialog from a click |
-| `upgrade` | `boolean` | no | With no `fallback`: when the plan is why it is off, render an "Upgrade to use this" prompt that opens the upgrade dialog |
-
-Use the same `FeatureFlag` component anywhere in the app to gate any content behind a flag.
-
-## Step 3 — Configure how the flag decides (states and rules)
-
-A flag has exactly **three states**. `off` and `on` apply to everyone; `on-with-rule` decides per visitor.
-
-| State | Meaning |
-|---|---|
-| `off` | Everyone gets the off value. A newly auto-created flag starts here |
-| `on` | Everyone gets the on value |
-| `on-with-rule` | The rule decides. Whoever matches a branch gets that branch's value; everyone else gets `otherwiseValue` |
-
-A rule is **branches + otherwiseValue + rolloutPct**, first match wins:
-
-```jsonc
-{
-  "branches": [
-    { "conditions": [ { "attribute": "bridge:billing.entitlement.export", "operator": "eq", "values": [true] } ],
-      "returnValue": true }
-  ],
-  "otherwiseValue": false,
-  "rolloutPct": 100          // 0-100, applies to the WHOLE rule
-}
+const reports = useFlag('reports');          // reports.value, reports.reason (runes)
+const theme = flag('theme', 'light');        // a store: $theme
 ```
 
-- Conditions inside one branch are AND-ed; add more branches for OR / different return values.
-- Operators: `eq` `neq` `contains` `not_contains` `in` `not_in` `gt` `lt` `between` `regex` `exists` `not_exists` (numeric and date operators only apply to those attribute types).
-- `attribute` is a dotted path into the eval context (next step). With Bridge Auth and billing, `user.id`, `user.email`, `tenant.id`, `privileges`, `user.role` and `bridge:billing.entitlement.<feature>` are populated for you.
-- **A feature a plan sells**: list it on the plan (`bridge plan feature add pro export`, MCP `add_plan_feature`) and rule the flag `bridge:billing.entitlement.export eq true`, as above. The rule never names plans, so changing what a plan sells is one edit on the plan.
-- **Who someone is**: prefer a privilege rule, `{ "attribute": "privileges", "operator": "contains", "values": ["users:write"] }`, over a role rule. Read the app's real roles and privileges first (`list_roles` / `bridge role list`) — what a role can do is only "in the default setup". `contains` on `privileges` is exact membership: `users:write` does not match `USER_WRITE_ALL`. A role rule (`user.role eq "ADMIN"`) is for when the developer means the role itself.
-- **`rolloutPct` below 100 requires an identity** on the eval context — bucketing is `hash(flagKey + identity) mod 100`. With no identity the SDK refuses to bucket and returns the safe value rather than randomizing per call.
+`flags` is the store of every result and `flagsStatus` says whether they have loaded (for a loading state only, never to work around a gate). Values a rule may read that the page knows, such as a country, go in `bridgeBootstrap({ hints: { country: 'SE' } })`; who the person is always comes from their token, never from a hint.
 
-### Where to configure it
+## On your server
 
-Configure it on whichever surface you have — the Bridge **MCP tools** or the **`bridge` CLI**. Same operation either way:
+```ts
+// src/hooks.server.ts
+import { env as publicEnv } from '$env/dynamic/public';
+import { bridgeHandle } from '@nebulr-group/bridge-svelte/server';
 
-| | Create the flag with a rule |
-|---|---|
-| **MCP** | `create_feature_flag` — `key`, `valueType`, `state: "on-with-rule"`, `rule` (a structured object, not a JSON string) |
-| **CLI** | `bridge flag create --key … --value-type … --state on-with-rule --rule '<json>'` |
-
-Use whichever is already set up. **If the user asks for a specific surface, use that one** — both reach the same API. If neither is available, offer to install one; only fall back to the dashboard (**Feature Control**) if they decline.
-
-CLI:
-
-```bash
-bridge flag create --key enterprise-export --value-type boolean --state on-with-rule \
-  --rule '{"branches":[{"conditions":[{"attribute":"bridge:billing.entitlement.export","operator":"eq","values":[true]}],"returnValue":true}],"otherwiseValue":false,"rolloutPct":100}'
+export const handle = bridgeHandle({ issuer: publicEnv.PUBLIC_BRIDGE_ISSUER });
 ```
 
-MCP — `create_feature_flag`, same rule as structured arguments:
+```ts
+// src/routes/api/reports/+server.ts
+import { json } from '@sveltejs/kit';
+import { requireFlag } from '@nebulr-group/bridge-svelte/server';
 
-```jsonc
-{
-  "key": "enterprise-export",
-  "valueType": "boolean",
-  "state": "on-with-rule",
-  "rule": {
-    "branches": [
-      { "conditions": [ { "attribute": "bridge:billing.entitlement.export", "operator": "eq", "values": [true] } ],
-        "returnValue": true }
-    ],
-    "otherwiseValue": false,
-    "rolloutPct": 100
-  }
-}
+export const GET = async (event) => {
+  const actor = await requireFlag(event, 'reports'); // 401 without a caller, 403 while the flag is off for them
+  return json({ workspace: actor.workspaceId });
+};
 ```
 
-### Inspect and flip
+`flagsFor(event)` gives every result for the caller. Add `event.locals.bridge` to `App.Locals` (`import type { BridgeLocals } from '@nebulr-group/bridge-svelte/server'`). The browser calls the endpoint with `bridgeFetch`, which carries the token. A NestJS backend uses `@RequireFlag` from `@nebulr-group/bridge-nestjs@alpha` instead (`bridge guide nestjs feature-flags`).
 
-| | Read current state | Flip on/off without touching the rule |
+## The standard flags
+
+Bridge keeps three flags for every app, and the plugin's own screens gate on them. Their rules are the developer's to change.
+
+| Flag | On means | Default rule |
 |---|---|---|
-| **MCP** | `list_feature_flags` | `toggle_feature_flag` — `key`, `enabled` |
-| **CLI** | `bridge flag list` / `bridge flag get <key>` | `bridge flag toggle --key <key> --enabled true` |
+| `bridge-billing-manage` | may choose a plan and open the billing portal | `bridge:privileges contains billing:manage` |
+| `bridge-team-manage` | may invite, change roles and remove members | `bridge:privileges contains users:write` |
+| `bridge-app-active` | the workspace may use the app; off sends signed-in people to the plan page | `bridge:billing.entitlement.app_active eq true` |
 
-Both take the **key**. Use `update_feature_flag` (MCP, which takes the `id` from `list_feature_flags`) or `bridge flag update --key <key>` only when changing the rule, values or value type.
+`bridgeBootstrap({ flags: { billingManage, teamManage, appActive } })` names other flags instead. `canManageBilling()` and `canManageTeam()` give the first two as stores, for your own screens.
 
-### Dry-running a rule — CLI only
+## Create the flag and its rule
 
-`bridge flag eval` evaluates a rule against a synthetic identity and attributes, with the app out of the way:
+Who should get the feature (everyone, a share, a plan, a privilege, named people) is the developer's decision: ask, then create the flag. Create it before the code reads it.
 
-```bash
-bridge flag eval enterprise-export --identity user-123 --attribute bridge:billing.entitlement.export=true   # → true
-bridge flag eval enterprise-export --identity user-123 --attribute bridge:billing.entitlement.export=false  # → false
-```
+| | MCP | CLI 1.0 |
+|---|---|---|
+| Create, with a rule | `create_feature_flag` (`key`, `valueType`, `state: "on-with-rule"`, `rule`) | `bridge flag create <key> --when "<attribute> <operator> <value>"` |
+| Read | `get_flag`, `list_feature_flags` | `bridge flag get <key>`, `bridge flag list` |
+| Change the rule | `update_feature_flag` | `bridge flag rule add <key> --when "…"`, `bridge flag rule set <key> --rule-file rule.json`, `bridge flag rule clear <key>` |
+| On, off, back | `toggle_feature_flag` | `bridge flag on <key>`, `bridge flag off <key>` (the kill switch, keeps the rule), `bridge flag restore <key>` |
+| Dry-run who gets it | `evaluate_feature_flag` | `bridge flag eval <key> --context '{"bridge:billing.entitlement.analytics":true}'` |
+| Later, at a time | `set_flag_schedule` | `bridge flag schedule set <key> --at <time> --state on` |
 
-**There is no MCP equivalent today.** Over MCP the nearest check is reading the stored rule back with `list_feature_flags` and confirming the branches, operators and attribute paths are what you intended — that verifies the rule was *saved* correctly, not what it *evaluates to*. When you need the actual verdict, use the CLI.
+A flag has three states: `off` (everyone gets the off value), `on` (everyone gets the on value) and `on-with-rule` (the rule decides). A rule is ordered branches of AND-ed conditions; the first match wins and everyone else gets the off value. `--when` builds a one-branch rule; repeat it to AND conditions, add `--rollout <percent>` for a share. A share under 100 needs an identity, which a signed-in person has.
 
-## Step 4 — Feed the rule its inputs (eval context)
+The facts a rule may read, from the token and Billing:
 
-Rules can only target what the app sends. Flags don't require auth — without it you supply the context yourself:
+| Attribute | Means |
+|---|---|
+| `privileges` (`bridge:privileges`) | the person's privileges; use `contains`, e.g. `privileges contains users:write` |
+| `bridge:billing.entitlement.<feature>` | the workspace's plan includes the feature: `eq true` |
+| `user.email` (`bridge:email`), `user.id` (`bridge:user`) | named people |
+| `tenant.id` (`bridge:workspace`) | named workspaces |
+| your hints | values the page passes in `hints` |
 
-```ts
-{
-  identity?: string;                    // stable per-user id — required when rolloutPct < 100
-  attributes: Record<string, unknown>;  // dotted or nested; whatever your rules target
-}
-```
-
-Per call, on the component:
-
-```svelte
-<FeatureFlag key="new-editor" defaultValue={false} context={{ identity: user.id, attributes: { region } }}>
-  {#snippet children()}<ExportButton />{/snippet}
-</FeatureFlag>
-```
-
-Or publish attributes once, app-wide, on the `bridge` singleton (package root, not `/flags`):
-
-```ts
-import { bridge } from '@nebulr-group/bridge-svelte';
-
-bridge.attributes.set('region', region);              // static value
-bridge.attributes.bind('seats', () => currentSeats);   // live — re-read on every eval
-bridge.attributes.bindMany(() => ({ region, betaOptIn }));
-```
-
-Per-call context wins on key collision. **With Bridge Auth**, the signed-in user's privileges, role and the plan's features flow in automatically (`privileges`, `user.role`, `bridge:billing.entitlement.*`) — no wiring needed, and never pass them yourself; see `bridge guide fit-together`.
-
-## Gating logic instead of markup
-
-`<FeatureFlag>` gates *markup*. When the flag decides **behavior or supplies a value** — which endpoint to call, a numeric limit to enforce, a `string`/`number`/JSON flag value you compute with — read it directly instead:
-
-```svelte
-<script lang="ts">
-  import { useFlag } from '@nebulr-group/bridge-svelte/flags';
-  const limit = useFlag('upload-limit', 5);   // reactive: limit.value, limit.passed
-</script>
-```
-
-For anything this prompt doesn't cover — classic stores, non-runes contexts — read the docs at `learning/feature-flags/` (`using/in-logic.md`, `using/guard-routes.md`, `targeting/`) rather than guessing an API.
-
-> Flags evaluate **client-side** in SvelteKit today. There is no server-side evaluation in this SDK — don't try to read a flag in `+page.server.ts` or a `+layout.server.ts` load.
+- **A feature a plan sells**: list it on the plan (`bridge plan feature add <plan> <feature>`, MCP `add_plan_feature`) and rule the flag `bridge:billing.entitlement.<feature> eq true`. The rule never names a plan, so changing what a plan sells is one edit on the plan.
+- **Who someone is**: a privilege rule (`privileges contains reports:read`). Read the app's real roles and privileges first (`bridge role list`, `bridge privilege list`; MCP `list_roles`). A role rule is for when the developer means the role itself.
 
 ## Troubleshooting
 
-Flag not appearing in the dashboard within ~30s, or a read returns the default forever:
-
-- **`<BridgeBootstrap>` is mounted and the app id is set.** The flag layer initializes on its mount; without it every read returns the default. Confirm `VITE_BRIDGE_APP_ID` is set — and, for a stage or local app, `VITE_BRIDGE_API_BASE_URL` too. Without it the app talks to production, where a stage app id doesn't exist; a development build warns about exactly this in the console.
-- **A flag registers only once it has been evaluated** — load a page that actually reads the key.
-- **Rule never matches?** Read the stored rule back — `list_feature_flags` over MCP, `bridge flag get <key>` on the CLI — and confirm the app sends exactly those attribute paths. To see the verdict without the app in the way, `bridge flag eval <key> --identity … --attribute k=v` (CLI only — no MCP equivalent).
-- **`rolloutPct < 100` with no identity** returns the safe value by design.
-- **Realtime.** Live toggles ride the realtime channel; if a proxy blocks WebSockets the value still resolves on next load, just not instantly. In a dev build, `<BridgeBootstrap>` shows a "Live updates off — why?" badge in the corner when the channel is refused, connected but receiving nothing, or has been retrying for over 30 s; it names the reason and whose side it is. Read the same thing in code from `realtimeStatusDetail` (`state`, `reason`, `side`, `retrying`, `docsUrl`).
-- **First-render flicker is expected** — flags hydrate async. Set `defaultValue` to the safe-off state. This is a reason to gate a whole route with a `routeConfig` rule rather than in the page component, not a reason to hand-roll a readiness probe.
-- **A route-guard flag toggle seems to do nothing.** A flag change arriving on the live channel drops the guard's cache and re-checks the current page within about a second, so a toggle that has no effect usually means live updates are off — check the dev badge or `realtimeStatusDetail`. Without the live channel the guard's cache expires after 5 minutes. Also confirm the rule's `match` covers the path and names the key you toggled.
-- **A route-guard rule ignores attributes that work in components.** The guard evaluates server-side from the session token, so it never sees attributes you publish with `bridge.attributes.set(...)`. Target what Bridge fills in from the session (`privileges`, `user.*`, `tenant.*`, `bridge:billing.entitlement.*`) in rules used by route guards.
+- The flag never turns on: `bridge flag get <key>` shows its state and rule; `bridge flag eval <key> --context '…'` with the person's facts shows what the rule gives.
+- On for some and not others: the rule reads something the person lacks; check their privileges (`bridge member get <member>`) or the plan's features (`bridge plan get <plan>`).
+- A signed-out visitor never sees it: the flag is not public (`bridge flag update <key> --public`).
 
 ## Verify
 
-1. Open the page that reads the flag. The fallback shows, and the flag now exists, switched off: `bridge flag get <key>`.
-2. Switch it on — `toggle_feature_flag` with the key over MCP, or `bridge flag toggle --key <key> --enabled true`. With neither, flip it under **Feature Control** in the Bridge dashboard.
-3. The page changes **without a reload** — live updates are on by default.
-4. Switch it off again; it reverts.
-5. A route rule: signed in, the gated route redirects to its `redirectTo` while the flag is off.
+Run the terminal checks. If you have a browser tool, run the browser checks too. If you do not, list them for the developer, numbered, and start the summary with a Heads up line saying which checks were not run.
+
+### Terminal checks
+
+1. The build passes.
+2. `npx @nebulr-group/bridge-cli@alpha check gates` lists nothing.
+3. `bridge flag get <key>` shows the state and the rule the developer chose; a plan-feature rule names `bridge:billing.entitlement.<feature>`, never a plan.
+4. `bridge flag eval <key> --context '…'` gives the on value for someone the rule should match and the off value for someone it should not.
+5. With an endpoint gated on the server, calling it without a token answers 401.
+
+### Browser checks
+
+1. Signed in as someone the rule matches, the gated page, link or button shows.
+2. `bridge flag off <key>`: within about a second the gated markup hides and an open gated page closes, without a reload. `bridge flag restore <key>` brings it back.
+3. Signed in as someone the rule does not match, the page redirects to `redirectTo` and the markup stays hidden.
+
+Never call the browser checks done when you did not run them. When any was not run, the summary starts with "Heads up: not verified in a browser" and lists them for the developer, numbered.

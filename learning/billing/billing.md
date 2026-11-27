@@ -54,7 +54,6 @@ If the checkout cannot start because of how the app is set up (the page's addres
 | `BillingNotice` | The one notice worth showing now: blocked, payment due, needs a plan, trial ending, ending, or a change waiting. `mode="hard"` covers the page while the workspace is locked for payment |
 | `QuotaBanner` | A limit nearing (from 80%) or reached, for one metric (`<QuotaBanner metric="tickets" />`); a metered limit shows its overage |
 | `QuotaGate` | Disables the actions inside once a metric is at its hard limit, with an upgrade line beside them |
-| `Entitled` | Shows its content when the plan has a feature, a fallback when it does not |
 | `CheckoutNotice` | The outcome of a checkout the person came back from |
 
 `billing`, `plans` and `usage` are the stores behind them, as `{ value, loading, error }`.
@@ -74,7 +73,7 @@ If the checkout cannot start because of how the app is set up (the page's addres
 
 It has `loading`, `unlimited`, `used`, `limit`, `remaining`, `warningLevel` (`approaching` from 80%, `critical` from 95%), `kind` (`counter` or `gauge`) and the whole `snapshot` (with `policy`, `hard` or `metered`). There is never a made-up 0: while loading the numbers are `null`. It is also a store, `$tickets`, with `{ used, limit, ratio, state }`, or `null` while loading and for a metric without a limit.
 
-`$entitlements.can('analytics')` tells whether the plan has a feature; it reads the flag `bridge:billing.entitlement.analytics`, is `false` until Bridge has answered, and `$entitlements.ready` tells those two apart. `<Entitled to="analytics">` is the markup form. To gate a page or a button with a reason, use a flag with that rule and `<FeatureFlag>`.
+Whether the plan has a feature is a flag: rule a flag `bridge:billing.entitlement.analytics eq true` and gate the page or the button with `<FeatureFlag>` or a route rule (see [Flags and route guards](../flags/flags.md)), never by reading the plan in the page.
 
 ```svelte
 <QuotaGate metric="tickets">
@@ -83,7 +82,7 @@ It has `loading`, `unlimited`, `used`, `limit`, `remaining`, `warningLevel` (`ap
 </QuotaGate>
 ```
 
-The gate and the banner only decorate: your server refuses the write. They never disable on "not known yet", for a metric without a limit, or for a metered limit, which bills the overage instead of blocking.
+The gate and the banner show where the workspace stands; your server enforces the limit and refuses the write. They never disable on "not known yet", for a metric without a limit, or for a metered limit, which bills the overage instead of blocking.
 
 ## Plan limits
 

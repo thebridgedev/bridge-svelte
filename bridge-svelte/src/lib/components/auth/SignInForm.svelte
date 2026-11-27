@@ -23,7 +23,7 @@
   import { continueOnAppPage, handOff, heldReturn } from './finish-link.js';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { hostedPageRedirect, isBridgeError, isPasswordChangeRequired, passkeyHandOver, readReturnTo, takeSocialReturn, type SignInOptions, type SignInStep, type SocialProvider, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
+  import { hostedPageRedirect, isBridgeError, isPasswordChangeRequired, passkeyHandOver, readReturnTo, takeCompanyReturn, takeSocialReturn, type CompanyLinkRequired, type SignInOptions, type SignInStep, type SocialProvider, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
   import { get } from 'svelte/store';
   import { getBridge, peekConfig, takeEndedReason } from '../../core/client.js';
   import { holdSignInPage } from '../../core/guard.js';
@@ -108,6 +108,9 @@
   const PROVIDERS: readonly SocialProvider[] = ['google', 'linkedin', 'facebook', 'github', 'azure', 'apple'];
   /** A provider the person tried first was linked as this sign-in finished: shown once, before going on. */
   let linkedName = $state<string | null>(null);
+  /** "Sign in with SSO": shown when the app has a company login on; asks only for the work email. */
+  const companyOffered = $derived(options?.companyLogin === true);
+  let ssoMode = $state(false);
   /** The finished step the "now connected" notice waits on: its Continue goes on with it (to the app, on the hosted page). */
   let afterLinked: SignInStep | null = null;
   // While a sign-in is under way here, or its "now connected" notice shows, the person is signed in already: the page
@@ -149,6 +152,14 @@
     if (ended === 'session-ended') notice = t('session.ended');
     if (ended === 'access-removed') notice = t('session.accessRemoved');
     const bridge = getBridge();
+    // Back from the company's login, or sent by its portal to start one: finished, or started, here.
+    const company = takeCompanyReturn();
+    if (company !== null) {
+      loading = true;
+      ('start' in company ? bridge.companyLogin.start({ connection: company.start }).then((url) => { settled = true; location.assign(url); }) : bridge.companyLogin.finish(company).then((step) => (step.done === false && step.next === 'link_required' ? linkFirst(step) : follow(step))))
+        .catch((error: unknown) => fail(error))
+        .finally(() => (loading = false));
+    }
     // Back from a social provider: its answer finishes here, in the browser that started.
     const answer = takeSocialReturn();
     if (answer !== null) {
@@ -256,6 +267,33 @@
     onError?.(error);
   }
 
+  /** Sends the browser to the company's login: by the work email typed, or for a workspace that requires it. */
+  async function startCompany(input: { email: string } | { workspace: string }) {
+    if (loading) return;
+    failure = null;
+    notice = null;
+    loading = true;
+    try {
+      const url = await getBridge().companyLogin.start(input);
+      settled = true;
+      location.assign(url);
+    } catch (error) {
+      if (isBridgeError(error) && error.code === 'no_company_login') failure = t('company.none');
+      else fail(error);
+    } finally {
+      loading = false;
+    }
+  }
+
+  /** An account already holds the address: sign in the usual way once, and the company's login is linked then. */
+  function linkFirst(step: CompanyLinkRequired) {
+    second = null;
+    choice = null;
+    ssoMode = false;
+    email = step.email;
+    notice = t('company.linkFirst', { company: step.name });
+  }
+
   async function follow(step: SignInStep) {
     // A provider the person tried first is now linked to this account: said once, before anything else, the hosted
     // page's hand-off to the app included. Continue then goes on with the same step.
@@ -335,6 +373,12 @@
 
   async function choose(id: string) {
     if (choice === null) return;
+    // A workspace that requires its company login: this sign-in goes through it for that workspace.
+    if (choice.workspaces.find((each) => each.id === id)?.needs === 'required_connection') {
+      choice = null;
+      await startCompany({ workspace: id });
+      return;
+    }
     try {
       await follow(await choice.choose(id));
     } catch (error) {
@@ -396,7 +440,21 @@
   >
     {#if notice}<Alert variant="info">{notice}</Alert>{/if}
     {#if failure}<Alert variant="error">{failure}</Alert>{/if}
-    {#if setupLinkSent}
+    {#if ssoMode}
+      <form onsubmit={(event) => { event.preventDefault(); void startCompany({ email: email.trim() }); }} data-bridge-sso-form>
+        <p class="bridge-step-desc">{t('company.emailPrompt')}</p>
+        <div class="bridge-form-group">
+          <label for="login-sso-email">{t('field.email')}</label>
+          <input id="login-sso-email" type="email" autocomplete="username" placeholder={t('placeholder.email')} required bind:value={email} disabled={loading} />
+        </div>
+        <button type="submit" class="bridge-btn bridge-btn-primary" data-bridge-sso-continue disabled={loading || !email.trim()}>
+          {#if loading}<Spinner size={16} />{/if} {t('company.continue')}
+        </button>
+        <div class="bridge-forgot-row">
+          <button type="button" class="bridge-link" data-bridge-sso-back onclick={() => { ssoMode = false; failure = null; }}>{t('company.back')}</button>
+        </div>
+      </form>
+    {:else if setupLinkSent}
       <Alert variant="info">{t('passkey.setupLinkSent')}</Alert>
     {:else if linkSent}
       <Alert variant="info">{t('magicLink.sent')}</Alert>
@@ -469,7 +527,7 @@
       </form>
     {/if}
 
-    {#if passkeysOffered && !linkSent && !setupLinkSent}
+    {#if passkeysOffered && !linkSent && !setupLinkSent && !ssoMode}
       {#if passwordOffered || linkOffered}<div class="bridge-divider" data-bridge-sign-in-or>{t('magicLink.or')}</div>{/if}
       <button type="button" class="bridge-btn {passwordOffered || linkOffered ? 'bridge-btn-secondary' : 'bridge-btn-primary'}" data-bridge-passkey-sign-in onclick={signInWithPasskey} disabled={loading}>
         {t('passkey.signIn')}
@@ -485,7 +543,14 @@
       </div>
     {/if}
 
-    {#if social.length > 0 && !linkSent && !setupLinkSent}
+    {#if companyOffered && !ssoMode && !linkSent && !setupLinkSent}
+      <div class="bridge-divider" data-bridge-sign-in-or>{t('magicLink.or')}</div>
+      <button type="button" class="bridge-btn bridge-btn-secondary" data-bridge-sso-sign-in onclick={() => { ssoMode = true; failure = null; notice = null; }} disabled={loading}>
+        {t('company.signIn')}
+      </button>
+    {/if}
+
+    {#if social.length > 0 && !linkSent && !setupLinkSent && !ssoMode}
       {#if passwordOffered || linkOffered || passkeysOffered}<div class="bridge-divider" data-bridge-sign-in-or>{t('magicLink.or')}</div>{/if}
       <SocialButtons providers={social} disabled={loading} onError={(message, error) => { failure = message; onError?.(error); }} {messages} />
     {/if}

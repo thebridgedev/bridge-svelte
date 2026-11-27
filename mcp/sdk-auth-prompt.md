@@ -34,7 +34,7 @@ The forms show a button for each provider that is on; there is no code to write.
 4. **Apple**: `--client-id <Services ID> --team-id <Team ID> --key-id <Key ID> --private-key-file <AuthKey.p8>`, no secret. On the Services ID: Domains and Subdomains and the Return URL Bridge prints. Register the app's email sender in Apple's Sign in with Apple for Email Communication, or people who hide their email get no invites or sign-in links. Apple refuses localhost: test on stage.
 5. The developer clicks **Test** in the provider's panel (dashboard › Authentication › Login): one sign-in at the provider that shows what came back, signing nobody in.
 
-Rules the developer should know: Bridge links a provider to an existing account by email only when the provider proves the address; otherwise the person signs in their usual way once and the provider is added. A new person whose address the provider does not prove (Facebook, Microsoft personal and other companies' accounts) confirms it with Bridge's email link first. The full steps are in the learning docs: `learning/sign-in/social.md`.
+Rules the developer should know: Bridge links a provider to an existing account by email only when the provider proves the address; otherwise the person signs in their usual way once and the provider is added. A new person whose address the provider does not prove (Facebook, Microsoft personal and other companies' accounts) confirms it with Bridge's email link first. The full steps are in the learning docs: `learning/social-sign-in/social-sign-in.md`.
 
 ## Install
 

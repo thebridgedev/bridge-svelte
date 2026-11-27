@@ -170,7 +170,7 @@ A form's own `messages` prop changes wording on that form only.
 
 ## Social sign-in
 
-The forms show a button for each social provider your app switched on in Bridge (Google, Microsoft, Apple, GitHub, LinkedIn, Facebook). How to set up each one, step by step: [Social sign-in](social.md).
+The forms show a button for each social provider your app switched on in Bridge (Google, Microsoft, Apple, GitHub, LinkedIn, Facebook). How to set up each one, step by step: [Social sign-in](../social-sign-in/social-sign-in.md).
 
 ## What comes later
 

@@ -369,6 +369,21 @@
     gap: 0.5rem;
   }
 
+  /* Sign in with Apple: Apple's own look, which a theme does not restyle (Human Interface Guidelines). */
+  [data-bridge-auth-form] .bridge-social-apple {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: #000;
+    color: #fff;
+    border: 1px solid #000;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 500;
+  }
+  [data-bridge-auth-form] .bridge-social-apple:hover:not(:disabled) { background: #1d1d1f; }
+  [data-bridge-auth-form] .bridge-social-apple-logo { width: 1em; height: 1.15em; margin-top: -0.15em; }
+
   [data-bridge-auth-form] .bridge-backup-code {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: calc(1.25 * var(--bridge-text-base, 1rem));

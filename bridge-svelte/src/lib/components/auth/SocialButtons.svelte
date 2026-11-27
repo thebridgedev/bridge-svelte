@@ -30,7 +30,7 @@
   let { providers, intent = 'sign-in', returnPage = undefined, signUp = undefined, disabled = false, onError, label = undefined, messages }: Props = $props();
   const t = $derived(translator(messages));
   /** The providers' names, as their own sign-in buttons say them. */
-  const NAMES: Record<SocialProvider, string> = { google: 'Google', linkedin: 'LinkedIn', facebook: 'Facebook', github: 'GitHub', azure: 'Microsoft' };
+  const NAMES: Record<SocialProvider, string> = { google: 'Google', linkedin: 'LinkedIn', facebook: 'Facebook', github: 'GitHub', azure: 'Microsoft', apple: 'Apple' };
   let going = $state<SocialProvider | null>(null);
 
   /**
@@ -61,9 +61,18 @@
 {#if providers.length > 0}
   <div class="bridge-social" data-bridge-social>
     {#each providers as provider (provider)}
-      <button type="button" class="bridge-btn bridge-btn-secondary bridge-social-btn" data-bridge-social-provider={provider} onclick={() => go(provider)} disabled={disabled || going !== null}>
-        {label ? label(NAMES[provider]) : t('social.continueWith', { provider: NAMES[provider] })}
-      </button>
+      {#if provider === 'apple'}
+        <!-- Sign in with Apple, as Apple's Human Interface Guidelines draw it: black, the Apple logo, "Continue with Apple". -->
+        <button type="button" class="bridge-btn bridge-social-btn bridge-social-apple" data-bridge-social-provider="apple" onclick={() => go(provider)} disabled={disabled || going !== null}>
+          <svg class="bridge-social-apple-logo" viewBox="0 0 17 20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M14.06 10.62c-.02-2.2 1.8-3.26 1.88-3.31-1.03-1.5-2.62-1.7-3.19-1.73-1.36-.14-2.65.8-3.34.8-.69 0-1.75-.78-2.88-.76-1.48.02-2.85.86-3.61 2.19-1.54 2.67-.39 6.62 1.11 8.79.73 1.06 1.6 2.25 2.75 2.21 1.1-.04 1.52-.71 2.85-.71 1.33 0 1.71.71 2.88.69 1.19-.02 1.94-1.08 2.67-2.15.84-1.23 1.19-2.42 1.21-2.48-.03-.01-2.31-.89-2.33-3.54zM11.88 4.16c.61-.74 1.02-1.76.91-2.78-.88.04-1.94.59-2.57 1.32-.56.65-1.06 1.69-.93 2.69.98.08 1.98-.5 2.59-1.23z"/></svg>
+          <!-- Apple's button says only what Apple allows: "Continue with Apple", whatever the form's own label. -->
+          <span>{t('social.continueWith', { provider: NAMES[provider] })}</span>
+        </button>
+      {:else}
+        <button type="button" class="bridge-btn bridge-btn-secondary bridge-social-btn" data-bridge-social-provider={provider} onclick={() => go(provider)} disabled={disabled || going !== null}>
+          {label ? label(NAMES[provider]) : t('social.continueWith', { provider: NAMES[provider] })}
+        </button>
+      {/if}
     {/each}
   </div>
 {/if}

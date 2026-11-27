@@ -105,7 +105,7 @@
   const social = $derived(options?.social ?? []);
   /** A social sign-in found no account for the address: the provider, for a one-click "Create an account with …". */
   let noAccountWith = $state<SocialProvider | null>(null);
-  const PROVIDERS: readonly SocialProvider[] = ['google', 'linkedin', 'facebook', 'github', 'azure'];
+  const PROVIDERS: readonly SocialProvider[] = ['google', 'linkedin', 'facebook', 'github', 'azure', 'apple'];
   /** A provider the person tried first was linked as this sign-in finished: shown once, before going on. */
   let linkedName = $state<string | null>(null);
 

@@ -4,6 +4,7 @@ The guides for `@nebulr-group/bridge-svelte` 1.0, for the developer integrating 
 
 - **[Quickstart](quickstart/quickstart.md)**: install, the issuer, and the three files.
 - **[Sign-in pages](sign-in/sign-in.md)**: sign-in, sign-up, email links, password recovery, invites, workspaces, sign-out, and the language.
+- **[Social sign-in](social-sign-in/social-sign-in.md)**: Google, Microsoft, Apple, GitHub, LinkedIn and Facebook, step by step, with the Test button and what to do when a provider refuses.
 - **[Flags and route guards](flags/flags.md)**: every gate as a flag, route rules, `<FeatureFlag>`, and the standard flags.
 - **[Billing](billing/billing.md)**: plans, checkout, the billing portal, notices and plan limits.
 - **[The team panel](team/team.md)**: members, invites, roles and workspace settings.

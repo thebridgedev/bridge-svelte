@@ -57,6 +57,12 @@ describe('decide', () => {
 		expect(run({ defaultAccess: 'public' }, '/anything', signedOut)).toEqual({ type: 'allow' });
 	});
 
+	it('lets the sign-in page stay while its form shows a notice after signing in (a provider now connected)', () => {
+		const config = resolveConfig({ issuer: ISSUER }, undefined);
+		expect(decide(config, { path: '/auth/sign-in', target: '/auth/sign-in', session: signedIn, flags: on(ACTIVE), returnTo: null, holding: true })).toEqual({ type: 'allow' });
+		expect(decide(config, { path: '/auth/sign-in', target: '/auth/sign-in', session: signedIn, flags: on(ACTIVE), returnTo: null, holding: false }).type).toBe('redirect');
+	});
+
 	it('sends a signed-in person on from sign-in, to a safe return address only', () => {
 		expect(run({}, '/auth/sign-in', signedIn, on(ACTIVE), '/reports')).toEqual({ type: 'redirect', to: '/reports', reason: 'signed-in' });
 		expect(run({}, '/auth/sign-in', signedIn, on(ACTIVE), 'https://evil.test/')).toEqual({ type: 'redirect', to: '/', reason: 'signed-in' });

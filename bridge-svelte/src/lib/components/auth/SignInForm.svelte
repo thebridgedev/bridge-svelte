@@ -108,6 +108,13 @@
   const PROVIDERS: readonly SocialProvider[] = ['google', 'linkedin', 'facebook', 'github', 'azure', 'apple'];
   /** A provider the person tried first was linked as this sign-in finished: shown once, before going on. */
   let linkedName = $state<string | null>(null);
+  /** The finished step the "now connected" notice waits on: its Continue goes on with it (to the app, on the hosted page). */
+  let afterLinked: SignInStep | null = null;
+  // While a sign-in is under way here, or its "now connected" notice shows, the person is signed in already: the page
+  // stays until the form itself goes on (the guard would otherwise leave it for the app before the notice is read).
+  // Held while signing in, while a provider now connected is said, and while a passkey is offered (TBP-536).
+  $effect(() => holdSignInPage(loading || linkedName !== null || offering));
+  onDestroy(() => holdSignInPage(false));
 
   const signUpShown = $derived(showSignupLink ?? options?.signUp ?? true);
   const passwordOffered = $derived(options === null || options.methods.includes('password'));
@@ -175,8 +182,6 @@
         }
         if (!found.methods.includes('passkeys')) return;
         passkeySupported = await bridge.passkeys.supported();
-        // A sign-in here is followed by the passkey offer, before the person is sent on (TBP-536).
-        if (passkeySupported && found.passkeyOffer !== undefined) holdSignInPage(true);
         if (passkeySupported) void startAutofill();
       })
       .catch(() => undefined);
@@ -237,7 +242,6 @@
 
   function goOn() {
     offering = false;
-    holdSignInPage(false);
     settled = true;
     if (onSignIn) {
       onSignIn();
@@ -253,15 +257,19 @@
   }
 
   async function follow(step: SignInStep) {
+    // A provider the person tried first is now linked to this account: said once, before anything else, the hosted
+    // page's hand-off to the app included. Continue then goes on with the same step.
+    if (step.done && step.linked !== undefined && afterLinked === null) {
+      afterLinked = step;
+      linkedName = step.linked.name;
+      return;
+    }
     const held = heldReturn(step);
     if (held !== null) {
       heldBack = held;
       settled = true;
     } else if (handOff(step)) {
       settled = true;
-    } else if (step.done && step.linked !== undefined) {
-      // A provider the person tried first is now linked to this account: said once, then on.
-      linkedName = step.linked.name;
     } else if (step.done) {
       finish();
     } else if (step.next === 'verify_email') {
@@ -341,7 +349,7 @@
 {:else if linkedName !== null}
   <AuthFormWrapper heading={null} class={className} {style} data-bridge-sign-in-step="linked" {...rest}>
     <Alert variant="success">{t('social.linked', { provider: linkedName })}</Alert>
-    <button type="button" class="bridge-btn bridge-btn-primary" data-bridge-linked-continue onclick={() => { linkedName = null; finish(); }}>{t('secondStep.continue')}</button>
+    <button type="button" class="bridge-btn bridge-btn-primary" data-bridge-linked-continue onclick={() => { linkedName = null; const step = afterLinked; if (step === null) finish(); else void follow(step); }}>{t('secondStep.continue')}</button>
   </AuthFormWrapper>
 {:else if heldBack !== null}
   <ReturnContinue url={heldBack} {messages} class={className} {style} {...rest} />

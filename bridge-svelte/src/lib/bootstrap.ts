@@ -19,7 +19,7 @@ import { get } from 'svelte/store';
 import { startClient } from './core/client.js';
 import { resolveConfig, type BridgeConfig, type ResolvedConfig } from './core/config.js';
 import { fallBackFromBrowserFont } from './core/font.js';
-import { decide, normalizePath, type GuardDecision, signInPageHeld } from './core/guard.js';
+import { decide, normalizePath, signInPageHeld, type GuardDecision } from './core/guard.js';
 import { authPageAt, isCatchAll, isUnder, pageForLink, parseBillingPage, ROUTE_PARAM } from './core/routes.js';
 
 /** What the root layout's load gives every page. */
@@ -90,9 +90,9 @@ async function guard(client: Bridge, config: ResolvedConfig, url: URL): Promise<
 		path: url.pathname,
 		target: `${normalizePath(url.pathname)}${url.search}`,
 		session: client.session.get(),
+		holding: signInPageHeld(),
 		flags: client.flags,
 		returnTo: readReturnTo(url, config.returnToParam),
-		held: signInPageHeld(),
 	};
 	const decision = decide(config, input);
 	if (decision.type !== 'redirect' || decision.reason !== 'paywall') return decision;

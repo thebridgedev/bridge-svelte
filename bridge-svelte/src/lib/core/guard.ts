@@ -71,18 +71,6 @@ export function flagsAllow(requirement: FlagRequirement, flags: FlagReader): boo
 /** Auth pages a signed-in person is sent on from, to where they were going. */
 const SIGNED_IN_SKIPS: ReadonlySet<AuthPage> = new Set(['sign-in', 'sign-up']);
 
-let signInHeld = false;
-/**
- * While the sign-in form is open on an app that offers passkeys, a sign-in finishing there does not send the person on by
- * itself: the form does, once it has asked whether to offer a passkey (TBP-536). A fresh visit to the page is not held.
- */
-export function holdSignInPage(on: boolean): void {
-	signInHeld = on;
-}
-export function signInPageHeld(): boolean {
-	return signInHeld;
-}
-
 export interface GuardInput {
 	readonly path: string;
 	/** The path with its query, to come back to after signing in. */
@@ -93,8 +81,17 @@ export interface GuardInput {
 	readonly returnTo: string | null;
 	/** The page stays although the app's active flag is off: the workspace is locked for payment (the lock screen covers the page) or has a plan (the flag lags Bridge's billing), rather than the paywall. */
 	readonly locked?: boolean;
-	/** The sign-in form is between a sign-in and the passkey offer: it sends the person on itself. */
-	readonly held?: boolean;
+	/** The sign-in form is still showing what happened as the person signed in (a provider now connected): it stays until they go on. */
+	readonly holding?: boolean;
+}
+
+/** Whether the sign-in form is showing a notice after signing in, which the guard must not navigate away from. */
+let holding = false;
+export function holdSignInPage(on: boolean): void {
+	holding = on;
+}
+export function signInPageHeld(): boolean {
+	return holding;
 }
 
 /** Decides one navigation. */
@@ -103,7 +100,7 @@ export function decide(config: ResolvedConfig, given: GuardInput): GuardDecision
 	const signedIn = input.session.status === 'signed-in';
 	const authPage = authPageAt(input.path, config.authBase);
 	if (authPage !== null) {
-		if (signedIn && SIGNED_IN_SKIPS.has(authPage) && input.held !== true) {
+		if (signedIn && SIGNED_IN_SKIPS.has(authPage) && input.holding !== true) {
 			return { type: 'redirect', to: sanitizeReturnTo(input.returnTo) ?? config.afterSignIn, reason: 'signed-in' };
 		}
 		return { type: 'allow' };

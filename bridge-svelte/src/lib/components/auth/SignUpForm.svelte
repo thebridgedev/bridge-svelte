@@ -9,6 +9,13 @@
   With `invite`, it signs the person up from an invite instead: the invite's
   link proved the address, so there is no email field and no email to wait
   for, and the person lands signed in, in the inviting workspace.
+
+  Login security: when the app's sign-up protection is on Block, the form
+  runs the invisible bot check (Cloudflare Turnstile) and sends its answer;
+  it also sends how long the form took and a field people never see, which
+  Bridge scores on its servers. A password from a public data leak is
+  refused, or on Warn taken once the person confirms. A meter shows how
+  strong the password is, never "strong" for one the app's rules refuse.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
@@ -16,7 +23,7 @@
   import { onDestroy, onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import type { SignInOptions } from '@nebulr-group/bridge-auth-core';
+  import { isBridgeError, type SignInOptions } from '@nebulr-group/bridge-auth-core';
   import { getBridge, peekConfig } from '../../core/client.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
@@ -27,6 +34,9 @@
   import Spinner from '../shared/Spinner.svelte';
   import PasswordInput from '../shared/PasswordInput.svelte';
   import SocialButtons from './SocialButtons.svelte';
+  import BotCheck from './BotCheck.svelte';
+  import PasswordStrength from '../shared/PasswordStrength.svelte';
+  import { botAnswer } from '../../core/login-security.js';
 
   /** Where a visit came from: campaign tags as strings, and the visitor's marketing consent (auth-core's sign-up attribution). */
   interface SignUpAttribution {
@@ -137,6 +147,16 @@
   let failure = $state<string | null>(null);
   let sentTo = $state<string | null>(null);
   let options = $state<SignInOptions | null>(null);
+  /** The bot check's answer, when the app asks for one; a new one is made after each sign-up sent. */
+  const bot = botAnswer();
+  let botRound = $state(0);
+  const botCheck = $derived(invite ? undefined : options?.botCheck);
+  /** A field people never see: a script that fills in every field fills it in too. */
+  let website = $state('');
+  let openedAt = Date.now();
+  /** The password Bridge said is in a public leak, on Warn: the person may use it anyway. */
+  let leakedFor = $state<string | null>(null);
+  const confirmLeak = $derived(leakedFor !== null && leakedFor === password);
 
   const minLength = $derived(options?.password?.minLength ?? 8);
   /** An app that offers sign-in links only takes no password: the person signs in by link. */
@@ -167,6 +187,7 @@
   }
 
   onMount(() => {
+    openedAt = Date.now();
     getBridge()
       .signIn.options()
       .then((found) => (options = found))
@@ -175,6 +196,10 @@
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
+    await send(false);
+  }
+
+  async function send(acceptLeaked: boolean) {
     if (loading) return;
     failure = null;
     if (passwordOffered && password.length < minLength) {
@@ -189,17 +214,24 @@
       ...(lastName.trim() ? { lastName: lastName.trim() } : {}),
     };
     try {
+      const leak = acceptLeaked ? { acceptLeaked: true } : {};
       if (invite) {
         // Signed in at once, in the inviting workspace: the invite's link proved the address.
-        await getBridge().invites.signUp({ token: invite, ...secret, ...names });
+        await getBridge().invites.signUp({ token: invite, ...secret, ...names, ...leak });
         if (onSignIn) onSignIn();
         else void goto(config?.afterSignIn ?? '/', { invalidateAll: true });
         return;
       }
+      // On Block, the bot check's answer (it waits a moment for one); without one Bridge refuses, and the form says so.
+      const turnstileToken = botCheck === undefined ? '' : await bot.take();
       await getBridge().signUp.start({
         email: address,
         ...secret,
         ...names,
+        ...leak,
+        ...(turnstileToken === '' ? {} : { turnstileToken }),
+        formMs: Date.now() - openedAt,
+        website,
         ...(workspace === 'ask' ? { workspace: workspaceName.trim() || true } : workspace ? { workspace: true } : {}),
         ...attributionOf(),
         ...planOf(),
@@ -209,10 +241,13 @@
       // The email link opens in a new tab, which finishes the sign-up there and tells this one.
       if (config !== null && config !== undefined && stopRelay === null) stopRelay = onSignUpFinished(config.issuer, afterConfirmed);
     } catch (error) {
+      leakedFor = isBridgeError(error, 'password-leaked') && error.leakedPasswords === 'warn' && !acceptLeaked ? password : null;
       failure = errorMessage(error, t, 'signup.error.create');
       onError?.(error);
     } finally {
       loading = false;
+      // Each answer of the bot check works once.
+      if (botCheck !== undefined) botRound += 1;
     }
   }
 </script>
@@ -237,6 +272,14 @@
   <AuthFormWrapper heading={heading === undefined ? t('signup.heading') : heading} {headingSnippet} logo={showLogo ? (options?.app.logo ?? null) : null} class={className} {style} data-bridge-sign-up-step="form" {...rest}>
     {#if failure}<Alert variant="error">{failure}</Alert>{/if}
     <form onsubmit={submit}>
+      {#if !invite}
+        <!-- People never see this field; Bridge treats a sign-up that fills it in as a script's. -->
+        <div class="bridge-hp-field" aria-hidden="true">
+          <!-- A name no browser fills in by itself, so a person's autofill never trips it. -->
+          <label for="signup-hp">Leave this empty</label>
+          <input id="signup-hp" name="bridge-hp" type="text" tabindex="-1" autocomplete="off" data-1p-ignore data-lpignore="true" bind:value={website} />
+        </div>
+      {/if}
       {#if showNameFields}
         <div class="bridge-form-row">
           <div class="bridge-form-group">
@@ -269,6 +312,12 @@
           showLabel={t('action.showPassword')}
           hideLabel={t('action.hidePassword')}
         />
+        <PasswordStrength {password} rules={options?.password} userInputs={[email, firstName, lastName].filter((each) => each.trim() !== '')} {t} />
+        {#if confirmLeak}
+          <button type="button" class="bridge-btn bridge-btn-secondary bridge-leaked-confirm" data-bridge-leaked-use-anyway onclick={() => void send(true)} disabled={loading}>
+            {t('password.leaked.useAnyway')}
+          </button>
+        {/if}
       </div>
       {/if}
       {#if workspace === 'ask' && !invite}
@@ -276,6 +325,9 @@
           <label for="signup-workspace">{t('field.workspaceName')}</label>
           <input id="signup-workspace" type="text" autocomplete="organization" bind:value={workspaceName} disabled={loading} />
         </div>
+      {/if}
+      {#if botCheck !== undefined}
+        <BotCheck siteKey={botCheck.siteKey} answer={bot} round={botRound} />
       {/if}
       <button type="submit" class="bridge-btn bridge-btn-primary" disabled={loading || (!invite && !email.trim()) || (passwordOffered && !password)}>
         {#if loading}<Spinner size={16} />{:else}{t('signup.submit')}{/if}

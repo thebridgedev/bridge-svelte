@@ -87,7 +87,26 @@ export type PluginMessageKey =
 	| 'recheck.noMethods'
 	| 'recheck.wrongPassword'
 	| 'recheck.confirmed'
-	| 'billing.error.checkout';
+	| 'billing.error.checkout'
+	| 'login.error.suspended'
+	| 'login.suspended.contact'
+	| 'signup.error.domainBlocked'
+	| 'signup.error.permanentEmail'
+	| 'signup.error.botCheck'
+	| 'password.leaked.warn'
+	| 'password.leaked.refuse'
+	| 'password.leaked.useAnyway'
+	| 'login.leaked.heading'
+	| 'login.leaked.warn'
+	| 'login.leaked.refuse'
+	| 'login.leaked.change'
+	| 'login.leaked.notNow'
+	| 'login.leaked.sent'
+	| 'password.strength.label'
+	| 'password.strength.weak'
+	| 'password.strength.fair'
+	| 'password.strength.strong'
+	| 'signup.alreadyHadAccount';
 
 export type PluginMessages = Record<PluginMessageKey, string>;
 
@@ -174,6 +193,25 @@ const en: PluginMessages = {
 	'secondStep.backupHeading': "Save your backup code",
 	'secondStep.backupIntro': "Keep it somewhere safe. It is shown only once, and you need it if you lose your phone.",
 	'secondStep.continue': "Continue",
+	'login.error.suspended': "Your account has been suspended.",
+	'login.suspended.contact': "Contact support:",
+	'signup.error.domainBlocked': "Sign-ups from this email domain aren't allowed.",
+	'signup.error.permanentEmail': "Please use a permanent email address.",
+	'signup.error.botCheck': "We could not check that you are a person. Please try again.",
+	'password.leaked.warn': "This password has appeared in a public data leak. Choose another, or use it anyway.",
+	'password.leaked.refuse': "This password has appeared in a public data leak. Choose another.",
+	'password.leaked.useAnyway': "Use it anyway",
+	'login.leaked.heading': "Change your password",
+	'login.leaked.warn': "The password you signed in with has appeared in a public data leak. Change it now to keep your account safe.",
+	'login.leaked.refuse': "The password you signed in with has appeared in a public data leak. Set a new one to sign in.",
+	'login.leaked.change': "Email me a link to set a new password",
+	'login.leaked.notNow': "Not now",
+	'login.leaked.sent': "A link to set a new password is on its way to {email}.",
+	'password.strength.label': "Password strength: {strength}",
+	'password.strength.weak': "weak",
+	'password.strength.fair': "fair",
+	'password.strength.strong': "strong",
+	'signup.alreadyHadAccount': "You already have an account, so we signed you in.",
 };
 
 const sv: PluginMessages = {
@@ -259,6 +297,25 @@ const sv: PluginMessages = {
 	'secondStep.backupHeading': "Spara din reservkod",
 	'secondStep.backupIntro': "Förvara den säkert. Den visas bara en gång, och du behöver den om du tappar telefonen.",
 	'secondStep.continue': "Fortsätt",
+	'login.error.suspended': "Ditt konto har stängts av.",
+	'login.suspended.contact': "Kontakta supporten:",
+	'signup.error.domainBlocked': "Registreringar från den här e-postdomänen är inte tillåtna.",
+	'signup.error.permanentEmail': "Använd en permanent e-postadress.",
+	'signup.error.botCheck': "Vi kunde inte kontrollera att du är en människa. Försök igen.",
+	'password.leaked.warn': "Det här lösenordet finns i en offentlig dataläcka. Välj ett annat, eller använd det ändå.",
+	'password.leaked.refuse': "Det här lösenordet finns i en offentlig dataläcka. Välj ett annat.",
+	'password.leaked.useAnyway': "Använd det ändå",
+	'login.leaked.heading': "Byt lösenord",
+	'login.leaked.warn': "Lösenordet du loggade in med finns i en offentlig dataläcka. Byt det nu för att skydda ditt konto.",
+	'login.leaked.refuse': "Lösenordet du loggade in med finns i en offentlig dataläcka. Välj ett nytt för att logga in.",
+	'login.leaked.change': "Mejla mig en länk för att välja ett nytt lösenord",
+	'login.leaked.notNow': "Inte nu",
+	'login.leaked.sent': "En länk för att välja ett nytt lösenord är på väg till {email}.",
+	'password.strength.label': "Lösenordets styrka: {strength}",
+	'password.strength.weak': "svagt",
+	'password.strength.fair': "medel",
+	'password.strength.strong': "starkt",
+	'signup.alreadyHadAccount': "Du har redan ett konto, så vi loggade in dig.",
 };
 
 const da: PluginMessages = {
@@ -344,6 +401,25 @@ const da: PluginMessages = {
 	'secondStep.backupHeading': "Gem din backupkode",
 	'secondStep.backupIntro': "Opbevar den sikkert. Den vises kun én gang, og du skal bruge den, hvis du mister din telefon.",
 	'secondStep.continue': "Fortsæt",
+	'login.error.suspended': "Din konto er blevet suspenderet.",
+	'login.suspended.contact': "Kontakt support:",
+	'signup.error.domainBlocked': "Tilmeldinger fra dette e-maildomæne er ikke tilladt.",
+	'signup.error.permanentEmail': "Brug en permanent e-mailadresse.",
+	'signup.error.botCheck': "Vi kunne ikke tjekke, at du er et menneske. Prøv igen.",
+	'password.leaked.warn': "Denne adgangskode findes i et offentligt datalæk. Vælg en anden, eller brug den alligevel.",
+	'password.leaked.refuse': "Denne adgangskode findes i et offentligt datalæk. Vælg en anden.",
+	'password.leaked.useAnyway': "Brug den alligevel",
+	'login.leaked.heading': "Skift din adgangskode",
+	'login.leaked.warn': "Den adgangskode, du loggede ind med, findes i et offentligt datalæk. Skift den nu for at beskytte din konto.",
+	'login.leaked.refuse': "Den adgangskode, du loggede ind med, findes i et offentligt datalæk. Vælg en ny for at logge ind.",
+	'login.leaked.change': "Send mig et link til at vælge en ny adgangskode",
+	'login.leaked.notNow': "Ikke nu",
+	'login.leaked.sent': "Et link til at vælge en ny adgangskode er på vej til {email}.",
+	'password.strength.label': "Adgangskodens styrke: {strength}",
+	'password.strength.weak': "svag",
+	'password.strength.fair': "middel",
+	'password.strength.strong': "stærk",
+	'signup.alreadyHadAccount': "Du har allerede en konto, så vi har logget dig ind.",
 };
 
 const nb: PluginMessages = {
@@ -429,6 +505,25 @@ const nb: PluginMessages = {
 	'secondStep.backupHeading': "Lagre reservekoden",
 	'secondStep.backupIntro': "Oppbevar den trygt. Den vises bare én gang, og du trenger den hvis du mister telefonen.",
 	'secondStep.continue': "Fortsett",
+	'login.error.suspended': "Kontoen din er suspendert.",
+	'login.suspended.contact': "Kontakt kundestøtte:",
+	'signup.error.domainBlocked': "Registreringer fra dette e-postdomenet er ikke tillatt.",
+	'signup.error.permanentEmail': "Bruk en permanent e-postadresse.",
+	'signup.error.botCheck': "Vi kunne ikke sjekke at du er et menneske. Prøv igjen.",
+	'password.leaked.warn': "Dette passordet finnes i en offentlig datalekkasje. Velg et annet, eller bruk det likevel.",
+	'password.leaked.refuse': "Dette passordet finnes i en offentlig datalekkasje. Velg et annet.",
+	'password.leaked.useAnyway': "Bruk det likevel",
+	'login.leaked.heading': "Bytt passord",
+	'login.leaked.warn': "Passordet du logget inn med finnes i en offentlig datalekkasje. Bytt det nå for å beskytte kontoen din.",
+	'login.leaked.refuse': "Passordet du logget inn med finnes i en offentlig datalekkasje. Velg et nytt for å logge inn.",
+	'login.leaked.change': "Send meg en lenke for å velge et nytt passord",
+	'login.leaked.notNow': "Ikke nå",
+	'login.leaked.sent': "En lenke for å velge et nytt passord er på vei til {email}.",
+	'password.strength.label': "Passordstyrke: {strength}",
+	'password.strength.weak': "svakt",
+	'password.strength.fair': "middels",
+	'password.strength.strong': "sterkt",
+	'signup.alreadyHadAccount': "Du har allerede en konto, så vi logget deg inn.",
 };
 
 const nl: PluginMessages = {
@@ -514,6 +609,25 @@ const nl: PluginMessages = {
 	'secondStep.backupHeading': "Bewaar je back-upcode",
 	'secondStep.backupIntro': "Bewaar hem op een veilige plek. Hij wordt maar één keer getoond en je hebt hem nodig als je je telefoon kwijtraakt.",
 	'secondStep.continue': "Doorgaan",
+	'login.error.suspended': "Je account is geschorst.",
+	'login.suspended.contact': "Neem contact op met support:",
+	'signup.error.domainBlocked': "Aanmelden met dit e-maildomein is niet toegestaan.",
+	'signup.error.permanentEmail': "Gebruik een vast e-mailadres.",
+	'signup.error.botCheck': "We konden niet controleren of je een mens bent. Probeer het opnieuw.",
+	'password.leaked.warn': "Dit wachtwoord staat in een openbaar datalek. Kies een ander, of gebruik het toch.",
+	'password.leaked.refuse': "Dit wachtwoord staat in een openbaar datalek. Kies een ander.",
+	'password.leaked.useAnyway': "Toch gebruiken",
+	'login.leaked.heading': "Wijzig je wachtwoord",
+	'login.leaked.warn': "Het wachtwoord waarmee je bent ingelogd staat in een openbaar datalek. Wijzig het nu om je account te beschermen.",
+	'login.leaked.refuse': "Het wachtwoord waarmee je bent ingelogd staat in een openbaar datalek. Kies een nieuw om in te loggen.",
+	'login.leaked.change': "Mail me een link om een nieuw wachtwoord te kiezen",
+	'login.leaked.notNow': "Niet nu",
+	'login.leaked.sent': "Een link om een nieuw wachtwoord te kiezen is onderweg naar {email}.",
+	'password.strength.label': "Sterkte van het wachtwoord: {strength}",
+	'password.strength.weak': "zwak",
+	'password.strength.fair': "redelijk",
+	'password.strength.strong': "sterk",
+	'signup.alreadyHadAccount': "Je hebt al een account, dus we hebben je ingelogd.",
 };
 
 const de: PluginMessages = {
@@ -599,6 +713,25 @@ const de: PluginMessages = {
 	'secondStep.backupHeading': "Backup-Code speichern",
 	'secondStep.backupIntro': "Bewahre ihn sicher auf. Er wird nur einmal angezeigt, und du brauchst ihn, wenn du dein Telefon verlierst.",
 	'secondStep.continue': "Weiter",
+	'login.error.suspended': "Dein Konto wurde gesperrt.",
+	'login.suspended.contact': "Kontaktiere den Support:",
+	'signup.error.domainBlocked': "Registrierungen mit dieser E-Mail-Domain sind nicht erlaubt.",
+	'signup.error.permanentEmail': "Bitte verwende eine dauerhafte E-Mail-Adresse.",
+	'signup.error.botCheck': "Wir konnten nicht prüfen, ob du ein Mensch bist. Bitte versuche es erneut.",
+	'password.leaked.warn': "Dieses Passwort ist in einem öffentlichen Datenleck aufgetaucht. Wähle ein anderes oder verwende es trotzdem.",
+	'password.leaked.refuse': "Dieses Passwort ist in einem öffentlichen Datenleck aufgetaucht. Wähle ein anderes.",
+	'password.leaked.useAnyway': "Trotzdem verwenden",
+	'login.leaked.heading': "Ändere dein Passwort",
+	'login.leaked.warn': "Das Passwort, mit dem du dich angemeldet hast, ist in einem öffentlichen Datenleck aufgetaucht. Ändere es jetzt, um dein Konto zu schützen.",
+	'login.leaked.refuse': "Das Passwort, mit dem du dich angemeldet hast, ist in einem öffentlichen Datenleck aufgetaucht. Lege ein neues fest, um dich anzumelden.",
+	'login.leaked.change': "Schick mir einen Link für ein neues Passwort",
+	'login.leaked.notNow': "Nicht jetzt",
+	'login.leaked.sent': "Ein Link für ein neues Passwort ist auf dem Weg zu {email}.",
+	'password.strength.label': "Passwortstärke: {strength}",
+	'password.strength.weak': "schwach",
+	'password.strength.fair': "mittel",
+	'password.strength.strong': "stark",
+	'signup.alreadyHadAccount': "Du hast bereits ein Konto, deshalb haben wir dich angemeldet.",
 };
 
 const fi: PluginMessages = {
@@ -684,6 +817,25 @@ const fi: PluginMessages = {
 	'secondStep.backupHeading': "Tallenna varakoodi",
 	'secondStep.backupIntro': "Säilytä se turvassa. Se näytetään vain kerran, ja tarvitset sitä, jos kadotat puhelimesi.",
 	'secondStep.continue': "Jatka",
+	'login.error.suspended': "Tilisi on jäädytetty.",
+	'login.suspended.contact': "Ota yhteyttä tukeen:",
+	'signup.error.domainBlocked': "Rekisteröityminen tältä sähköpostiverkkotunnukselta ei ole sallittua.",
+	'signup.error.permanentEmail': "Käytä pysyvää sähköpostiosoitetta.",
+	'signup.error.botCheck': "Emme voineet tarkistaa, että olet ihminen. Yritä uudelleen.",
+	'password.leaked.warn': "Tämä salasana on löytynyt julkisesta tietovuodosta. Valitse toinen tai käytä sitä silti.",
+	'password.leaked.refuse': "Tämä salasana on löytynyt julkisesta tietovuodosta. Valitse toinen.",
+	'password.leaked.useAnyway': "Käytä silti",
+	'login.leaked.heading': "Vaihda salasanasi",
+	'login.leaked.warn': "Salasana, jolla kirjauduit, on löytynyt julkisesta tietovuodosta. Vaihda se nyt suojataksesi tilisi.",
+	'login.leaked.refuse': "Salasana, jolla kirjauduit, on löytynyt julkisesta tietovuodosta. Valitse uusi kirjautuaksesi.",
+	'login.leaked.change': "Lähetä minulle linkki uuden salasanan valitsemiseen",
+	'login.leaked.notNow': "Ei nyt",
+	'login.leaked.sent': "Linkki uuden salasanan valitsemiseen on matkalla osoitteeseen {email}.",
+	'password.strength.label': "Salasanan vahvuus: {strength}",
+	'password.strength.weak': "heikko",
+	'password.strength.fair': "kohtalainen",
+	'password.strength.strong': "vahva",
+	'signup.alreadyHadAccount': "Sinulla on jo tili, joten kirjasimme sinut sisään.",
 };
 
 const fr: PluginMessages = {
@@ -769,6 +921,25 @@ const fr: PluginMessages = {
 	'secondStep.backupHeading': "Conservez votre code de secours",
 	'secondStep.backupIntro': "Conservez-le en lieu sûr. Il n'est affiché qu'une fois, et vous en aurez besoin si vous perdez votre téléphone.",
 	'secondStep.continue': "Continuer",
+	'login.error.suspended': "Ton compte a été suspendu.",
+	'login.suspended.contact': "Contacte le support :",
+	'signup.error.domainBlocked': "Les inscriptions avec ce domaine d'e-mail ne sont pas autorisées.",
+	'signup.error.permanentEmail': "Utilise une adresse e-mail permanente.",
+	'signup.error.botCheck': "Nous n'avons pas pu vérifier que tu es une personne. Réessaie.",
+	'password.leaked.warn': "Ce mot de passe figure dans une fuite de données publique. Choisis-en un autre, ou utilise-le quand même.",
+	'password.leaked.refuse': "Ce mot de passe figure dans une fuite de données publique. Choisis-en un autre.",
+	'password.leaked.useAnyway': "L'utiliser quand même",
+	'login.leaked.heading': "Change ton mot de passe",
+	'login.leaked.warn': "Le mot de passe avec lequel tu t'es connecté figure dans une fuite de données publique. Change-le maintenant pour protéger ton compte.",
+	'login.leaked.refuse': "Le mot de passe avec lequel tu t'es connecté figure dans une fuite de données publique. Choisis-en un nouveau pour te connecter.",
+	'login.leaked.change': "Envoie-moi un lien pour choisir un nouveau mot de passe",
+	'login.leaked.notNow': "Pas maintenant",
+	'login.leaked.sent': "Un lien pour choisir un nouveau mot de passe est en route vers {email}.",
+	'password.strength.label': "Force du mot de passe : {strength}",
+	'password.strength.weak': "faible",
+	'password.strength.fair': "moyen",
+	'password.strength.strong': "fort",
+	'signup.alreadyHadAccount': "Tu as déjà un compte, nous t'avons donc connecté.",
 };
 
 const es: PluginMessages = {
@@ -854,6 +1025,25 @@ const es: PluginMessages = {
 	'secondStep.backupHeading': "Guarda tu código de respaldo",
 	'secondStep.backupIntro': "Guárdalo en un lugar seguro. Solo se muestra una vez y lo necesitarás si pierdes el teléfono.",
 	'secondStep.continue': "Continuar",
+	'login.error.suspended': "Tu cuenta ha sido suspendida.",
+	'login.suspended.contact': "Contacta con soporte:",
+	'signup.error.domainBlocked': "No se permiten registros con este dominio de correo.",
+	'signup.error.permanentEmail': "Usa una dirección de correo permanente.",
+	'signup.error.botCheck': "No pudimos comprobar que eres una persona. Inténtalo de nuevo.",
+	'password.leaked.warn': "Esta contraseña aparece en una filtración de datos pública. Elige otra o úsala igualmente.",
+	'password.leaked.refuse': "Esta contraseña aparece en una filtración de datos pública. Elige otra.",
+	'password.leaked.useAnyway': "Usarla igualmente",
+	'login.leaked.heading': "Cambia tu contraseña",
+	'login.leaked.warn': "La contraseña con la que iniciaste sesión aparece en una filtración de datos pública. Cámbiala ahora para proteger tu cuenta.",
+	'login.leaked.refuse': "La contraseña con la que iniciaste sesión aparece en una filtración de datos pública. Elige una nueva para iniciar sesión.",
+	'login.leaked.change': "Envíame un enlace para elegir una contraseña nueva",
+	'login.leaked.notNow': "Ahora no",
+	'login.leaked.sent': "Un enlace para elegir una contraseña nueva va de camino a {email}.",
+	'password.strength.label': "Seguridad de la contraseña: {strength}",
+	'password.strength.weak': "débil",
+	'password.strength.fair': "aceptable",
+	'password.strength.strong': "fuerte",
+	'signup.alreadyHadAccount': "Ya tienes una cuenta, así que hemos iniciado tu sesión.",
 };
 
 const it: PluginMessages = {
@@ -939,6 +1129,25 @@ const it: PluginMessages = {
 	'secondStep.backupHeading': "Salva il codice di backup",
 	'secondStep.backupIntro': "Conservalo al sicuro. Viene mostrato una sola volta e ti servirà se perdi il telefono.",
 	'secondStep.continue': "Continua",
+	'login.error.suspended': "Il tuo account è stato sospeso.",
+	'login.suspended.contact': "Contatta l'assistenza:",
+	'signup.error.domainBlocked': "Le registrazioni da questo dominio email non sono consentite.",
+	'signup.error.permanentEmail': "Usa un indirizzo email permanente.",
+	'signup.error.botCheck': "Non siamo riusciti a verificare che tu sia una persona. Riprova.",
+	'password.leaked.warn': "Questa password compare in una fuga di dati pubblica. Scegline un'altra o usala comunque.",
+	'password.leaked.refuse': "Questa password compare in una fuga di dati pubblica. Scegline un'altra.",
+	'password.leaked.useAnyway': "Usala comunque",
+	'login.leaked.heading': "Cambia la password",
+	'login.leaked.warn': "La password con cui hai effettuato l'accesso compare in una fuga di dati pubblica. Cambiala ora per proteggere il tuo account.",
+	'login.leaked.refuse': "La password con cui hai effettuato l'accesso compare in una fuga di dati pubblica. Impostane una nuova per accedere.",
+	'login.leaked.change': "Inviami un link per scegliere una nuova password",
+	'login.leaked.notNow': "Non ora",
+	'login.leaked.sent': "Un link per scegliere una nuova password è in arrivo a {email}.",
+	'password.strength.label': "Sicurezza della password: {strength}",
+	'password.strength.weak': "debole",
+	'password.strength.fair': "discreta",
+	'password.strength.strong': "forte",
+	'signup.alreadyHadAccount': "Hai già un account, quindi ti abbiamo fatto accedere.",
 };
 
 const pt: PluginMessages = {
@@ -1024,6 +1233,25 @@ const pt: PluginMessages = {
 	'secondStep.backupHeading': "Guarde o seu código de recuperação",
 	'secondStep.backupIntro': "Guarde-o num local seguro. Só é mostrado uma vez e vai precisar dele se perder o telemóvel.",
 	'secondStep.continue': "Continuar",
+	'login.error.suspended': "A tua conta foi suspensa.",
+	'login.suspended.contact': "Contacta o suporte:",
+	'signup.error.domainBlocked': "Não são permitidos registos com este domínio de email.",
+	'signup.error.permanentEmail': "Usa um endereço de email permanente.",
+	'signup.error.botCheck': "Não conseguimos verificar que és uma pessoa. Tenta novamente.",
+	'password.leaked.warn': "Esta palavra-passe aparece numa fuga de dados pública. Escolhe outra ou usa-a mesmo assim.",
+	'password.leaked.refuse': "Esta palavra-passe aparece numa fuga de dados pública. Escolhe outra.",
+	'password.leaked.useAnyway': "Usar mesmo assim",
+	'login.leaked.heading': "Muda a tua palavra-passe",
+	'login.leaked.warn': "A palavra-passe com que iniciaste sessão aparece numa fuga de dados pública. Muda-a agora para proteger a tua conta.",
+	'login.leaked.refuse': "A palavra-passe com que iniciaste sessão aparece numa fuga de dados pública. Define uma nova para iniciar sessão.",
+	'login.leaked.change': "Envia-me um link para escolher uma nova palavra-passe",
+	'login.leaked.notNow': "Agora não",
+	'login.leaked.sent': "Um link para escolher uma nova palavra-passe está a caminho de {email}.",
+	'password.strength.label': "Força da palavra-passe: {strength}",
+	'password.strength.weak': "fraca",
+	'password.strength.fair': "razoável",
+	'password.strength.strong': "forte",
+	'signup.alreadyHadAccount': "Já tens uma conta, por isso iniciámos a tua sessão.",
 };
 
 const pl: PluginMessages = {
@@ -1109,6 +1337,25 @@ const pl: PluginMessages = {
 	'secondStep.backupHeading': "Zapisz kod zapasowy",
 	'secondStep.backupIntro': "Przechowuj go w bezpiecznym miejscu. Jest pokazywany tylko raz i będzie potrzebny, jeśli zgubisz telefon.",
 	'secondStep.continue': "Dalej",
+	'login.error.suspended': "Twoje konto zostało zawieszone.",
+	'login.suspended.contact': "Skontaktuj się z pomocą:",
+	'signup.error.domainBlocked': "Rejestracje z tej domeny e-mail są niedozwolone.",
+	'signup.error.permanentEmail': "Użyj stałego adresu e-mail.",
+	'signup.error.botCheck': "Nie udało się sprawdzić, czy jesteś człowiekiem. Spróbuj ponownie.",
+	'password.leaked.warn': "To hasło pojawiło się w publicznym wycieku danych. Wybierz inne lub użyj go mimo to.",
+	'password.leaked.refuse': "To hasło pojawiło się w publicznym wycieku danych. Wybierz inne.",
+	'password.leaked.useAnyway': "Użyj mimo to",
+	'login.leaked.heading': "Zmień hasło",
+	'login.leaked.warn': "Hasło, którym się zalogowałeś, pojawiło się w publicznym wycieku danych. Zmień je teraz, aby chronić konto.",
+	'login.leaked.refuse': "Hasło, którym się zalogowałeś, pojawiło się w publicznym wycieku danych. Ustaw nowe, aby się zalogować.",
+	'login.leaked.change': "Wyślij mi link do ustawienia nowego hasła",
+	'login.leaked.notNow': "Nie teraz",
+	'login.leaked.sent': "Link do ustawienia nowego hasła jest w drodze na {email}.",
+	'password.strength.label': "Siła hasła: {strength}",
+	'password.strength.weak': "słabe",
+	'password.strength.fair': "średnie",
+	'password.strength.strong': "silne",
+	'signup.alreadyHadAccount': "Masz już konto, więc zalogowaliśmy cię.",
 };
 
 /** The plugin's copy by primary language subtag. */

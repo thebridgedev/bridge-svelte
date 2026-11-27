@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Login security on the sign-in screens** (needs `@nebulr-group/bridge-auth-core` with the login-security kinds; not yet released).
+  - A suspended person sees "Your account has been suspended" with the app's own support contact (`supportContact` from the sign-in options: a mailto link for an email address, a link for an https address).
+  - A sign-up from a blocked email domain is refused on the first screen ("Sign-ups from this email domain aren't allowed"); a throwaway address on Block gets "Please use a permanent email address".
+  - The invisible bot check: when the sign-in options carry `botCheck` (sign-up protection on Block), `SignUpForm` loads Cloudflare Turnstile from challenges.cloudflare.com, only then, and sends its answer with the sign-up. Never on an invite, social or company sign-in. The form also sends how long it took and a hidden field people never see.
+  - Leaked passwords: on Warn, sign-up, the sign-up link's password step and the reset page offer "Use it anyway"; after signing in with a leaked password a change step offers the link to set a new one, with "Not now". On Refuse the sign-in form asks for a new password through that link before anyone is signed in.
+  - A password strength meter (weak / fair / strong) on every screen that sets a password, never "strong" for a password the app's rules refuse. The estimator (`@zxcvbn-ts`) loads the first time a password is typed.
+  - A repeat sign-up at the app's workspace limit: the sign-up link's page says "You already have an account, so we signed you in", then the usual workspace pick.
+  - All new copy in the 12 languages.
+
 ## [1.0.0-alpha.19] - Unreleased
 
 Needs `@nebulr-group/bridge-auth-core` 1.0.0-alpha.16.

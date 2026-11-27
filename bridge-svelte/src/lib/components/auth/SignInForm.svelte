@@ -15,6 +15,11 @@
   the code texted to the person's phone (or a number to set up first, then
   shows the backup code once). Other methods (email codes, company login)
   arrive as new sign-in steps and join the same way.
+
+  Login security: a suspended person is told so, with the app's support
+  contact; a password found in a public data leak is flagged after signing
+  in (on Warn, with "Not now"), or must be replaced before signing in (on
+  Refuse), through the emailed link to set a new one.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
@@ -37,6 +42,8 @@
   import SocialButtons from './SocialButtons.svelte';
   import SecondStepForm from './SecondStepForm.svelte';
   import CheckYourEmail from './CheckYourEmail.svelte';
+  import LeakedPasswordStep from './LeakedPasswordStep.svelte';
+  import { supportLink } from '../../core/login-security.js';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** Heading on the credentials step. @default the shared "Log in to your account" copy; `null` for none */
@@ -86,6 +93,10 @@
   let password = $state('');
   let loading = $state(false);
   let failure = $state<string | null>(null);
+  /** The kind of the last refusal: a suspended person also sees the app's support contact. */
+  let failureKind = $state<string | null>(null);
+  /** The password used is in a public data leak: on Warn signed in, then `then` goes on; on Refuse not signed in. */
+  let leaked = $state<{ mode: 'warn' | 'refuse'; then: (() => void) | null } | null>(null);
   let notice = $state<string | null>(null);
   let linkSent = $state(false);
   let options = $state<SignInOptions | null>(null);
@@ -96,6 +107,7 @@
   /** A social sign-up whose address the provider did not confirm: the address Bridge emailed its own link to. */
   let checkEmail = $state<string | null>(null);
   const social = $derived(options?.social ?? []);
+  const support = $derived(failureKind === 'suspended' ? supportLink(options?.supportContact) : null);
 
   const signUpShown = $derived(showSignupLink ?? options?.signUp ?? true);
   const passwordOffered = $derived(options === null || options.methods.includes('password'));
@@ -193,11 +205,30 @@
   }
 
   function fail(error: unknown) {
-    failure = errorMessage(error, t, 'login.error.invalidCredentials');
+    failureKind = isBridgeError(error) ? error.kind : null;
     onError?.(error);
+    // The password was right but is in a public leak, on Refuse: no session; a new password is the way on.
+    if (isBridgeError(error, 'password-change-required') && email.trim() !== '') {
+      failure = null;
+      leaked = { mode: 'refuse', then: null };
+      return;
+    }
+    failure = errorMessage(error, t, 'login.error.invalidCredentials');
   }
 
   async function follow(step: SignInStep) {
+    // Signed in with a password from a public leak, on Warn: offer to change it before going on.
+    if (step.done && step.passwordLeaked === true && leaked === null) {
+      second = null;
+      choice = null;
+      leaked = { mode: 'warn', then: () => void followAfterLeak(step) };
+      return;
+    }
+    await followAfterLeak(step);
+  }
+
+  async function followAfterLeak(step: SignInStep) {
+    leaked = null;
     if (handOff(step)) {
       settled = true;
     } else if (step.done) {
@@ -219,6 +250,7 @@
     event.preventDefault();
     if (loading) return;
     failure = null;
+    failureKind = null;
     notice = null;
     loading = true;
     try {
@@ -265,6 +297,8 @@
       <span>{t('login.submitting')}</span>
     </div>
   </AuthFormWrapper>
+{:else if leaked !== null}
+  <LeakedPasswordStep email={email.trim()} mode={leaked.mode} onNotNow={() => leaked?.then?.()} class={className} {style} {messages} />
 {:else if checkEmail !== null}
   <CheckYourEmail email={checkEmail} {onSignIn} class={className} {style} {messages} />
 {:else if second}
@@ -284,7 +318,14 @@
     {...rest}
   >
     {#if notice}<Alert variant="info">{notice}</Alert>{/if}
-    {#if failure}<Alert variant="error">{failure}</Alert>{/if}
+    {#if failure}
+      <Alert variant="error" data-error-kind={failureKind}>
+        {failure}
+        {#if support}
+          <span class="bridge-support-contact" data-bridge-support-contact>{t('login.suspended.contact')} <a href={support.href} class="bridge-link" rel="noopener noreferrer" target={support.href.startsWith('mailto:') ? undefined : '_blank'}>{support.label}</a></span>
+        {/if}
+      </Alert>
+    {/if}
     {#if setupLinkSent}
       <Alert variant="info">{t('passkey.setupLinkSent')}</Alert>
     {:else if linkSent}

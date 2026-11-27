@@ -91,6 +91,19 @@ export function errorMessage(error: unknown, t: BridgeTranslator, fallback: Brid
 			if (minutes === null) return t('error.rateLimited');
 			return minutes === 1 ? t('login.error.tooManyAttemptsOneMinute') : t('login.error.tooManyAttempts', { minutes });
 		}
+		// Login security: who suspended and why is only for the app's admins; the screen shows the support contact.
+		case 'suspended':
+			return t('login.error.suspended');
+		case 'domain-blocked':
+			return t('signup.error.domainBlocked');
+		case 'permanent-email-required':
+			return t('signup.error.permanentEmail');
+		case 'bot-check-failed':
+			return t('signup.error.botCheck');
+		case 'password-leaked':
+			return t(e.leakedPasswords === 'warn' ? 'password.leaked.warn' : 'password.leaked.refuse');
+		case 'password-change-required':
+			return t('login.leaked.refuse');
 		case 'signed-out':
 		case 'reauthenticate':
 			return t('session.ended');

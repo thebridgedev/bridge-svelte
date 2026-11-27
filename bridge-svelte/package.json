@@ -60,7 +60,9 @@
 		"@sveltejs/kit": "^2.0.0 || ^3.0.0"
 	},
 	"dependencies": {
-		"@nebulr-group/bridge-auth-core": "1.0.0-alpha.16"
+		"@nebulr-group/bridge-auth-core": "1.0.0-alpha.16",
+		"@zxcvbn-ts/core": "3.0.4",
+		"@zxcvbn-ts/language-common": "3.0.4"
 	},
 	"devDependencies": {
 		"@sveltejs/kit": "^2.16.0",

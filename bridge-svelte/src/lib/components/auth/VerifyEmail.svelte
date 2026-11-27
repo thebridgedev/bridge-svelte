@@ -8,13 +8,18 @@
 
   Every wait has a bound: finishing fails with an error after a while, and
   once signed in the page goes on, or offers a link when it cannot.
+
+  Signing up again with an address that already has an account, at the
+  app's limit of workspaces one person can create, signs the person in: the
+  page says "You already have an account, so we signed you in", then the
+  usual workspace pick.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { isBridgeError, type SignInStep, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
+  import { isBridgeError, type SignInOptions, type SignInStep, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
   import { getBridge, peekConfig } from '../../core/client.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
@@ -23,6 +28,7 @@
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
   import PasswordInput from '../shared/PasswordInput.svelte';
+  import PasswordStrength from '../shared/PasswordStrength.svelte';
   import WorkspaceChooser from './WorkspaceChooser.svelte';
   import SecondStepForm from './SecondStepForm.svelte';
   import { takeEmailLink } from './email-link.js';
@@ -50,8 +56,12 @@
     | { step: 'workspace'; workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> }
     | { step: 'second'; second: Extract<SignInStep, { next: 'second_step' } | { next: 'second_step_setup' }> }
     | { step: 'failed'; message: string; kind: string | null }
-    | { step: 'password'; token: string; error: string | null; sending: boolean };
+    | { step: 'already'; then: () => void }
+    | { step: 'password'; token: string; error: string | null; sending: boolean; leaked?: string };
   let view = $state<State>({ step: 'working' });
+  /** A repeat sign-up at the workspace limit signed the person in (no workspace was made). */
+  let already = $state(false);
+  let rules = $state<SignInOptions['password']>(undefined);
 
   async function finish() {
     if (onSignIn) {
@@ -65,22 +75,31 @@
   }
 
   /** auth-core's finish, with the password chosen at the link (from the release that takes it). */
-  const finishSignUp = (link: string, password?: string): Promise<SignInStep> =>
-    (getBridge().signUp.finish as (token: string, password?: string) => Promise<SignInStep>)(link, password);
+  const finishSignUp = (link: string, password?: string, acceptLeaked = false): Promise<SignInStep> =>
+    (getBridge().signUp.finish as (token: string, password?: string, options?: { acceptLeaked?: boolean }) => Promise<SignInStep>)(link, password, acceptLeaked ? { acceptLeaked: true } : {});
 
   /** A sign-up started with no password: the person chooses it here, and the link is finished with it. */
   let chosen = $state('');
 
   async function choosePassword(event: SubmitEvent) {
     event.preventDefault();
+    await sendPassword(false);
+  }
+
+  async function sendPassword(acceptLeaked: boolean) {
     if (view.step !== 'password') return;
     const link = view.token;
     view = { ...view, sending: true, error: null };
     try {
-      await follow(await bounded(finishSignUp(link, chosen)));
+      await follow(await bounded(finishSignUp(link, chosen, acceptLeaked)));
     } catch (error) {
       if (isBridgeError(error) && (error.code === 'password_rules' || error.code === 'password_required')) {
         view = { step: 'password', token: link, sending: false, error: errorMessage(error, t, 'password.tooShort') };
+        return;
+      }
+      // A password from a public leak: choose another, or on Warn use it anyway.
+      if (isBridgeError(error, 'password-leaked')) {
+        view = { step: 'password', token: link, sending: false, error: errorMessage(error, t), ...(error.leakedPasswords === 'warn' && !acceptLeaked ? { leaked: chosen } : {}) };
         return;
       }
       fail(error);
@@ -99,6 +118,13 @@
 
   async function follow(step: SignInStep) {
     if (step.done) announce();
+    if (!step.done && step.next === 'workspace' && step.alreadyHadAccount === true) already = true;
+    // Signed in instead of a new workspace: say so before going on.
+    if (step.done && step.alreadyHadAccount === true && !already) {
+      already = true;
+      view = { step: 'already', then: () => void follow(step) };
+      return;
+    }
     if (handOff(step)) view = { step: 'working' };
     else if (step.done) await finish();
     else if (step.next === 'workspace') view = { step: 'workspace', workspaces: step.workspaces, choose: step.choose };
@@ -107,6 +133,10 @@
   }
 
   onMount(() => {
+    getBridge()
+      .signIn.options()
+      .then((found) => (rules = found.password))
+      .catch(() => undefined);
     // The token given, or the page's own address.
     const found = token ?? takeEmailLink('verify-email');
     if (found === null) {
@@ -153,6 +183,11 @@
       <a href={view.to} class="bridge-link">{t('invite.continue')}</a>
     </div>
   </AuthFormWrapper>
+{:else if view.step === 'already'}
+  <AuthFormWrapper heading={t('signup.heading')} {headingSnippet} class={className} {style} data-bridge-verify-email="already" {...rest}>
+    <Alert variant="info" data-bridge-already-had-account>{t('signup.alreadyHadAccount')}</Alert>
+    <button type="button" class="bridge-btn bridge-btn-primary" onclick={() => view.step === 'already' && view.then()}>{t('invite.continue')}</button>
+  </AuthFormWrapper>
 {:else if view.step === 'password'}
   <AuthFormWrapper heading={t('forgot.headingSet')} {headingSnippet} class={className} {style} data-bridge-verify-email="password" {...rest}>
     {#if view.error}
@@ -171,6 +206,12 @@
           disabled={view.sending}
           required
         />
+        <PasswordStrength password={chosen} {rules} {t} />
+        {#if view.leaked !== undefined && view.leaked === chosen}
+          <button type="button" class="bridge-btn bridge-btn-secondary bridge-leaked-confirm" data-bridge-leaked-use-anyway onclick={() => void sendPassword(true)} disabled={view.sending}>
+            {t('password.leaked.useAnyway')}
+          </button>
+        {/if}
       </div>
       <button type="submit" class="bridge-btn-primary" disabled={view.sending || chosen === ''}>
         {#if view.sending}<Spinner size={16} />{/if}
@@ -182,6 +223,7 @@
   <SecondStepForm step={view.second} onStep={(next) => void follow(next)} class={className} {style} {messages} />
 {:else if view.step === 'workspace'}
   <AuthFormWrapper heading={t('workspace.chooseHeading')} {headingSnippet} class={className} {style} data-bridge-verify-email="workspace" {...rest}>
+    {#if already}<Alert variant="info" data-bridge-already-had-account>{t('signup.alreadyHadAccount')}</Alert>{/if}
     <WorkspaceChooser workspaces={view.workspaces} onChoose={choose} {messages} />
   </AuthFormWrapper>
 {:else}

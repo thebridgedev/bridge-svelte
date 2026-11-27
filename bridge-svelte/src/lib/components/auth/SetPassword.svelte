@@ -1,11 +1,14 @@
 <!--
   Sets a new password from a reset link. It signs nobody in and ends every
-  session of the account, so the page goes on to sign-in.
+  session of the account, so the page goes on to sign-in. A password from a
+  public data leak is refused, or on Warn taken once the person confirms;
+  a meter shows how strong the new one is.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
   import { onMount } from 'svelte';
+  import { isBridgeError, type SignInOptions } from '@nebulr-group/bridge-auth-core';
   import { getBridge, peekConfig } from '../../core/client.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
@@ -13,6 +16,7 @@
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
   import PasswordInput from '../shared/PasswordInput.svelte';
+  import PasswordStrength from '../shared/PasswordStrength.svelte';
   import { takeEmailLink } from './email-link.js';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
@@ -38,18 +42,28 @@
   let loading = $state(false);
   let done = $state(false);
   let failure = $state<string | null>(null);
+  let rules = $state<SignInOptions['password']>(undefined);
+  /** The password Bridge said is in a public leak, on Warn: the person may use it anyway. */
+  let leakedFor = $state<string | null>(null);
 
   onMount(() => {
     linkToken = token ?? takeEmailLink('reset-password');
     checked = true;
     getBridge()
       .signIn.options()
-      .then((found) => (minLength = found.password?.minLength ?? minLength))
+      .then((found) => {
+        minLength = found.password?.minLength ?? minLength;
+        rules = found.password;
+      })
       .catch(() => undefined);
   });
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
+    await send(false);
+  }
+
+  async function send(acceptLeaked: boolean) {
     if (loading || linkToken === null) return;
     failure = null;
     if (password !== confirm) {
@@ -62,10 +76,11 @@
     }
     loading = true;
     try {
-      await getBridge().password.set(linkToken, password);
+      await getBridge().password.set(linkToken, password, acceptLeaked ? { acceptLeaked: true } : {});
       done = true;
       onDone?.();
     } catch (error) {
+      leakedFor = isBridgeError(error, 'password-leaked') && error.leakedPasswords === 'warn' && !acceptLeaked ? password : null;
       failure = errorMessage(error, t, 'forgot.error.update');
     } finally {
       loading = false;
@@ -100,6 +115,12 @@
           showLabel={t('action.showPassword')}
           hideLabel={t('action.hidePassword')}
         />
+        <PasswordStrength {password} {rules} {t} />
+        {#if leakedFor !== null && leakedFor === password}
+          <button type="button" class="bridge-btn bridge-btn-secondary bridge-leaked-confirm" data-bridge-leaked-use-anyway onclick={() => void send(true)} disabled={loading}>
+            {t('password.leaked.useAnyway')}
+          </button>
+        {/if}
       </div>
       <div class="bridge-form-group">
         <label for="set-password-confirm">{t('field.confirmPassword')}</label>

@@ -1,7 +1,10 @@
 <!--
   The signed-in person's passkeys: each one's name, when it was added and
-  last used, and whether it syncs to their other devices; adding one from
-  this device and removing one. Adding or removing needs a recent sign-in;
+  last used, whether it syncs to their other devices, and who keeps it (the
+  provider's name and icon, such as iCloud Keychain); adding one from this
+  device, renaming one and removing one. The browser and the person's password
+  manager are told which passkeys are still theirs (the Signal API, where the
+  browser has it), so a removed one is no longer offered. Adding or removing needs a recent sign-in;
   otherwise the person is asked to sign in again. The last way to sign in
   cannot be removed.
 -->
@@ -32,6 +35,9 @@
   let name = $state('');
   let busy = $state(false);
   let failure = $state<string | null>(null);
+  /** The passkey being renamed, and the name typed. */
+  let renaming = $state<string | null>(null);
+  let newName = $state('');
 
   const date = (value: string | null) => (value === null ? '' : new Date(value).toLocaleDateString());
 
@@ -60,6 +66,22 @@
     try {
       await getBridge().passkeys.add(name.trim() || undefined);
       name = '';
+      await load();
+      onChange?.(passkeys ?? []);
+    } catch (error) {
+      fail(error);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function rename(id: string) {
+    if (busy || newName.trim() === '') return;
+    busy = true;
+    failure = null;
+    try {
+      await getBridge().passkeys.rename(id, newName.trim());
+      renaming = null;
       await load();
       onChange?.(passkeys ?? []);
     } catch (error) {
@@ -99,13 +121,25 @@
     <ul class="bridge-passkey-list">
       {#each passkeys as passkey (passkey.id)}
         <li data-bridge-passkey={passkey.id} data-unusable={passkey.usable ? undefined : 'true'}>
+          {#if passkey.authenticator?.icon}<img class="bridge-passkey-icon" src={passkey.authenticator.icon} alt="" width="24" height="24" data-bridge-passkey-icon />{/if}
           <div>
-            <strong>{passkey.name}</strong>
+            {#if renaming === passkey.id}
+              <form onsubmit={(event) => { event.preventDefault(); void rename(passkey.id); }} data-bridge-passkey-rename-form>
+                <input type="text" maxlength="64" aria-label={t('passkey.rename')} bind:value={newName} disabled={busy} />
+                <button type="submit" class="bridge-btn bridge-btn-primary" data-bridge-passkey-rename-save disabled={busy || newName.trim() === ''}>{t('passkey.save')}</button>
+              </form>
+            {:else}
+              <strong>{passkey.name}</strong>
+            {/if}
+            {#if passkey.authenticator && passkey.authenticator.name !== passkey.name}<div class="bridge-passkey-meta" data-bridge-passkey-authenticator>{passkey.authenticator.name}</div>{/if}
             {#if !passkey.usable}<div class="bridge-passkey-meta" data-bridge-passkey-unusable>{t('passkey.unusable')}</div>{/if}
             <div class="bridge-passkey-meta">
               {t('passkey.added', { date: date(passkey.createdAt) })}{#if passkey.lastUsedAt} · {t('passkey.lastUsed', { date: date(passkey.lastUsedAt) })}{/if}{#if passkey.deviceType === 'multiDevice'} · {t('passkey.synced')}{/if}
             </div>
           </div>
+          {#if renaming !== passkey.id}
+            <button type="button" class="bridge-btn bridge-btn-secondary" data-bridge-passkey-rename onclick={() => { renaming = passkey.id; newName = passkey.name; }} disabled={busy}>{t('passkey.rename')}</button>
+          {/if}
           <button type="button" class="bridge-btn bridge-btn-secondary" data-bridge-passkey-remove onclick={() => remove(passkey.id)} disabled={busy}>{t('passkey.remove')}</button>
         </li>
       {/each}

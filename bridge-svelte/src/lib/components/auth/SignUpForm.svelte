@@ -16,7 +16,7 @@
   import { onDestroy, onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import type { SignInOptions } from '@nebulr-group/bridge-auth-core';
+  import { hostedPageRedirect, type SignInOptions } from '@nebulr-group/bridge-auth-core';
   import { getBridge, peekConfig } from '../../core/client.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
@@ -26,6 +26,8 @@
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
   import PasswordInput from '../shared/PasswordInput.svelte';
+  import PasswordChecklist from '../shared/PasswordChecklist.svelte';
+  import { checklistMet, checklistOf } from '../../core/password-rules.js';
   import SocialButtons from './SocialButtons.svelte';
 
   /** Where a visit came from: campaign tags as strings, and the visitor's marketing consent (auth-core's sign-up attribution). */
@@ -167,9 +169,21 @@
   }
 
   onMount(() => {
-    getBridge()
-      .signIn.options()
-      .then((found) => (options = found))
+    const bridge = getBridge();
+    bridge.signIn
+      .options()
+      .then(async (found) => {
+        // Bridge's own page, opened for an app whose users sign in in the app, with no sign-in request and no invite:
+        // on to the app's own sign-in page.
+        if (config?.signInRequests && !invite) {
+          const away = hostedPageRedirect(found, location.href, (await bridge.request.current()) !== null);
+          if (away !== null) {
+            location.replace(away);
+            return;
+          }
+        }
+        options = found;
+      })
       .catch(() => undefined);
   });
 
@@ -177,8 +191,8 @@
     event.preventDefault();
     if (loading) return;
     failure = null;
-    if (passwordOffered && password.length < minLength) {
-      failure = t('password.tooShort', { count: minLength });
+    if (passwordOffered && !checklistMet(checklistOf(options?.password, password, email.trim() || null))) {
+      failure = [...password.normalize('NFKC')].length < minLength ? t('password.tooShort', { count: minLength }) : t('rules.heading');
       return;
     }
     loading = true;
@@ -266,9 +280,11 @@
           minlength={minLength}
           bind:value={password}
           disabled={loading}
+          aria-describedby="signup-password-rules"
           showLabel={t('action.showPassword')}
           hideLabel={t('action.hidePassword')}
         />
+        <PasswordChecklist id="signup-password-rules" rules={options?.password} {password} email={email.trim() || null} {t} />
       </div>
       {/if}
       {#if workspace === 'ask' && !invite}

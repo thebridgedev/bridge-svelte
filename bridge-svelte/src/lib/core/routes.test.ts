@@ -10,3 +10,10 @@ describe('the auth pages', () => {
 		expect(parseAuthPage('passkey-setup')).toBe('passkey-setup');
 	});
 });
+
+describe('the return path of "Your app" (TBP-871)', () => {
+	it('serves the hosted return at /auth/oauth-callback, the return path every address takes', () => {
+		expect(parseAuthPage('oauth-callback')).toBe('callback');
+		expect(parseAuthPage('login')).toBe('sign-in');
+	});
+});

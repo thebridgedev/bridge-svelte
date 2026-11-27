@@ -18,9 +18,13 @@
   interface Props {
     headingSnippet?: Snippet;
     messages?: BridgeMessages;
+    /** Open Bridge's page on its sign-up form. @default 'sign-in' */
+    page?: 'sign-in' | 'sign-up';
+    /** Where Bridge's page sends the person back. @default the config's `hosted.redirectUri`, else `<origin><auth base>/callback` */
+    redirectUri?: string;
   }
 
-  let { headingSnippet, messages }: Props = $props();
+  let { headingSnippet, messages, page: form = 'sign-in', redirectUri: given = undefined }: Props = $props();
   const t = $derived(translator(messages));
   const config = peekConfig();
   let failure = $state<string | null>(null);
@@ -28,10 +32,10 @@
   onMount(async () => {
     try {
       const hosted = config?.hosted ?? {};
-      const redirectUri = hosted.redirectUri ?? new URL(`${config?.authBase ?? '/auth'}/callback`, location.origin).toString();
+      const redirectUri = given ?? hosted.redirectUri ?? new URL(`${config?.authBase ?? '/auth'}/callback`, location.origin).toString();
       // Where to go once signed in survives the trip to Bridge's page, in this tab.
       stashReturnTo(readReturnTo(page.url.href, config?.returnToParam));
-      location.assign(await getBridge().hosted.start({ redirectUri, ...(hosted.linkAddress === undefined ? {} : { linkAddress: hosted.linkAddress }) }));
+      location.assign(await getBridge().hosted.start({ redirectUri, ...(form === 'sign-up' ? { page: 'sign-up' as const } : {}), ...(hosted.linkAddress === undefined ? {} : { linkAddress: hosted.linkAddress }) }));
     } catch (error) {
       failure = errorMessage(error, t, 'error.unavailable');
     }

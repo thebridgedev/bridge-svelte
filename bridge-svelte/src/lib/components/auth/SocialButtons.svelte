@@ -22,10 +22,12 @@
     signUp?: () => Omit<SocialStartInput, 'intent' | 'returnPage'>;
     disabled?: boolean;
     onError?: (message: string, error: unknown) => void;
+    /** Each button's words, for the provider's name. @default "Continue with {provider}" */
+    label?: (name: string) => string;
     messages?: BridgeMessages;
   }
 
-  let { providers, intent = 'sign-in', returnPage = undefined, signUp = undefined, disabled = false, onError, messages }: Props = $props();
+  let { providers, intent = 'sign-in', returnPage = undefined, signUp = undefined, disabled = false, onError, label = undefined, messages }: Props = $props();
   const t = $derived(translator(messages));
   /** The providers' names, as their own sign-in buttons say them. */
   const NAMES: Record<SocialProvider, string> = { google: 'Google', linkedin: 'LinkedIn', facebook: 'Facebook', github: 'GitHub', azure: 'Microsoft' };
@@ -60,7 +62,7 @@
   <div class="bridge-social" data-bridge-social>
     {#each providers as provider (provider)}
       <button type="button" class="bridge-btn bridge-btn-secondary bridge-social-btn" data-bridge-social-provider={provider} onclick={() => go(provider)} disabled={disabled || going !== null}>
-        {t('social.continueWith', { provider: NAMES[provider] })}
+        {label ? label(NAMES[provider]) : t('social.continueWith', { provider: NAMES[provider] })}
       </button>
     {/each}
   </div>

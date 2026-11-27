@@ -20,7 +20,10 @@
   import type { Snippet } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { readReturnTo } from '@nebulr-group/bridge-auth-core';
+  import { onMount } from 'svelte';
+  import { readReturnTo, signInPlaceOf, signsInOnHostedPage } from '@nebulr-group/bridge-auth-core';
+  import { getBridge } from '../../core/client.js';
+  import Spinner from '../shared/Spinner.svelte';
   import { peekConfig } from '../../core/client.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { translator } from '../../core/i18n.js';
@@ -54,6 +57,27 @@
   const current = $derived(parseAuthPage(page.params[ROUTE_PARAM]));
   const config = peekConfig();
 
+  /**
+   * Where users sign in, as the app's "Your app" setting says (TBP-871): on Bridge's pages, the sign-in and sign-up
+   * pages hand over to Bridge's hosted page, with no code change. Asked once; an app whose code sets `hosted`, or a page
+   * that signs in for other apps, decides by its config as before. Null while asked.
+   */
+  const asks = !config?.hosted && !config?.signInRequests;
+  let onHosted = $state<boolean | null>(asks ? null : false);
+  /** Where Bridge's page sends the person back then: the app's return path, which is valid on every address it lists. */
+  let hostedReturn = $state<string | undefined>(undefined);
+  onMount(() => {
+    if (!asks) return;
+    getBridge()
+      .signIn.options()
+      .then((found) => {
+        const place = signInPlaceOf(found);
+        if (place !== null) hostedReturn = new URL(place.returnPath, location.origin).toString();
+        onHosted = signsInOnHostedPage(found);
+      })
+      .catch(() => (onHosted = false));
+  });
+
   function afterSwitch() {
     void goto(readReturnTo(page.url.href, config?.returnToParam) ?? config?.afterSignIn ?? '/', { invalidateAll: true });
   }
@@ -64,8 +88,12 @@
     {@render heading?.(p)}
   {/snippet}
   {@const pageHeading = heading ? boundHeading : undefined}
-  {#if p === 'sign-in' && config?.hosted}
+  {#if (p === 'sign-in' || p === 'sign-up') && onHosted === null}
+    <div class="bridge-auth-settling" data-bridge-auth-settling><Spinner size={24} /></div>
+  {:else if p === 'sign-in' && config?.hosted}
     <HostedSignIn headingSnippet={pageHeading} {messages} />
+  {:else if (p === 'sign-in' || p === 'sign-up') && onHosted}
+    <HostedSignIn headingSnippet={pageHeading} {messages} page={p} redirectUri={hostedReturn} />
   {:else if p === 'sign-in'}
     <SignInForm headingSnippet={pageHeading} {messages} />
   {:else if p === 'callback'}

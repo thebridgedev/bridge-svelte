@@ -23,7 +23,7 @@
   import { continueOnAppPage, handOff, heldReturn } from './finish-link.js';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { isBridgeError, isPasswordChangeRequired, passkeyHandOver, readReturnTo, takeSocialReturn, type SignInOptions, type SignInStep, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
+  import { hostedPageRedirect, isBridgeError, isPasswordChangeRequired, passkeyHandOver, readReturnTo, takeSocialReturn, type SignInOptions, type SignInStep, type SocialProvider, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
   import { get } from 'svelte/store';
   import { getBridge, peekConfig, takeEndedReason } from '../../core/client.js';
   import { session } from '../../core/stores.js';
@@ -101,6 +101,11 @@
   /** A social sign-up whose address the provider did not confirm: the address Bridge emailed its own link to. */
   let checkEmail = $state<string | null>(null);
   const social = $derived(options?.social ?? []);
+  /** A social sign-in found no account for the address: the provider, for a one-click "Create an account with …". */
+  let noAccountWith = $state<SocialProvider | null>(null);
+  const PROVIDERS: readonly SocialProvider[] = ['google', 'linkedin', 'facebook', 'github', 'azure'];
+  /** A provider the person tried first was linked as this sign-in finished: shown once, before going on. */
+  let linkedName = $state<string | null>(null);
 
   const signUpShown = $derived(showSignupLink ?? options?.signUp ?? true);
   const passwordOffered = $derived(options === null || options.methods.includes('password'));
@@ -139,13 +144,30 @@
       bridge.social
         .finish(answer)
         .then(follow)
-        .catch((error: unknown) => (isBridgeError(error, 'cancelled') ? (notice = t('passkey.cancelled')) : fail(error)))
+        .catch((error: unknown) => {
+          if (isBridgeError(error, 'cancelled')) notice = t('passkey.cancelled');
+          // No account for the address: one click makes one with the same provider, when the app takes sign-ups.
+          else if (isBridgeError(error) && error.code === 'no_account' && PROVIDERS.includes(error.reason as SocialProvider)) {
+            noAccountWith = error.reason as SocialProvider;
+            notice = t('social.noAccount');
+          } else fail(error);
+        })
         .finally(() => (loading = false));
     }
     bridge.signIn
       .options()
       .then(async (found) => {
         options = found;
+        // Bridge's own page, opened for an app whose users sign in in the app, with no sign-in request: on to the app's
+        // sign-in page. A request (an app, a program, an assistant) is always signed in here.
+        if (config?.signInRequests) {
+          const away = hostedPageRedirect(found, location.href, (await bridge.request.current()) !== null);
+          if (away !== null) {
+            settled = true;
+            location.replace(away);
+            return;
+          }
+        }
         if (!found.methods.includes('passkeys')) return;
         passkeySupported = await bridge.passkeys.supported();
         if (passkeySupported) void startAutofill();
@@ -213,6 +235,9 @@
       settled = true;
     } else if (handOff(step)) {
       settled = true;
+    } else if (step.done && step.linked !== undefined) {
+      // A provider the person tried first is now linked to this account: said once, then on.
+      linkedName = step.linked.name;
     } else if (step.done) {
       finish();
     } else if (step.next === 'verify_email') {
@@ -287,7 +312,12 @@
   }
 </script>
 
-{#if heldBack !== null}
+{#if linkedName !== null}
+  <AuthFormWrapper heading={null} class={className} {style} data-bridge-sign-in-step="linked" {...rest}>
+    <Alert variant="success">{t('social.linked', { provider: linkedName })}</Alert>
+    <button type="button" class="bridge-btn bridge-btn-primary" data-bridge-linked-continue onclick={() => { linkedName = null; finish(); }}>{t('secondStep.continue')}</button>
+  </AuthFormWrapper>
+{:else if heldBack !== null}
   <ReturnContinue url={heldBack} {messages} class={className} {style} {...rest} />
 {:else if mustChoose !== null}
   <AuthFormWrapper heading={t('login.passwordChangeHeading')} class={className} {style} data-bridge-sign-in-step="password-change" {...rest}>
@@ -407,6 +437,12 @@
       </button>
       <div class="bridge-forgot-row">
         <button type="button" class="bridge-link" data-bridge-passkey-setup-link onclick={sendSetupLink} disabled={loading || !email.trim()}>{t('passkey.setupLinkSend')}</button>
+      </div>
+    {/if}
+
+    {#if noAccountWith !== null && options?.signUp !== false && !linkSent && !setupLinkSent}
+      <div data-bridge-social-create>
+        <SocialButtons providers={[noAccountWith]} intent="sign-up" disabled={loading} label={(name) => t('social.createAccount', { provider: name })} onError={(message, error) => { failure = message; onError?.(error); }} {messages} />
       </div>
     {/if}
 

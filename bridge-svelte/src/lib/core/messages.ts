@@ -96,7 +96,30 @@ export type PluginMessageKey =
 	| 'login.passwordChange'
 	| 'login.passwordChangeResend'
 	| 'login.passwordChangeSent'
-	| 'billing.error.checkout';
+	| 'billing.error.checkout'
+	| 'rules.heading'
+	| 'rules.minLength'
+	| 'rules.upper'
+	| 'rules.lower'
+	| 'rules.digit'
+	| 'rules.symbol'
+	| 'rules.email'
+	| 'rules.common'
+	| 'rules.appName'
+	| 'passkey.needsVerification'
+	| 'passkey.rename'
+	| 'passkey.save'
+	| 'social.createAccount'
+	| 'social.noAccount'
+	| 'social.linked'
+	| 'microsoft.personal'
+	| 'microsoft.work'
+	| 'microsoft.directory'
+	| 'provider.secretExpired'
+	| 'provider.wrongReturnAddress'
+	| 'provider.wrongAccountTypes'
+	| 'provider.appNotInDirectory'
+	| 'provider.adminApproval';
 
 export type PluginMessages = Record<PluginMessageKey, string>;
 
@@ -192,6 +215,29 @@ const en: PluginMessages = {
 	'secondStep.backupHeading': "Save your backup code",
 	'secondStep.backupIntro': "Keep it somewhere safe. It is shown only once, and you need it if you lose your phone.",
 	'secondStep.continue': "Continue",
+	'rules.heading': "Your password needs",
+	'rules.minLength': "At least {count} characters",
+	'rules.upper': "An upper-case letter",
+	'rules.lower': "A lower-case letter",
+	'rules.digit': "A number",
+	'rules.symbol': "A symbol",
+	'rules.email': "Not your email address",
+	'rules.common': "Not a common password (checked when you save)",
+	'rules.appName': "Not the app's name (checked when you save)",
+	'passkey.needsVerification': "This key needs a PIN or fingerprint to be used here.",
+	'passkey.rename': "Rename",
+	'passkey.save': "Save",
+	'social.createAccount': "Create an account with {provider}",
+	'social.noAccount': "There is no account for this address yet.",
+	'social.linked': "{provider} is now connected to your account.",
+	'microsoft.personal': "This app accepts only work or school Microsoft accounts. Sign in with your work or school account.",
+	'microsoft.work': "This app accepts only personal Microsoft accounts. Sign in with your personal account.",
+	'microsoft.directory': "This app accepts only Microsoft accounts of one organisation. Sign in with an account from that organisation, or another way.",
+	'provider.secretExpired': "Signing in this way is not set up right: the app's secret has expired. Sign in another way, or tell the app's team.",
+	'provider.wrongReturnAddress': "Signing in this way is not set up right: the app's return address is not registered. Sign in another way, or tell the app's team.",
+	'provider.wrongAccountTypes': "Signing in this way is not set up right: this kind of account is not accepted. Sign in another way, or tell the app's team.",
+	'provider.appNotInDirectory': "Signing in this way is not set up right: the app is not registered in this directory. Sign in another way, or tell the app's team.",
+	'provider.adminApproval': "Your organisation's IT admin must approve this app before you can sign in with Microsoft.",
 };
 
 const sv: PluginMessages = {
@@ -286,6 +332,29 @@ const sv: PluginMessages = {
 	'secondStep.backupHeading': "Spara din reservkod",
 	'secondStep.backupIntro': "Förvara den säkert. Den visas bara en gång, och du behöver den om du tappar telefonen.",
 	'secondStep.continue': "Fortsätt",
+	'rules.heading': "Ditt lösenord behöver",
+	'rules.minLength': "Minst {count} tecken",
+	'rules.upper': "En versal",
+	'rules.lower': "En gemen",
+	'rules.digit': "En siffra",
+	'rules.symbol': "Ett specialtecken",
+	'rules.email': "Inte din e-postadress",
+	'rules.common': "Inte ett vanligt lösenord (kontrolleras när du sparar)",
+	'rules.appName': "Inte appens namn (kontrolleras när du sparar)",
+	'passkey.needsVerification': "Den här nyckeln behöver en PIN-kod eller ett fingeravtryck för att användas här.",
+	'passkey.rename': "Byt namn",
+	'passkey.save': "Spara",
+	'social.createAccount': "Skapa ett konto med {provider}",
+	'social.noAccount': "Det finns inget konto för den här adressen än.",
+	'social.linked': "{provider} är nu kopplat till ditt konto.",
+	'microsoft.personal': "Appen tar bara emot jobb- eller skolkonton från Microsoft. Logga in med ditt jobb- eller skolkonto.",
+	'microsoft.work': "Appen tar bara emot personliga Microsoft-konton. Logga in med ditt personliga konto.",
+	'microsoft.directory': "Appen tar bara emot Microsoft-konton från en organisation. Logga in med ett konto därifrån, eller på annat sätt.",
+	'provider.secretExpired': "Inloggningen är inte rätt inställd: appens hemlighet har gått ut. Logga in på annat sätt eller kontakta appens team.",
+	'provider.wrongReturnAddress': "Inloggningen är inte rätt inställd: appens returadress är inte registrerad. Logga in på annat sätt eller kontakta appens team.",
+	'provider.wrongAccountTypes': "Inloggningen är inte rätt inställd: den här typen av konto tas inte emot. Logga in på annat sätt eller kontakta appens team.",
+	'provider.appNotInDirectory': "Inloggningen är inte rätt inställd: appen är inte registrerad i den här katalogen. Logga in på annat sätt eller kontakta appens team.",
+	'provider.adminApproval': "Din organisations IT-administratör måste godkänna appen innan du kan logga in med Microsoft.",
 };
 
 const da: PluginMessages = {
@@ -380,6 +449,29 @@ const da: PluginMessages = {
 	'secondStep.backupHeading': "Gem din backupkode",
 	'secondStep.backupIntro': "Opbevar den sikkert. Den vises kun én gang, og du skal bruge den, hvis du mister din telefon.",
 	'secondStep.continue': "Fortsæt",
+	'rules.heading': "Din adgangskode skal have",
+	'rules.minLength': "Mindst {count} tegn",
+	'rules.upper': "Et stort bogstav",
+	'rules.lower': "Et lille bogstav",
+	'rules.digit': "Et tal",
+	'rules.symbol': "Et symbol",
+	'rules.email': "Ikke din e-mailadresse",
+	'rules.common': "Ikke en almindelig adgangskode (tjekkes, når du gemmer)",
+	'rules.appName': "Ikke appens navn (tjekkes, når du gemmer)",
+	'passkey.needsVerification': "Denne nøgle skal have en pinkode eller et fingeraftryk for at kunne bruges her.",
+	'passkey.rename': "Omdøb",
+	'passkey.save': "Gem",
+	'social.createAccount': "Opret en konto med {provider}",
+	'social.noAccount': "Der er endnu ingen konto for denne adresse.",
+	'social.linked': "{provider} er nu forbundet til din konto.",
+	'microsoft.personal': "Appen accepterer kun arbejds- eller skolekonti fra Microsoft. Log ind med din arbejds- eller skolekonto.",
+	'microsoft.work': "Appen accepterer kun personlige Microsoft-konti. Log ind med din personlige konto.",
+	'microsoft.directory': "Appen accepterer kun Microsoft-konti fra én organisation. Log ind med en konto derfra, eller på en anden måde.",
+	'provider.secretExpired': "Login på denne måde er ikke sat rigtigt op: appens hemmelighed er udløbet. Log ind på en anden måde, eller kontakt appens team.",
+	'provider.wrongReturnAddress': "Login på denne måde er ikke sat rigtigt op: appens returadresse er ikke registreret. Log ind på en anden måde, eller kontakt appens team.",
+	'provider.wrongAccountTypes': "Login på denne måde er ikke sat rigtigt op: denne type konto accepteres ikke. Log ind på en anden måde, eller kontakt appens team.",
+	'provider.appNotInDirectory': "Login på denne måde er ikke sat rigtigt op: appen er ikke registreret i denne mappe. Log ind på en anden måde, eller kontakt appens team.",
+	'provider.adminApproval': "Din organisations it-administrator skal godkende appen, før du kan logge ind med Microsoft.",
 };
 
 const nb: PluginMessages = {
@@ -474,6 +566,29 @@ const nb: PluginMessages = {
 	'secondStep.backupHeading': "Lagre reservekoden",
 	'secondStep.backupIntro': "Oppbevar den trygt. Den vises bare én gang, og du trenger den hvis du mister telefonen.",
 	'secondStep.continue': "Fortsett",
+	'rules.heading': "Passordet ditt trenger",
+	'rules.minLength': "Minst {count} tegn",
+	'rules.upper': "En stor bokstav",
+	'rules.lower': "En liten bokstav",
+	'rules.digit': "Et tall",
+	'rules.symbol': "Et symbol",
+	'rules.email': "Ikke e-postadressen din",
+	'rules.common': "Ikke et vanlig passord (sjekkes når du lagrer)",
+	'rules.appName': "Ikke appens navn (sjekkes når du lagrer)",
+	'passkey.needsVerification': "Denne nøkkelen trenger en PIN-kode eller et fingeravtrykk for å brukes her.",
+	'passkey.rename': "Gi nytt navn",
+	'passkey.save': "Lagre",
+	'social.createAccount': "Opprett en konto med {provider}",
+	'social.noAccount': "Det finnes ingen konto for denne adressen ennå.",
+	'social.linked': "{provider} er nå koblet til kontoen din.",
+	'microsoft.personal': "Appen godtar bare jobb- eller skolekontoer fra Microsoft. Logg inn med jobb- eller skolekontoen din.",
+	'microsoft.work': "Appen godtar bare personlige Microsoft-kontoer. Logg inn med den personlige kontoen din.",
+	'microsoft.directory': "Appen godtar bare Microsoft-kontoer fra én organisasjon. Logg inn med en konto derfra, eller på en annen måte.",
+	'provider.secretExpired': "Innlogging på denne måten er ikke satt opp riktig: appens hemmelighet er utløpt. Logg inn på en annen måte, eller kontakt appens team.",
+	'provider.wrongReturnAddress': "Innlogging på denne måten er ikke satt opp riktig: appens returadresse er ikke registrert. Logg inn på en annen måte, eller kontakt appens team.",
+	'provider.wrongAccountTypes': "Innlogging på denne måten er ikke satt opp riktig: denne kontotypen godtas ikke. Logg inn på en annen måte, eller kontakt appens team.",
+	'provider.appNotInDirectory': "Innlogging på denne måten er ikke satt opp riktig: appen er ikke registrert i denne katalogen. Logg inn på en annen måte, eller kontakt appens team.",
+	'provider.adminApproval': "IT-administratoren i organisasjonen din må godkjenne appen før du kan logge inn med Microsoft.",
 };
 
 const nl: PluginMessages = {
@@ -568,6 +683,29 @@ const nl: PluginMessages = {
 	'secondStep.backupHeading': "Bewaar je back-upcode",
 	'secondStep.backupIntro': "Bewaar hem op een veilige plek. Hij wordt maar één keer getoond en je hebt hem nodig als je je telefoon kwijtraakt.",
 	'secondStep.continue': "Doorgaan",
+	'rules.heading': "Je wachtwoord moet hebben",
+	'rules.minLength': "Minstens {count} tekens",
+	'rules.upper': "Een hoofdletter",
+	'rules.lower': "Een kleine letter",
+	'rules.digit': "Een cijfer",
+	'rules.symbol': "Een symbool",
+	'rules.email': "Niet je e-mailadres",
+	'rules.common': "Geen veelgebruikt wachtwoord (gecontroleerd bij opslaan)",
+	'rules.appName': "Niet de naam van de app (gecontroleerd bij opslaan)",
+	'passkey.needsVerification': "Deze sleutel heeft een pincode of vingerafdruk nodig om hier te werken.",
+	'passkey.rename': "Naam wijzigen",
+	'passkey.save': "Opslaan",
+	'social.createAccount': "Account aanmaken met {provider}",
+	'social.noAccount': "Er is nog geen account voor dit adres.",
+	'social.linked': "{provider} is nu gekoppeld aan je account.",
+	'microsoft.personal': "Deze app accepteert alleen werk- of schoolaccounts van Microsoft. Log in met je werk- of schoolaccount.",
+	'microsoft.work': "Deze app accepteert alleen persoonlijke Microsoft-accounts. Log in met je persoonlijke account.",
+	'microsoft.directory': "Deze app accepteert alleen Microsoft-accounts van één organisatie. Log in met een account daarvan, of op een andere manier.",
+	'provider.secretExpired': "Inloggen op deze manier is niet goed ingesteld: het geheim van de app is verlopen. Log op een andere manier in of laat het team van de app het weten.",
+	'provider.wrongReturnAddress': "Inloggen op deze manier is niet goed ingesteld: het terugkeeradres van de app is niet geregistreerd. Log op een andere manier in of laat het team van de app het weten.",
+	'provider.wrongAccountTypes': "Inloggen op deze manier is niet goed ingesteld: dit soort account wordt niet geaccepteerd. Log op een andere manier in of laat het team van de app het weten.",
+	'provider.appNotInDirectory': "Inloggen op deze manier is niet goed ingesteld: de app is niet geregistreerd in deze directory. Log op een andere manier in of laat het team van de app het weten.",
+	'provider.adminApproval': "De IT-beheerder van je organisatie moet deze app goedkeuren voordat je met Microsoft kunt inloggen.",
 };
 
 const de: PluginMessages = {
@@ -662,6 +800,29 @@ const de: PluginMessages = {
 	'secondStep.backupHeading': "Backup-Code speichern",
 	'secondStep.backupIntro': "Bewahre ihn sicher auf. Er wird nur einmal angezeigt, und du brauchst ihn, wenn du dein Telefon verlierst.",
 	'secondStep.continue': "Weiter",
+	'rules.heading': "Dein Passwort braucht",
+	'rules.minLength': "Mindestens {count} Zeichen",
+	'rules.upper': "Einen Großbuchstaben",
+	'rules.lower': "Einen Kleinbuchstaben",
+	'rules.digit': "Eine Zahl",
+	'rules.symbol': "Ein Sonderzeichen",
+	'rules.email': "Nicht deine E-Mail-Adresse",
+	'rules.common': "Kein gängiges Passwort (wird beim Speichern geprüft)",
+	'rules.appName': "Nicht den Namen der App (wird beim Speichern geprüft)",
+	'passkey.needsVerification': "Dieser Schlüssel braucht eine PIN oder einen Fingerabdruck, um hier verwendet zu werden.",
+	'passkey.rename': "Umbenennen",
+	'passkey.save': "Speichern",
+	'social.createAccount': "Konto mit {provider} erstellen",
+	'social.noAccount': "Für diese Adresse gibt es noch kein Konto.",
+	'social.linked': "{provider} ist jetzt mit deinem Konto verbunden.",
+	'microsoft.personal': "Diese App akzeptiert nur Geschäfts- oder Schulkonten von Microsoft. Melde dich mit deinem Geschäfts- oder Schulkonto an.",
+	'microsoft.work': "Diese App akzeptiert nur private Microsoft-Konten. Melde dich mit deinem privaten Konto an.",
+	'microsoft.directory': "Diese App akzeptiert nur Microsoft-Konten einer Organisation. Melde dich mit einem Konto dieser Organisation an oder auf andere Weise.",
+	'provider.secretExpired': "Diese Anmeldung ist nicht richtig eingerichtet: Das Geheimnis der App ist abgelaufen. Melde dich auf andere Weise an oder wende dich an das Team der App.",
+	'provider.wrongReturnAddress': "Diese Anmeldung ist nicht richtig eingerichtet: Die Rücksprungadresse der App ist nicht registriert. Melde dich auf andere Weise an oder wende dich an das Team der App.",
+	'provider.wrongAccountTypes': "Diese Anmeldung ist nicht richtig eingerichtet: Diese Art von Konto wird nicht akzeptiert. Melde dich auf andere Weise an oder wende dich an das Team der App.",
+	'provider.appNotInDirectory': "Diese Anmeldung ist nicht richtig eingerichtet: Die App ist in diesem Verzeichnis nicht registriert. Melde dich auf andere Weise an oder wende dich an das Team der App.",
+	'provider.adminApproval': "Die IT-Administration deiner Organisation muss diese App freigeben, bevor du dich mit Microsoft anmelden kannst.",
 };
 
 const fi: PluginMessages = {
@@ -756,6 +917,29 @@ const fi: PluginMessages = {
 	'secondStep.backupHeading': "Tallenna varakoodi",
 	'secondStep.backupIntro': "Säilytä se turvassa. Se näytetään vain kerran, ja tarvitset sitä, jos kadotat puhelimesi.",
 	'secondStep.continue': "Jatka",
+	'rules.heading': "Salasanassasi pitää olla",
+	'rules.minLength': "Vähintään {count} merkkiä",
+	'rules.upper': "Iso kirjain",
+	'rules.lower': "Pieni kirjain",
+	'rules.digit': "Numero",
+	'rules.symbol': "Erikoismerkki",
+	'rules.email': "Ei sähköpostiosoitettasi",
+	'rules.common': "Ei yleinen salasana (tarkistetaan tallennettaessa)",
+	'rules.appName': "Ei sovelluksen nimeä (tarkistetaan tallennettaessa)",
+	'passkey.needsVerification': "Tämä avain tarvitsee PIN-koodin tai sormenjäljen, jotta sitä voi käyttää tässä.",
+	'passkey.rename': "Nimeä uudelleen",
+	'passkey.save': "Tallenna",
+	'social.createAccount': "Luo tili palvelulla {provider}",
+	'social.noAccount': "Tälle osoitteelle ei ole vielä tiliä.",
+	'social.linked': "{provider} on nyt yhdistetty tiliisi.",
+	'microsoft.personal': "Tämä sovellus hyväksyy vain Microsoftin työ- tai koulutilit. Kirjaudu työ- tai koulutililläsi.",
+	'microsoft.work': "Tämä sovellus hyväksyy vain henkilökohtaiset Microsoft-tilit. Kirjaudu henkilökohtaisella tililläsi.",
+	'microsoft.directory': "Tämä sovellus hyväksyy vain yhden organisaation Microsoft-tilit. Kirjaudu sen organisaation tilillä tai muulla tavalla.",
+	'provider.secretExpired': "Tätä kirjautumistapaa ei ole määritetty oikein: sovelluksen salaisuus on vanhentunut. Kirjaudu muulla tavalla tai kerro sovelluksen tiimille.",
+	'provider.wrongReturnAddress': "Tätä kirjautumistapaa ei ole määritetty oikein: sovelluksen paluuosoitetta ei ole rekisteröity. Kirjaudu muulla tavalla tai kerro sovelluksen tiimille.",
+	'provider.wrongAccountTypes': "Tätä kirjautumistapaa ei ole määritetty oikein: tämäntyyppistä tiliä ei hyväksytä. Kirjaudu muulla tavalla tai kerro sovelluksen tiimille.",
+	'provider.appNotInDirectory': "Tätä kirjautumistapaa ei ole määritetty oikein: sovellusta ei ole rekisteröity tähän hakemistoon. Kirjaudu muulla tavalla tai kerro sovelluksen tiimille.",
+	'provider.adminApproval': "Organisaatiosi IT-järjestelmänvalvojan on hyväksyttävä tämä sovellus, ennen kuin voit kirjautua Microsoftilla.",
 };
 
 const fr: PluginMessages = {
@@ -850,6 +1034,29 @@ const fr: PluginMessages = {
 	'secondStep.backupHeading': "Conservez votre code de secours",
 	'secondStep.backupIntro': "Conservez-le en lieu sûr. Il n'est affiché qu'une fois, et vous en aurez besoin si vous perdez votre téléphone.",
 	'secondStep.continue': "Continuer",
+	'rules.heading': "Votre mot de passe doit contenir",
+	'rules.minLength': "Au moins {count} caractères",
+	'rules.upper': "Une majuscule",
+	'rules.lower': "Une minuscule",
+	'rules.digit': "Un chiffre",
+	'rules.symbol': "Un symbole",
+	'rules.email': "Pas votre adresse e-mail",
+	'rules.common': "Pas un mot de passe courant (vérifié à l'enregistrement)",
+	'rules.appName': "Pas le nom de l'application (vérifié à l'enregistrement)",
+	'passkey.needsVerification': "Cette clé a besoin d'un code PIN ou d'une empreinte digitale pour être utilisée ici.",
+	'passkey.rename': "Renommer",
+	'passkey.save': "Enregistrer",
+	'social.createAccount': "Créer un compte avec {provider}",
+	'social.noAccount': "Il n'y a pas encore de compte pour cette adresse.",
+	'social.linked': "{provider} est maintenant associé à votre compte.",
+	'microsoft.personal': "Cette application n'accepte que les comptes Microsoft professionnels ou scolaires. Connectez-vous avec votre compte professionnel ou scolaire.",
+	'microsoft.work': "Cette application n'accepte que les comptes Microsoft personnels. Connectez-vous avec votre compte personnel.",
+	'microsoft.directory': "Cette application n'accepte que les comptes Microsoft d'une seule organisation. Connectez-vous avec un compte de cette organisation, ou autrement.",
+	'provider.secretExpired': "Cette connexion n'est pas bien configurée : le secret de l'application a expiré. Connectez-vous autrement ou prévenez l'équipe de l'application.",
+	'provider.wrongReturnAddress': "Cette connexion n'est pas bien configurée : l'adresse de retour de l'application n'est pas enregistrée. Connectez-vous autrement ou prévenez l'équipe de l'application.",
+	'provider.wrongAccountTypes': "Cette connexion n'est pas bien configurée : ce type de compte n'est pas accepté. Connectez-vous autrement ou prévenez l'équipe de l'application.",
+	'provider.appNotInDirectory': "Cette connexion n'est pas bien configurée : l'application n'est pas enregistrée dans cet annuaire. Connectez-vous autrement ou prévenez l'équipe de l'application.",
+	'provider.adminApproval': "L'administrateur informatique de votre organisation doit approuver cette application avant que vous puissiez vous connecter avec Microsoft.",
 };
 
 const es: PluginMessages = {
@@ -944,6 +1151,29 @@ const es: PluginMessages = {
 	'secondStep.backupHeading': "Guarda tu código de respaldo",
 	'secondStep.backupIntro': "Guárdalo en un lugar seguro. Solo se muestra una vez y lo necesitarás si pierdes el teléfono.",
 	'secondStep.continue': "Continuar",
+	'rules.heading': "Tu contraseña necesita",
+	'rules.minLength': "Al menos {count} caracteres",
+	'rules.upper': "Una mayúscula",
+	'rules.lower': "Una minúscula",
+	'rules.digit': "Un número",
+	'rules.symbol': "Un símbolo",
+	'rules.email': "No tu dirección de correo",
+	'rules.common': "No una contraseña común (se comprueba al guardar)",
+	'rules.appName': "No el nombre de la aplicación (se comprueba al guardar)",
+	'passkey.needsVerification': "Esta llave necesita un PIN o una huella para usarse aquí.",
+	'passkey.rename': "Cambiar nombre",
+	'passkey.save': "Guardar",
+	'social.createAccount': "Crear una cuenta con {provider}",
+	'social.noAccount': "Todavía no hay una cuenta para esta dirección.",
+	'social.linked': "{provider} ya está conectado a tu cuenta.",
+	'microsoft.personal': "Esta aplicación solo acepta cuentas de Microsoft de trabajo o centro educativo. Inicia sesión con tu cuenta de trabajo o centro educativo.",
+	'microsoft.work': "Esta aplicación solo acepta cuentas personales de Microsoft. Inicia sesión con tu cuenta personal.",
+	'microsoft.directory': "Esta aplicación solo acepta cuentas de Microsoft de una organización. Inicia sesión con una cuenta de esa organización, o de otra forma.",
+	'provider.secretExpired': "Este inicio de sesión no está bien configurado: el secreto de la aplicación ha caducado. Inicia sesión de otra forma o avisa al equipo de la aplicación.",
+	'provider.wrongReturnAddress': "Este inicio de sesión no está bien configurado: la dirección de retorno de la aplicación no está registrada. Inicia sesión de otra forma o avisa al equipo de la aplicación.",
+	'provider.wrongAccountTypes': "Este inicio de sesión no está bien configurado: este tipo de cuenta no se acepta. Inicia sesión de otra forma o avisa al equipo de la aplicación.",
+	'provider.appNotInDirectory': "Este inicio de sesión no está bien configurado: la aplicación no está registrada en este directorio. Inicia sesión de otra forma o avisa al equipo de la aplicación.",
+	'provider.adminApproval': "El administrador de TI de tu organización debe aprobar esta aplicación antes de que puedas iniciar sesión con Microsoft.",
 };
 
 const it: PluginMessages = {
@@ -1038,6 +1268,29 @@ const it: PluginMessages = {
 	'secondStep.backupHeading': "Salva il codice di backup",
 	'secondStep.backupIntro': "Conservalo al sicuro. Viene mostrato una sola volta e ti servirà se perdi il telefono.",
 	'secondStep.continue': "Continua",
+	'rules.heading': "La tua password deve avere",
+	'rules.minLength': "Almeno {count} caratteri",
+	'rules.upper': "Una lettera maiuscola",
+	'rules.lower': "Una lettera minuscola",
+	'rules.digit': "Un numero",
+	'rules.symbol': "Un simbolo",
+	'rules.email': "Non il tuo indirizzo e-mail",
+	'rules.common': "Non una password comune (verificato al salvataggio)",
+	'rules.appName': "Non il nome dell'app (verificato al salvataggio)",
+	'passkey.needsVerification': "Questa chiave richiede un PIN o un'impronta digitale per essere usata qui.",
+	'passkey.rename': "Rinomina",
+	'passkey.save': "Salva",
+	'social.createAccount': "Crea un account con {provider}",
+	'social.noAccount': "Non esiste ancora un account per questo indirizzo.",
+	'social.linked': "{provider} è ora collegato al tuo account.",
+	'microsoft.personal': "Questa app accetta solo account Microsoft di lavoro o dell'istituto. Accedi con il tuo account di lavoro o dell'istituto.",
+	'microsoft.work': "Questa app accetta solo account Microsoft personali. Accedi con il tuo account personale.",
+	'microsoft.directory': "Questa app accetta solo account Microsoft di un'organizzazione. Accedi con un account di quell'organizzazione, o in un altro modo.",
+	'provider.secretExpired': "Questo accesso non è configurato bene: il segreto dell'app è scaduto. Accedi in un altro modo o avvisa il team dell'app.",
+	'provider.wrongReturnAddress': "Questo accesso non è configurato bene: l'indirizzo di ritorno dell'app non è registrato. Accedi in un altro modo o avvisa il team dell'app.",
+	'provider.wrongAccountTypes': "Questo accesso non è configurato bene: questo tipo di account non è accettato. Accedi in un altro modo o avvisa il team dell'app.",
+	'provider.appNotInDirectory': "Questo accesso non è configurato bene: l'app non è registrata in questa directory. Accedi in un altro modo o avvisa il team dell'app.",
+	'provider.adminApproval': "L'amministratore IT della tua organizzazione deve approvare questa app prima che tu possa accedere con Microsoft.",
 };
 
 const pt: PluginMessages = {
@@ -1132,6 +1385,29 @@ const pt: PluginMessages = {
 	'secondStep.backupHeading': "Guarde o seu código de recuperação",
 	'secondStep.backupIntro': "Guarde-o num local seguro. Só é mostrado uma vez e vai precisar dele se perder o telemóvel.",
 	'secondStep.continue': "Continuar",
+	'rules.heading': "A sua palavra-passe precisa de",
+	'rules.minLength': "Pelo menos {count} caracteres",
+	'rules.upper': "Uma letra maiúscula",
+	'rules.lower': "Uma letra minúscula",
+	'rules.digit': "Um número",
+	'rules.symbol': "Um símbolo",
+	'rules.email': "Não o seu endereço de e-mail",
+	'rules.common': "Não uma palavra-passe comum (verificado ao guardar)",
+	'rules.appName': "Não o nome da aplicação (verificado ao guardar)",
+	'passkey.needsVerification': "Esta chave precisa de um PIN ou impressão digital para ser usada aqui.",
+	'passkey.rename': "Mudar o nome",
+	'passkey.save': "Guardar",
+	'social.createAccount': "Criar uma conta com {provider}",
+	'social.noAccount': "Ainda não existe uma conta para este endereço.",
+	'social.linked': "{provider} está agora ligado à sua conta.",
+	'microsoft.personal': "Esta aplicação só aceita contas Microsoft profissionais ou escolares. Inicie sessão com a sua conta profissional ou escolar.",
+	'microsoft.work': "Esta aplicação só aceita contas Microsoft pessoais. Inicie sessão com a sua conta pessoal.",
+	'microsoft.directory': "Esta aplicação só aceita contas Microsoft de uma organização. Inicie sessão com uma conta dessa organização, ou de outra forma.",
+	'provider.secretExpired': "Este início de sessão não está bem configurado: o segredo da aplicação expirou. Inicie sessão de outra forma ou avise a equipa da aplicação.",
+	'provider.wrongReturnAddress': "Este início de sessão não está bem configurado: o endereço de retorno da aplicação não está registado. Inicie sessão de outra forma ou avise a equipa da aplicação.",
+	'provider.wrongAccountTypes': "Este início de sessão não está bem configurado: este tipo de conta não é aceite. Inicie sessão de outra forma ou avise a equipa da aplicação.",
+	'provider.appNotInDirectory': "Este início de sessão não está bem configurado: a aplicação não está registada neste diretório. Inicie sessão de outra forma ou avise a equipa da aplicação.",
+	'provider.adminApproval': "O administrador de TI da sua organização tem de aprovar esta aplicação antes de poder iniciar sessão com a Microsoft.",
 };
 
 const pl: PluginMessages = {
@@ -1226,6 +1502,29 @@ const pl: PluginMessages = {
 	'secondStep.backupHeading': "Zapisz kod zapasowy",
 	'secondStep.backupIntro': "Przechowuj go w bezpiecznym miejscu. Jest pokazywany tylko raz i będzie potrzebny, jeśli zgubisz telefon.",
 	'secondStep.continue': "Dalej",
+	'rules.heading': "Twoje hasło musi mieć",
+	'rules.minLength': "Co najmniej {count} znaków",
+	'rules.upper': "Wielką literę",
+	'rules.lower': "Małą literę",
+	'rules.digit': "Cyfrę",
+	'rules.symbol': "Symbol",
+	'rules.email': "Nie twój adres e-mail",
+	'rules.common': "Nie popularne hasło (sprawdzane przy zapisie)",
+	'rules.appName': "Nie nazwę aplikacji (sprawdzane przy zapisie)",
+	'passkey.needsVerification': "Ten klucz wymaga kodu PIN lub odcisku palca, aby można go było tu użyć.",
+	'passkey.rename': "Zmień nazwę",
+	'passkey.save': "Zapisz",
+	'social.createAccount': "Utwórz konto przez {provider}",
+	'social.noAccount': "Dla tego adresu nie ma jeszcze konta.",
+	'social.linked': "{provider} jest teraz połączony z twoim kontem.",
+	'microsoft.personal': "Ta aplikacja przyjmuje tylko służbowe lub szkolne konta Microsoft. Zaloguj się kontem służbowym lub szkolnym.",
+	'microsoft.work': "Ta aplikacja przyjmuje tylko osobiste konta Microsoft. Zaloguj się kontem osobistym.",
+	'microsoft.directory': "Ta aplikacja przyjmuje tylko konta Microsoft jednej organizacji. Zaloguj się kontem tej organizacji lub w inny sposób.",
+	'provider.secretExpired': "To logowanie nie jest dobrze skonfigurowane: sekret aplikacji wygasł. Zaloguj się w inny sposób lub powiadom zespół aplikacji.",
+	'provider.wrongReturnAddress': "To logowanie nie jest dobrze skonfigurowane: adres powrotny aplikacji nie jest zarejestrowany. Zaloguj się w inny sposób lub powiadom zespół aplikacji.",
+	'provider.wrongAccountTypes': "To logowanie nie jest dobrze skonfigurowane: ten rodzaj konta nie jest przyjmowany. Zaloguj się w inny sposób lub powiadom zespół aplikacji.",
+	'provider.appNotInDirectory': "To logowanie nie jest dobrze skonfigurowane: aplikacja nie jest zarejestrowana w tym katalogu. Zaloguj się w inny sposób lub powiadom zespół aplikacji.",
+	'provider.adminApproval': "Administrator IT twojej organizacji musi zatwierdzić tę aplikację, zanim zalogujesz się przez Microsoft.",
 };
 
 /** The plugin's copy by primary language subtag. */

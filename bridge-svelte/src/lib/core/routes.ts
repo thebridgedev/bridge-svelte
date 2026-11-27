@@ -25,8 +25,10 @@ export type AuthPage = (typeof AUTH_PAGES)[number];
 /**
  * Other names an auth page answers to. `login` is the sign-in page path Bridge's "Your app" settings default to
  * (`/auth/login`): the address email links and sign-outs name when users sign in in the app, so it serves the sign-in page.
+ * `oauth-callback` is the return path those settings default to (`/auth/oauth-callback`), valid on every address of the app:
+ * the hosted page's return lands there when users sign in on Bridge's pages.
  */
-export const AUTH_PAGE_ALIASES: Readonly<Record<string, AuthPage>> = { login: 'sign-in' };
+export const AUTH_PAGE_ALIASES: Readonly<Record<string, AuthPage>> = { login: 'sign-in', 'oauth-callback': 'callback' };
 
 export const BILLING_PAGES = ['manage', 'plan', 'success', 'error'] as const;
 

@@ -13,6 +13,9 @@
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
   import PasswordInput from '../shared/PasswordInput.svelte';
+  import PasswordChecklist from '../shared/PasswordChecklist.svelte';
+  import type { PasswordRules } from '@nebulr-group/bridge-auth-core';
+  import { checklistMet, checklistOf } from '../../core/password-rules.js';
   import { takeEmailLink } from './email-link.js';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
@@ -34,7 +37,8 @@
   let checked = $state(false);
   let password = $state('');
   let confirm = $state('');
-  let minLength = $state(8);
+  let rules = $state<PasswordRules | null>(null);
+  const minLength = $derived(rules?.minLength ?? 8);
   let loading = $state(false);
   let done = $state(false);
   let failure = $state<string | null>(null);
@@ -44,7 +48,7 @@
     checked = true;
     getBridge()
       .signIn.options()
-      .then((found) => (minLength = found.password?.minLength ?? minLength))
+      .then((found) => (rules = found.password ?? null))
       .catch(() => undefined);
   });
 
@@ -56,8 +60,8 @@
       failure = t('forgot.error.mismatch');
       return;
     }
-    if (password.length < minLength) {
-      failure = t('password.tooShort', { count: minLength });
+    if (!checklistMet(checklistOf(rules, password))) {
+      failure = [...password.normalize('NFKC')].length < minLength ? t('password.tooShort', { count: minLength }) : t('rules.heading');
       return;
     }
     loading = true;
@@ -97,9 +101,11 @@
           required
           bind:value={password}
           disabled={loading || !checked}
+          aria-describedby="set-password-rules"
           showLabel={t('action.showPassword')}
           hideLabel={t('action.hidePassword')}
         />
+        <PasswordChecklist id="set-password-rules" {rules} {password} {t} />
       </div>
       <div class="bridge-form-group">
         <label for="set-password-confirm">{t('field.confirmPassword')}</label>

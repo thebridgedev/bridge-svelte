@@ -6,6 +6,7 @@
   import type { Snippet } from 'svelte';
   import type { HTMLButtonAttributes } from 'svelte/elements';
   import { goto } from '$app/navigation';
+  import { signedOutTarget } from '@nebulr-group/bridge-auth-core';
   import { getBridge, peekConfig } from '../../core/client.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { translator } from '../../core/i18n.js';
@@ -24,13 +25,21 @@
   async function signOut() {
     if (busy) return;
     busy = true;
+    // Where the person lands follows the app's "Users sign in" setting (TBP-871): Bridge's hosted page when they sign in there.
+    const options = redirectTo === undefined && !onSignOut ? getBridge().signIn.options().catch(() => null) : Promise.resolve(null);
     try {
       await getBridge().signOut();
     } finally {
       busy = false;
     }
-    if (onSignOut) onSignOut();
-    else void goto(redirectTo ?? peekConfig()?.afterSignOut ?? '/', { invalidateAll: true });
+    if (onSignOut) {
+      onSignOut();
+      return;
+    }
+    const fallback = redirectTo ?? peekConfig()?.afterSignOut ?? '/';
+    const target = redirectTo === undefined ? signedOutTarget(await options, fallback) : fallback;
+    if (/^https?:\/\//.test(target) && new URL(target).origin !== location.origin) location.assign(target);
+    else void goto(target, { invalidateAll: true });
   }
 </script>
 

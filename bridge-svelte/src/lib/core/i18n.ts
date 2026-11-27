@@ -8,13 +8,16 @@ import {
 	createTranslator,
 	interpolate,
 	isBridgeError,
+	needsUserVerification,
 	normalizeLocale,
+	socialRefusal,
 	waitMinutes,
 	type BridgeError,
 	type MessageKey,
 } from '@nebulr-group/bridge-auth-core';
 import type { BridgeMessages } from './config.js';
 import { PLUGIN_EN, PLUGIN_LOCALES, type PluginMessageKey } from './messages.js';
+import { RULE_KEYS } from './password-rules.js';
 
 export type BridgeMessageKey = MessageKey | PluginMessageKey;
 
@@ -47,6 +50,18 @@ export function translator(messages?: BridgeMessages): BridgeTranslator {
 	};
 }
 
+/** The messages of the social refusals Bridge names (Microsoft's who-can-sign-in and its error causes). */
+const REFUSAL_KEYS: Readonly<Record<string, PluginMessageKey>> = {
+	'microsoft_account_not_allowed:personal': 'microsoft.personal',
+	'microsoft_account_not_allowed:work': 'microsoft.work',
+	'microsoft_account_not_allowed:directory': 'microsoft.directory',
+	'provider_error:secret_expired': 'provider.secretExpired',
+	'provider_error:wrong_return_address': 'provider.wrongReturnAddress',
+	'provider_error:wrong_account_types': 'provider.wrongAccountTypes',
+	'provider_error:app_not_in_directory': 'provider.appNotInDirectory',
+	'provider_error:admin_approval_needed': 'provider.adminApproval',
+};
+
 const reportedOrigins = new Set<string>();
 const reportedCheckout = new Set<string>();
 
@@ -68,6 +83,20 @@ export function errorMessage(error: unknown, t: BridgeTranslator, fallback: Brid
 			console.error(`[bridge] The checkout could not start. ${e.message}`);
 		}
 		return t('billing.error.checkout');
+	}
+	// A passkey or security key that did no PIN, fingerprint or face check.
+	if (needsUserVerification(e)) return t('passkey.needsVerification');
+	// Who can sign in with Microsoft turned the account away, or the provider refused for a cause Bridge names.
+	const refused = socialRefusal(e);
+	if (refused !== null) {
+		const key = REFUSAL_KEYS[`${refused.code}:${refused.reason}`];
+		if (key !== undefined) return t(key);
+	}
+	// A new password the app's rules refuse: which rules, in the checklist's words.
+	if (e.code === 'password_rules' && e.failed !== null && e.failed.length > 0) {
+		// The length's line needs the number, which the form's checklist shows; the others name themselves.
+		const named = e.failed.flatMap((rule) => (rule === 'minLength' || RULE_KEYS[rule] === undefined ? [] : [t(RULE_KEYS[rule] as PluginMessageKey)]));
+		if (named.length > 0) return `${t('rules.heading')}: ${named.join(', ')}.`;
 	}
 	switch (e.kind) {
 		case 'wrong-credentials':

@@ -25,9 +25,9 @@ const PLANS = [
 
 let fake: FakeIssuer = fresh();
 
-function fresh(): FakeIssuer {
+function fresh(methods?: readonly string[]): FakeIssuer {
 	// Renaming yourself wants a sign-in within 5 minutes, as Bridge's own recent-sign-in routes do.
-	const made = createFakeIssuer({ origin: ORIGIN, appId: APP_ID, recheck: { routes: ['PATCH /v2/accounts/me'], maxAgeSeconds: 300 } });
+	const made = createFakeIssuer({ origin: ORIGIN, appId: APP_ID, recheck: { routes: ['PATCH /v2/accounts/me'], maxAgeSeconds: 300 }, ...(methods === undefined ? {} : { methods }) });
 	made.withoutLiveConnection();
 	made.setFlags(STANDARD_FLAGS);
 	made.setPlans(PLANS);
@@ -52,7 +52,8 @@ async function control(path: string, request: Request, url: URL): Promise<Respon
 	const body = request.method === 'POST' ? ((await request.json().catch(() => ({}))) as Record<string, unknown>) : {};
 	switch (path) {
 		case '/reset':
-			fake = fresh();
+			// The sign-in methods the app offers, when a test names them (passkeys are off by default, as on Bridge).
+			fake = fresh(Array.isArray(body['methods']) ? (body['methods'] as string[]) : undefined);
 			return json({ issuer: fake.issuer });
 		case '/people': {
 			const person = fake.addPerson(body as never);

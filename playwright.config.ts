@@ -41,6 +41,10 @@ export default defineConfig({
 	projects: [
 		{ name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /\/memory\// },
 		{ name: 'memory', use: { ...devices['Desktop Chrome'], baseURL: memoryURL }, testMatch: /\/memory\/.*\.spec\.ts$/ },
+		// Safari and Firefox (TBP-59): the passkey screens and the sign-in methods next to them. Their ceremonies cannot be
+		// driven headless (Chromium's virtual authenticator is the only one), so passkeys.spec.ts plays the browser's answer.
+		{ name: 'webkit', use: { ...devices['Desktop Safari'] }, testMatch: /\/auth\/(passkeys|passkey-offer|sign-in|sign-out|password)\.spec\.ts$/ },
+		{ name: 'firefox', use: { ...devices['Desktop Firefox'] }, testMatch: /\/auth\/(passkeys|passkey-offer|sign-in|sign-out|password)\.spec\.ts$/ },
 	],
 	webServer: [
 		...(external

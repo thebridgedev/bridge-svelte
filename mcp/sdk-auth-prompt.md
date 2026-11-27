@@ -20,9 +20,21 @@ In SvelteKit: a piece of UI is `<FeatureFlag key="…">`; a page is a route rule
 
 - **Allowed origins** must list every origin the app is served from, each dev port included (`http://localhost:5173` and `:5175` differ). From an unlisted origin, sign-in itself answers `403 {"message":"Origin not allowed"}` — password sign-in, the exchange that finishes magic-link, passkey and MFA sign-in, signup and passkeys. Sending a magic link still succeeds, so that failure shows after the link is clicked. `bridge app update --allowed-origins <origins>`, or Bridge admin → **Authentication** → **Security** → **Allowed Origins**.
 - **Self-signup** must be on for the signup page to work: `bridge app update --tenant-self-signup true`.
-- **Sign-in methods** the developer wants (magic link, passkeys, MFA, SSO) are switched on in the app, not in code: `bridge app update --magic-link-enabled true --passkeys-enabled true`, `bridge setup sso`. The pages show a method only when it is on. Which methods to offer is the developer's call — ask.
+- **Sign-in methods** the developer wants (magic link, passkeys, MFA, SSO) are switched on in the app, not in code: `bridge app update --magic-link-enabled true --passkeys-enabled true`; social providers below. The pages show a method only when it is on. Which methods to offer is the developer's call — ask.
 
 `bridge app get` and `bridge auth config` show the current values.
+
+### Social sign-in (Google, Microsoft, Apple, GitHub, LinkedIn, Facebook)
+
+The forms show a button for each provider that is on; there is no code to write. Ask the developer which providers they want, then for each:
+
+1. They make a client in the provider's console and register the **return address** Bridge prints: `bridge auth providers set <provider> …` (or the MCP tool `setup_social_provider`) saves the keys and prints it. `bridge auth providers list` shows each provider's return address and state.
+2. **Google, GitHub, LinkedIn, Facebook**: `--client-id <id> --client-secret <secret> --enable`.
+3. **Microsoft**: also `--who-can-sign-in any|work|personal|directory` (default any; `directory` takes `--directory <id or domain>`, for the developer's own company only). In the Entra admin center: New registration with the matching account types, Redirect URI platform **Web**, the client secret's **Value** (not its ID), 24 months. Errors such as AADSTS50011 (return address not registered) and AADSTS7000222 (secret expired) are named on the sign-in page.
+4. **Apple**: `--client-id <Services ID> --team-id <Team ID> --key-id <Key ID> --private-key-file <AuthKey.p8>`, no secret. On the Services ID: Domains and Subdomains and the Return URL Bridge prints. Register the app's email sender in Apple's Sign in with Apple for Email Communication, or people who hide their email get no invites or sign-in links. Apple refuses localhost: test on stage.
+5. The developer clicks **Test** in the provider's panel (dashboard › Authentication › Login): one sign-in at the provider that shows what came back, signing nobody in.
+
+Rules the developer should know: Bridge links a provider to an existing account by email only when the provider proves the address; otherwise the person signs in their usual way once and the provider is added. A new person whose address the provider does not prove (Facebook, Microsoft personal and other companies' accounts) confirms it with Bridge's email link first. The full steps are in the learning docs: `learning/social-sign-in/social-sign-in.md`.
 
 ## Install
 

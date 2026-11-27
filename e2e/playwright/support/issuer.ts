@@ -24,6 +24,8 @@ export interface TestIssuer {
 	/** The plans the app offers, as a test names them. */
 	readonly plans: { readonly free: string; readonly pro: string; readonly count: number };
 	reset(): Promise<void>;
+	/** Starts over with passkeys offered next to password and sign-in links (TBP-59). The local issuer only: before adding people. */
+	offerPasskeys?(): Promise<void>;
 	/** The server's id for a workspace the spec named (the local issuer keeps the spec's own). */
 	workspaceId(spec: string): string;
 	addPerson(person: Person): Promise<void>;
@@ -71,6 +73,9 @@ class LocalIssuer implements TestIssuer {
 
 	async reset() {
 		await this.call('/reset', {});
+	}
+	async offerPasskeys() {
+		await this.call('/reset', { methods: ['password', 'magicLink', 'passkeys'] });
 	}
 	workspaceId(spec: string) {
 		return spec;

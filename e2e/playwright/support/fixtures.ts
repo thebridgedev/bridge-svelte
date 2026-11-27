@@ -67,5 +67,6 @@ export async function expectTokenGone(page: Page, token: string, requests: reado
 	await page.goBack();
 	expect(page.url(), 'the entry before the link page').not.toContain(token);
 	await page.goForward();
-	expect(page.url(), 'the link page in history').toBe(here);
+	// Firefox finishes a client-side history step after goForward resolves: wait for the address, never read it at once.
+	await expect(page, 'the link page in history').toHaveURL(here);
 }

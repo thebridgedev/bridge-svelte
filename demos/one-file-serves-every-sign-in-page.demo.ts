@@ -257,7 +257,7 @@ async function signUp(demo: { page: Page; type: (t: import('@playwright/test').L
 	await demo.type(page.locator('#signup-email'), email);
 	await demo.type(page.locator('#signup-first-name'), 'Ada');
 	await demo.type(page.locator('#signup-last-name'), 'Lovelace');
-	await demo.click(page.getByRole('button', { name: 'Sign up' }));
+	await demo.click(page.getByRole('button', { name: 'Create account' }));
 	await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible({ timeout: 30_000 });
 }
 

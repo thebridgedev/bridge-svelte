@@ -61,7 +61,7 @@ describe('a checkout that cannot start because of the app\'s setup', () => {
 		const detail = "return-url-not-registered: https://app.test is not one of the app's registered browser origins, so a payer is not sent back to it. Add it.";
 		const refused = new BridgeError('conflict', detail, { status: 409, code: 'return-url-not-registered' });
 		expect(errorMessage(refused, t)).toBe(t('billing.error.checkout'));
-		expect(errorMessage(refused, t)).toBe('Changing the plan is not available right now. Please try again later or contact support.');
+		expect(errorMessage(refused, t)).toBe('Changing the plan is not available right now. Try again later, or contact support.');
 		expect(errorMessage(refused, t)).not.toContain('return-url');
 		const none = new BridgeError('conflict', 'no-return-url: Billing was not told where to return.', { status: 409, code: 'no-return-url' });
 		expect(errorMessage(none, t)).toBe(t('billing.error.checkout'));

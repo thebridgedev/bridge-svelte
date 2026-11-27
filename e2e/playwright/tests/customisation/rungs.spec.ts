@@ -63,7 +63,7 @@ test.describe('customisation', () => {
 		await page.locator('[data-testid="headless-form"] input[name="email"]').fill(person.email);
 		await page.locator('[data-testid="headless-form"] input[name="password"]').fill('wrong');
 		await page.locator('[data-testid="headless-form"] button').click();
-		await expect(page.getByTestId('headless-error')).toHaveText('Invalid email or password.');
+		await expect(page.getByTestId('headless-error')).toHaveText('Wrong email or password. Try again, or reset your password.');
 		await page.locator('[data-testid="headless-form"] input[name="password"]').fill(person.password);
 		await page.locator('[data-testid="headless-form"] button').click();
 		await expect(page.getByTestId('headless-done')).toContainText(person.email);

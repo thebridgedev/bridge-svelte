@@ -9,9 +9,9 @@ test.describe('sign-in', () => {
 
 	test('a wrong password says so, without saying whether the address has an account', async ({ page, person }) => {
 		await signIn(page, person.email, 'not the password', undefined, { wait: false });
-		await expect(page.locator('[data-bridge-alert][data-variant="error"]')).toHaveText('Invalid email or password.');
+		await expect(page.locator('[data-bridge-alert][data-variant="error"]')).toHaveText('Wrong email or password. Try again, or reset your password.');
 		await signIn(page, 'nobody@demo.test', PASSWORD, undefined, { wait: false });
-		await expect(page.locator('[data-bridge-alert][data-variant="error"]')).toHaveText('Invalid email or password.');
+		await expect(page.locator('[data-bridge-alert][data-variant="error"]')).toHaveText('Wrong email or password. Try again, or reset your password.');
 	});
 
 	test('the sign-up link follows the app’s sign-in options', async ({ page }) => {

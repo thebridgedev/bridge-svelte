@@ -106,6 +106,8 @@
   const PROVIDERS: readonly SocialProvider[] = ['google', 'linkedin', 'facebook', 'github', 'azure', 'apple'];
   /** A provider the person tried first was linked as this sign-in finished: shown once, before going on. */
   let linkedName = $state<string | null>(null);
+  /** The finished step the "now connected" notice waits on: its Continue goes on with it (to the app, on the hosted page). */
+  let afterLinked: SignInStep | null = null;
 
   const signUpShown = $derived(showSignupLink ?? options?.signUp ?? true);
   const passwordOffered = $derived(options === null || options.methods.includes('password'));
@@ -229,15 +231,19 @@
   }
 
   async function follow(step: SignInStep) {
+    // A provider the person tried first is now linked to this account: said once, before anything else, the hosted
+    // page's hand-off to the app included. Continue then goes on with the same step.
+    if (step.done && step.linked !== undefined && afterLinked === null) {
+      afterLinked = step;
+      linkedName = step.linked.name;
+      return;
+    }
     const held = heldReturn(step);
     if (held !== null) {
       heldBack = held;
       settled = true;
     } else if (handOff(step)) {
       settled = true;
-    } else if (step.done && step.linked !== undefined) {
-      // A provider the person tried first is now linked to this account: said once, then on.
-      linkedName = step.linked.name;
     } else if (step.done) {
       finish();
     } else if (step.next === 'verify_email') {
@@ -315,7 +321,7 @@
 {#if linkedName !== null}
   <AuthFormWrapper heading={null} class={className} {style} data-bridge-sign-in-step="linked" {...rest}>
     <Alert variant="success">{t('social.linked', { provider: linkedName })}</Alert>
-    <button type="button" class="bridge-btn bridge-btn-primary" data-bridge-linked-continue onclick={() => { linkedName = null; finish(); }}>{t('secondStep.continue')}</button>
+    <button type="button" class="bridge-btn bridge-btn-primary" data-bridge-linked-continue onclick={() => { linkedName = null; const step = afterLinked; if (step === null) finish(); else void follow(step); }}>{t('secondStep.continue')}</button>
   </AuthFormWrapper>
 {:else if heldBack !== null}
   <ReturnContinue url={heldBack} {messages} class={className} {style} {...rest} />

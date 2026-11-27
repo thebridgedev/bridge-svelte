@@ -11,8 +11,8 @@ import { session } from './stores.js';
 const PASSWORD = 'correct horse battery';
 const files = import.meta.glob('../components/auth/SignOutButton.svelte', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
-async function signedIn(config: BridgeConfig = {}) {
-	const fake = createFakeIssuer();
+async function signedIn(config: BridgeConfig = {}, issuer: Parameters<typeof createFakeIssuer>[0] = {}) {
+	const fake = createFakeIssuer(issuer);
 	fake.addPerson({ email: 'alice@acme.test', password: PASSWORD, workspaces: [{ id: 'ws-acme', name: 'Acme', role: 'OWNER' }] });
 	const client = startClient(resolveConfig({ issuer: fake.issuer, ...config }, undefined), { fetch: fake.fetch, storage: memoryStorage(), autoRefresh: false, locks: null, tabChannel: null, live: false });
 	await client.ready;
@@ -71,6 +71,24 @@ describe('signing out keeps people in the app, or where the developer chooses', 
 		expect((await asks()).status).toBe(200);
 		await logout({ silent: true });
 		expect((await asks()).status).toBe(401);
+	});
+
+	it('goes where the app\'s settings on Bridge say, and lets a chosen address through on the app\'s origins as Bridge lists them, with nothing configured', async () => {
+		const signOut = { page: 'https://acme.test/goodbye', origins: ['https://acme.test', 'https://*.acme.test'] };
+		await signedIn({}, { signOut });
+		await expect(logout()).resolves.toEqual({ redirectTo: 'https://acme.test/goodbye' });
+		expect(calls.goto).toEqual(['https://acme.test/goodbye']);
+		await signedIn({}, { signOut });
+		await logout({ redirectTo: 'https://app.acme.test/bye' });
+		expect(calls.goto).toEqual(['https://app.acme.test/bye']);
+		await signedIn({}, { signOut });
+		await logout({ redirectTo: 'https://evil.test/x' });
+		expect(calls.goto).toEqual(['https://acme.test/goodbye']);
+		// Bridge names no page: the app's own sign-in page. (A new issuer under the same address needs a new client.)
+		resetClient();
+		await signedIn({}, { signOut: { page: null, origins: [] } });
+		await logout();
+		expect(calls.goto).toEqual(['/auth/sign-in']);
 	});
 
 	it('<SignOutButton> signs out through logout() with its redirectTo and silent', () => {

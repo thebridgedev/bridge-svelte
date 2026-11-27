@@ -1,9 +1,10 @@
 <!--
   Signs out here, in every tab, and at Bridge, then goes where you chose:
 
-  - nothing set: the app's own sign-in page (`auth.afterSignOut`);
-  - `redirectTo="/goodbye"`: another page, only on this page's address or one of `auth.appOrigins`; any other
-    address is refused and the default is used;
+  - nothing set: where the app's settings on Bridge say (its sign-out address, or Bridge's sign-in page when its
+    users sign in there), else the app's own sign-in page (`auth.afterSignOut`);
+  - `redirectTo="/goodbye"`: another page, only on this page's address or one of the app's addresses as Bridge
+    lists them; any other address is refused and the default is used;
   - `silent`: stay here, signed out, with no page reload, so your page shows its own signed-out view.
 
   The `signed-out` event reaches everything that listens in every case, and the session ends at Bridge, so a copied

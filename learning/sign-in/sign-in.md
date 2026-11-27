@@ -113,12 +113,14 @@ An invite that no longer works says why: revoked or expired (ask for a new one),
 Signing out ends the session here, in every open tab, and at Bridge, so a copied token stops working. Then the person goes where you choose:
 
 ```svelte
-<SignOutButton />                        <!-- the app's own sign-in page (auth.afterSignOut) -->
+<SignOutButton />                        <!-- where the app's settings on Bridge say, else the app's own sign-in page -->
 <SignOutButton redirectTo="/goodbye" />  <!-- another page of the app -->
 <SignOutButton silent />                 <!-- stay here: signed out, no page reload, show your own signed-out view -->
 ```
 
-`redirectTo` is only ever a path on the page's own address, or an address in `auth.appOrigins` (`https://app.acme.com`). Any other address is refused and the default is used, so a link can never sign somebody out and send them to another site. In your own code, `logout({ redirectTo, silent })` does the same; the `signed-out` event reaches everything that listens in every case. Switching workspace moves every tab to the new workspace; flag results, billing and the team panel follow.
+With nothing set, the person goes where the app's settings on Bridge say: the sign-out address listed among the app's addresses (an address with the "sign-out" use), or Bridge's sign-in page when the app's users sign in on Bridge's pages; otherwise the app's own sign-in page (`auth.afterSignOut`, `/auth/sign-in`). Changing it in the dashboard needs no change in the code.
+
+`redirectTo` is only ever a path on the page's own address, or an address on one of the app's browser origins as Bridge lists them (the addresses with the "browser-origin" use, read from Bridge: no list to keep in the code). Any other address is refused and the default is used, so a link can never sign somebody out and send them to another site. In your own code, `logout({ redirectTo, silent })` does the same; the `signed-out` event reaches everything that listens in every case. Switching workspace moves every tab to the new workspace; flag results, billing and the team panel follow.
 
 ## Using the forms on your own pages
 

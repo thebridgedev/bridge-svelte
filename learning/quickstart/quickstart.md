@@ -90,7 +90,7 @@ bridgeBootstrap({
   issuer,                 // default: PUBLIC_BRIDGE_ISSUER
   rules,                  // route rules, first match wins
   defaultAccess,          // 'protected' (default) or 'public' for routes no rule matches
-  auth: { base, afterSignIn, afterSignOut, appOrigins }, // '/auth', '/', the sign-in page, none
+  auth: { base, afterSignIn, afterSignOut }, // '/auth', '/', the sign-in page (when Bridge names no sign-out page)
   returnToParam,          // 'redirectUri'
   locale, messages,       // the language, and your own wording
   tokenOrigins,           // other origins your API runs on, for bridgeFetch

@@ -49,11 +49,15 @@ export interface BridgeConfig {
 		readonly base?: string;
 		/** Where a person lands after signing in, when no return address was kept. @default '/' */
 		readonly afterSignIn?: string;
-		/** Where a person lands after signing out. @default the sign-in page */
+		/**
+		 * The app's own sign-in page, where a person lands after signing out when Bridge names no page for it. Bridge
+		 * names one when the app lists a sign-out address in its settings, or its users sign in on Bridge's pages.
+		 * @default the sign-in page
+		 */
 		readonly afterSignOut?: string;
 		/**
-		 * Other addresses of the app (besides this page's own) that a sign-out may send a person to, as origins
-		 * (`https://app.acme.com`). A sign-out never goes to an address that is not the page's own or one of these.
+		 * @deprecated Not needed: a sign-out may send a person to the app's browser origins as Bridge lists them, read
+		 * from Bridge. Still read for one release: the origins listed here are allowed too.
 		 */
 		readonly appOrigins?: readonly string[];
 	};

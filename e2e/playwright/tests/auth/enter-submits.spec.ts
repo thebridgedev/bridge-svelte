@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { expect, PASSWORD, test, uniqueEmail } from '../../support/fixtures';
+import { expect, PASSWORD, signIn, test, uniqueEmail } from '../../support/fixtures';
 
 /**
  * Enter submits every end-user sign-in form, once, and nothing submits by itself (TBP-828): pressed in a real
@@ -88,6 +88,20 @@ test.describe('Enter submits every sign-in form', () => {
 		await expect(page.locator('[data-bridge-second-step="second_step"]')).toBeVisible();
 		await page.locator('#second-step-code').press('Enter');
 		await expect(page.getByTestId('sign-out')).toBeVisible();
+	});
+
+	test('the profile form: Enter saves it, and its phone field (the country picker) catches an impossible number first', async ({ page, person }) => {
+		await signIn(page, person.email);
+		await page.goto('/settings/team');
+		await page.locator('.bridge-team-tab', { hasText: 'Profile' }).click();
+		const profile = page.locator('[data-bridge-team-profile]');
+		await profile.locator('#bridge-profile-phone').fill('+44 7700');
+		await profile.locator('#bridge-profile-phone').press('Enter');
+		await expect(profile.locator('[data-bridge-alert]')).toContainText('does not look right');
+		await profile.locator('#bridge-profile-phone').fill('+44 7700 900123');
+		await profile.locator('#bridge-profile-first-name').fill('Alicia');
+		await profile.locator('#bridge-profile-first-name').press('Enter');
+		await expect(page.getByTestId('nav-user')).toContainText('Alicia');
 	});
 
 	test('the second step: an impossible number is caught before any code is sent', async ({ page, issuer }) => {

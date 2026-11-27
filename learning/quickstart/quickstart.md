@@ -36,7 +36,8 @@ export const variables = defineEnvVars({
 In your app's settings in Bridge, also add:
 
 - your app's address (`https://app.example.com`, and `http://localhost:5173` while developing) as a **browser address**, so your pages may call Bridge;
-- `https://app.example.com/auth` as the **email-links address**, so links in Bridge's emails (finishing sign-up, resetting a password, invites) land on your sign-in pages.
+- `https://app.example.com/auth` as the **email-links address**, so links in Bridge's emails (finishing sign-up, resetting a password, invites, passkey setup) land on your sign-in pages. [Sign-in pages](../sign-in/sign-in.md#email-links) says which page each link opens and how your settings decide where it opens.
+- optionally, an address with the **sign-out** use (`https://app.example.com/goodbye`): where people land after signing out. Without one they land on your sign-in page.
 
 ## 3. Write three files
 

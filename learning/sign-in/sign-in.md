@@ -1,6 +1,6 @@
 # Sign-in pages
 
-`<BridgeAuthRoutes />` in `src/routes/auth/[...bridge]/+page.svelte` serves every page a person signs in, signs up or recovers a password on. The plugin owns the list, so no page an email links to can be missing.
+`<BridgeAuthRoutes />` in `src/routes/auth/[...bridge]/+page.svelte` serves every page a person signs in, signs up or recovers a password on. The plugin owns the list, so no page an email links to can be missing: an app that signs people in on its own pages serves this one file, and nothing else, for Bridge's emails.
 
 | Page | What it does |
 |---|---|
@@ -29,6 +29,16 @@ An unknown page under `/auth` gets your app's own 404.
 ## Email links
 
 Bridge's emails link to your email-links address with the token in the fragment: `https://app.example.com/auth#bridge=verify-email&token=…`. The fragment never reaches a server log or a `Referer` header. `bridgeBootstrap` sends the browser to the matching page, and that page takes the token and clears it from the address bar.
+
+The page a link opens shows one button ("Confirm my email", "Sign in", "Set new password", "Accept invite"): nothing is used up until it is pressed, so a mail scanner that opens the link first spoils nothing. A link works once; a used or expired one says so, with a way to get a new one.
+
+**Where a link opens** is decided by your app's settings in Bridge, never by the plugin:
+
+- A sign-up, sign-in link or password reset started on one of your sites opens on that site's email-links address, so the person comes back where they started.
+- Every other email (an invite, a passkey setup link, a payment that failed, and the ones above when no site is known) opens on your app's first email-links address. With the "Your app" settings, that follows where your users sign in: on Bridge's pages, Bridge's sign-in page for your app; in your app, your email-links address, or your main address with its sign-in path when you listed none.
+- An admin's "copy reset link" in the dashboard opens on the same address, lasts one hour and is recorded in the app's log.
+
+So the one thing an app on its own pages must do is list `https://<your site>/auth` (where `[...bridge]` is mounted) as an email-links address. The pages each link opens: `verify-email` (sign-up), `magic-link` (sign-in link), `set-password` (password reset, and a paused or locked account), `passkey-setup`, `invite` (an invite or a new owner's welcome).
 
 ## Sign-in links
 

@@ -27,6 +27,7 @@
   import { get } from 'svelte/store';
   import { getBridge, peekConfig, takeEndedReason } from '../../core/client.js';
   import { session } from '../../core/stores.js';
+  import { holdSignInPage } from '../../core/guard.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
   import AuthFormWrapper from '../shared/AuthFormWrapper.svelte';
@@ -108,6 +109,10 @@
   let linkedName = $state<string | null>(null);
   /** The finished step the "now connected" notice waits on: its Continue goes on with it (to the app, on the hosted page). */
   let afterLinked: SignInStep | null = null;
+  // While a sign-in is under way here, or its "now connected" notice shows, the person is signed in already: the page
+  // stays until the form itself goes on (the guard would otherwise leave it for the app before the notice is read).
+  $effect(() => holdSignInPage(loading || linkedName !== null));
+  onDestroy(() => holdSignInPage(false));
 
   const signUpShown = $derived(showSignupLink ?? options?.signUp ?? true);
   const passwordOffered = $derived(options === null || options.methods.includes('password'));

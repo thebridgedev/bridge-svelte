@@ -60,6 +60,7 @@ export { default as VerifyEmail } from './components/auth/VerifyEmail.svelte';
 export { default as RecheckDialog } from './components/auth/RecheckDialog.svelte';
 export { default as MagicLinkLanding } from './components/auth/MagicLinkLanding.svelte';
 export { default as PasskeySetupLanding } from './components/auth/PasskeySetupLanding.svelte';
+export { default as PasskeyOffer } from './components/auth/PasskeyOffer.svelte';
 export { default as PasskeyManager } from './components/auth/PasskeyManager.svelte';
 export { default as ConnectedTools } from './components/auth/ConnectedTools.svelte';
 export { toolRows, type ListedSession, type ToolRow } from './components/auth/connected-tools.js';

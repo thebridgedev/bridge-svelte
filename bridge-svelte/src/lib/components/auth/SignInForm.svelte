@@ -26,6 +26,7 @@
   import { hostedPageRedirect, isBridgeError, isPasswordChangeRequired, passkeyHandOver, readReturnTo, takeSocialReturn, type SignInOptions, type SignInStep, type SocialProvider, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
   import { get } from 'svelte/store';
   import { getBridge, peekConfig, takeEndedReason } from '../../core/client.js';
+  import { holdSignInPage } from '../../core/guard.js';
   import { session } from '../../core/stores.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
@@ -38,6 +39,7 @@
   import SocialButtons from './SocialButtons.svelte';
   import SecondStepForm from './SecondStepForm.svelte';
   import CheckYourEmail from './CheckYourEmail.svelte';
+  import PasskeyOffer from './PasskeyOffer.svelte';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** Heading on the credentials step. @default the shared "Log in to your account" copy; `null` for none */
@@ -103,14 +105,23 @@
   const social = $derived(options?.social ?? []);
   /** A social sign-in found no account for the address: the provider, for a one-click "Create an account with …". */
   let noAccountWith = $state<SocialProvider | null>(null);
-  const PROVIDERS: readonly SocialProvider[] = ['google', 'linkedin', 'facebook', 'github', 'azure'];
+  const PROVIDERS: readonly SocialProvider[] = ['google', 'linkedin', 'facebook', 'github', 'azure', 'apple'];
   /** A provider the person tried first was linked as this sign-in finished: shown once, before going on. */
   let linkedName = $state<string | null>(null);
+  /** The finished step the "now connected" notice waits on: its Continue goes on with it (to the app, on the hosted page). */
+  let afterLinked: SignInStep | null = null;
+  // While a sign-in is under way here, or its "now connected" notice shows, the person is signed in already: the page
+  // stays until the form itself goes on (the guard would otherwise leave it for the app before the notice is read).
+  // Held while signing in, while a provider now connected is said, and while a passkey is offered (TBP-536).
+  $effect(() => holdSignInPage(loading || linkedName !== null || offering));
+  onDestroy(() => holdSignInPage(false));
 
   const signUpShown = $derived(showSignupLink ?? options?.signUp ?? true);
   const passwordOffered = $derived(options === null || options.methods.includes('password'));
   const linkOffered = $derived(options !== null && options.methods.includes('magicLink'));
   let passkeySupported = $state(false);
+  /** Signed in: a passkey is offered before going on, when Bridge says so (TBP-536). */
+  let offering = $state(false);
   let setupLinkSent = $state(false);
   const passkeysOffered = $derived(passkeySupported && options !== null && options.methods.includes('passkeys'));
   const passkeyHandOverTo = (error: unknown) => passkeyHandOver(error);
@@ -126,7 +137,8 @@
       await follow(await bridge.passkeys.signIn({ autofill: true, ...(workspace ? { workspace } : {}) }));
     } catch (error) {
       // Bridge's own page cannot offer a passkey (it belongs to the app's page): waiting for the list ends quietly.
-      if (!isBridgeError(error, 'cancelled') && passkeyHandOverTo(error) === null) fail(error);
+      // A browser that refuses the app's passkey domain on this page (related origins it does not support) waits quietly too.
+      if (!isBridgeError(error, 'cancelled') && !isBridgeError(error, 'origin-not-allowed') && passkeyHandOverTo(error) === null) fail(error);
     }
   }
 
@@ -176,6 +188,7 @@
   });
 
   onDestroy(() => {
+    holdSignInPage(false);
     // An autofill wait must not outlive the form.
     if (autofillStarted) void getBridge().passkeys.cancel();
   });
@@ -192,7 +205,12 @@
       if (isBridgeError(error, 'cancelled')) notice = t('passkey.cancelled');
       // On Bridge's own page a passkey belongs to the app's sign-in page: the person is taken there.
       else if (continueOnAppPage(error)) notice = t('passkey.handover');
-      else fail(error);
+      // Bridge's page with related origins (TBP-873) in a browser that does not support them (Firefox): the browser refuses
+      // the app's passkey domain here, and the person goes on to the app's own sign-in page, as without them.
+      else if (isBridgeError(error, 'origin-not-allowed') && config?.signInRequests && options?.signIn?.url && /^https:\/\//.test(options.signIn.url)) {
+        notice = t('passkey.handover');
+        location.assign(options.signIn.url);
+      } else fail(error);
     } finally {
       loading = false;
     }
@@ -213,7 +231,17 @@
     }
   }
 
+  /** Signed in. Where the app offers passkeys, Bridge is asked first whether to offer one (TBP-536); then on. */
   function finish() {
+    if (!offering && options?.passkeyOffer !== undefined && passkeySupported) {
+      offering = true;
+      return;
+    }
+    goOn();
+  }
+
+  function goOn() {
+    offering = false;
     settled = true;
     if (onSignIn) {
       onSignIn();
@@ -229,15 +257,19 @@
   }
 
   async function follow(step: SignInStep) {
+    // A provider the person tried first is now linked to this account: said once, before anything else, the hosted
+    // page's hand-off to the app included. Continue then goes on with the same step.
+    if (step.done && step.linked !== undefined && afterLinked === null) {
+      afterLinked = step;
+      linkedName = step.linked.name;
+      return;
+    }
     const held = heldReturn(step);
     if (held !== null) {
       heldBack = held;
       settled = true;
     } else if (handOff(step)) {
       settled = true;
-    } else if (step.done && step.linked !== undefined) {
-      // A provider the person tried first is now linked to this account: said once, then on.
-      linkedName = step.linked.name;
     } else if (step.done) {
       finish();
     } else if (step.next === 'verify_email') {
@@ -312,10 +344,12 @@
   }
 </script>
 
-{#if linkedName !== null}
+{#if offering}
+  <PasskeyOffer onDone={goOn} {messages} class={className} {style} />
+{:else if linkedName !== null}
   <AuthFormWrapper heading={null} class={className} {style} data-bridge-sign-in-step="linked" {...rest}>
     <Alert variant="success">{t('social.linked', { provider: linkedName })}</Alert>
-    <button type="button" class="bridge-btn bridge-btn-primary" data-bridge-linked-continue onclick={() => { linkedName = null; finish(); }}>{t('secondStep.continue')}</button>
+    <button type="button" class="bridge-btn bridge-btn-primary" data-bridge-linked-continue onclick={() => { linkedName = null; const step = afterLinked; if (step === null) finish(); else void follow(step); }}>{t('secondStep.continue')}</button>
   </AuthFormWrapper>
 {:else if heldBack !== null}
   <ReturnContinue url={heldBack} {messages} class={className} {style} {...rest} />

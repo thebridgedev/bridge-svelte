@@ -13,9 +13,9 @@ test.describe('hosted sign-in', () => {
 	test('a wrong password says so on the hosted page, without saying whether the address has an account', async ({ page, person }) => {
 		await openHostedSignIn(page);
 		await fillCredentials(page, person.email, 'not the password');
-		await expect(page.locator('[data-bridge-alert][data-variant="error"]')).toHaveText('Invalid email or password.');
+		await expect(page.locator('[data-bridge-alert][data-variant="error"]')).toHaveText('Wrong email or password. Try again, or reset your password.');
 		await fillCredentials(page, 'nobody@example.test', PASSWORD);
-		await expect(page.locator('[data-bridge-alert][data-variant="error"]')).toHaveText('Invalid email or password.');
+		await expect(page.locator('[data-bridge-alert][data-variant="error"]')).toHaveText('Wrong email or password. Try again, or reset your password.');
 	});
 
 	test('the hosted page is drawn in the app’s own colours', async ({ page }) => {

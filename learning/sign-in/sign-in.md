@@ -19,7 +19,7 @@ An unknown page under `/auth` gets your app's own 404.
 
 ## What people see
 
-- **A wrong email or password** says "Invalid email or password." whether or not the address has an account. Sign-up and password recovery also answer the same way for both, so the pages never reveal who has an account.
+- **A wrong email or password** says "Wrong email or password. Try again, or reset your password." whether or not the address has an account. Sign-up and password recovery also answer the same way for both, so the pages never reveal who has an account.
 - **The workspace choice** appears after the password when the person belongs to several workspaces. Pick one and they are in.
 - **The sign-up link** finishes the sign-up only in the browser that started it. Opened on another device, it says to open it where they signed up, and the link still works there.
 - **A sign-in link** ("Email me a sign-in link") works once, for 15 minutes, and only in the browser that asked for it. Opened on another device, it says to open it where they asked, and the link still works there. The page answers the same whether or not the address has an account.

@@ -102,7 +102,7 @@ test.describe('invite landing', () => {
 		await first.close();
 		await page.goto(`/auth#bridge=invite&token=${used}`);
 		await expect(page.locator('[data-bridge-invite="closed"]')).toHaveAttribute('data-invite-state', 'used');
-		await expect(page.locator('[data-bridge-alert]')).toHaveText('This invite was used already. Sign in to open the workspace.');
+		await expect(page.locator('[data-bridge-alert]')).toHaveText('This invite has already been used. Sign in to open the workspace.');
 
 		await page.goto('/auth#bridge=invite&token=ws-acme_made-up-0123456789');
 		await expect(page.locator('[data-bridge-invite="closed"]')).toHaveAttribute('data-invite-state', 'expired');

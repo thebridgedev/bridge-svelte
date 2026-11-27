@@ -7,7 +7,7 @@ test.describe('password recovery', () => {
 		await page.goto('/auth/forgot-password');
 		await page.locator('#forgot-email').fill(person.email);
 		await page.locator('[data-bridge-forgot-password="form"] button[type="submit"]').click();
-		await expect(page.locator('[data-bridge-forgot-password="sent"] [data-bridge-alert]')).toHaveText('Check your email for a password reset link.');
+		await expect(page.locator('[data-bridge-forgot-password="sent"] [data-bridge-alert]')).toHaveText('If this address has an account, a link to reset your password is on its way.');
 
 		const token = await issuer.lastLink(person.email, 'reset-password');
 		const requests = recordRequests(page);

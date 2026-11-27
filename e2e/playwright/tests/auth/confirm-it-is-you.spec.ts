@@ -44,7 +44,7 @@ test.describe('confirming it is you', () => {
 		expect(page.url(), 'an overlay, not a navigation').toBe(url);
 		await page.locator('#recheck-password').fill('not the password');
 		await page.locator('[data-bridge-recheck-submit]').click();
-		await expect(page.locator('[data-bridge-recheck-error]')).toHaveText('That password is not right.');
+		await expect(page.locator('[data-bridge-recheck-error]')).toHaveText('That password is not right. Try again.');
 		await expect(page.locator(dialog)).toBeVisible();
 		expect(saves()).toBe(1);
 

@@ -25,7 +25,7 @@ test.describe('sign-out and sessions', () => {
 		await issuer.endSessions(person.email);
 		await page.goto('/tickets');
 		await expect(page).toHaveURL(/\/auth\/sign-in/);
-		await expect(page.locator('[data-bridge-alert][data-variant="info"]')).toHaveText(issuer.kind === 'real' ? /Your session ended|Your access to that workspace changed/ : 'Your session ended. Please sign in again.');
+		await expect(page.locator('[data-bridge-alert][data-variant="info"]')).toHaveText(issuer.kind === 'real' ? /You were signed out|Your access to that workspace changed/ : 'You were signed out. Sign in again to go on.');
 	});
 
 	test('two tabs share one session', async ({ page, context, person }) => {

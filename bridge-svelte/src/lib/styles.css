@@ -50,6 +50,7 @@
  *   --bridge-alert-success-{bg,fg,border}   confirmations, active plan badge
  *   --bridge-alert-info-{bg,fg,border}      info notices, trial badge
  *   --bridge-alert-warning-{bg,fg,border}   warnings, quota nearing its limit
+ *   --bridge-alert-{error,success,info}-accent  the accent bar and icon of the one message look (Alert)
  *
  * Layout
  *   --bridge-auth-page-padding     default container of the sign-in pages
@@ -248,26 +249,46 @@
     to { transform: rotate(360deg); }
   }
 
-  /* ─── Alert ───────────────────────────────────────────────────────────────── */
+  /* ─── Alert ─────────────────────────────────────────────────────────────────
+     One look in three kinds (TBP-532): a surface mixed from the page's background, a thin accent bar and an icon in
+     the kind's accent, and the page's own text colour. Drawn from --bridge-bg and --bridge-foreground, so a dark
+     theme needs nothing more. --bridge-alert-{error,success,info}-accent set the three accents. */
 
   [data-bridge-alert] {
-    padding: 0.625rem 0.875rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.75rem 0.875rem;
     font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+    line-height: 1.45;
+    text-align: left;
+  }
+  [data-bridge-alert] .bridge-alert-icon {
+    flex: none;
+    margin-top: 0.05em;
+    color: var(--bridge-alert-accent);
+  }
+  [data-bridge-alert] .bridge-alert-text {
+    flex: 1;
+    min-width: 0;
   }
 
   :where([data-bridge-alert]) {
+    --bridge-alert-accent: var(--bridge-alert-info-accent, var(--bridge-primary, #4f46e5));
     border-radius: var(--bridge-border-radius);
-    border: 1px solid var(--bridge-border);
+    border: 1px solid color-mix(in srgb, var(--bridge-alert-accent) 28%, var(--bridge-border, #d1d5db));
+    border-left: 3px solid var(--bridge-alert-accent);
+    background-color: color-mix(in srgb, var(--bridge-alert-accent) 7%, var(--bridge-bg, #ffffff));
+    color: var(--bridge-foreground, #111827);
   }
   :where([data-bridge-alert][data-variant="error"]) {
-    background-color: var(--bridge-alert-error-bg);
-    color: var(--bridge-alert-error-fg);
-    border-color: var(--bridge-alert-error-border);
+    --bridge-alert-accent: var(--bridge-alert-error-accent, #dc2626);
   }
   :where([data-bridge-alert][data-variant="success"]) {
-    background-color: var(--bridge-alert-success-bg);
-    color: var(--bridge-alert-success-fg);
-    border-color: var(--bridge-alert-success-border);
+    --bridge-alert-accent: var(--bridge-alert-success-accent, #16a34a);
+  }
+  :where([data-bridge-alert][data-variant="info"]) {
+    --bridge-alert-accent: var(--bridge-alert-info-accent, var(--bridge-primary, #4f46e5));
   }
 
   /* ─── AuthFormWrapper ─────────────────────────────────────────────────────── */

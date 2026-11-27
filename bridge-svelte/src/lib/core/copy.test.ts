@@ -30,11 +30,11 @@ describe('the plugin copy', () => {
 
 	it('explains an error by its kind, never by guessing', () => {
 		const t = translator();
-		expect(errorMessage(new BridgeError('wrong-credentials', 'x'), t)).toBe('Invalid email or password.');
+		expect(errorMessage(new BridgeError('wrong-credentials', 'x'), t)).toBe('Wrong email or password. Try again, or reset your password.');
 		expect(errorMessage(new BridgeError('wrong-device', 'x'), t)).toBe('This link works only in the browser where you signed up. Open it there, or sign up again here.');
 		expect(errorMessage(new BridgeError('invalid', 'Password is too short.'), t)).toBe('Password is too short.');
-		expect(errorMessage(new BridgeError('not-offered', 'x'), t, 'workspace.error.switch')).toBe('Failed to switch workspace.');
-		expect(errorMessage(new Error('boom'), t)).toBe('Something went wrong. Please try again.');
+		expect(errorMessage(new BridgeError('not-offered', 'x'), t, 'workspace.error.switch')).toBe('The workspace could not be changed. Try again.');
+		expect(errorMessage(new Error('boom'), t)).toBe('Something went wrong. Try again in a moment.');
 	});
 
 	it('says how long to wait when sign-in is paused, and that a locked account needs a reset', () => {

@@ -4,6 +4,10 @@
 
 Needs the `@nebulr-group/bridge-auth-core` that carries `language`, `links.preview` and `logout()`.
 
+### Changed
+
+- **One message look in three kinds, and clearer wording (proposed, for the owner's review).** `<Alert>` (every success, error and info message) is a calm surface drawn from the page's own background with a thin accent bar and an icon, the text in the page's own colour, so it reads in light and dark themes; `--bridge-alert-{error,success,info}-accent` set the accents. Errors are announced at once (`role="alert"`), successes and info politely (`role="status"`). Messages say what happened and what to do next, in all 12 languages; no "app" in what people read. Keys are unchanged.
+
 ### Fixed
 
 - **Sign-in problems at startup never break a page.** A page that is public and gated by no flag (a rule with `public: true`, or any page with `defaultAccess: 'public'`) now shows at once and waits for nothing the sign-in startup does: before, every page waited for Bridge to answer, up to 8 seconds when Bridge did not. Any failure the guard does not expect is taken as a signed-out visitor, so a page that needs sign-in sends the visitor to sign in instead of failing. Refused or failed renewals, an unreachable Bridge and failing flags were already handled and are now held by a test.

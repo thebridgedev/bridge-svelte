@@ -133,6 +133,17 @@ describe('marking pages public makes them skip the sign-in startup work', () => 
 		expect(ms).toBeLessThan(500);
 	});
 
+	it('sign-up and a social sign-in work from a public page: it gets the client at once, and both reach Bridge through it', async () => {
+		(globalThis as { window?: unknown }).window = { location: { hash: '', origin: 'http://localhost', href: 'http://localhost/' } };
+		const fake = createFakeIssuer({ methods: ['password'], social: ['google'] });
+		const { startClient } = await import('./client.js');
+		startClient(resolveConfig({ issuer: fake.issuer, ...PUBLIC_PAGE }, undefined), { fetch: fake.fetch, storage: memoryStorage(), autoRefresh: false, locks: null, tabChannel: null, live: false });
+		const data = await bridgeBootstrap({ issuer: fake.issuer, ...PUBLIC_PAGE })(event('/'));
+		expect(data.bridge).toBe(getBridge());
+		await expect(data.bridge.signUp.start({ email: 'new@acme.test', password: PASSWORD })).resolves.toMatchObject({ next: 'verify_email' });
+		await expect(data.bridge.social.start('google', { intent: 'sign-up', returnPage: 'http://localhost/auth/sign-in' })).resolves.toMatch(/^https?:\/\//);
+	});
+
 	it('an app with defaultAccess public shows every page at once', async () => {
 		(globalThis as { window?: unknown }).window = { location: { hash: '' } };
 		const { outcome, ms } = await open('hanging', '/about', { defaultAccess: 'public' });

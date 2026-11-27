@@ -6,6 +6,7 @@
   import { getBridge } from '../../core/client.js';
   import { errorMessage, translator } from '../../core/i18n.js';
   import { me } from '../../core/stores.js';
+  import { signalNewName } from '../../core/name-signal.js';
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
 
@@ -56,8 +57,12 @@
     error = null;
     success = null;
     try {
-      adopt(await getBridge().me.update(changed));
+      const nameChanged = changed.firstName !== undefined || changed.lastName !== undefined;
+      const saved = await getBridge().me.update(changed);
+      adopt(saved);
       success = 'Profile updated successfully.';
+      // Their passkeys show the new name in the password manager too.
+      void signalNewName(getBridge(), saved, nameChanged);
       await me.refresh();
     } catch (err) {
       error = errorMessage(err, t);

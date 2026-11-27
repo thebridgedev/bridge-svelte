@@ -40,6 +40,10 @@ export default defineConfig({
 	},
 	projects: [
 		{ name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /\/memory\// },
+		// Safari's engine and Firefox: every spec but the memory-storage ones (Chromium covers those) and passkey ceremonies,
+		// which need Chromium's virtual authenticator.
+		{ name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: /\/memory\// },
+		{ name: 'firefox', use: { ...devices['Desktop Firefox'] }, testIgnore: /\/memory\// },
 		{ name: 'memory', use: { ...devices['Desktop Chrome'], baseURL: memoryURL }, testMatch: /\/memory\/.*\.spec\.ts$/ },
 	],
 	webServer: [

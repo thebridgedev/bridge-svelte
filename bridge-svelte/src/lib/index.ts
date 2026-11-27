@@ -61,6 +61,8 @@ export { default as RecheckDialog } from './components/auth/RecheckDialog.svelte
 export { default as MagicLinkLanding } from './components/auth/MagicLinkLanding.svelte';
 export { default as PasskeySetupLanding } from './components/auth/PasskeySetupLanding.svelte';
 export { default as PasskeyManager } from './components/auth/PasskeyManager.svelte';
+export { default as ConnectedTools } from './components/auth/ConnectedTools.svelte';
+export { toolRows, type ListedSession, type ToolRow } from './components/auth/connected-tools.js';
 export { default as ForgotPassword } from './components/auth/ForgotPassword.svelte';
 export { default as SetPassword } from './components/auth/SetPassword.svelte';
 export { default as InviteLanding } from './components/auth/InviteLanding.svelte';

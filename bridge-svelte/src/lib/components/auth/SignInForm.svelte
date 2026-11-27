@@ -373,6 +373,11 @@
   </AuthFormWrapper>
 {:else if checkEmail !== null}
   <CheckYourEmail email={checkEmail} {onSignIn} class={className} {style} {messages} />
+  <!-- Link required (D24): an address that already has an account signs in the way it always does, here, on this page and
+       its sign-in request, so the provider tried first is linked as the sign-in finishes. -->
+  <p class="bridge-step-desc" data-bridge-check-email-sign-in>
+    {t('signup.loginPrompt')} <button type="button" class="bridge-link" onclick={() => (checkEmail = null)}>{t('signup.loginLink')}</button>
+  </p>
 {:else if second}
   <SecondStepForm step={second} onStep={(next) => void follow(next)} class={className} {style} {messages} />
 {:else if choice}

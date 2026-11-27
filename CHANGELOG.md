@@ -4,6 +4,15 @@
 
 ### Added
 
+- **My profile** (needs `@nebulr-group/bridge-auth-core` with `emailChange`; not yet released). `<MyProfile>` is a ready-made page in two parts and Security settings:
+  - Details: the names (`names={false}` for an app that collects none), the app's own fields Bridge sends with the profile, and the person's own language, one of the 12 screen languages, saved with `me.update({ language })`. A saved change shows at once: the page switches language, and `<ProfileName>` and every `me` reader see the new values. `onLanguageChange` lets the app switch its own language too; `setUserLocale` makes the person's language apply where the app set none.
+  - Email (`<EmailSettings>`): "Change email" asks for a recent sign-in when Bridge wants one (the "confirm it is you" dialog), then shows the change waiting for the current inbox, then the new one, with "Cancel the change". An address that Google or a company's sign-in manages shows "Managed by Google", read-only.
+  - Security settings (`<SecuritySettings>`): a link to set a new password, and `<PasskeyManager>` when the app offers passkeys; `securityExtra` adds more below them.
+  - The email change's links land on two new auth pages, `email-change` and `email-revert` (`<EmailChangeLanding>`), on the app's `[...bridge]` route and Bridge's hosted page: one button confirms, and "This wasn't me" puts the old address back and signs every device out.
+  - All new copy in the 12 languages.
+- `<PasskeyManager>` asks the person to confirm it is them when Bridge wants a recent sign-in to add or remove a passkey, then goes on; it takes `locale`.
+- `<ProfileName>` has render tests: it shows the name, or the address while there is none, never nothing.
+- The demo's Playwright suite runs in WebKit and Firefox too.
 - **Login security on the sign-in screens** (needs `@nebulr-group/bridge-auth-core` with the login-security kinds; not yet released).
   - A suspended person sees "Your account has been suspended" with the app's own support contact (`supportContact` from the sign-in options: a mailto link for an email address, a link for an https address).
   - A sign-up from a blocked email domain is refused on the first screen ("Sign-ups from this email domain aren't allowed"); a throwaway address on Block gets "Please use a permanent email address".

@@ -43,13 +43,14 @@ export { handoffSignIn, readHandoff, returnToProgram } from './core/handoff.js';
 export type { HandoffState } from './core/handoff.js';
 
 // Copy
-export { errorMessage, translator } from './core/i18n.js';
+export { errorMessage, setUserLocale, translator } from './core/i18n.js';
+export { PROFILE_LANGUAGES, providerName } from './core/profile.js';
 export type { BridgeMessageKey, BridgeTranslator } from './core/i18n.js';
 export type { PluginMessageKey } from './core/messages.js';
 
 // The few auth-core names app code needs to use this package
-export { BridgeError, isBridgeError, needsRecheck, STANDARD_FLAGS } from '@nebulr-group/bridge-auth-core';
-export type { BillingGateState, Bridge, BridgeErrorKind, QuotaSnapshot, RecheckMethod, SessionState, SessionUser, SessionWorkspace } from '@nebulr-group/bridge-auth-core';
+export { BridgeError, isBridgeError, managedByProvider, needsRecheck, STANDARD_FLAGS, USER_LANGUAGES } from '@nebulr-group/bridge-auth-core';
+export type { BillingGateState, Bridge, BridgeErrorKind, Me, MyLogin, PendingEmailChange, ProfileField, QuotaSnapshot, RecheckMethod, SessionState, SessionUser, SessionWorkspace, UserLanguage } from '@nebulr-group/bridge-auth-core';
 
 // Components
 export { default as BridgeBootstrap } from './components/BridgeBootstrap.svelte';
@@ -72,6 +73,10 @@ export { default as HostedSignIn } from './components/auth/HostedSignIn.svelte';
 export { default as HostedCallback } from './components/auth/HostedCallback.svelte';
 export { default as SignOutButton } from './components/auth/SignOutButton.svelte';
 export { default as ProfileName } from './components/auth/ProfileName.svelte';
+export { default as MyProfile } from './components/profile/MyProfile.svelte';
+export { default as EmailSettings } from './components/profile/EmailSettings.svelte';
+export { default as SecuritySettings } from './components/profile/SecuritySettings.svelte';
+export { default as EmailChangeLanding } from './components/auth/EmailChangeLanding.svelte';
 export { default as FeatureFlag } from './components/flags/FeatureFlag.svelte';
 export type { FeatureFlagOffInfo } from './components/flags/FeatureFlag.svelte';
 export { default as UpgradeDialog } from './components/billing/UpgradeDialog.svelte';

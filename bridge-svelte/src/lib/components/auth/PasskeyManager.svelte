@@ -1,9 +1,9 @@
 <!--
   The signed-in person's passkeys: each one's name, when it was added and
   last used, and whether it syncs to their other devices; adding one from
-  this device and removing one. Adding or removing needs a recent sign-in;
-  otherwise the person is asked to sign in again. The last way to sign in
-  cannot be removed.
+  this device and removing one. Adding or removing needs a recent sign-in:
+  the "confirm it is you" dialog asks for it, then the change goes on. The
+  last way to sign in cannot be removed.
 -->
 <script lang="ts">
   import type { HTMLAttributes } from 'svelte/elements';
@@ -12,6 +12,7 @@
   import { getBridge } from '../../core/client.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
+  import { withRecheck } from '../../core/recheck.js';
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
 
@@ -22,11 +23,13 @@
     onChange?: (passkeys: readonly PasskeyInfo[]) => void;
     onError?: (error: unknown) => void;
     messages?: BridgeMessages;
+    /** The language to show in. @default the app's */
+    locale?: string | null;
   }
 
-  let { heading = undefined, onChange, onError, messages, class: className, ...rest }: Props = $props();
+  let { heading = undefined, onChange, onError, messages, locale = undefined, class: className, ...rest }: Props = $props();
 
-  const t = $derived(translator(messages));
+  const t = $derived(translator(messages, locale));
   let passkeys = $state<PasskeyInfo[] | null>(null);
   let supported = $state(false);
   let name = $state('');
@@ -58,7 +61,8 @@
     busy = true;
     failure = null;
     try {
-      await getBridge().passkeys.add(name.trim() || undefined);
+      const named = name.trim() || undefined;
+      await withRecheck(() => getBridge().passkeys.add(named));
       name = '';
       await load();
       onChange?.(passkeys ?? []);
@@ -74,7 +78,7 @@
     busy = true;
     failure = null;
     try {
-      await getBridge().passkeys.remove(id);
+      await withRecheck(() => getBridge().passkeys.remove(id));
       await load();
       onChange?.(passkeys ?? []);
     } catch (error) {

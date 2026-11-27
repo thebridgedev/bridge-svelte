@@ -15,6 +15,7 @@ import {
 } from '@nebulr-group/bridge-auth-core';
 import type { BridgeMessages } from './config.js';
 import { PLUGIN_EN, PLUGIN_LOCALES, type PluginMessageKey } from './messages.js';
+import { providerName } from './providers.js';
 
 export type BridgeMessageKey = MessageKey | PluginMessageKey;
 
@@ -23,7 +24,16 @@ export interface BridgeTranslator {
 }
 
 let appLocale: string | undefined;
+let userLocale: string | undefined;
 let appMessages: BridgeMessages = {};
+
+/**
+ * The signed-in person's own language, from their profile: it applies where the app set no language of its own
+ * (the screen's language comes first, then the person's, then English). `<MyProfile>` sets it.
+ */
+export function setUserLocale(locale: string | null | undefined): void {
+	userLocale = locale ?? undefined;
+}
 
 /** Set by bridgeBootstrap: the app's language and wording, once for every component. */
 export function setAppCopy(locale: string | undefined, messages: BridgeMessages): void {
@@ -35,11 +45,15 @@ function isPluginKey(key: string): key is PluginMessageKey {
 	return key in PLUGIN_EN;
 }
 
-/** A translator for one component, with its own `messages` on top of the app's. */
-export function translator(messages?: BridgeMessages): BridgeTranslator {
+/**
+ * A translator for one component, with its own `messages` on top of the app's. `locale`, when given, is the
+ * language this component shows in, whatever the app's: `<MyProfile>` shows a newly chosen language at once.
+ */
+export function translator(messages?: BridgeMessages, locale?: string | null): BridgeTranslator {
 	const overrides: BridgeMessages = { ...appMessages, ...messages };
-	const shared = createTranslator({ locale: appLocale, messages: overrides });
-	const plugin = PLUGIN_LOCALES[appLocale ? normalizeLocale(appLocale) : 'en'] ?? PLUGIN_EN;
+	const language = locale ?? appLocale ?? userLocale;
+	const shared = createTranslator({ locale: language, messages: overrides });
+	const plugin = PLUGIN_LOCALES[language ? normalizeLocale(language) : 'en'] ?? PLUGIN_EN;
 	return (key, vars) => {
 		if (!isPluginKey(key)) return shared(key, vars);
 		const override = (overrides as Record<string, string | undefined>)[key];
@@ -104,6 +118,9 @@ export function errorMessage(error: unknown, t: BridgeTranslator, fallback: Brid
 			return t(e.leakedPasswords === 'warn' ? 'password.leaked.warn' : 'password.leaked.refuse');
 		case 'password-change-required':
 			return t('login.leaked.refuse');
+		// An address Google or a company's sign-in manages: it is changed there.
+		case 'managed-by-provider':
+			return t('profile.email.managedHint', { provider: providerName(e.provider) });
 		case 'signed-out':
 		case 'reauthenticate':
 			return t('session.ended');

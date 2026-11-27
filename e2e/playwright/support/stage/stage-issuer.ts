@@ -4,7 +4,7 @@ import { Inbox, bridgeLink } from './inbox';
 import { readManifest, readRuntime, type Manifest } from './manifest';
 import type { LinkPurpose, Person, TestIssuer } from '../issuer';
 
-const STEP: Record<LinkPurpose, string> = { 'verify-sign-up': 'verify-email', 'reset-password': 'reset-password', invite: 'invite', 'magic-link': 'magic-link', 'passkey-setup': 'passkey-setup' };
+const STEP: Record<LinkPurpose, string> = { 'verify-sign-up': 'verify-email', 'reset-password': 'reset-password', invite: 'invite', 'magic-link': 'magic-link', 'passkey-setup': 'passkey-setup', 'email-change': 'email-change', 'email-revert': 'email-revert' };
 
 /** The demo's plan names (`free`, `pro`) as the stage app's plans call them. */
 /** Roles a test names that the app does not have: made on first use, with these privileges. */

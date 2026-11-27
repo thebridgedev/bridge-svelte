@@ -17,6 +17,8 @@ export const AUTH_PAGES = [
 	'handoff',
 	'magic-link',
 	'passkey-setup',
+	'email-change',
+	'email-revert',
 	'callback',
 ] as const;
 
@@ -62,6 +64,10 @@ export function pageForLink(link: EmailLink): AuthPage {
 			return 'magic-link';
 		case 'passkey-setup':
 			return 'passkey-setup';
+		case 'email-change':
+			return 'email-change';
+		case 'email-revert':
+			return 'email-revert';
 	}
 }
 

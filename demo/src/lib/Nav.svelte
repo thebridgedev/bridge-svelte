@@ -9,6 +9,7 @@
 		<a href="/reports" class="nav-link" data-testid="nav-reports">Reports</a>
 	</FeatureFlag>
 	<a href="/settings/team" class="nav-link">Team</a>
+	<a href="/settings/my-profile" class="nav-link" data-testid="nav-profile">Profile</a>
 	<a href="/subscription" class="nav-link">Subscription</a>
 	<span class="nav-spacer"></span>
 	{#if $signedIn}

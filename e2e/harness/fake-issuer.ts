@@ -104,6 +104,11 @@ async function control(path: string, request: Request, url: URL): Promise<Respon
 		case '/signed-in-long-ago':
 			fake.signedInLongAgo();
 			return json({ ok: true });
+		case '/email-notices':
+			return json(fake.emailChangeNotices);
+		case '/admin-change-email':
+			fake.adminChangeEmail(String(body['email'] ?? ''), String(body['to'] ?? ''));
+			return json({ ok: true });
 		case '/requests':
 			return json(fake.requests.map((r) => ({ method: r.method, path: r.path })));
 		default:

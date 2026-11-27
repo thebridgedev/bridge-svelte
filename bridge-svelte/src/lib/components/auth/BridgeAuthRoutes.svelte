@@ -5,8 +5,8 @@
     <BridgeAuthRoutes />
 
   Serves sign-in, sign-up, verify-email, forgot-password, set-password,
-  invite, workspaces, handoff, magic-link (a sign-in link's landing), passkey-setup (a passkey setup link's landing)
-  and callback (hosted mode's return from Bridge's page). An unknown page gets the app's own 404.
+  invite, workspaces, handoff, magic-link (a sign-in link's landing), passkey-setup (a passkey setup link's landing),
+  email-change and email-revert (the email change's links, and "This wasn't me"), and callback (hosted mode's return from Bridge's page). An unknown page gets the app's own 404.
 
   Customising, in rungs:
     1. `--bridge-*` CSS tokens restyle the forms.
@@ -37,6 +37,7 @@
   import HandoffSignIn from './HandoffSignIn.svelte';
   import MagicLinkLanding from './MagicLinkLanding.svelte';
   import PasskeySetupLanding from './PasskeySetupLanding.svelte';
+  import EmailChangeLanding from './EmailChangeLanding.svelte';
   import HostedSignIn from './HostedSignIn.svelte';
   import HostedCallback from './HostedCallback.svelte';
 
@@ -84,6 +85,8 @@
     <MagicLinkLanding headingSnippet={pageHeading} {messages} />
   {:else if p === 'passkey-setup'}
     <PasskeySetupLanding headingSnippet={pageHeading} {messages} />
+  {:else if p === 'email-change' || p === 'email-revert'}
+    <EmailChangeLanding kind={p} headingSnippet={pageHeading} {messages} />
   {:else if p === 'handoff'}
     <HandoffSignIn headingSnippet={pageHeading} {messages} />
   {:else if p === 'workspaces'}

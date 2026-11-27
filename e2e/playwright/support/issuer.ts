@@ -9,12 +9,17 @@
 import { stageIssuer } from './stage/stage-issuer';
 
 /** The emails whose link a test reads: `invite` for either invite email. */
-export type LinkPurpose = 'verify-sign-up' | 'reset-password' | 'invite' | 'magic-link' | 'passkey-setup';
+export type LinkPurpose = 'verify-sign-up' | 'reset-password' | 'invite' | 'magic-link' | 'passkey-setup' | 'email-change' | 'email-revert';
 
 export interface Person {
 	readonly email: string;
 	readonly password: string;
 	readonly firstName?: string;
+	readonly lastName?: string;
+	/** Who manages the address (`google`…): it cannot be changed in the app. The local issuer only. */
+	readonly managedBy?: string;
+	/** The app's own fields on the profile. The local issuer only. */
+	readonly customFields?: readonly { readonly label: string; readonly userLabel?: string; readonly type: string; readonly value: string | null }[];
 	readonly workspaces?: readonly { readonly id: string; readonly name: string; readonly role?: string }[];
 }
 

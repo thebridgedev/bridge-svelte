@@ -13,6 +13,7 @@
   import AuthFormWrapper from '../shared/AuthFormWrapper.svelte';
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
+  import PhoneInput from '../shared/PhoneInput.svelte';
 
   type Waiting = Extract<SignInStep, { next: 'second_step' } | { next: 'second_step_setup' }>;
 
@@ -30,6 +31,8 @@
   let value = $state('');
   let backupInput = $state('');
   let usingBackup = $state(false);
+  /** True while the phone field holds a number that cannot exist for its country. */
+  let phoneInvalid = $state(false);
   let loading = $state(false);
   let failure = $state<string | null>(null);
 
@@ -53,8 +56,14 @@
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (step.next === 'second_step_setup') void run(() => (step as Extract<Waiting, { next: 'second_step_setup' }>).setUp(value.trim()));
-    else if (usingBackup) void run(() => (step as Extract<Waiting, { next: 'second_step' }>).reset(backupInput.trim()));
+    if (step.next === 'second_step_setup') {
+      // A number that cannot exist for the chosen country is caught here, before any code is sent.
+      if (phoneInvalid) {
+        failure = t('phone.invalid');
+        return;
+      }
+      void run(() => (step as Extract<Waiting, { next: 'second_step_setup' }>).setUp(value.trim()));
+    } else if (usingBackup) void run(() => (step as Extract<Waiting, { next: 'second_step' }>).reset(backupInput.trim()));
     else void run(() => (step as Extract<Waiting, { next: 'second_step' }>).verify(value.trim()));
   }
 </script>
@@ -73,7 +82,7 @@
     <form onsubmit={submit}>
       <div class="bridge-form-group">
         <label for="second-step-phone">{t('field.phone')}</label>
-        <input id="second-step-phone" type="tel" autocomplete="tel" placeholder="+46 70 123 45 67" required bind:value disabled={loading} />
+        <PhoneInput id="second-step-phone" bind:value bind:invalid={phoneInvalid} disabled={loading} {messages} />
       </div>
       <button type="submit" class="bridge-btn bridge-btn-primary" disabled={loading || !value.trim()}>
         {#if loading}<Spinner size={16} />{/if} {t('secondStep.sendCode')}

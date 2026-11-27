@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-const files = import.meta.glob(['./PhoneInput.svelte', '../team/ProfileForm.svelte'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const files = import.meta.glob(['./PhoneInput.svelte', '../team/ProfileForm.svelte', '../auth/SecondStepForm.svelte'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const picker = files['./PhoneInput.svelte'] as string;
 const profile = files['../team/ProfileForm.svelte'] as string;
+const secondStep = files['../auth/SecondStepForm.svelte'] as string;
 
 describe('the phone number field\'s picker', () => {
   it('shows flags as images, so they show on every system, and loads them only when used', () => {
@@ -34,5 +35,12 @@ describe('the phone number field\'s picker', () => {
     expect(profile).toMatch(/<PhoneInput id="bridge-profile-phone" bind:value=\{phoneNumber\} bind:invalid=\{phoneInvalid\}/);
     expect(profile).toMatch(/if \(phoneInvalid\) \{\s*error = t\('phone\.invalid'\);\s*return;/);
     expect(profile).not.toMatch(/type="tel"/);
+  });
+
+  it('is the text-message second step\'s phone setup, and no code is sent for a number that cannot exist', () => {
+    expect(secondStep).toMatch(/<PhoneInput id="second-step-phone" bind:value bind:invalid=\{phoneInvalid\}/);
+    // The check comes before setUp, which is what sends the code.
+    expect(secondStep).toMatch(/if \(phoneInvalid\) \{\s*failure = t\('phone\.invalid'\);\s*return;\s*\}\s*void run\(\(\) => \(step as [^)]*\)\.setUp\(/);
+    expect(secondStep).not.toMatch(/type="tel"/);
   });
 });

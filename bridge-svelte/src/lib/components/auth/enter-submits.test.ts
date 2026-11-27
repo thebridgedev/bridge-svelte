@@ -24,6 +24,7 @@ const SCREENS = [
   'RecheckDialog',
   'PasskeyManager',
   'ProfileForm',
+  'SecondStepForm',
 ].map((name) => ({ name, source: sourceOf(name) }));
 
 /** The `<form ...>...</form>` blocks of a screen. */
@@ -73,6 +74,7 @@ describe('Enter submits every end-user screen', () => {
     ['RecheckDialog', /async function attempt[\s\S]{0,80}if \(loading\) return/],
     ['PasskeyManager', /async function add\(\)[\s\S]{0,60}if \(busy\) return/],
     ['ProfileForm', /async function save\(\)[\s\S]{0,60}saving\) return/],
+    ['SecondStepForm', /async function run\([\s\S]{0,80}if \(loading\) return/],
   ])('%s: a second press while it works does nothing', (name, guard) => {
     expect(SCREENS.find((s) => s.name === name)!.source).toMatch(guard);
   });

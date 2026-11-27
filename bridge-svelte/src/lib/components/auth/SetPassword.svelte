@@ -24,11 +24,14 @@
     heading?: string | null;
     headingSnippet?: Snippet;
     loginHref?: string;
+    /** The heading and line once the password is set. @default "Password set" and "Your password is set. Sign in with your new password." */
+    doneHeading?: string;
+    doneDescription?: string;
     onDone?: () => void;
     messages?: BridgeMessages;
   }
 
-  let { token = undefined, heading = undefined, headingSnippet, loginHref = undefined, onDone, messages, class: className, style, ...rest }: Props = $props();
+  let { token = undefined, heading = undefined, headingSnippet, loginHref = undefined, doneHeading = undefined, doneDescription = undefined, onDone, messages, class: className, style, ...rest }: Props = $props();
 
   const t = $derived(translator(messages));
   const authBase = peekConfig()?.authBase ?? '/auth';
@@ -78,7 +81,7 @@
 </script>
 
 {#if done}
-  <AuthFormWrapper heading={t('forgot.successHeading')} description={t('forgot.setDone')} class={className} {style} data-bridge-set-password="done" {...rest}>
+  <AuthFormWrapper heading={doneHeading ?? t('forgot.successHeading')} description={doneDescription ?? t('forgot.setDone')} class={className} {style} data-bridge-set-password="done" {...rest}>
     <a href={loginHref ?? `${authBase}/sign-in`} class="bridge-btn bridge-btn-primary">{t('login.submit')}</a>
   </AuthFormWrapper>
 {:else if checked && linkToken === null}

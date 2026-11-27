@@ -6,6 +6,11 @@
   lives in that tab only, says so). The answer is the same whether or not
   the address already has an account, so the form never says which.
 
+  On an app set to codes, the form asks for the address (and names) first:
+  Bridge emails a six-digit code, typed here on a code screen, and then, when
+  the app takes passwords, the person chooses one against the app's
+  checklist. The sign-up finishes signed in, in this tab.
+
   With `invite`, it signs the person up from an invite instead: the invite's
   link proved the address, so there is no email field and no email to wait
   for, and the person lands signed in, in the inviting workspace.
@@ -16,7 +21,7 @@
   import { onDestroy, onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { hostedPageRedirect, type SignInOptions } from '@nebulr-group/bridge-auth-core';
+  import { emailConfirmationOf, hostedPageRedirect, isBridgeError, type SignInOptions, type SignInStep, type SignUpCodeStep, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
   import { getBridge, peekConfig } from '../../core/client.js';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, translator } from '../../core/i18n.js';
@@ -29,6 +34,11 @@
   import PasswordChecklist from '../shared/PasswordChecklist.svelte';
   import { checklistMet, checklistOf } from '../../core/password-rules.js';
   import SocialButtons from './SocialButtons.svelte';
+  import EmailCodeScreen from './EmailCodeScreen.svelte';
+  import SecondStepForm from './SecondStepForm.svelte';
+  import WorkspaceChooser from './WorkspaceChooser.svelte';
+  import ReturnContinue from './ReturnContinue.svelte';
+  import { handOff, heldReturn } from './finish-link.js';
 
   /** Where a visit came from: campaign tags as strings, and the visitor's marketing consent (auth-core's sign-up attribution). */
   interface SignUpAttribution {
@@ -142,7 +152,74 @@
 
   const minLength = $derived(options?.password?.minLength ?? 8);
   /** An app that offers sign-in links only takes no password: the person signs in by link. */
-  const passwordOffered = $derived(options === null || options.methods.includes('password'));
+  const passwordTaken = $derived(options === null || options.methods.includes('password'));
+  /** An app set to codes: the address first, its code, then the password (when the app takes one). Never with an invite. */
+  const codeApp = $derived(!invite && options !== null && emailConfirmationOf(options) === 'code');
+  /** Whether the first form asks for the password: not on a code app, where it comes after the code. */
+  const passwordOffered = $derived(passwordTaken && !codeApp);
+  /** The sign-up's code, waiting to be typed; then the password it asks for; then the steps that follow. */
+  let codeStep = $state<SignUpCodeStep | null>(null);
+  let choosingPassword = $state(false);
+  let after = $state<Extract<SignInStep, { next: 'second_step' } | { next: 'second_step_setup' }> | null>(null);
+  let choice = $state<{ workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> } | null>(null);
+  let heldBack = $state<string | null>(null);
+  let settled = $state(false);
+
+  /** Where a finished code sign-up goes: as a sign-in does (the request's return, a workspace, a second step, the app). */
+  function follow(step: SignInStep) {
+    const held = heldReturn(step);
+    if (held !== null) {
+      heldBack = held;
+      return;
+    }
+    if (handOff(step)) {
+      settled = true;
+      return;
+    }
+    if (step.done) {
+      settled = true;
+      if (onSignIn) onSignIn();
+      else void goto(config?.afterSignIn ?? '/', { invalidateAll: true });
+      return;
+    }
+    codeStep = null;
+    choosingPassword = false;
+    if (step.next === 'workspace') choice = { workspaces: step.workspaces, choose: step.choose };
+    else if (step.next === 'second_step' || step.next === 'second_step_setup') after = step;
+  }
+
+  async function verifyCode(code: string) {
+    if (codeStep === null) return;
+    try {
+      follow(await codeStep.verify(code));
+    } catch (error) {
+      // The code was right: the address is proved, and the password comes next.
+      if (isBridgeError(error) && error.code === 'password_required') {
+        choosingPassword = true;
+        return;
+      }
+      throw error;
+    }
+  }
+
+  async function choosePassword(event: SubmitEvent) {
+    event.preventDefault();
+    if (loading || codeStep === null) return;
+    failure = null;
+    if (!checklistMet(checklistOf(options?.password, password, email.trim() || null))) {
+      failure = [...password.normalize('NFKC')].length < minLength ? t('password.tooShort', { count: minLength }) : t('rules.heading');
+      return;
+    }
+    loading = true;
+    try {
+      follow(await codeStep.choosePassword(password));
+    } catch (error) {
+      failure = errorMessage(error, t, 'signup.error.create');
+      onError?.(error);
+    } finally {
+      loading = false;
+    }
+  }
   // An invite is its own way in, whether or not the app takes sign-ups.
   const closed = $derived(!invite && options !== null && !options.signUp);
   /** The email link finished the sign-up in another tab of this browser (link-relay). */
@@ -210,7 +287,7 @@
         else void goto(config?.afterSignIn ?? '/', { invalidateAll: true });
         return;
       }
-      await getBridge().signUp.start({
+      const started = await getBridge().signUp.start({
         email: address,
         ...secret,
         ...names,
@@ -218,8 +295,13 @@
         ...attributionOf(),
         ...planOf(),
       });
-      sentTo = address;
       onSent?.(address);
+      // An app set to codes: the code is typed here.
+      if ('verify' in started) {
+        codeStep = started;
+        return;
+      }
+      sentTo = address;
       // The email link opens in a new tab, which finishes the sign-up there and tells this one.
       if (config !== null && config !== undefined && stopRelay === null) stopRelay = onSignUpFinished(config.issuer, afterConfirmed);
     } catch (error) {
@@ -231,7 +313,60 @@
   }
 </script>
 
-{#if sentTo !== null}
+{#if heldBack !== null}
+  <ReturnContinue url={heldBack} {messages} class={className} {style} {...rest} />
+{:else if settled}
+  <AuthFormWrapper heading={null} class={className} {style} {...rest}>
+    <div class="bridge-auth-settling" data-bridge-auth-settling><Spinner size={24} /></div>
+  </AuthFormWrapper>
+{:else if after}
+  <SecondStepForm step={after} onStep={follow} class={className} {style} {messages} />
+{:else if choice}
+  <AuthFormWrapper heading={t('workspace.chooseHeading')} class={className} {style} data-bridge-sign-up-step="workspace" {...rest}>
+    <WorkspaceChooser workspaces={choice.workspaces} onChoose={async (id) => { if (choice) follow(await choice.choose(id)); }} {messages} />
+  </AuthFormWrapper>
+{:else if codeStep && choosingPassword}
+  <AuthFormWrapper heading={t('signup.choosePasswordHeading')} description={t('signup.choosePasswordIntro')} class={className} {style} data-bridge-sign-up-step="password" {...rest}>
+    {#if failure}<Alert variant="error">{failure}</Alert>{/if}
+    <form onsubmit={choosePassword}>
+      <div class="bridge-form-group">
+        <label for="signup-password">{t('field.password')}</label>
+        <PasswordInput
+          id="signup-password"
+          autocomplete="new-password"
+          placeholder={t('placeholder.newPassword')}
+          required
+          minlength={minLength}
+          bind:value={password}
+          disabled={loading}
+          aria-describedby="signup-password-rules"
+          showLabel={t('action.showPassword')}
+          hideLabel={t('action.hidePassword')}
+        />
+        <PasswordChecklist id="signup-password-rules" rules={options?.password} {password} email={email.trim() || null} {t} />
+      </div>
+      <button type="submit" class="bridge-btn bridge-btn-primary" disabled={loading || !password}>
+        {#if loading}<Spinner size={16} />{:else}{t('signup.finish')}{/if}
+      </button>
+    </form>
+  </AuthFormWrapper>
+{:else if codeStep}
+  <EmailCodeScreen
+    email={codeStep.email}
+    resendIn={codeStep.resendIn}
+    verify={verifyCode}
+    resend={async () => {
+      if (codeStep === null) return 60;
+      codeStep = await codeStep.resend();
+      return codeStep.resendIn;
+    }}
+    onBack={() => (codeStep = null)}
+    class={className}
+    {style}
+    {messages}
+    data-bridge-sign-up-step="code"
+  />
+{:else if sentTo !== null}
   <AuthFormWrapper heading={t('signup.successHeading')} class={className} {style} data-bridge-sign-up-step="sent" {...rest}>
     {#snippet descriptionSnippet()}
       <p class="bridge-step-desc" data-bridge-sign-up-sent>{t('signup.successDescription', { email: sentTo ?? '' })}</p>

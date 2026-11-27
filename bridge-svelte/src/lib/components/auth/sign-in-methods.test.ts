@@ -142,7 +142,7 @@ describe('a password that no longer meets the rules is routed to choosing a new 
 
 	it('the sign-in form shows the choose-a-new-password step with a way to send the link again', () => {
 		const form = source('SignInForm');
-		expect(form).toMatch(/isPasswordChangeRequired\(error\)\) mustChoose = 'asked'/);
+		expect(form).toMatch(/isPasswordChangeRequired\(error\)\) mustChoose = isPasswordExpired\(error\) \? 'expired' : 'asked'/);
 		expect(form).toMatch(/data-bridge-sign-in-step="password-change"/);
 		expect(form).toMatch(/async function resendChoose\(\)[\s\S]*?password\.forgot\(email\.trim\(\)\)/);
 		expect(form).toMatch(/\/forgot-password/);

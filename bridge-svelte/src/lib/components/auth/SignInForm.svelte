@@ -11,10 +11,13 @@
   passkeys in its autofill list, where the browser supports it; the button
   stays for a phone or a security key. The social providers the app offers
   show as "Continue with …" buttons; the provider's answer comes back to this
-  page and is finished here. A workspace that requires a second step asks for
-  the code texted to the person's phone (or a number to set up first, then
-  shows the backup code once). Other methods (email codes, company login)
-  arrive as new sign-in steps and join the same way.
+  page and is finished here. On an app set to codes, "Email me a code" takes
+  the place of the link: a code screen with the address partly hidden, a new
+  code after 60 seconds and "Wrong email?". A sign-in that needs a second step
+  asks for it (an authenticator app, an email code, a text, a recovery code,
+  or a way to set up first). An expired password says a link to choose a new
+  one is on its way. Other methods (company login) arrive as new sign-in
+  steps and join the same way.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
@@ -23,7 +26,7 @@
   import { continueOnAppPage, handOff, heldReturn } from './finish-link.js';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { hostedPageRedirect, isBridgeError, isPasswordChangeRequired, passkeyHandOver, readReturnTo, takeSocialReturn, type SignInOptions, type SignInStep, type SocialProvider, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
+  import { emailConfirmationOf, hostedPageRedirect, isBridgeError, isPasswordChangeRequired, isPasswordExpired, passkeyHandOver, readReturnTo, takeSocialReturn, type EmailCodeStep, type SignInOptions, type SignInStep, type SocialProvider, type WorkspaceChoice } from '@nebulr-group/bridge-auth-core';
   import { get } from 'svelte/store';
   import { getBridge, peekConfig, takeEndedReason } from '../../core/client.js';
   import { session } from '../../core/stores.js';
@@ -38,6 +41,7 @@
   import SocialButtons from './SocialButtons.svelte';
   import SecondStepForm from './SecondStepForm.svelte';
   import CheckYourEmail from './CheckYourEmail.svelte';
+  import EmailCodeScreen from './EmailCodeScreen.svelte';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** Heading on the credentials step. @default the shared "Log in to your account" copy; `null` for none */
@@ -95,7 +99,9 @@
   /** A finished sign-in whose return to the person's own machine waits for a click (a Continue button). */
   let heldBack = $state<string | null>(null);
   /** The right password that no longer meets the app's rules: a link to choose a new one was emailed. */
-  let mustChoose = $state<'asked' | 'resent' | null>(null);
+  let mustChoose = $state<'asked' | 'expired' | 'resent' | null>(null);
+  /** On an app set to codes: the code emailed to sign in with, waiting to be typed. */
+  let codeStep = $state<EmailCodeStep<SignInStep> | null>(null);
   /** The second step, while it waits for its code or a number. */
   let second = $state<Extract<SignInStep, { next: 'second_step' } | { next: 'second_step_setup' }> | null>(null);
   /** A social sign-up whose address the provider did not confirm: the address Bridge emailed its own link to. */
@@ -110,6 +116,8 @@
   const signUpShown = $derived(showSignupLink ?? options?.signUp ?? true);
   const passwordOffered = $derived(options === null || options.methods.includes('password'));
   const linkOffered = $derived(options !== null && options.methods.includes('magicLink'));
+  /** The app proves addresses with a code, not a link: "Email me a code". */
+  const codeOffered = $derived(linkOffered && emailConfirmationOf(options) === 'code');
   let passkeySupported = $state(false);
   let setupLinkSent = $state(false);
   const passkeysOffered = $derived(passkeySupported && options !== null && options.methods.includes('passkeys'));
@@ -263,7 +271,8 @@
       await follow(await getBridge().signIn.start({ email: email.trim(), password, ...(workspace ? { workspace } : {}) }));
     } catch (error) {
       // The password is right, but the app's rules changed: a link to choose a new one is on its way.
-      if (isPasswordChangeRequired(error)) mustChoose = 'asked';
+      // An expired password says so; either way the link is on its way.
+      if (isPasswordChangeRequired(error)) mustChoose = isPasswordExpired(error) ? 'expired' : 'asked';
       else fail(error);
     } finally {
       loading = false;
@@ -292,8 +301,11 @@
     notice = null;
     loading = true;
     try {
-      await getBridge().magicLink.start(email.trim());
-      linkSent = true;
+      if (codeOffered) codeStep = await getBridge().emailCode.request(email.trim());
+      else {
+        await getBridge().magicLink.start(email.trim());
+        linkSent = true;
+      }
     } catch (error) {
       fail(error);
     } finally {
@@ -322,7 +334,7 @@
 {:else if mustChoose !== null}
   <AuthFormWrapper heading={t('login.passwordChangeHeading')} class={className} {style} data-bridge-sign-in-step="password-change" {...rest}>
     {#if failure}<Alert variant="error">{failure}</Alert>{/if}
-    <Alert variant="info">{mustChoose === 'resent' ? t('login.passwordChangeSent') : t('login.passwordChange')}</Alert>
+    <Alert variant="info">{mustChoose === 'resent' ? t('login.passwordChangeSent') : mustChoose === 'expired' ? t('login.passwordExpired') : t('login.passwordChange')}</Alert>
     <button type="button" class="bridge-btn bridge-btn-secondary" data-bridge-password-change-resend onclick={resendChoose} disabled={loading}>
       {#if loading}<Spinner size={16} />{/if} {t('login.passwordChangeResend')}
     </button>
@@ -339,6 +351,27 @@
   </AuthFormWrapper>
 {:else if checkEmail !== null}
   <CheckYourEmail email={checkEmail} {onSignIn} class={className} {style} {messages} />
+{:else if codeStep}
+  <EmailCodeScreen
+    email={codeStep.email}
+    resendIn={codeStep.resendIn}
+    verify={async (code) => {
+      if (codeStep === null) return;
+      const next = await codeStep.verify(code);
+      codeStep = null;
+      await follow(next);
+    }}
+    resend={async () => {
+      if (codeStep === null) return 60;
+      codeStep = await codeStep.resend();
+      return codeStep.resendIn;
+    }}
+    onBack={() => (codeStep = null)}
+    class={className}
+    {style}
+    {messages}
+    data-bridge-sign-in-step="email-code"
+  />
 {:else if second}
   <SecondStepForm step={second} onStep={(next) => void follow(next)} class={className} {style} {messages} />
 {:else if choice}
@@ -399,7 +432,7 @@
         {#if linkOffered}
           <div class="bridge-divider" data-bridge-sign-in-or>{t('magicLink.or')}</div>
           <button type="button" class="bridge-btn bridge-btn-secondary" data-bridge-magic-link-send onclick={sendLink} disabled={loading || !email.trim()}>
-            {t('magicLink.send')}
+            {codeOffered ? t('magicLink.sendCode') : t('magicLink.send')}
           </button>
         {/if}
       </form>
@@ -418,7 +451,7 @@
           />
         </div>
         <button type="submit" class="bridge-btn bridge-btn-primary" data-bridge-magic-link-send disabled={loading || !email.trim()}>
-          {#if loading}<Spinner size={16} />{/if} {t('magicLink.send')}
+          {#if loading}<Spinner size={16} />{/if} {codeOffered ? t('magicLink.sendCode') : t('magicLink.send')}
         </button>
       </form>
     {:else if passkeysOffered}

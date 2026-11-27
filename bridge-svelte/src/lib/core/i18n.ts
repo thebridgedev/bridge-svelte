@@ -135,7 +135,7 @@ export function errorMessage(error: unknown, t: BridgeTranslator, fallback: Brid
 		}
 		case 'forbidden':
 			// The password is right but the app's rules changed: Bridge has emailed a link to choose a new one.
-			if (e.code === 'password_change_required') return t('login.passwordChange');
+			if (e.code === 'password_change_required') return e.reason === 'expired' ? t('login.passwordExpired') : t('login.passwordChange');
 			return e.message !== '' ? e.message : t(fallback);
 		case 'invalid':
 		case 'conflict':

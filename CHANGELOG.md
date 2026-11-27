@@ -2,10 +2,15 @@
 
 ## Unreleased
 
-Needs the `@nebulr-group/bridge-auth-core` that carries `passkeyHandOver`, `usable`, `confirmReturn` and `isPasswordChangeRequired`.
+Needs the `@nebulr-group/bridge-auth-core` that carries `passkeyHandOver`, `usable`, `confirmReturn`, `isPasswordChangeRequired`, and `emailCode`, `security`, `codeRefusal` and `isPasswordExpired`.
 
 ### Added
 
+- **Email codes.** On an app set to codes, the sign-in form offers "Email me a code" instead of the link (link apps are unchanged): a code screen (`<EmailCodeScreen>`) with the address partly hidden, a six-digit field, "Send a new code" after its 60-second countdown, "Wrong email?", and "Wrong code, N tries left" or "This code has expired". Sign-up asks for the address, then the code, then the password against the app's checklist. Forgot password goes code, "Choose a new password" with the checklist, then "Password changed": a code reset never signs in.
+- **`<CodeInput>`.** One input drawn as six boxes: `inputmode="numeric"`, `autocomplete="one-time-code"`, a pasted code keeps its digits, one label for screen readers.
+- **The second step's ways.** `<SecondStepForm>` asks for the authenticator app's code, an email code or a text, with "Use another way" (the other ways and a recovery code), "Remember this device for N days", and, the first time, setting up an authenticator app (a QR code drawn in the page by a small built-in encoder, `encodeQr`, no new dependency, and the key to type) or a phone. Recovery codes are shown once (`<RecoveryCodes>`: copy, download, print, "I've saved these"). An older Bridge's text message and backup code work as before.
+- **`<SecuritySettings>`.** Two-step verification for the signed-in person: whether it is on, the ways set up and which is used first ("Use first"), adding an authenticator app or a phone, removing one, turning it on for themselves, new recovery codes, forgetting remembered devices, and the note that an authenticator app is the strongest choice. Every change goes through the recheck dialog. With it, `<ChangePassword>`: the current password, the new one against the checklist, and "You've used this password recently" from the app's history.
+- **Expired passwords.** A sign-in with an expired password says "Your password has expired. We've sent you a link to choose a new one." (12 languages, as all the new copy).
 - **The app's own sign-in path, `/auth/login`, is served.** It is the page Bridge's "Your app" settings default to, and the address email links and sign-outs name when users sign in in the app; it serves the sign-in page next to `/auth/sign-in`.
 - **Passkeys on the app's own domain.** On Bridge's own pages, "Sign in with a passkey" takes the person to the app's sign-in page, where the browser offers their passkey (Bridge's `passkey_on_app_page`); the wait for the autofill list on Bridge's page never sends the browser away. `<PasskeyManager>` tells the person about passkeys made on the old page (they no longer work, and a new one can be added next to them).
 - **A Continue button for returns to localhost.** When Bridge asks for a click before a sign-in goes back to the person's own machine (an app in production), the sign-in form and the sign-in and sign-up link pages show a Continue button instead of going back by themselves.

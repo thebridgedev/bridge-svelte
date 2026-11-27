@@ -48,8 +48,10 @@ export type { BridgeMessageKey, BridgeTranslator } from './core/i18n.js';
 export type { PluginMessageKey } from './core/messages.js';
 
 // The few auth-core names app code needs to use this package
-export { BridgeError, isBridgeError, needsRecheck, STANDARD_FLAGS } from '@nebulr-group/bridge-auth-core';
-export type { BillingGateState, Bridge, BridgeErrorKind, QuotaSnapshot, RecheckMethod, SessionState, SessionUser, SessionWorkspace } from '@nebulr-group/bridge-auth-core';
+export { BridgeError, codeRefusal, emailConfirmationOf, isBridgeError, isPasswordExpired, needsRecheck, STANDARD_FLAGS } from '@nebulr-group/bridge-auth-core';
+export { encodeQr, qrPath } from './core/qr.js';
+export type { QrCode as QrMatrix, QrLevel } from './core/qr.js';
+export type { BillingGateState, Bridge, BridgeErrorKind, EmailCodeStep, SecondStepMethod, SecurityStatus, QuotaSnapshot, RecheckMethod, SessionState, SessionUser, SessionWorkspace } from '@nebulr-group/bridge-auth-core';
 
 // Components
 export { default as BridgeBootstrap } from './components/BridgeBootstrap.svelte';
@@ -61,6 +63,12 @@ export { default as RecheckDialog } from './components/auth/RecheckDialog.svelte
 export { default as MagicLinkLanding } from './components/auth/MagicLinkLanding.svelte';
 export { default as PasskeySetupLanding } from './components/auth/PasskeySetupLanding.svelte';
 export { default as PasskeyManager } from './components/auth/PasskeyManager.svelte';
+export { default as SecuritySettings } from './components/auth/SecuritySettings.svelte';
+export { default as ChangePassword } from './components/auth/ChangePassword.svelte';
+export { default as EmailCodeScreen } from './components/auth/EmailCodeScreen.svelte';
+export { default as CodeInput } from './components/shared/CodeInput.svelte';
+export { default as QrCode } from './components/shared/QrCode.svelte';
+export { default as RecoveryCodes } from './components/shared/RecoveryCodes.svelte';
 export { default as ForgotPassword } from './components/auth/ForgotPassword.svelte';
 export { default as SetPassword } from './components/auth/SetPassword.svelte';
 export { default as InviteLanding } from './components/auth/InviteLanding.svelte';

@@ -157,6 +157,18 @@ describe('the second step', () => {
 		expect(form).toContain('chooseMethod(');
 		expect(form).toContain('useRecoveryCode(');
 	});
+
+	it('holds the sign-in page from the code until the recovery codes or the backup code are saved (TBP-848)', () => {
+		const form = source('SecondStepForm');
+		// The page is held before the code goes: the finished step signs in, and the guard hears of it at once.
+		expect(form.indexOf("holdSignInPage(true, 'second-step')")).toBeGreaterThan(-1);
+		expect(form.indexOf("holdSignInPage(true, 'second-step')")).toBeLessThan(form.indexOf('await action()'));
+		expect(form).toContain("holdSignInPage(loading || recovery !== null || backup !== null, 'second-step')");
+		// Only the person's Continue lets go and goes on, from both screens.
+		expect(form).toContain('onDone={() => recovery && savedThen(recovery.then)}');
+		expect(form).toContain('onclick={() => backup && savedThen(backup.then)}');
+		expect(form).not.toMatch(/recovery && onStep\(|backup && onStep\(/);
+	});
 });
 
 describe('the forms on an app set to codes', () => {

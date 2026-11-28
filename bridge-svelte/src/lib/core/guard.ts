@@ -85,13 +85,18 @@ export interface GuardInput {
 	readonly holding?: boolean;
 }
 
-/** Whether the sign-in form is showing a notice after signing in, which the guard must not navigate away from. */
-let holding = false;
-export function holdSignInPage(on: boolean): void {
-	holding = on;
+/**
+ * Whether a form on the sign-in page is showing something after signing in, which the guard must not navigate away
+ * from. Each holder holds on its own (the sign-in form's notices, the second step's recovery codes), so one letting go
+ * does not let go for another.
+ */
+const holders = new Set<string>();
+export function holdSignInPage(on: boolean, by = 'sign-in'): void {
+	if (on) holders.add(by);
+	else holders.delete(by);
 }
 export function signInPageHeld(): boolean {
-	return holding;
+	return holders.size > 0;
 }
 
 /** Decides one navigation. */

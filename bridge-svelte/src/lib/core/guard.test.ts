@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionState } from '@nebulr-group/bridge-auth-core';
 import { checkIssuer, resolveConfig, type BridgeConfig } from './config.js';
-import { decide, flagsAllow, normalizePath, type FlagReader } from './guard.js';
+import { decide, flagsAllow, holdSignInPage, normalizePath, signInPageHeld, type FlagReader } from './guard.js';
 
 const ISSUER = 'https://bridge.example.com/identity-access/apps/app-1';
 const signedIn: SessionState = { status: 'signed-in', user: { id: 'u1', email: 'a@x.test', emailVerified: true }, workspace: { id: 'w1', standing: 'active' } };
@@ -61,6 +61,15 @@ describe('decide', () => {
 		const config = resolveConfig({ issuer: ISSUER }, undefined);
 		expect(decide(config, { path: '/auth/sign-in', target: '/auth/sign-in', session: signedIn, flags: on(ACTIVE), returnTo: null, holding: true })).toEqual({ type: 'allow' });
 		expect(decide(config, { path: '/auth/sign-in', target: '/auth/sign-in', session: signedIn, flags: on(ACTIVE), returnTo: null, holding: false }).type).toBe('redirect');
+	});
+
+	it('keeps the sign-in page held while any form holds it: the second step\'s recovery codes outlast the sign-in form letting go', () => {
+		holdSignInPage(true, 'second-step');
+		holdSignInPage(true);
+		holdSignInPage(false);
+		expect(signInPageHeld()).toBe(true);
+		holdSignInPage(false, 'second-step');
+		expect(signInPageHeld()).toBe(false);
 	});
 
 	it('sends a signed-in person on from sign-in, to a safe return address only', () => {

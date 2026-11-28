@@ -9,7 +9,9 @@
 <script lang="ts">
   import type { SecondStepMethod, SignInStep } from '@nebulr-group/bridge-auth-core';
   import type { HTMLAttributes } from 'svelte/elements';
+  import { onDestroy } from 'svelte';
   import type { BridgeMessages } from '../../core/config.js';
+  import { holdSignInPage } from '../../core/guard.js';
   import { translator } from '../../core/i18n.js';
   import { codeErrorMessage, codeSpent } from '../../core/code-errors.js';
   import AuthFormWrapper from '../shared/AuthFormWrapper.svelte';
@@ -54,10 +56,26 @@
   const otherWays = $derived(asking === null ? [] : asking.methods.filter((each) => each !== asking.method));
   const WAY_KEYS = { totp: 'secondStep.way.totp', email: 'secondStep.way.email', sms: 'secondStep.way.sms' } as const;
 
+  // A finished step has signed the person in already, and the guard would move the sign-in page on before the recovery
+  // codes (or the backup code) were saved. The page is held from the moment a code is sent until the person has saved
+  // them; their Continue lets go and goes on with the step.
+  $effect(() => holdSignInPage(loading || recovery !== null || backup !== null, 'second-step'));
+  onDestroy(() => holdSignInPage(false, 'second-step'));
+
+  /** Saved: the page is let go, and the step that waited goes on. */
+  function savedThen(then: SignInStep) {
+    recovery = null;
+    backup = null;
+    holdSignInPage(false, 'second-step');
+    onStep(then);
+  }
+
   async function run(action: () => Promise<SignInStep>) {
     if (loading) return;
     failure = null;
     loading = true;
+    // Held before the code goes, not once the answer is in: signing in tells the guard at once.
+    holdSignInPage(true, 'second-step');
     try {
       const next = await action();
       code = '';
@@ -89,13 +107,13 @@
 
 {#if recovery}
   <AuthFormWrapper heading={t('recovery.heading')} class={className} {style} data-bridge-sign-in-step="recovery-codes" {...rest}>
-    <RecoveryCodes codes={recovery.codes} {t} onDone={() => recovery && onStep(recovery.then)} />
+    <RecoveryCodes codes={recovery.codes} {t} onDone={() => recovery && savedThen(recovery.then)} />
   </AuthFormWrapper>
 {:else if backup}
   <AuthFormWrapper heading={t('secondStep.backupHeading')} class={className} {style} data-bridge-sign-in-step="backup-code" {...rest}>
     <p class="bridge-step-desc">{t('secondStep.backupIntro')}</p>
     <div class="bridge-backup-code" data-bridge-backup-code>{backup.code}</div>
-    <button type="button" class="bridge-btn bridge-btn-primary" onclick={() => backup && onStep(backup.then)}>{t('secondStep.continue')}</button>
+    <button type="button" class="bridge-btn bridge-btn-primary" onclick={() => backup && savedThen(backup.then)}>{t('secondStep.continue')}</button>
   </AuthFormWrapper>
 {:else if settingUp}
   <AuthFormWrapper heading={settingUp.methods.includes('totp') && view !== 'phone' ? t('secondStep.chooseSetup') : t('secondStep.setupHeading')} class={className} {style} data-bridge-sign-in-step="second-step" data-bridge-second-step="second_step_setup" {...rest}>

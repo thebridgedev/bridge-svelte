@@ -62,6 +62,7 @@ export { default as VerifyEmail } from './components/auth/VerifyEmail.svelte';
 export { default as RecheckDialog } from './components/auth/RecheckDialog.svelte';
 export { default as MagicLinkLanding } from './components/auth/MagicLinkLanding.svelte';
 export { default as PasskeySetupLanding } from './components/auth/PasskeySetupLanding.svelte';
+export { default as PasskeyOffer } from './components/auth/PasskeyOffer.svelte';
 export { default as PasskeyManager } from './components/auth/PasskeyManager.svelte';
 export { default as SecuritySettings } from './components/auth/SecuritySettings.svelte';
 export { default as ChangePassword } from './components/auth/ChangePassword.svelte';

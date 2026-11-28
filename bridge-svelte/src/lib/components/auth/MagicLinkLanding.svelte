@@ -22,6 +22,7 @@
   import AuthFormWrapper from '../shared/AuthFormWrapper.svelte';
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
+  import PasskeyOffer from './PasskeyOffer.svelte';
   import WorkspaceChooser from './WorkspaceChooser.svelte';
   import SecondStepForm from './SecondStepForm.svelte';
   import { takeEmailLink } from './email-link.js';
@@ -51,10 +52,16 @@
     | { step: 'return'; url: string }
     | { step: 'workspace'; workspaces: readonly WorkspaceChoice[]; choose: (id: string) => Promise<SignInStep> }
     | { step: 'second'; second: Extract<SignInStep, { next: 'second_step' } | { next: 'second_step_setup' }> }
-    | { step: 'failed'; message: string; kind: string | null };
+    | { step: 'failed'; message: string; kind: string | null }
+    | { step: 'offer' };
   let view = $state<State>({ step: 'working' });
 
+  /** Signed in by the link: a passkey is offered first when Bridge says so (TBP-536), then on. */
   async function finish() {
+    view = { step: 'offer' };
+  }
+
+  async function goOn() {
     if (onSignIn) {
       onSignIn();
       return;
@@ -101,7 +108,9 @@
   }
 </script>
 
-{#if view.step === 'working'}
+{#if view.step === 'offer'}
+  <PasskeyOffer onDone={() => void goOn()} {messages} class={className} {style} />
+{:else if view.step === 'working'}
   <AuthFormWrapper heading={null} class={className} {style} data-bridge-magic-link="working" {...rest}>
     <div class="bridge-auth-settling" data-bridge-auth-settling>
       <Spinner size={24} />

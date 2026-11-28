@@ -44,6 +44,9 @@
   const minLength = $derived(rules?.minLength ?? 8);
   let loading = $state(false);
   let done = $state(false);
+  /** What the reset handed back to add one passkey on this browser (TBP-536), and how that went. */
+  let afterReset = $state<{ readonly pass: string; readonly verifier: string } | null>(null);
+  let passkey = $state<'offer' | 'working' | 'made' | 'failed' | null>(null);
   let failure = $state<string | null>(null);
 
   onMount(() => {
@@ -54,6 +57,19 @@
       .then((found) => (rules = found.password ?? null))
       .catch(() => undefined);
   });
+
+  /** One passkey on this browser, with what the reset handed back; signs nobody in. Never stops the way to sign-in. */
+  async function addPasskey() {
+    if (afterReset === null) return;
+    passkey = 'working';
+    try {
+      await getBridge().passkeys.addAfterReset(afterReset);
+      passkey = 'made';
+    } catch {
+      passkey = 'failed';
+    }
+    afterReset = null;
+  }
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
@@ -69,7 +85,9 @@
     }
     loading = true;
     try {
-      await getBridge().password.set(linkToken, password);
+      const answered = await getBridge().password.set(linkToken, password);
+      afterReset = answered?.afterReset ?? null;
+      passkey = afterReset !== null && getBridge().passkeys.supported !== undefined && (await getBridge().passkeys.supported()) ? 'offer' : null;
       done = true;
       onDone?.();
     } catch (error) {
@@ -80,8 +98,17 @@
   }
 </script>
 
-{#if done}
+{#if done && passkey === 'offer' && afterReset !== null}
+  <AuthFormWrapper heading={t('forgot.successHeading')} description={t('passkey.afterReset')} class={className} {style} data-bridge-set-password="passkey-offer" {...rest}>
+    <button type="button" class="bridge-btn bridge-btn-primary" data-bridge-passkey-offer-create onclick={addPasskey}>{t('passkey.create')}</button>
+    <div class="bridge-form-footer">
+      <button type="button" class="bridge-link" data-bridge-passkey-offer-later onclick={() => (passkey = null)}>{t('passkey.offerLater')}</button>
+    </div>
+  </AuthFormWrapper>
+{:else if done}
   <AuthFormWrapper heading={doneHeading ?? t('forgot.successHeading')} description={doneDescription ?? t('forgot.setDone')} class={className} {style} data-bridge-set-password="done" {...rest}>
+    {#if passkey === 'made'}<Alert variant="success">{t('passkey.offerDone')}</Alert>{/if}
+    {#if passkey === 'failed'}<Alert variant="info">{t('passkey.offerFailed')}</Alert>{/if}
     <a href={loginHref ?? `${authBase}/sign-in`} class="bridge-btn bridge-btn-primary">{t('login.submit')}</a>
   </AuthFormWrapper>
 {:else if checked && linkToken === null}

@@ -24,8 +24,10 @@
     readonly id: string;
     readonly name: string | null;
     readonly logo: string | null;
-    /** A step this SDK cannot do yet, so the row cannot be chosen. */
+    /** A step this SDK cannot do yet, so the row cannot be chosen; `required_connection` goes through the company's login. */
     readonly needs?: string;
+    /** The workspace requires its company login: shown with a lock. */
+    readonly companyLogin?: boolean;
   }
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
@@ -52,8 +54,11 @@
   let busyId = $state<string | null>(null);
   let failure = $state<string | null>(null);
 
+  /** A row a person can choose: one needing nothing, or its company's login, which SignInForm starts. */
+  const choosable = (row: Row) => row.needs === undefined || row.needs === 'required_connection';
+
   async function select(row: Row) {
-    if (busyId !== null || row.needs !== undefined) return;
+    if (busyId !== null || !choosable(row)) return;
     failure = null;
     busyId = row.id;
     try {
@@ -98,8 +103,9 @@
             data-workspace-id={row.id}
             data-active={isActive}
             data-loading={isLoading}
-            disabled={busyId !== null || row.needs !== undefined}
-            title={row.needs !== undefined ? t('login.error.unsupportedStep') : undefined}
+            data-company-login={row.companyLogin === true}
+            disabled={busyId !== null || !choosable(row)}
+            title={!choosable(row) ? t('login.error.unsupportedStep') : undefined}
             onclick={() => select(row)}
           >
             <span data-bridge-workspace-avatar>
@@ -108,6 +114,7 @@
             <span data-bridge-workspace-info>
               <span data-bridge-workspace-name>{row.name ?? row.id}</span>
               {#if isActive}<span data-bridge-workspace-user>{t('workspace.current')}</span>{/if}
+              {#if row.companyLogin === true}<span data-bridge-workspace-lock aria-label={t('company.requires', { company: row.name ?? '' })}>🔒 {t('company.requires', { company: row.name ?? '' })}</span>{/if}
             </span>
             {#if isLoading}<Spinner size={18} />{/if}
           </button>

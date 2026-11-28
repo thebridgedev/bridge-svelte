@@ -70,6 +70,8 @@ export { default as EmailCodeScreen } from './components/auth/EmailCodeScreen.sv
 export { default as CodeInput } from './components/shared/CodeInput.svelte';
 export { default as QrCode } from './components/shared/QrCode.svelte';
 export { default as RecoveryCodes } from './components/shared/RecoveryCodes.svelte';
+export { default as ConnectedTools } from './components/auth/ConnectedTools.svelte';
+export { toolRows, type ListedSession, type ToolRow } from './components/auth/connected-tools.js';
 export { default as ForgotPassword } from './components/auth/ForgotPassword.svelte';
 export { default as SetPassword } from './components/auth/SetPassword.svelte';
 export { default as InviteLanding } from './components/auth/InviteLanding.svelte';

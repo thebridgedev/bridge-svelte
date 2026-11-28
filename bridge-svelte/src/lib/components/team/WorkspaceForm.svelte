@@ -1,16 +1,18 @@
 <!--
   The workspace's name and logo. Editable for someone who may manage the team
   (the `teamManage` flag); read-only for everyone else. Bridge decides the
-  change; a refusal shows its message.
+  change; a refusal shows its message. The workspace's Owner also sees "Allow
+  AI assistants", saved as soon as it is switched (Bridge refuses anyone else).
 -->
 <script lang="ts">
-  import type { Workspace } from '@nebulr-group/bridge-auth-core';
+  import type { Workspace, WorkspaceUpdate } from '@nebulr-group/bridge-auth-core';
   import { untrack } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
   import { getBridge } from '../../core/client.js';
   import { canManageTeam } from '../../core/flags.js';
   import { errorMessage, translator } from '../../core/i18n.js';
-  import { resource, workspaces } from '../../core/stores.js';
+  import { resource, workspace, workspaces } from '../../core/stores.js';
+  import { assistantsSwitch } from './workspace-assistants.js';
   import Alert from '../shared/Alert.svelte';
   import Spinner from '../shared/Spinner.svelte';
 
@@ -39,6 +41,8 @@
     return fields;
   });
   const dirty = $derived(Object.keys(changed).length > 0);
+  // "Allow AI assistants": its value for the Owner, null when not shown.
+  const assistants = $derived(assistantsSwitch(base, $workspace?.role));
 
   function adopt(value: Workspace) {
     base = value;
@@ -51,6 +55,21 @@
     const value = $current.value;
     if (value !== null) untrack(() => !dirty && adopt(value));
   });
+
+  async function switchAssistants(on: boolean) {
+    saving = true;
+    error = null;
+    success = null;
+    try {
+      // The workspace field is newer than auth-core's type, which takes it as it is.
+      base = await getBridge().team.workspace.update({ assistants: on } as WorkspaceUpdate);
+    } catch (err) {
+      error = errorMessage(err, t);
+      onError?.(err);
+    } finally {
+      saving = false;
+    }
+  }
 
   async function save() {
     if (!dirty) return;
@@ -119,6 +138,23 @@
           disabled={saving || !$canManage}
         />
       </div>
+
+      {#if assistants !== null}
+        <div class="bridge-team-form-group" data-bridge-workspace-assistants>
+          <label>
+            <input
+              type="checkbox"
+              role="switch"
+              checked={assistants}
+              aria-checked={assistants}
+              disabled={saving}
+              onchange={(event) => void switchAssistants(event.currentTarget.checked)}
+            />
+            {t('workspace.assistants')}
+          </label>
+          <p class="bridge-passkey-meta">{t('workspace.assistantsHelp')}</p>
+        </div>
+      {/if}
 
       {#if $canManage}
         <div class="bridge-team-form-actions">

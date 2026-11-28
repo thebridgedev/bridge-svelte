@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SessionState } from '@nebulr-group/bridge-auth-core';
 import { checkIssuer, resolveConfig, type BridgeConfig } from './config.js';
 import { decide, flagsAllow, normalizePath, type FlagReader } from './guard.js';
+import { holdSignInPage, signInPageHeld } from './sign-in-hold.js';
 
 const ISSUER = 'https://bridge.example.com/identity-access/apps/app-1';
 const signedIn: SessionState = { status: 'signed-in', user: { id: 'u1', email: 'a@x.test', emailVerified: true }, workspace: { id: 'w1', standing: 'active' } };
@@ -61,6 +62,24 @@ describe('decide', () => {
 		expect(run({}, '/auth/sign-in', signedIn, on(ACTIVE), '/reports')).toEqual({ type: 'redirect', to: '/reports', reason: 'signed-in' });
 		expect(run({}, '/auth/sign-in', signedIn, on(ACTIVE), 'https://evil.test/')).toEqual({ type: 'redirect', to: '/', reason: 'signed-in' });
 		expect(run({}, '/auth/sign-in', signedIn, on(ACTIVE), '//evil.test')).toEqual({ type: 'redirect', to: '/', reason: 'signed-in' });
+	});
+
+	it('lets the sign-in page stay while a sign-in form holds it (the leaked-password offer on Warn, TBP-85), and only the sign-in page', () => {
+		const held = (path: string) => decide(resolveConfig({ issuer: ISSUER }, undefined), { path, target: path, session: signedIn, flags: on(ACTIVE), returnTo: '/reports', signInHeld: true });
+		expect(held('/auth/sign-in')).toEqual({ type: 'allow' });
+		expect(held('/auth/sign-up')).toEqual({ type: 'redirect', to: '/reports', reason: 'signed-in' });
+	});
+
+	it('the hold is let go once, however often its release is called', () => {
+		expect(signInPageHeld()).toBe(false);
+		const first = holdSignInPage();
+		const second = holdSignInPage();
+		expect(signInPageHeld()).toBe(true);
+		first();
+		first();
+		expect(signInPageHeld()).toBe(true);
+		second();
+		expect(signInPageHeld()).toBe(false);
 	});
 
 	it('gates on flags, never on anything else', () => {

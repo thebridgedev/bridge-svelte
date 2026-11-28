@@ -44,6 +44,7 @@
   import CheckYourEmail from './CheckYourEmail.svelte';
   import LeakedPasswordStep from './LeakedPasswordStep.svelte';
   import { supportLink } from '../../core/login-security.js';
+  import { holdSignInPage } from '../../core/sign-in-hold.js';
 
   interface Props extends HTMLAttributes<HTMLDivElement> {
     /** Heading on the credentials step. @default the shared "Log in to your account" copy; `null` for none */
@@ -97,6 +98,8 @@
   let failureKind = $state<string | null>(null);
   /** The password used is in a public data leak: on Warn signed in, then `then` goes on; on Refuse not signed in. */
   let leaked = $state<{ mode: 'warn' | 'refuse'; then: (() => void) | null } | null>(null);
+  // Signed in on Warn with a leaked password: the page is held, so the app's own route guard does not move on first (TBP-85).
+  let releaseHold: (() => void) | null = null;
   let notice = $state<string | null>(null);
   let linkSent = $state(false);
   let options = $state<SignInOptions | null>(null);
@@ -159,6 +162,8 @@
   });
 
   onDestroy(() => {
+    releaseHold?.();
+    releaseHold = null;
     // An autofill wait must not outlive the form.
     if (autofillStarted) void getBridge().passkeys.cancel();
   });
@@ -219,6 +224,8 @@
   async function follow(step: SignInStep) {
     // Signed in with a password from a public leak, on Warn: offer to change it before going on.
     if (step.done && step.passwordLeaked === true && leaked === null) {
+      releaseHold?.();
+      releaseHold = holdSignInPage();
       second = null;
       choice = null;
       leaked = { mode: 'warn', then: () => void followAfterLeak(step) };
@@ -229,6 +236,8 @@
 
   async function followAfterLeak(step: SignInStep) {
     leaked = null;
+    releaseHold?.();
+    releaseHold = null;
     if (handOff(step)) {
       settled = true;
     } else if (step.done) {

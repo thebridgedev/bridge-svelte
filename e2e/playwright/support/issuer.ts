@@ -54,6 +54,8 @@ export interface TestIssuer {
 	endSessions(email: string): Promise<void>;
 	/** Makes every session's last sign-in an hour old, so actions that want a recent sign-in ask the person to confirm it is them. */
 	signedInLongAgo(): Promise<void>;
+	/** Marks these passwords as found in a public leak, with the app on Warn or Refuse (TBP-85). The local issuer only. */
+	leakPasswords?(passwords: readonly string[], mode: 'warn' | 'refuse'): Promise<void>;
 }
 
 class LocalIssuer implements TestIssuer {
@@ -119,6 +121,9 @@ class LocalIssuer implements TestIssuer {
 	}
 	async signedInLongAgo() {
 		await this.call('/signed-in-long-ago', {});
+	}
+	async leakPasswords(passwords: readonly string[], mode: 'warn' | 'refuse') {
+		await this.call('/leak-passwords', { passwords, mode });
 	}
 }
 

@@ -109,6 +109,9 @@ async function control(path: string, request: Request, url: URL): Promise<Respon
 		case '/admin-change-email':
 			fake.adminChangeEmail(String(body['email'] ?? ''), String(body['to'] ?? ''));
 			return json({ ok: true });
+		case '/leak-passwords':
+			fake.leakPasswords((body['passwords'] as string[] | undefined) ?? [], body['mode'] === 'refuse' ? 'refuse' : 'warn');
+			return json({ ok: true });
 		case '/requests':
 			return json(fake.requests.map((r) => ({ method: r.method, path: r.path })));
 		default:

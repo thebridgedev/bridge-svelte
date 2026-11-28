@@ -81,6 +81,8 @@ export interface GuardInput {
 	readonly returnTo: string | null;
 	/** The page stays although the app's active flag is off: the workspace is locked for payment (the lock screen covers the page) or has a plan (the flag lags Bridge's billing), rather than the paywall. */
 	readonly locked?: boolean;
+	/** A sign-in form is showing a step after the session was made (the leaked-password offer, TBP-85): the sign-in page stays. */
+	readonly signInHeld?: boolean;
 }
 
 /** Decides one navigation. */
@@ -89,7 +91,7 @@ export function decide(config: ResolvedConfig, given: GuardInput): GuardDecision
 	const signedIn = input.session.status === 'signed-in';
 	const authPage = authPageAt(input.path, config.authBase);
 	if (authPage !== null) {
-		if (signedIn && SIGNED_IN_SKIPS.has(authPage)) {
+		if (signedIn && SIGNED_IN_SKIPS.has(authPage) && !(authPage === 'sign-in' && input.signInHeld === true)) {
 			return { type: 'redirect', to: sanitizeReturnTo(input.returnTo) ?? config.afterSignIn, reason: 'signed-in' };
 		}
 		return { type: 'allow' };

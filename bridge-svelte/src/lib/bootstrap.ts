@@ -5,7 +5,7 @@
  *
  * ```ts
  * // src/routes/+layout.ts
- * import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
+import { bridgeBootstrap } from '@nebulr-group/bridge-svelte';
  * export const ssr = false;
  * export const load = bridgeBootstrap({ rules: [{ match: '/', public: true }] });
  * ```
@@ -14,6 +14,7 @@ import { error, redirect } from '@sveltejs/kit';
 // SvelteKit 3 names this module `$app/env/public` and keeps `$env/dynamic/public` working (it warns), without types for it.
 // @ts-ignore -- typed on SvelteKit 2, untyped on 3
 import { env } from '$env/dynamic/public';
+import { signInPageHeld } from './core/sign-in-hold.js';
 import { readEmailLink, readReturnTo, type Bridge } from '@nebulr-group/bridge-auth-core';
 import { get } from 'svelte/store';
 import { startClient } from './core/client.js';
@@ -92,6 +93,7 @@ async function guard(client: Bridge, config: ResolvedConfig, url: URL): Promise<
 		session: client.session.get(),
 		flags: client.flags,
 		returnTo: readReturnTo(url, config.returnToParam),
+		signInHeld: signInPageHeld(),
 	};
 	const decision = decide(config, input);
 	if (decision.type !== 'redirect' || decision.reason !== 'paywall') return decision;

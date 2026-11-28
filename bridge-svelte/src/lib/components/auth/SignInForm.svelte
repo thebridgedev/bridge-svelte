@@ -183,7 +183,9 @@
         options = found;
         // Bridge's own page, opened for an app whose users sign in in the app, with no sign-in request: on to the app's
         // sign-in page. A request (an app, a program, an assistant) is always signed in here.
-        if (config?.signInRequests) {
+        // Back from a company's login or a social provider, the request this page signs in for is held at Bridge with the
+        // answer (the page no longer holds it): the finish goes on here, never sent to the app's own sign-in page meanwhile.
+        if (config?.signInRequests && company === null && answer === null) {
           const away = hostedPageRedirect(found, location.href, (await bridge.request.current()) !== null);
           if (away !== null) {
             settled = true;

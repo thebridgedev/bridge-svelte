@@ -72,6 +72,14 @@ describe('Details', () => {
 		expect(detailsChange({ ...anna, language: 'sv' }, { ...formOf(anna), language: '' }, { names: true, phone: false })).toEqual({ language: null });
 	});
 
+	it('a number field\'s input gives a number: it is sent as text, and an unchanged one is not sent', () => {
+		const counted = { ...anna, customFields: [{ label: 'seats', type: 'integer', value: '3', editable: true }] };
+		const typed = (value: unknown) => ({ ...formOf(counted), fields: { seats: value as string } });
+		expect(detailsChange(counted, typed(4), { names: true, phone: false })).toEqual({ customFields: [{ label: 'seats', value: '4' }] });
+		expect(detailsChange(counted, typed(3), { names: true, phone: false })).toEqual({});
+		expect(detailsChange(counted, typed(null), { names: true, phone: false })).toEqual({ customFields: [{ label: 'seats', value: '' }] });
+	});
+
 	it('offers the 12 screen languages, each in its own words, the ones the plugin has copy for', () => {
 		expect(PROFILE_LANGUAGES.map((each) => each.code).sort()).toEqual(Object.keys(PLUGIN_LOCALES).sort());
 		expect(PROFILE_LANGUAGES.find((each) => each.code === 'sv')?.name).toBe('Svenska');

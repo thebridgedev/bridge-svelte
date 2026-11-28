@@ -77,10 +77,12 @@ export function detailsChange(
 	if (shown.names && form.lastName.trim() !== base.lastName) change.lastName = form.lastName.trim();
 	if (shown.phone && form.phoneNumber.trim() !== base.phoneNumber) change.phoneNumber = form.phoneNumber.trim();
 	if (form.language !== base.language) change.language = isProfileLanguage(form.language) ? form.language : null;
+	// A number field's input gives a number, not text (Svelte's bind:value on type="number"): read every value as text.
+	const given = (label: string) => String(form.fields[label] ?? '').trim();
 	const fields = (me.customFields ?? [])
 		.filter((field) => field.editable !== false)
-		.filter((field) => (form.fields[field.label] ?? '').trim() !== (base.fields[field.label] ?? ''))
-		.map((field) => ({ label: field.label, value: (form.fields[field.label] ?? '').trim() }));
+		.filter((field) => given(field.label) !== (base.fields[field.label] ?? ''))
+		.map((field) => ({ label: field.label, value: given(field.label) }));
 	if (fields.length > 0) change.customFields = fields;
 	return change;
 }

@@ -57,6 +57,44 @@ test.describe('My profile', () => {
 		await expect(page.getByLabel('First name')).toHaveValue('Annie');
 	});
 
+	test('the app\'s fields: a value is saved by the field\'s rules, a wrong one is refused with the field\'s own message under it, and a read-only one cannot be changed', async ({ page, issuer }) => {
+		await anna(page, issuer, {
+			customFields: [
+				{ label: 'jobTitle', userLabel: 'Job title', type: 'text', value: 'Engineer', editable: true },
+				{ label: 'employeeId', userLabel: 'Employee number', type: 'integer', value: null, editable: true },
+				{ label: 'badge', userLabel: 'Badge', type: 'regex', regex: '^B-[0-9]{3}$', value: null, editable: true },
+				{ label: 'costCentre', userLabel: 'Cost centre', type: 'text', value: 'CC-1', editable: false },
+			],
+		});
+		await expect(page.getByLabel('Cost centre')).toHaveValue('CC-1');
+		await expect(page.getByLabel('Cost centre')).toHaveAttribute('readonly', '');
+
+		// A badge outside the field's pattern (the browser's own check is skipped, as a script or an older page would send it).
+		await page.locator('form').first().evaluate((form) => form.setAttribute('novalidate', ''));
+		await page.getByLabel('Badge').fill('X-1');
+		await page.getByLabel('Job title').fill('Lead');
+		const sent = page.waitForResponse((response) => response.request().method() === 'PATCH' && new URL(response.url()).pathname === '/v2/accounts/me');
+		await page.locator('[data-bridge-profile-save]').click();
+		expect((await sent).status()).toBe(400);
+		await expect(page.locator('[data-bridge-profile-field-error="badge"]')).toHaveText("Badge must be in the field's pattern.");
+		await expect(page.getByLabel('Badge')).toHaveAttribute('aria-invalid', 'true');
+		await expect(page.locator('[data-bridge-profile-field-error="jobTitle"]')).toHaveCount(0);
+		await expect(page.locator('[data-bridge-profile-details-error]')).toHaveCount(0);
+		await expect(page.locator('[data-bridge-profile-saved]')).toHaveCount(0);
+
+		// Corrected, the message goes as the person types; saved, it stays saved.
+		await page.getByLabel('Badge').fill('B-042');
+		await expect(page.locator('[data-bridge-profile-field-error="badge"]')).toHaveCount(0);
+		await page.getByLabel('Employee number').fill('42');
+		await page.locator('[data-bridge-profile-save]').click();
+		await expect(page.locator('[data-bridge-profile-saved]')).toHaveText('Your details are saved.');
+		await page.reload();
+		await expect(page.getByLabel('Job title')).toHaveValue('Lead');
+		await expect(page.getByLabel('Badge')).toHaveValue('B-042');
+		await expect(page.getByLabel('Employee number')).toHaveValue('42');
+		await expect(page.getByLabel('Cost centre')).toHaveValue('CC-1');
+	});
+
 	test('an app that collects no names shows no name field', async ({ page, issuer }) => {
 		await anna(page, issuer);
 		await page.goto('/settings/my-profile?names=0');

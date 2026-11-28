@@ -878,6 +878,17 @@
     margin: 0;
   }
 
+  /* Bridge's reason for refusing one of the app's fields, under that field (My profile). */
+  .bridge-profile-section .bridge-field-error {
+    margin: 0.25rem 0 0;
+    color: var(--bridge-alert-error-fg);
+    font-size: calc(0.875 * var(--bridge-text-base, 1rem));
+  }
+
+  .bridge-profile-section [aria-invalid='true'] {
+    border-color: var(--bridge-alert-error-border);
+  }
+
   .bridge-profile-actions {
     display: flex;
     gap: 0.5rem;

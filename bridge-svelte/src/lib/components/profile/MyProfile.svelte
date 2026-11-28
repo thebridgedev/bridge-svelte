@@ -5,7 +5,9 @@
     <MyProfile />
 
   Details: their names (unless the app collects none: `names={false}`), the
-  app's own fields that Bridge sends with the profile, and their own language,
+  app's own fields that Bridge sends with the profile (editable where the app
+  lets the person change them, read-only otherwise; a value Bridge refuses
+  shows Bridge's reason under its own field), and their own language,
   one of the 12 screen languages. A saved change shows at once: the page
   switches to the chosen language, and `<ProfileName>` and every `me` reader
   see the new values.
@@ -20,7 +22,7 @@
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
   import { untrack } from 'svelte';
-  import type { Me, UserLanguage } from '@nebulr-group/bridge-auth-core';
+  import { fieldProblems, type Me, type UserLanguage } from '@nebulr-group/bridge-auth-core';
   import type { BridgeMessages } from '../../core/config.js';
   import { errorMessage, setUserLocale, translator } from '../../core/i18n.js';
   import { detailsChange, formOf, isProfileLanguage, PROFILE_LANGUAGES, saveDetails, shownFields, type DetailsForm } from '../../core/profile.js';
@@ -72,6 +74,8 @@
   let saving = $state(false);
   let failure = $state<string | null>(null);
   let saved = $state(false);
+  // Why Bridge refused each of the app's fields, by label, from the last save; a field's goes when it is edited.
+  let problems = $state<Record<string, string>>({});
 
   const fields = $derived(base === null ? [] : shownFields(base));
   const change = $derived(base === null ? {} : detailsChange(base, form, { names, phone }));
@@ -98,10 +102,18 @@
     if (value !== null) untrack(() => !dirty && !saving && adopt(value));
   });
 
+  function forget(label: string) {
+    if (label in problems) {
+      const { [label]: _gone, ...rest } = problems;
+      problems = rest;
+    }
+  }
+
   async function save() {
     if (!dirty || saving) return;
     saving = true;
     failure = null;
+    problems = {};
     saved = false;
     const sent = change;
     try {
@@ -118,7 +130,9 @@
       // `<ProfileName>` and every other reader of `me` see it at once.
       await me.refresh();
     } catch (error) {
-      failure = errorMessage(error, t);
+      problems = { ...fieldProblems(error) };
+      // Each refused field says why under itself; anything else, above the form.
+      if (Object.keys(problems).length === 0) failure = errorMessage(error, t);
       onError?.(error);
     } finally {
       saving = false;
@@ -170,12 +184,20 @@
         {/if}
         {#each fields as field (field.label)}
           {@const id = `bridge-profile-field-${field.label.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
-          <div class="bridge-team-form-group" data-bridge-profile-field={field.label}>
+          {@const problem = problems[field.label]}
+          <div class="bridge-team-form-group" data-bridge-profile-field={field.label} data-bridge-profile-field-editable={field.editable !== false}>
             <label for={id}>{field.userLabel ?? field.label}</label>
             {#if field.editable === false}
-              <input {id} type="text" value={field.value ?? ''} readonly />
+              <input {id} type="text" value={field.value ?? ''} readonly aria-readonly="true" />
             {:else if field.type === 'boolean'}
-              <select {id} bind:value={form.fields[field.label]} disabled={saving}>
+              <select
+                {id}
+                bind:value={form.fields[field.label]}
+                disabled={saving}
+                aria-invalid={problem === undefined ? undefined : 'true'}
+                aria-describedby={problem === undefined ? undefined : `${id}-problem`}
+                onchange={() => forget(field.label)}
+              >
                 <option value=""></option>
                 <option value="true">✓</option>
                 <option value="false">✗</option>
@@ -187,7 +209,13 @@
                 pattern={field.type === 'regex' ? field.regex : undefined}
                 bind:value={form.fields[field.label]}
                 disabled={saving}
+                aria-invalid={problem === undefined ? undefined : 'true'}
+                aria-describedby={problem === undefined ? undefined : `${id}-problem`}
+                oninput={() => forget(field.label)}
               />
+            {/if}
+            {#if problem !== undefined}
+              <p class="bridge-field-error" id="{id}-problem" role="alert" data-bridge-profile-field-error={field.label}>{problem}</p>
             {/if}
           </div>
         {/each}

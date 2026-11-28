@@ -63,6 +63,19 @@ describe('<MyProfile>', () => {
 		expect(body).toContain('Säkerhetsinställningar');
 	});
 
+	it('a field the app keeps read-only shows read-only; the others as inputs of their type', async () => {
+		await signedIn({
+			customFields: [
+				{ label: 'employeeId', userLabel: 'Employee number', type: 'integer', value: '42', editable: true },
+				{ label: 'costCentre', userLabel: 'Cost centre', type: 'text', value: 'CC-1', editable: false },
+			],
+		});
+		const { body } = render(MyProfile);
+		expect(body).toMatch(/data-bridge-profile-field="employeeId" data-bridge-profile-field-editable="true"[\s\S]*?type="number"/);
+		expect(body).toMatch(/data-bridge-profile-field="costCentre" data-bridge-profile-field-editable="false"[\s\S]*?readonly/);
+		expect(body).not.toContain('data-bridge-profile-field-error');
+	});
+
 	it('an app that collects no names shows no name field', async () => {
 		await signedIn({ firstName: 'Anna' });
 		const { body } = render(MyProfile, { props: { names: false } });

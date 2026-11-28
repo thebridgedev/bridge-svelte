@@ -18,8 +18,8 @@ export interface Person {
 	readonly lastName?: string;
 	/** Who manages the address (`google`…): it cannot be changed in the app. The local issuer only. */
 	readonly managedBy?: string;
-	/** The app's own fields on the profile. The local issuer only. */
-	readonly customFields?: readonly { readonly label: string; readonly userLabel?: string; readonly type: string; readonly value: string | null }[];
+	/** The app's own fields on the profile; `editable: false` is read-only there. The local issuer only. */
+	readonly customFields?: readonly { readonly label: string; readonly userLabel?: string; readonly type: string; readonly regex?: string; readonly value: string | null; readonly editable?: boolean }[];
 	readonly workspaces?: readonly { readonly id: string; readonly name: string; readonly role?: string }[];
 }
 
